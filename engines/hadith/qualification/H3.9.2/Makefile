@@ -35,7 +35,7 @@ verify-freeze:
 	python -m benchmark_campaign verify-freeze --anchor-file $(FREEZE_ANCHOR)
 
 export-tuning-pack:
-	python -m benchmark_campaign export-tuning-pack
+	python -m benchmark_campaign export-tuning-pack --freeze-anchor-file $(FREEZE_ANCHOR)
 
 pre-h4-audit:
-	python -m benchmark_campaign pre-h4-audit
+	python -m benchmark_campaign pre-h4-audit --freeze-anchor-file $(FREEZE_ANCHOR) --holdout-key-file $(HOLDOUT_KEY)

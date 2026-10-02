@@ -127,7 +127,8 @@ def _read_benchmark_evaluation(root: Path, path: Path | None, expected_freeze_id
 
 def build_pre_m4_audit(root: Path, spec_path: Path, freeze_manifest: Path | None,
                        architecture_audit: Path | None, evaluation_report: Path | None = None,
-                       holdout_key_path: Path | None = None) -> dict[str, Any]:
+                       holdout_key_path: Path | None = None,
+                       freeze_anchor_path: Path | None = None) -> dict[str, Any]:
     spec = load_json(spec_path)
     validation = validate_campaign(root, spec)
     freeze_ok = False
@@ -135,7 +136,7 @@ def build_pre_m4_audit(root: Path, spec_path: Path, freeze_manifest: Path | None
     freeze_reason = "missing_freeze_manifest"
     freeze_evidence: dict[str, Any] = {}
     if freeze_manifest is not None and freeze_manifest.exists():
-        verification = verify_freeze(root, freeze_manifest)
+        verification = verify_freeze(root, freeze_manifest, freeze_anchor_path)
         freeze_ok = bool(verification["verified"])
         freeze_id = verification.get("freeze_id")
         freeze_reason = "verified" if freeze_ok else "freeze_verification_failed"
@@ -198,9 +199,11 @@ def write_ini(path: Path, audit: dict[str, Any]) -> None:
 
 def emit_pre_m4_audit(root: Path, spec_path: Path, freeze_manifest: Path | None,
                       architecture_audit: Path | None, evaluation_report: Path | None,
-                      holdout_key_path: Path | None, json_out: Path, ini_out: Path) -> dict[str, Any]:
+                      holdout_key_path: Path | None, freeze_anchor_path: Path | None,
+                      json_out: Path, ini_out: Path) -> dict[str, Any]:
     audit = build_pre_m4_audit(
-        root, spec_path, freeze_manifest, architecture_audit, evaluation_report, holdout_key_path
+        root, spec_path, freeze_manifest, architecture_audit, evaluation_report,
+        holdout_key_path, freeze_anchor_path
     )
     write_json(json_out, audit)
     write_ini(ini_out, audit)

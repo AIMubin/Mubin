@@ -9,9 +9,10 @@ from .core import load_json, sha256_file, write_json
 from .freeze import verify_freeze
 
 
-def export_tuning_pack(root: Path, spec: dict[str, Any], out_dir: Path, freeze_manifest: Path) -> dict[str, Any]:
+def export_tuning_pack(root: Path, spec: dict[str, Any], out_dir: Path, freeze_manifest: Path,
+                       freeze_anchor_path: Path | None = None) -> dict[str, Any]:
     from .core import dump_jsonl, load_jsonl
-    verification = verify_freeze(root, freeze_manifest)
+    verification = verify_freeze(root, freeze_manifest, freeze_anchor_path)
     if not verification["verified"]:
         raise ValueError("tuning pack cannot be exported before a verified benchmark freeze")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -25,8 +26,10 @@ def export_tuning_pack(root: Path, spec: dict[str, Any], out_dir: Path, freeze_m
     return report
 
 
-def mark_tuning_started(root: Path, freeze_manifest: Path, model_ref: str, model_config_path: Path | None = None) -> dict[str, Any]:
-    verification = verify_freeze(root, freeze_manifest)
+def mark_tuning_started(root: Path, freeze_manifest: Path, model_ref: str,
+                        model_config_path: Path | None = None,
+                        freeze_anchor_path: Path | None = None) -> dict[str, Any]:
+    verification = verify_freeze(root, freeze_manifest, freeze_anchor_path)
     if not verification["verified"]:
         raise ValueError("tuning cannot start before a verified benchmark freeze")
     if (root / "artifacts" / "HOLDOUT_ACCESSED.json").exists():
@@ -52,8 +55,9 @@ def mark_tuning_started(root: Path, freeze_manifest: Path, model_ref: str, model
 
 def lock_model(root: Path, freeze_manifest: Path, model_ref: str, model_config_path: Path | None = None,
                system_commit: str | None = None, model_artifact_path: Path | None = None,
-               generation_config_path: Path | None = None) -> dict[str, Any]:
-    verification = verify_freeze(root, freeze_manifest)
+               generation_config_path: Path | None = None,
+               freeze_anchor_path: Path | None = None) -> dict[str, Any]:
+    verification = verify_freeze(root, freeze_manifest, freeze_anchor_path)
     if not verification["verified"]:
         raise ValueError("model cannot be locked before a verified benchmark freeze")
     if (root / "artifacts" / "HOLDOUT_ACCESSED.json").exists():

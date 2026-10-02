@@ -71,8 +71,9 @@ def _threshold_pass(metrics: dict[str, float], thresholds: dict[str, Any],
 
 
 def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predictions_dir: Path,
-                     out_path: Path, consume: bool = True, holdout_key_path: Path | None = None) -> dict[str, Any]:
-    verification = verify_freeze(root, freeze_manifest)
+                     out_path: Path, consume: bool = True, holdout_key_path: Path | None = None,
+                     freeze_anchor_path: Path | None = None) -> dict[str, Any]:
+    verification = verify_freeze(root, freeze_manifest, freeze_anchor_path)
     if not verification["verified"]:
         raise ValueError("cannot evaluate: freeze verification failed")
     spec = load_json(spec_path)
