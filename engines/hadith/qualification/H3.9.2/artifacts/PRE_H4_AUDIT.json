@@ -1,0 +1,21 @@
+{
+  "architecture_evidence": {
+    "source": "missing_architecture_audit"
+  },
+  "architecture_gate_passed": false,
+  "benchmark_evidence": {
+    "all_benchmarks_qualified": false,
+    "evaluation": {
+      "reason": "missing_evaluation_report"
+    },
+    "freeze_id": null,
+    "freeze_reason": "missing_freeze_manifest",
+    "freeze_verified": false,
+    "violation_count": 45
+  },
+  "benchmark_gate_derivation": "benchmark_gate_passed = dataset_qualified AND freeze_verified AND frozen_holdout_evaluation_passed",
+  "benchmark_gate_passed": false,
+  "campaign_id": "H3.9.2",
+  "derivation": "h4_entry_allowed = benchmark_gate_passed AND architecture_gate_passed",
+  "h4_entry_allowed": false
+}

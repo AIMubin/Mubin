@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+artifacts/*.tmp
+source-cache/*.source
+source-cache/*.tmp
+private/
+*.key
+*.holdout-key

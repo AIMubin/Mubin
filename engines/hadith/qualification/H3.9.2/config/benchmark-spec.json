@@ -1,0 +1,144 @@
+{
+  "campaign_id": "H3.9.2",
+  "campaign_name": "Benchmark Expansion Campaign",
+  "schema_version": 4,
+  "freeze_required_before_tuning": true,
+  "final_holdout_policy": "one-shot",
+  "qualification": {
+    "synthetic_eligible": false,
+    "allowed_gold_status": ["reference_pilot", "expert_gold"],
+    "require_source_disjoint_holdout": true,
+    "require_family_disjoint_holdout": true,
+    "require_cross_split_fingerprint_disjointness": true,
+    "require_frozen_holdout": true,
+    "require_registered_source": true,
+    "require_source_excerpt_hash": true,
+    "require_recomputed_fingerprint": true,
+    "require_campaign_global_source_disjoint_holdout": true,
+    "require_campaign_global_family_disjoint_holdout": true,
+    "require_campaign_global_fingerprint_disjointness": true,
+    "require_frozen_curation_plan": true,
+    "require_model_lock_before_holdout": true,
+    "require_sealed_holdout_gold": true,
+    "holdout_gold_encryption": "AES-256-GCM; external 256-bit key; key excluded from repository/artifacts",
+    "require_frozen_curation_quotas": true
+  },
+  "split_policy": {
+    "development_fraction": 0.5,
+    "validation_fraction": 0.2,
+    "holdout_fraction": 0.3,
+    "count_tolerance": 0,
+    "holdout_partition_unit": "connected-components(all source_ids,family_id)"
+  },
+  "benchmarks": [
+    {
+      "id": "external-critical-commentary",
+      "logical_id": "mubin:benchmark:external-critical-commentary",
+      "milestone": "H3.5",
+      "target_total": 300,
+      "target_development": 150,
+      "target_validation": 60,
+      "target_holdout": 90,
+      "min_unique_sources": 10,
+      "min_holdout_sources": 3,
+      "min_unique_families": 60,
+      "min_holdout_families": 18,
+      "source_contract": "source_ids enumerates every canonical work used as evidence by the case; every source is independently pinned and included in disjointness checks",
+      "family_contract": "family_id identifies the underlying critical proposition/event, not merely a phrase template",
+      "evaluation": {
+        "task_type": "multilabel",
+        "labels": ["continuity_negative","non_encounter","route_form","route_preference","route_not_preserved","raisedness_negative","narrator_error","narrator_weakening","route_isolation"],
+        "threshold_basis": "preregistered before expanded holdout inspection; anchored to H3.5 small-holdout P=1.000/R=.875/F1=.933 without demanding perfect recall",
+        "thresholds": {"micro_precision":{"min":0.9},"micro_recall":{"min":0.85},"micro_f1":{"min":0.9},"exact_accuracy":{"min":0.8}}
+      }
+    },
+    {
+      "id": "transmission-language",
+      "logical_id": "mubin:benchmark:transmission-language",
+      "milestone": "H3.6",
+      "target_total": 240,
+      "target_development": 120,
+      "target_validation": 48,
+      "target_holdout": 72,
+      "min_unique_sources": 8,
+      "min_holdout_sources": 2,
+      "min_unique_families": 48,
+      "min_holdout_families": 15,
+      "source_contract": "source_ids enumerates every canonical work used as evidence by the case; every source is independently pinned and included in disjointness checks",
+      "family_contract": "family_id identifies the narrator-pair transmission question independent of wording/source",
+      "evaluation": {
+        "task_type": "classification",
+        "labels": ["heard_from","heard_by_inverse","did_not_hear","did_not_meet","hearing_not_known","hearing_uncertain","partial_hearing","met"],
+        "threshold_basis": "preregistered before expanded holdout inspection; anchored to H3.6 final small-holdout F1=.857 and directionality as a critical semantic invariant",
+        "thresholds": {"accuracy":{"min":0.85},"macro_f1":{"min":0.85},"direction_error_rate":{"max":0.02}},
+        "safety_metrics": {"direction": true}
+      }
+    },
+    {
+      "id": "biographical-scope",
+      "logical_id": "mubin:benchmark:biographical-scope",
+      "milestone": "H3.7",
+      "target_total": 200,
+      "target_development": 100,
+      "target_validation": 40,
+      "target_holdout": 60,
+      "min_unique_sources": 8,
+      "min_holdout_sources": 2,
+      "min_unique_families": 40,
+      "min_holdout_families": 12,
+      "source_contract": "source_ids enumerates every canonical work used as evidence by the case; every source is independently pinned and included in disjointness checks",
+      "family_contract": "family_id binds narrator pair plus report-scope question so general hearing cannot leak into report-specific holdout cases",
+      "evaluation": {
+        "task_type": "classification",
+        "labels": ["established","plausible","contradicted","unresolved"],
+        "threshold_basis": "preregistered engineering threshold; H3.7's key invariant is preventing pair-general hearing from becoming report-specific certainty",
+        "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"scope_collapse_rate":{"max":0.02}},
+        "safety_metrics": {"scope_collapse":{"protected_gold_labels":["plausible","unresolved"],"forbidden_prediction_labels":["established"]}}
+      }
+    },
+    {
+      "id": "cross-witness-identity",
+      "logical_id": "mubin:benchmark:cross-witness-identity",
+      "milestone": "H3.8",
+      "target_total": 240,
+      "target_development": 120,
+      "target_validation": 48,
+      "target_holdout": 72,
+      "min_unique_sources": 8,
+      "min_holdout_sources": 3,
+      "min_unique_families": 60,
+      "min_holdout_families": 18,
+      "source_contract": "source_ids enumerates every canonical work used by the comparison/family case; each source has an independently pinned source_ref and all are included in disjointness checks",
+      "family_contract": "family_id identifies the candidate report family/identity cluster; similarity alone never establishes identity",
+      "evaluation": {
+        "task_type": "classification",
+        "labels": ["same_report","same_report_variant","related_not_same"],
+        "threshold_basis": "preregistered engineering threshold with zero tolerance for unsafe merge of reviewed related-not-same reports",
+        "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"unsafe_merge_rate":{"max":0.0}},
+        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]}}
+      }
+    },
+    {
+      "id": "report-family-identity",
+      "logical_id": "mubin:benchmark:report-family-identity",
+      "milestone": "H3.9",
+      "target_total": 300,
+      "target_development": 150,
+      "target_validation": 60,
+      "target_holdout": 90,
+      "min_unique_sources": 10,
+      "min_holdout_sources": 3,
+      "min_unique_families": 75,
+      "min_holdout_families": 23,
+      "source_contract": "source_ids enumerates every canonical work used by the comparison/family case; each source has an independently pinned source_ref and all are included in disjointness checks",
+      "family_contract": "family_id is the reviewed report-family graph identity; related_not_same conflicts block family formation",
+      "evaluation": {
+        "task_type": "classification",
+        "labels": ["same_report","same_report_variant","related_not_same"],
+        "threshold_basis": "preregistered engineering threshold; graph-level corruption is treated as a safety failure even when aggregate F1 is high",
+        "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"unsafe_merge_rate":{"max":0.0},"provenance_preservation_rate":{"min":1.0}},
+        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]},"provenance_preservation":true}
+      }
+    }
+  ]
+}

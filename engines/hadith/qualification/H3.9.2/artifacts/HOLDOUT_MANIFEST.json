@@ -1,0 +1,55 @@
+{
+  "benchmarks": [
+    {
+      "benchmark_id": "external-critical-commentary",
+      "count": 0,
+      "records": [],
+      "sealed_gold": {
+        "path": "sealed-holdout/external-critical-commentary.gold.aesgcm.json",
+        "present": false,
+        "reason": "benchmark holdout has not been populated/sealed yet"
+      }
+    },
+    {
+      "benchmark_id": "transmission-language",
+      "count": 0,
+      "records": [],
+      "sealed_gold": {
+        "path": "sealed-holdout/transmission-language.gold.aesgcm.json",
+        "present": false,
+        "reason": "benchmark holdout has not been populated/sealed yet"
+      }
+    },
+    {
+      "benchmark_id": "biographical-scope",
+      "count": 0,
+      "records": [],
+      "sealed_gold": {
+        "path": "sealed-holdout/biographical-scope.gold.aesgcm.json",
+        "present": false,
+        "reason": "benchmark holdout has not been populated/sealed yet"
+      }
+    },
+    {
+      "benchmark_id": "cross-witness-identity",
+      "count": 0,
+      "records": [],
+      "sealed_gold": {
+        "path": "sealed-holdout/cross-witness-identity.gold.aesgcm.json",
+        "present": false,
+        "reason": "benchmark holdout has not been populated/sealed yet"
+      }
+    },
+    {
+      "benchmark_id": "report-family-identity",
+      "count": 0,
+      "records": [],
+      "sealed_gold": {
+        "path": "sealed-holdout/report-family-identity.gold.aesgcm.json",
+        "present": false,
+        "reason": "benchmark holdout has not been populated/sealed yet"
+      }
+    }
+  ],
+  "campaign_id": "H3.9.2"
+}

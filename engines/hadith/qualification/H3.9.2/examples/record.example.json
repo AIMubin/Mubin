@@ -1,0 +1,16 @@
+{
+  "benchmark_id": "cross-witness-identity",
+  "case_id": "example-only",
+  "split": "development",
+  "source_ids": ["openiti:0279Tirmidhi.Sunan","openiti:0385Daraqutni.Sunan"],
+  "family_id": "report-family:example-only",
+  "content_fingerprint": "RECOMPUTE_WITH_normalization.fingerprint_payload",
+  "gold_status": "reference_pilot",
+  "synthetic": false,
+  "source_refs": [
+    {"source_id":"openiti:0279Tirmidhi.Sunan","locator":"urn:cts:arabLit:...","source_blob_sha":"PINNED_BLOB_SHA_FROM_SOURCE_REGISTRY","excerpt":"EXACT_SOURCE_EXCERPT","excerpt_sha256":"SHA256_OF_EXACT_UTF8_EXCERPT"},
+    {"source_id":"openiti:0385Daraqutni.Sunan","locator":"urn:cts:arabLit:...","source_blob_sha":"PINNED_BLOB_SHA_FROM_SOURCE_REGISTRY","excerpt":"EXACT_SOURCE_EXCERPT","excerpt_sha256":"SHA256_OF_EXACT_UTF8_EXCERPT"}
+  ],
+  "annotation":{"reviewers":["reviewer:pseudonym-1"],"source_verified":true,"adjudicated":false,"adjudicator":null},
+  "payload":{"input":{"left_report":{},"right_report":{}},"gold":{"label":"same_report_variant"}}
+}

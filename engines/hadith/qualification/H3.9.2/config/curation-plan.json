@@ -1,0 +1,39 @@
+{
+  "campaign_id": "H3.9.2",
+  "plan_version": 1,
+  "frozen_before_curation": true,
+  "rationale": "Pre-register source partitions before reviewed-case expansion so holdout membership cannot be chosen after observing labels or model errors.",
+  "global_source_partition": {
+    "holdout": ["openiti:0385Daraqutni.Sunan","openiti:0458Bayhaqi.SunanSaghir","openiti:0852IbnHajarCasqalani.TalkhisHabir","openiti:1255Shawkani.NaylAwtar","openiti:0327IbnAbiHatimRazi.JarhWaTacdil","openiti:0852IbnHajarCasqalani.TahdhibTahdhib"],
+    "non_holdout": ["openiti:0279Tirmidhi.Sunan","openiti:0458Bayhaqi.SunanKubra","openiti:0762IbnYusufZaylaci.NasbRaya","openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi","openiti:0774IbnKathir.TafsirQuran","openiti:0751IbnQayyimJawziyya.ZadMacad","openiti:0742Mizzi.TahdhibKamal","openiti:0748Dhahabi.MizanIctidal","openiti:0354IbnHibbanBusti.Thiqat","openiti:0365IbnCadiJurjani.KamilFiDucafa","openiti:0463KhatibBaghdadi.TarikhBaghdad","openiti:0852IbnHajarCasqalani.TaqribTahdhib"]
+  },
+  "benchmarks": {
+    "external-critical-commentary": {
+      "holdout_source_pool": ["openiti:0385Daraqutni.Sunan","openiti:0458Bayhaqi.SunanSaghir","openiti:0852IbnHajarCasqalani.TalkhisHabir","openiti:1255Shawkani.NaylAwtar"],
+      "non_holdout_source_pool": ["openiti:0279Tirmidhi.Sunan","openiti:0458Bayhaqi.SunanKubra","openiti:0762IbnYusufZaylaci.NasbRaya","openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi","openiti:0774IbnKathir.TafsirQuran","openiti:0751IbnQayyimJawziyya.ZadMacad"],
+      "target_holdout": 90, "target_non_holdout": 210
+    },
+    "transmission-language": {
+      "holdout_source_pool": ["openiti:0327IbnAbiHatimRazi.JarhWaTacdil","openiti:0852IbnHajarCasqalani.TahdhibTahdhib"],
+      "non_holdout_source_pool": ["openiti:0742Mizzi.TahdhibKamal","openiti:0748Dhahabi.MizanIctidal","openiti:0354IbnHibbanBusti.Thiqat","openiti:0365IbnCadiJurjani.KamilFiDucafa","openiti:0463KhatibBaghdadi.TarikhBaghdad","openiti:0852IbnHajarCasqalani.TaqribTahdhib"],
+      "target_holdout": 72, "target_non_holdout": 168
+    },
+    "biographical-scope": {
+      "holdout_source_pool": ["openiti:0327IbnAbiHatimRazi.JarhWaTacdil","openiti:0852IbnHajarCasqalani.TahdhibTahdhib"],
+      "non_holdout_source_pool": ["openiti:0742Mizzi.TahdhibKamal","openiti:0748Dhahabi.MizanIctidal","openiti:0354IbnHibbanBusti.Thiqat","openiti:0365IbnCadiJurjani.KamilFiDucafa","openiti:0463KhatibBaghdadi.TarikhBaghdad","openiti:0852IbnHajarCasqalani.TaqribTahdhib"],
+      "target_holdout": 60, "target_non_holdout": 140
+    },
+    "cross-witness-identity": {
+      "holdout_source_pool": ["openiti:0385Daraqutni.Sunan","openiti:0458Bayhaqi.SunanSaghir","openiti:0852IbnHajarCasqalani.TalkhisHabir","openiti:1255Shawkani.NaylAwtar"],
+      "non_holdout_source_pool": ["openiti:0279Tirmidhi.Sunan","openiti:0458Bayhaqi.SunanKubra","openiti:0762IbnYusufZaylaci.NasbRaya","openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi","openiti:0774IbnKathir.TafsirQuran","openiti:0751IbnQayyimJawziyya.ZadMacad"],
+      "target_holdout": 72, "target_non_holdout": 168,
+      "constraint": "Every pair/case must use sources wholly inside one partition; cross-partition pairs are prohibited."
+    },
+    "report-family-identity": {
+      "holdout_source_pool": ["openiti:0385Daraqutni.Sunan","openiti:0458Bayhaqi.SunanSaghir","openiti:0852IbnHajarCasqalani.TalkhisHabir","openiti:1255Shawkani.NaylAwtar"],
+      "non_holdout_source_pool": ["openiti:0279Tirmidhi.Sunan","openiti:0458Bayhaqi.SunanKubra","openiti:0762IbnYusufZaylaci.NasbRaya","openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi","openiti:0774IbnKathir.TafsirQuran","openiti:0751IbnQayyimJawziyya.ZadMacad"],
+      "target_holdout": 90, "target_non_holdout": 210,
+      "constraint": "Every reviewed report-family graph must be wholly contained inside one source partition."
+    }
+  }
+}

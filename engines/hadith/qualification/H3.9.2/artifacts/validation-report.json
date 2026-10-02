@@ -1,0 +1,398 @@
+{
+  "all_benchmarks_qualified": false,
+  "benchmarks": [
+    {
+      "benchmark_id": "external-critical-commentary",
+      "counts": {
+        "development": 0,
+        "holdout": 0,
+        "validation": 0
+      },
+      "coverage": {
+        "holdout_families": 0,
+        "holdout_sources": 0,
+        "unique_families": 0,
+        "unique_sources": 0
+      },
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "qualification_eligible": false,
+      "records_path": "benchmarks/external-critical-commentary/records.jsonl",
+      "source_disjoint": true,
+      "total": 0,
+      "violations": [
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "development: 0 != 150"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "validation: 0 != 60"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "holdout: 0 != 90"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "cardinality.total_not_exact",
+          "message": "total: 0 != 300"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "coverage.sources",
+          "message": "unique sources: 0 < 10"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "coverage.holdout_sources",
+          "message": "holdout sources: 0 < 3"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "coverage.families",
+          "message": "unique families: 0 < 60"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "coverage.holdout_families",
+          "message": "holdout families: 0 < 18"
+        },
+        {
+          "benchmark_id": "external-critical-commentary",
+          "case_id": null,
+          "code": "holdout.seal_binding",
+          "message": "sealed holdout store missing"
+        }
+      ]
+    },
+    {
+      "benchmark_id": "transmission-language",
+      "counts": {
+        "development": 0,
+        "holdout": 0,
+        "validation": 0
+      },
+      "coverage": {
+        "holdout_families": 0,
+        "holdout_sources": 0,
+        "unique_families": 0,
+        "unique_sources": 0
+      },
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "qualification_eligible": false,
+      "records_path": "benchmarks/transmission-language/records.jsonl",
+      "source_disjoint": true,
+      "total": 0,
+      "violations": [
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "development: 0 != 120"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "validation: 0 != 48"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "holdout: 0 != 72"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "cardinality.total_not_exact",
+          "message": "total: 0 != 240"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "coverage.sources",
+          "message": "unique sources: 0 < 8"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "coverage.holdout_sources",
+          "message": "holdout sources: 0 < 2"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "coverage.families",
+          "message": "unique families: 0 < 48"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "coverage.holdout_families",
+          "message": "holdout families: 0 < 15"
+        },
+        {
+          "benchmark_id": "transmission-language",
+          "case_id": null,
+          "code": "holdout.seal_binding",
+          "message": "sealed holdout store missing"
+        }
+      ]
+    },
+    {
+      "benchmark_id": "biographical-scope",
+      "counts": {
+        "development": 0,
+        "holdout": 0,
+        "validation": 0
+      },
+      "coverage": {
+        "holdout_families": 0,
+        "holdout_sources": 0,
+        "unique_families": 0,
+        "unique_sources": 0
+      },
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "qualification_eligible": false,
+      "records_path": "benchmarks/biographical-scope/records.jsonl",
+      "source_disjoint": true,
+      "total": 0,
+      "violations": [
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "development: 0 != 100"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "validation: 0 != 40"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "holdout: 0 != 60"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "cardinality.total_not_exact",
+          "message": "total: 0 != 200"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "coverage.sources",
+          "message": "unique sources: 0 < 8"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "coverage.holdout_sources",
+          "message": "holdout sources: 0 < 2"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "coverage.families",
+          "message": "unique families: 0 < 40"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "coverage.holdout_families",
+          "message": "holdout families: 0 < 12"
+        },
+        {
+          "benchmark_id": "biographical-scope",
+          "case_id": null,
+          "code": "holdout.seal_binding",
+          "message": "sealed holdout store missing"
+        }
+      ]
+    },
+    {
+      "benchmark_id": "cross-witness-identity",
+      "counts": {
+        "development": 0,
+        "holdout": 0,
+        "validation": 0
+      },
+      "coverage": {
+        "holdout_families": 0,
+        "holdout_sources": 0,
+        "unique_families": 0,
+        "unique_sources": 0
+      },
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "qualification_eligible": false,
+      "records_path": "benchmarks/cross-witness-identity/records.jsonl",
+      "source_disjoint": true,
+      "total": 0,
+      "violations": [
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "development: 0 != 120"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "validation: 0 != 48"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "holdout: 0 != 72"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "cardinality.total_not_exact",
+          "message": "total: 0 != 240"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "coverage.sources",
+          "message": "unique sources: 0 < 8"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "coverage.holdout_sources",
+          "message": "holdout sources: 0 < 3"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "coverage.families",
+          "message": "unique families: 0 < 60"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "coverage.holdout_families",
+          "message": "holdout families: 0 < 18"
+        },
+        {
+          "benchmark_id": "cross-witness-identity",
+          "case_id": null,
+          "code": "holdout.seal_binding",
+          "message": "sealed holdout store missing"
+        }
+      ]
+    },
+    {
+      "benchmark_id": "report-family-identity",
+      "counts": {
+        "development": 0,
+        "holdout": 0,
+        "validation": 0
+      },
+      "coverage": {
+        "holdout_families": 0,
+        "holdout_sources": 0,
+        "unique_families": 0,
+        "unique_sources": 0
+      },
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "qualification_eligible": false,
+      "records_path": "benchmarks/report-family-identity/records.jsonl",
+      "source_disjoint": true,
+      "total": 0,
+      "violations": [
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "development: 0 != 150"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "validation: 0 != 60"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "cardinality.not_exact",
+          "message": "holdout: 0 != 90"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "cardinality.total_not_exact",
+          "message": "total: 0 != 300"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "coverage.sources",
+          "message": "unique sources: 0 < 10"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "coverage.holdout_sources",
+          "message": "holdout sources: 0 < 3"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "coverage.families",
+          "message": "unique families: 0 < 75"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "coverage.holdout_families",
+          "message": "holdout families: 0 < 23"
+        },
+        {
+          "benchmark_id": "report-family-identity",
+          "case_id": null,
+          "code": "holdout.seal_binding",
+          "message": "sealed holdout store missing"
+        }
+      ]
+    }
+  ],
+  "campaign_id": "H3.9.2",
+  "campaign_violations": [],
+  "global_disjointness": {
+    "family_disjoint": true,
+    "family_overlap": [],
+    "fingerprint_disjoint": true,
+    "fingerprint_overlap": [],
+    "source_disjoint": true,
+    "source_overlap": []
+  },
+  "global_violations": [],
+  "source_registry_entries": 19,
+  "violation_count": 45
+}

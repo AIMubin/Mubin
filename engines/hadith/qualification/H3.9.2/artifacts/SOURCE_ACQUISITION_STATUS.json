@@ -1,0 +1,9 @@
+{
+  "campaign_id": "H3.9.2",
+  "attempted_on": "2026-10-02",
+  "local_cache_acquired": false,
+  "reason": "execution_environment_network_unavailable",
+  "qualification_source_pins_verified_via_connected_github": true,
+  "qualification_source_count": 18,
+  "required_next_action": "run `python -m benchmark_campaign acquire-sources` in a network-enabled environment; every downloaded file must match the pinned Git blob SHA before curation"
+}
