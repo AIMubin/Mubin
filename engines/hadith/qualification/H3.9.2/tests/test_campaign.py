@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -34,6 +35,9 @@ class CampaignTests(unittest.TestCase):
         for rel in [
             "schemas/benchmark-record.schema.json",
             "schemas/source-registry.schema.json",
+            "benchmark_campaign/__init__.py",
+            "benchmark_campaign/__main__.py",
+            "benchmark_campaign/cli.py",
             "benchmark_campaign/validate.py",
             "benchmark_campaign/split.py",
             "benchmark_campaign/evaluate.py",
@@ -45,6 +49,9 @@ class CampaignTests(unittest.TestCase):
             "benchmark_campaign/source_registry.py",
             "benchmark_campaign/holdout_seal.py",
             "benchmark_campaign/queue_plan.py",
+            "benchmark_campaign/curation.py",
+            "benchmark_campaign/manifests.py",
+            "benchmark_campaign/source_cache.py",
         ]:
             dst = self.root / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -130,7 +137,16 @@ class CampaignTests(unittest.TestCase):
     def _freeze(self):
         p = self.root / "artifacts" / "FREEZE_MANIFEST.json"
         freeze_campaign(self.root, self.spec_path, p)
-        create_freeze_anchor(p, self.root / "private" / "FREEZE_ANCHOR.json", "a" * 40)
+        (self.root / ".gitignore").write_text("private/\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.root), "init"], check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["git", "-C", str(self.root), "config", "user.email", "tests@aimubin.invalid"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "config", "user.name", "Mubin Tests"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-m", "freeze fixture"], check=True, stdout=subprocess.DEVNULL)
+        source_commit = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True
+        ).strip()
+        create_freeze_anchor(p, self.root / "private" / "FREEZE_ANCHOR.json", source_commit)
         return p
 
     def _perfect_predictions(self, path: Path, label="yes"):
@@ -140,12 +156,17 @@ class CampaignTests(unittest.TestCase):
     def _lock_model(self, manifest_path: Path):
         model_cfg = self.root / "model-config.json"
         generation_cfg = self.root / "generation-config.json"
+        model_artifact = self.root / "model.bin"
         write_json(model_cfg, {"model": "test"})
         write_json(generation_cfg, {"temperature": 0})
+        model_artifact.write_bytes(b"immutable-test-model")
+        system_commit = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True
+        ).strip()
         return lock_model(
             self.root, manifest_path, "test-model@locked", model_cfg,
-            system_commit="b" * 40,
-            model_artifact_sha256="c" * 64,
+            system_commit=system_commit,
+            model_artifact_path=model_artifact,
             generation_config_path=generation_cfg,
         )
 
@@ -157,7 +178,9 @@ class CampaignTests(unittest.TestCase):
             "schema_version": 1,
             "audit_kind": "architecture_qualification",
             "audit_id": "test-architecture-audit",
-            "candidate_commit": "b" * 40,
+            "candidate_commit": subprocess.check_output(
+                ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True
+            ).strip(),
             "frozen": True,
             "architecture_gate_passed": True,
             "evidence": [{"path": str(evidence.relative_to(self.root)), "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest()}],
@@ -265,6 +288,25 @@ class CampaignTests(unittest.TestCase):
         with (self.root / "benchmarks" / "b1" / "records.jsonl").open("a") as f:
             f.write("\n")
         self.assertFalse(verify_freeze(self.root, manifest_path)["verified"])
+
+    def test_manifest_tamper_after_freeze_fails_even_if_frozen_files_are_unchanged(self):
+        self.write_good()
+        manifest_path = self._freeze()
+        manifest = load_json(manifest_path)
+        manifest["freeze_id"] = "f" * 64
+        write_json(manifest_path, manifest)
+        result = verify_freeze(self.root, manifest_path)
+        self.assertFalse(result["verified"])
+        reasons = {x["reason"] for x in result["mismatches"]}
+        self.assertTrue("freeze_id_mismatch" in reasons or "anchor_manifest_hash_mismatch" in reasons)
+
+    def test_freeze_verification_requires_detached_anchor(self):
+        self.write_good()
+        manifest_path = self._freeze()
+        (self.root / "private" / "FREEZE_ANCHOR.json").unlink()
+        result = verify_freeze(self.root, manifest_path)
+        self.assertFalse(result["verified"])
+        self.assertIn("detached_anchor_missing", {x["reason"] for x in result["mismatches"]})
 
     def test_manifests_are_emitted_with_source_sets(self):
         self.write_good()

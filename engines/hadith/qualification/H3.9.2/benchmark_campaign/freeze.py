@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 from pathlib import Path
 from typing import Any
 import re
+import subprocess
 
 from .core import canonical_json_bytes, load_json, sha256_bytes, sha256_file, write_json
 from .manifests import emit_campaign_manifests

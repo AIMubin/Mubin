@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +10,6 @@ from benchmark_campaign.audit import _read_architecture_gate
 from benchmark_campaign.core import dump_jsonl, load_json, write_json
 from benchmark_campaign.curation import curate_reviewed_file
 from benchmark_campaign.evaluate import _threshold_pass
-from benchmark_campaign.freeze import create_freeze_anchor, freeze_campaign, verify_freeze
 from benchmark_campaign.normalization import fingerprint_payload
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
 from benchmark_campaign.validate import _validate_annotation, validate_campaign
@@ -178,27 +176,6 @@ class ReviewRegressionTests(unittest.TestCase):
             codes = {x["code"] for x in report["campaign_violations"]}
             self.assertIn("curation_plan.record_partition_mismatch", codes)
             self.assertFalse(report["all_benchmarks_qualified"])
-
-    def test_detached_anchor_detects_manifest_edit_even_if_files_unchanged(self):
-        # Exercise the anchor check directly with a real campaign copy and a freeze fixture.
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            project = Path(__file__).resolve().parents[1]
-            for rel in ("benchmark_campaign","schemas","config","sources","benchmarks"):
-                src = project / rel
-                if src.exists():
-                    shutil.copytree(src, root / rel)
-            shutil.copy2(project / "requirements.txt", root / "requirements.txt")
-            # This production fixture is intentionally red and therefore cannot freeze;
-            # verify the detached anchor primitive itself on a synthetic manifest.
-            (root / "private").mkdir(exist_ok=True)
-            manifest = root / "manifest.json"
-            write_json(manifest, {"freeze_id":"f"*64})
-            anchor = root / "private" / "anchor.json"
-            create_freeze_anchor(manifest, anchor, "a"*40)
-            before = load_json(anchor)["manifest_sha256"]
-            write_json(manifest, {"freeze_id":"e"*64})
-            self.assertNotEqual(before, hashlib.sha256(manifest.read_bytes()).hexdigest())
 
 
 if __name__ == "__main__":
