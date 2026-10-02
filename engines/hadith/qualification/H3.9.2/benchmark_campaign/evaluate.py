@@ -70,6 +70,40 @@ def _threshold_pass(metrics: dict[str, float], thresholds: dict[str, Any],
     return passed, checks
 
 
+def _label_coverage_checks(contract: dict[str, Any], gold: list[Any], task: str) -> tuple[bool, list[dict[str, Any]]]:
+    checks: list[dict[str, Any]] = []
+    passed = True
+    if task == "classification":
+        counts = Counter(str(x) for x in gold)
+        required = contract.get("minimum_label_counts", {})
+        for label, minimum in required.items():
+            actual = int(counts.get(label, 0))
+            ok = actual >= int(minimum)
+            passed = passed and ok
+            checks.append({
+                "metric": f"gold_label_count:{label}",
+                "actual": actual,
+                "expected": {"min": int(minimum)},
+                "passed": ok,
+            })
+    elif task == "multilabel":
+        counts: Counter[str] = Counter()
+        for labels in gold:
+            counts.update(str(x) for x in labels)
+        required = contract.get("minimum_positive_label_counts", {})
+        for label, minimum in required.items():
+            actual = int(counts.get(label, 0))
+            ok = actual >= int(minimum)
+            passed = passed and ok
+            checks.append({
+                "metric": f"gold_positive_count:{label}",
+                "actual": actual,
+                "expected": {"min": int(minimum)},
+                "passed": ok,
+            })
+    return passed, checks
+
+
 def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predictions_dir: Path,
                      out_path: Path, consume: bool = True, holdout_key_path: Path | None = None,
                      freeze_anchor_path: Path | None = None) -> dict[str, Any]:
@@ -145,6 +179,8 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
         allowed_labels = set(contract.get("labels", []))
         if task == "multilabel":
             gold = [set(gold_map[str(r["case_id"])]["labels"]) for r in rows]
+            if any(not g.issubset(allowed_labels) for g in gold):
+                raise ValueError(f"{bid}: gold contains label outside preregistered label set")
             pred = [set(pred_map[str(r["case_id"])]["prediction"]["labels"]) for r in rows]
             if any(not p.issubset(allowed_labels) for p in pred):
                 raise ValueError(f"{bid}: prediction contains label outside preregistered label set")
@@ -153,6 +189,8 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
         elif task == "classification":
             labels = list(contract["labels"])
             gold = [str(gold_map[str(r["case_id"])]["label"]) for r in rows]
+            if any(g not in allowed_labels for g in gold):
+                raise ValueError(f"{bid}: gold contains label outside preregistered label set")
             pred = [str(pred_map[str(r["case_id"])]["prediction"]["label"]) for r in rows]
             if any(p not in allowed_labels for p in pred):
                 raise ValueError(f"{bid}: prediction contains label outside preregistered label set")
@@ -218,6 +256,9 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
             denominators,
             contract.get("minimum_denominators"),
         )
+        coverage_passed, coverage_checks = _label_coverage_checks(contract, gold, task)
+        passed = bool(passed and coverage_passed)
+        checks.extend(coverage_checks)
         all_pass = all_pass and passed
         results.append({
             "benchmark_id": bid,

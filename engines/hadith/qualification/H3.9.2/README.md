@@ -111,7 +111,7 @@ The final holdout is one-shot under one freeze. Byte-identical prediction replay
 
 ## Gate semantics
 
-`benchmark_gate_passed` requires all expanded datasets to qualify, campaign/local disjointness to pass, the freeze to verify, the candidate model to be locked, evaluator-produced one-shot holdout evidence to match the same freeze/model/ciphertext/predictions, and every preregistered threshold to pass.
+`benchmark_gate_passed` requires all expanded datasets to qualify, campaign/local disjointness to pass, the freeze to verify, the candidate model to be locked, evaluator-produced one-shot holdout evidence to match the same freeze/model/ciphertext/predictions, every preregistered metric threshold to pass, and the final holdout to meet preregistered minimum representation for every label plus safety-critical denominator minima.
 
 H4 lifecycle state is reported as:
 

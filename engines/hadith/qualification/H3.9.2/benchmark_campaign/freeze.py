@@ -73,6 +73,18 @@ def _validate_evaluation_contract(spec: dict[str, Any]) -> None:
         for metric, rule in thresholds.items():
             if not isinstance(rule, dict) or ("min" not in rule and "max" not in rule):
                 raise ValueError(f"{b['id']}: invalid threshold rule for {metric}")
+        labels = ev.get("labels")
+        if not isinstance(labels, list) or not labels or len(labels) != len(set(labels)):
+            raise ValueError(f"{b['id']}: labels must be a non-empty unique list")
+        coverage_key = "minimum_label_counts" if ev["task_type"] == "classification" else "minimum_positive_label_counts"
+        coverage = ev.get(coverage_key)
+        if not isinstance(coverage, dict) or set(coverage) != set(labels):
+            raise ValueError(f"{b['id']}: {coverage_key} must cover every preregistered label exactly")
+        if any(not isinstance(v, int) or v < 1 for v in coverage.values()):
+            raise ValueError(f"{b['id']}: {coverage_key} values must be positive integers")
+        for name, minimum in ev.get("minimum_denominators", {}).items():
+            if not isinstance(name, str) or not isinstance(minimum, int) or minimum < 1:
+                raise ValueError(f"{b['id']}: invalid minimum denominator")
 
 
 def _safe_relative(root: Path, p: Path) -> str:

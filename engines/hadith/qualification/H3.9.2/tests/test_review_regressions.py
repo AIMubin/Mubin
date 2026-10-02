@@ -9,7 +9,7 @@ from pathlib import Path
 from benchmark_campaign.audit import _read_architecture_gate
 from benchmark_campaign.core import dump_jsonl, load_json, write_json
 from benchmark_campaign.curation import curate_reviewed_file
-from benchmark_campaign.evaluate import _threshold_pass
+from benchmark_campaign.evaluate import _label_coverage_checks, _threshold_pass
 from benchmark_campaign.normalization import fingerprint_payload
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
 from benchmark_campaign.validate import _validate_annotation, validate_campaign
@@ -25,6 +25,15 @@ class ReviewRegressionTests(unittest.TestCase):
         )
         self.assertFalse(passed)
         self.assertTrue(any(x["metric"] == "unsafe_merge_denominator" and not x["passed"] for x in checks))
+
+    def test_missing_gold_label_fails_coverage_gate(self):
+        contract = {
+            "labels": ["a", "b", "c"],
+            "minimum_label_counts": {"a": 1, "b": 1, "c": 1},
+        }
+        passed, checks = _label_coverage_checks(contract, ["a", "b", "a"], "classification")
+        self.assertFalse(passed)
+        self.assertTrue(any(x["metric"] == "gold_label_count:c" and not x["passed"] for x in checks))
 
     def test_example_architecture_audit_never_qualifies(self):
         with tempfile.TemporaryDirectory() as d:

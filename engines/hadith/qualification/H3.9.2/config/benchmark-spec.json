@@ -6,7 +6,11 @@
   "final_holdout_policy": "one-shot",
   "qualification": {
     "synthetic_eligible": false,
-    "allowed_gold_status": ["source_attributed", "reference_pilot", "expert_gold"],
+    "allowed_gold_status": [
+      "source_attributed",
+      "reference_pilot",
+      "expert_gold"
+    ],
     "require_source_disjoint_holdout": true,
     "require_family_disjoint_holdout": true,
     "require_cross_split_fingerprint_disjointness": true,
@@ -47,9 +51,43 @@
       "family_contract": "family_id identifies the underlying critical proposition/event, not merely a phrase template",
       "evaluation": {
         "task_type": "multilabel",
-        "labels": ["continuity_negative","non_encounter","route_form","route_preference","route_not_preserved","raisedness_negative","narrator_error","narrator_weakening","route_isolation"],
+        "labels": [
+          "continuity_negative",
+          "non_encounter",
+          "route_form",
+          "route_preference",
+          "route_not_preserved",
+          "raisedness_negative",
+          "narrator_error",
+          "narrator_weakening",
+          "route_isolation"
+        ],
         "threshold_basis": "preregistered before expanded holdout inspection; anchored to H3.5 small-holdout P=1.000/R=.875/F1=.933 without demanding perfect recall",
-        "thresholds": {"micro_precision":{"min":0.9},"micro_recall":{"min":0.85},"micro_f1":{"min":0.9},"exact_accuracy":{"min":0.8}}
+        "thresholds": {
+          "micro_precision": {
+            "min": 0.9
+          },
+          "micro_recall": {
+            "min": 0.85
+          },
+          "micro_f1": {
+            "min": 0.9
+          },
+          "exact_accuracy": {
+            "min": 0.8
+          }
+        },
+        "minimum_positive_label_counts": {
+          "continuity_negative": 1,
+          "non_encounter": 1,
+          "route_form": 1,
+          "route_preference": 1,
+          "route_not_preserved": 1,
+          "raisedness_negative": 1,
+          "narrator_error": 1,
+          "narrator_weakening": 1,
+          "route_isolation": 1
+        }
       }
     },
     {
@@ -68,11 +106,44 @@
       "family_contract": "family_id identifies the narrator-pair transmission question independent of wording/source",
       "evaluation": {
         "task_type": "classification",
-        "labels": ["heard_from","heard_by_inverse","did_not_hear","did_not_meet","hearing_not_known","hearing_uncertain","partial_hearing","met"],
+        "labels": [
+          "heard_from",
+          "heard_by_inverse",
+          "did_not_hear",
+          "did_not_meet",
+          "hearing_not_known",
+          "hearing_uncertain",
+          "partial_hearing",
+          "met"
+        ],
         "threshold_basis": "preregistered before expanded holdout inspection; anchored to H3.6 final small-holdout F1=.857 and directionality as a critical semantic invariant",
-        "thresholds": {"accuracy":{"min":0.85},"macro_f1":{"min":0.85},"direction_error_rate":{"max":0.02}},
-        "safety_metrics": {"direction": true},
-        "minimum_denominators": {"direction": 15}
+        "thresholds": {
+          "accuracy": {
+            "min": 0.85
+          },
+          "macro_f1": {
+            "min": 0.85
+          },
+          "direction_error_rate": {
+            "max": 0.02
+          }
+        },
+        "safety_metrics": {
+          "direction": true
+        },
+        "minimum_denominators": {
+          "direction": 15
+        },
+        "minimum_label_counts": {
+          "heard_from": 1,
+          "heard_by_inverse": 1,
+          "did_not_hear": 1,
+          "did_not_meet": 1,
+          "hearing_not_known": 1,
+          "hearing_uncertain": 1,
+          "partial_hearing": 1,
+          "met": 1
+        }
       }
     },
     {
@@ -91,11 +162,44 @@
       "family_contract": "family_id binds narrator pair plus report-scope question so general hearing cannot leak into report-specific holdout cases",
       "evaluation": {
         "task_type": "classification",
-        "labels": ["established","plausible","contradicted","unresolved"],
+        "labels": [
+          "established",
+          "plausible",
+          "contradicted",
+          "unresolved"
+        ],
         "threshold_basis": "preregistered engineering threshold; H3.7's key invariant is preventing pair-general hearing from becoming report-specific certainty",
-        "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"scope_collapse_rate":{"max":0.02}},
-        "safety_metrics": {"scope_collapse":{"protected_gold_labels":["plausible","unresolved"],"forbidden_prediction_labels":["established"]}},
-        "minimum_denominators": {"scope_collapse": 12}
+        "thresholds": {
+          "accuracy": {
+            "min": 0.9
+          },
+          "macro_f1": {
+            "min": 0.9
+          },
+          "scope_collapse_rate": {
+            "max": 0.02
+          }
+        },
+        "safety_metrics": {
+          "scope_collapse": {
+            "protected_gold_labels": [
+              "plausible",
+              "unresolved"
+            ],
+            "forbidden_prediction_labels": [
+              "established"
+            ]
+          }
+        },
+        "minimum_denominators": {
+          "scope_collapse": 12
+        },
+        "minimum_label_counts": {
+          "established": 1,
+          "plausible": 1,
+          "contradicted": 1,
+          "unresolved": 1
+        }
       }
     },
     {
@@ -114,11 +218,42 @@
       "family_contract": "family_id identifies the candidate report family/identity cluster; similarity alone never establishes identity",
       "evaluation": {
         "task_type": "classification",
-        "labels": ["same_report","same_report_variant","related_not_same"],
+        "labels": [
+          "same_report",
+          "same_report_variant",
+          "related_not_same"
+        ],
         "threshold_basis": "preregistered engineering threshold with zero tolerance for unsafe merge of reviewed related-not-same reports",
-        "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"unsafe_merge_rate":{"max":0.0}},
-        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]}},
-        "minimum_denominators": {"unsafe_merge": 18}
+        "thresholds": {
+          "accuracy": {
+            "min": 0.9
+          },
+          "macro_f1": {
+            "min": 0.9
+          },
+          "unsafe_merge_rate": {
+            "max": 0
+          }
+        },
+        "safety_metrics": {
+          "unsafe_merge": {
+            "negative_gold_labels": [
+              "related_not_same"
+            ],
+            "merge_prediction_labels": [
+              "same_report",
+              "same_report_variant"
+            ]
+          }
+        },
+        "minimum_denominators": {
+          "unsafe_merge": 18
+        },
+        "minimum_label_counts": {
+          "same_report": 1,
+          "same_report_variant": 1,
+          "related_not_same": 1
+        }
       }
     },
     {
@@ -137,11 +272,47 @@
       "family_contract": "family_id is the reviewed report-family graph identity; related_not_same conflicts block family formation",
       "evaluation": {
         "task_type": "classification",
-        "labels": ["same_report","same_report_variant","related_not_same"],
+        "labels": [
+          "same_report",
+          "same_report_variant",
+          "related_not_same"
+        ],
         "threshold_basis": "preregistered engineering threshold; graph-level corruption is treated as a safety failure even when aggregate F1 is high",
-        "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"unsafe_merge_rate":{"max":0.0},"provenance_preservation_rate":{"min":1.0}},
-        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]},"provenance_preservation":true},
-        "minimum_denominators": {"unsafe_merge": 23, "provenance_preservation": 90}
+        "thresholds": {
+          "accuracy": {
+            "min": 0.9
+          },
+          "macro_f1": {
+            "min": 0.9
+          },
+          "unsafe_merge_rate": {
+            "max": 0
+          },
+          "provenance_preservation_rate": {
+            "min": 1
+          }
+        },
+        "safety_metrics": {
+          "unsafe_merge": {
+            "negative_gold_labels": [
+              "related_not_same"
+            ],
+            "merge_prediction_labels": [
+              "same_report",
+              "same_report_variant"
+            ]
+          },
+          "provenance_preservation": true
+        },
+        "minimum_denominators": {
+          "unsafe_merge": 23,
+          "provenance_preservation": 90
+        },
+        "minimum_label_counts": {
+          "same_report": 1,
+          "same_report_variant": 1,
+          "related_not_same": 1
+        }
       }
     }
   ]
