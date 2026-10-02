@@ -174,6 +174,72 @@ class FactoryTests(unittest.TestCase):
             self.assertNotIn("source_refs", row)
             self.assertNotIn("answer_provenance", row)
 
+    def test_verifier_task_rejects_answer_bearing_input_key(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, tasks, task = self._build_one_task(root)
+            curator = root / "factory-work" / "curator.jsonl"
+            dump_jsonl(curator, [{
+                "task_id": task["task_id"],
+                "task_fingerprint": task["task_fingerprint"],
+                "model_family": "family-a",
+                "model_ref": "a@1",
+                "status": "candidate",
+                "candidate": {
+                    "payload": {
+                        "input": {"pair": ["A", "B"], "gold_label": "yes"},
+                        "gold": {"label": "yes"}
+                    }
+                },
+            }])
+            with self.assertRaisesRegex(ValueError, "violates verifier blindness"):
+                prepare_verifier_tasks(
+                    root, tasks, curator, root / "factory-work" / "verifier.jsonl"
+                )
+
+    def test_verifier_task_rejects_explicit_label_value_in_input(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, tasks, task = self._build_one_task(root)
+            curator = root / "factory-work" / "curator.jsonl"
+            dump_jsonl(curator, [{
+                "task_id": task["task_id"],
+                "task_fingerprint": task["task_fingerprint"],
+                "model_family": "family-a",
+                "model_ref": "a@1",
+                "status": "candidate",
+                "candidate": {
+                    "payload": {
+                        "input": {"pair": ["A", "B"], "hint": "yes"},
+                        "gold": {"label": "yes"}
+                    }
+                },
+            }])
+            with self.assertRaisesRegex(ValueError, "explicit benchmark label value"):
+                prepare_verifier_tasks(
+                    root, tasks, curator, root / "factory-work" / "verifier.jsonl"
+                )
+
+    def test_model_family_independence_normalizes_case_and_whitespace(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(
+                task, excerpt, verifier_family="  FAMILY-A  "
+            )
+            report, _, adjudication, _ = self._reconcile(
+                root, task, cache, curator, verifier
+            )
+            self.assertEqual(report["promoted_count"], 0)
+            self.assertEqual(
+                load_jsonl(adjudication)[0]["reason"],
+                "model_family_not_independent",
+            )
+
     def _candidate(self, task: dict, excerpt: str):
         return {
             "benchmark_id": task["benchmark_id"],

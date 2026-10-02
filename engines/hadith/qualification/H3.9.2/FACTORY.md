@@ -97,4 +97,4 @@ No disagreement is silently discarded or rewritten into agreement.
 
 ## Orchestration trust boundary
 
-`model_family` and `model_ref` are **orchestration metadata**, not scholarly evidence and not a model's self-asserted authority. The runner/custodian is responsible for wrapping model output with the actual model family/ref used for that run. The factory enforces structural separation and hashes both response envelopes; it does not claim cryptographic proof of a provider identity.
+`model_family` and `model_ref` are **orchestration metadata**, not scholarly evidence and not a model's self-asserted authority. The runner/custodian is responsible for wrapping model output with the actual model family/ref used for that run. The factory enforces structural separation, rejects ordinary answer-bearing fields/label values from the Verifier input, normalizes model-family strings for independence checks, and hashes both response envelopes. It does not claim cryptographic proof of a provider identity or immunity to deliberate steganographic leakage.

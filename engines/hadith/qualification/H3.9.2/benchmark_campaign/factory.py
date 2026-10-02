@@ -334,6 +334,39 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
     }
 
 
+_ANSWER_BEARING_INPUT_KEYS = {
+    "gold", "label", "labels", "answer", "answers", "verdict", "judgment", "judgement",
+    "grade", "ruling", "classification", "prediction", "target", "support", "supports",
+}
+
+
+def _canonical_model_family(value: str) -> str:
+    return " ".join(value.strip().casefold().split())
+
+
+def _blind_input_error(value: Any, task: dict[str, Any], path: str = "input") -> str | None:
+    allowed_labels = {_canonical_model_family(str(x)) for x in task.get("allowed_labels", [])}
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized_key = str(key).strip().casefold().replace("-", "_").replace(".", "_")
+            tokens = {x for x in normalized_key.split("_") if x}
+            if normalized_key in _ANSWER_BEARING_INPUT_KEYS or tokens & _ANSWER_BEARING_INPUT_KEYS:
+                return f"answer-bearing key at {path}.{key}"
+            err = _blind_input_error(child, task, f"{path}.{key}")
+            if err is not None:
+                return err
+        return None
+    if isinstance(value, list):
+        for i, child in enumerate(value):
+            err = _blind_input_error(child, task, f"{path}[{i}]")
+            if err is not None:
+                return err
+        return None
+    if isinstance(value, str) and _canonical_model_family(value) in allowed_labels:
+        return f"explicit benchmark label value at {path}"
+    return None
+
+
 def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path: Path, out_path: Path,
                            partition: str = "non_holdout", custodian_mode: bool = False) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
@@ -368,6 +401,9 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
         payload = candidate.get("payload")
         if not isinstance(payload, dict) or "input" not in payload:
             raise ValueError(f"candidate payload.input missing: {tid}")
+        blind_error = _blind_input_error(payload["input"], task)
+        if blind_error is not None:
+            raise ValueError(f"candidate payload.input violates verifier blindness: {tid}: {blind_error}")
         verifier_task = {
             "task_id": tid,
             "task_fingerprint": task["task_fingerprint"],
@@ -530,7 +566,7 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             continue
         _validate_response_identity(curator, task, "curator")
         _validate_response_identity(verifier, task, "verifier")
-        if curator["model_family"] == verifier["model_family"]:
+        if _canonical_model_family(curator["model_family"]) == _canonical_model_family(verifier["model_family"]):
             adjudication.append({"task_id": tid, "reason": "model_family_not_independent"})
             log(tid, "adjudication", curator, verifier, "model_family_not_independent")
             continue
@@ -612,6 +648,14 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         if not source_ids or not source_ids.issubset(set(task["allowed_source_pool"])):
             adjudication.append({"task_id": tid, "reason": "curator_source_partition_violation"})
             log(tid, "adjudication", curator, verifier, "curator_source_partition_violation")
+            continue
+        verifier_source_ids = {
+            str(s.get("source_id")) for s in verifier_supports
+            if isinstance(s, dict) and isinstance(s.get("source_id"), str)
+        }
+        if not verifier_source_ids.issubset(source_ids):
+            adjudication.append({"task_id": tid, "reason": "verifier_support_not_in_curator_provenance"})
+            log(tid, "adjudication", curator, verifier, "verifier_support_not_in_curator_provenance")
             continue
 
         candidate = json.loads(json.dumps(candidate, ensure_ascii=False))
