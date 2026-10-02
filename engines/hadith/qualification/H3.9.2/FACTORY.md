@@ -30,7 +30,7 @@ adjudication  policy gate
 
 ## Partition isolation
 
-`non_holdout` is the only default acquisition/index/task partition. Any operation containing final-holdout sources requires `--custodian-holdout`, and its cache/task/review/ledger output must be outside the campaign checkout.
+`non_holdout` is the only default acquisition/index/task partition. Any operation containing final-holdout sources requires `--custodian-holdout`. Every source-bearing input and output for that operation — source cache, source index, Curator tasks/responses, Verifier tasks/responses, reviewed staging, adjudication queue, and curation ledger — must be outside the campaign checkout.
 
 This does not make public source books secret. It prevents H4 development artifacts and tuning workflows from accidentally consuming the preregistered final-holdout source partition.
 
@@ -44,7 +44,7 @@ This does not make public source books secret. It prevents H4 development artifa
 | cross-witness-identity | 3 | no; adjudication required |
 | report-family-identity | 3 | no; adjudication required |
 
-Auto-promotion still requires literal source support and all H3.9.2 provenance checks. AI agreement alone never qualifies a case.
+Auto-promotion still requires literal source support and all H3.9.2 provenance checks. AI agreement alone never qualifies a case. The promoted record embeds Curator/Verifier model identities, response SHA-256 hashes, task fingerprint, risk tier, and independently verified support hashes; the validator rejects unreviewed AI `source_attributed` records that bypass this contract.
 
 ## Non-holdout workflow
 
@@ -79,7 +79,7 @@ Example:
 python -m benchmark_campaign acquire-sources --partition holdout --custodian-holdout --cache-dir /custodian/h392/source-cache
 ```
 
-All subsequent holdout commands use `--custodian-holdout` and `/custodian/...` paths. Only after the full reviewed population is complete does the existing split/seal flow produce public holdout records without plaintext gold.
+All subsequent holdout commands use `--custodian-holdout` and `/custodian/...` paths for both inputs and outputs. Only after the full reviewed population is complete does the existing split/seal flow produce public holdout records without plaintext gold.
 
 ## File-based AI interface
 

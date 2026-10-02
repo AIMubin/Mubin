@@ -14,8 +14,10 @@ from benchmark_campaign.factory import (
     enforce_partition_boundary,
     prepare_verifier_tasks,
     reconcile_factory,
+    _gold_contract_error,
 )
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
+from benchmark_campaign.validate import _validate_factory_verification, _validate_factory_risk_policy
 
 
 class FactoryTests(unittest.TestCase):
@@ -151,7 +153,7 @@ class FactoryTests(unittest.TestCase):
                 },
             }])
             out = root / "factory-work" / "verifier.jsonl"
-            prepare_verifier_tasks(tasks, curator, out)
+            prepare_verifier_tasks(root, tasks, curator, out)
             row = load_jsonl(out)[0]
             self.assertEqual(row["candidate_input"], {"pair": ["A", "B"]})
             self.assertNotIn("candidate", row)
@@ -253,6 +255,14 @@ class FactoryTests(unittest.TestCase):
             rows = load_jsonl(reviewed / "b1" / "reviewed.jsonl")
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["factory_verification"]["agreement"], "exact_gold_match")
+            self.assertEqual(rows[0]["factory_verification"]["risk_tier"], 1)
+            self.assertEqual(rows[0]["factory_verification"]["factory_version"], 1)
+            self.assertRegex(rows[0]["factory_verification"]["curator_response_sha256"], r"^[a-f0-9]{64}$")
+            self.assertRegex(rows[0]["factory_verification"]["verifier_response_sha256"], r"^[a-f0-9]{64}$")
+            self.assertNotEqual(
+                rows[0]["factory_verification"]["curator_model_family"],
+                rows[0]["factory_verification"]["verifier_model_family"],
+            )
             self.assertEqual(load_jsonl(adjudication), [])
             ledger_rows = load_jsonl(ledger)
             self.assertEqual(ledger_rows[0]["outcome"], "promoted")
@@ -279,6 +289,103 @@ class FactoryTests(unittest.TestCase):
             report, _, adjudication, _ = self._reconcile(root, task, cache, curator, verifier)
             self.assertEqual(report["promoted_count"], 0)
             self.assertEqual(load_jsonl(adjudication)[0]["reason"], "gold_disagreement")
+
+    def test_holdout_source_index_rejects_internal_cache_even_with_external_output(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            external_out = Path(d) / "custodian" / "index"
+            with self.assertRaisesRegex(ValueError, "outside"):
+                build_source_index(root, cache, external_out, "holdout", True, 512, 64)
+
+    def test_holdout_verifier_preparation_requires_external_inputs_and_output(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            tasks = root / "holdout-tasks.jsonl"
+            curator = root / "holdout-curator.jsonl"
+            out = Path(d) / "custodian" / "verifier.jsonl"
+            dump_jsonl(tasks, [{
+                "task_id": "h1",
+                "task_fingerprint": "a" * 64,
+                "partition": "holdout",
+            }])
+            dump_jsonl(curator, [])
+            with self.assertRaisesRegex(ValueError, "outside"):
+                prepare_verifier_tasks(root, tasks, curator, out, True)
+
+    def test_duplicate_factory_task_ids_are_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            tasks = root / "tasks.jsonl"
+            curator = root / "curator.jsonl"
+            out = root / "verifier.jsonl"
+            row = {
+                "task_id": "dup",
+                "task_fingerprint": "a" * 64,
+                "partition": "non_holdout",
+            }
+            dump_jsonl(tasks, [row, row])
+            dump_jsonl(curator, [])
+            with self.assertRaisesRegex(ValueError, "duplicate factory task IDs"):
+                prepare_verifier_tasks(root, tasks, curator, out)
+
+    def test_gold_contract_rejects_out_of_contract_labels(self):
+        task = {"task_type": "classification", "allowed_labels": ["yes", "no"]}
+        self.assertIsNone(_gold_contract_error({"label": "yes"}, task))
+        self.assertEqual(
+            _gold_contract_error({"label": "maybe"}, task),
+            "classification_label_outside_contract",
+        )
+        multi = {"task_type": "multilabel", "allowed_labels": ["a", "b"]}
+        self.assertEqual(
+            _gold_contract_error({"labels": ["a", "c"]}, multi),
+            "multilabel_label_outside_contract",
+        )
+
+    def test_out_of_contract_gold_routes_to_adjudication(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(task, excerpt)
+            curator["candidate"]["payload"]["gold"] = {"label": "outside"}
+            verifier["answer"]["gold"] = {"label": "outside"}
+            report, _, adjudication, _ = self._reconcile(root, task, cache, curator, verifier)
+            self.assertEqual(report["promoted_count"], 0)
+            self.assertTrue(
+                load_jsonl(adjudication)[0]["reason"].startswith("curator_gold_contract_invalid:")
+            )
+
+    def test_unreviewed_ai_source_attributed_requires_factory_verification(self):
+        record = {
+            "case_id": "x",
+            "gold_status": "source_attributed",
+            "source_ids": ["s1"],
+            "answer_provenance": {
+                "extraction_method": "ai",
+                "human_reviewed": False,
+            },
+        }
+        codes = {v.code for v in _validate_factory_verification(record, "b1")}
+        self.assertIn("qualification.factory_verification_missing", codes)
+
+    def test_risk_tier_three_blocks_unreviewed_ai_even_with_factory_metadata(self):
+        record = {
+            "case_id": "x",
+            "gold_status": "source_attributed",
+            "answer_provenance": {
+                "extraction_method": "ai",
+                "human_reviewed": False,
+            },
+        }
+        codes = {v.code for v in _validate_factory_risk_policy(record, "b1", {"risk_tier": 3})}
+        self.assertIn("qualification.risk_tier_human_gate", codes)
+        record["answer_provenance"]["human_reviewed"] = True
+        self.assertEqual(_validate_factory_risk_policy(record, "b1", {"risk_tier": 3}), [])
 
     def test_risk_policy_can_force_human_or_authority_gate(self):
         with tempfile.TemporaryDirectory() as d:

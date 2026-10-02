@@ -1,4 +1,4 @@
-# H3.9.2 Curation Guide — R3
+# H3.9.2 Curation Guide — R4
 
 ## Trust boundary
 
@@ -55,7 +55,7 @@ For H3.8/H3.9, include every work used by the comparison as a separate `source_r
 
 ## Qualification levels
 
-`source_attributed` is the default extractive track: the answer originates in a human-authored source and may be extracted/structured by AI without pretending that a human reviewed the case. Every such answer must carry one or more literal `supports` bound to the pinned source excerpts; the curator derives support hashes and a `gold_binding_sha256` over the gold answer and supports. It requires `answer_origin=human_authored_source`, `extraction_method=ai|human`, an explicit `human_reviewed` boolean, and `source_verified=true`. `reference_pilot` remains available for genuinely human-reviewed pilot material. `expert_gold` requires two distinct reviewers plus an independent adjudicator. Synthetic records and AI-invented judgments are never qualification-eligible.
+`source_attributed` is the default extractive track: the answer originates in a human-authored source and may be extracted/structured by AI without pretending that a human reviewed the case. When `extraction_method=ai` and `human_reviewed=false`, qualification additionally requires the Benchmark Factory's independent-verifier evidence; a manually written record cannot bypass that gate. Every such answer must carry one or more literal `supports` bound to the pinned source excerpts; the curator derives support hashes and a `gold_binding_sha256` over the gold answer and supports. It requires `answer_origin=human_authored_source`, `extraction_method=ai|human`, an explicit `human_reviewed` boolean, and `source_verified=true`. `reference_pilot` remains available for genuinely human-reviewed pilot material. `expert_gold` requires two distinct reviewers plus an independent adjudicator. Synthetic records and AI-invented judgments are never qualification-eligible.
 
 ## Family IDs
 
@@ -88,7 +88,7 @@ Keep at least two securely controlled backups of the key. Losing it makes the fr
 
 ## No automatic gold
 
-Candidate discovery, regex mining, embedding similarity, Itqan links, LLM suggestions, or heuristic parsers may propose cases. An AI may extract an answer that is explicitly attributable to a pinned human-authored source and record it as `source_attributed`; the AI's own unsupported opinion may never become gold. Derived/adjudicative judgments require `expert_gold` or an explicit human-authored authority statement.
+Candidate discovery, regex mining, embedding similarity, Itqan links, LLM suggestions, or heuristic parsers may propose cases. An AI may extract an answer that is explicitly attributable to a pinned human-authored source and record it as `source_attributed`; the AI's own unsupported opinion may never become gold. Derived/adjudicative judgments require `expert_gold` or an explicit human-authored authority statement. Risk-tier 3 H3.8/H3.9 identity/family cases cannot qualify from unreviewed AI agreement, even if Curator and Verifier agree; they are routed to a human/authority gate.
 
 
 ### Direct vs composite attribution

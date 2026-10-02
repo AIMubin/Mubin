@@ -157,6 +157,77 @@ def _validate_answer_support(record: dict[str, Any], benchmark_id: str) -> list[
     return out
 
 
+def _validate_factory_verification(record: dict[str, Any], benchmark_id: str) -> list[Violation]:
+    out: list[Violation] = []
+    if record.get("gold_status") != "source_attributed":
+        return out
+    ap = record.get("answer_provenance")
+    if not isinstance(ap, dict):
+        return out
+    if ap.get("extraction_method") != "ai" or ap.get("human_reviewed") is not False:
+        return out
+    cid = record.get("case_id")
+    fv = record.get("factory_verification")
+    if not isinstance(fv, dict):
+        return [Violation(
+            "qualification.factory_verification_missing",
+            "unreviewed AI source_attributed gold requires independent factory verification",
+            benchmark_id, cid,
+        )]
+    for field in ("curator_model_family", "curator_model_ref", "verifier_model_family", "verifier_model_ref"):
+        if not isinstance(fv.get(field), str) or not fv[field].strip():
+            out.append(Violation("qualification.factory_verification_identity", f"factory_verification.{field} is required", benchmark_id, cid))
+    if (
+        isinstance(fv.get("curator_model_family"), str)
+        and fv.get("curator_model_family") == fv.get("verifier_model_family")
+    ):
+        out.append(Violation("qualification.factory_verification_independence", "curator and verifier model families must differ", benchmark_id, cid))
+    for field in ("curator_response_sha256", "verifier_response_sha256", "task_fingerprint"):
+        if not _is_sha256(fv.get(field)):
+            out.append(Violation("qualification.factory_verification_hash", f"factory_verification.{field} must be sha256", benchmark_id, cid))
+    if fv.get("agreement") != "exact_gold_match":
+        out.append(Violation("qualification.factory_verification_agreement", "factory verification must record exact_gold_match", benchmark_id, cid))
+    if not isinstance(fv.get("factory_version"), int) or int(fv.get("factory_version", 0)) < 1:
+        out.append(Violation("qualification.factory_version", "factory_version must be a positive integer", benchmark_id, cid))
+    if not isinstance(fv.get("risk_tier"), int) or int(fv.get("risk_tier", 0)) not in {1, 2, 3}:
+        out.append(Violation("qualification.factory_risk_tier", "risk_tier must be 1, 2, or 3", benchmark_id, cid))
+    supports = fv.get("verifier_supports")
+    if not isinstance(supports, list) or not supports:
+        out.append(Violation("qualification.factory_verifier_supports", "independent verifier supports are required", benchmark_id, cid))
+    else:
+        source_ids = set(str(x) for x in record.get("source_ids", []) if isinstance(x, str))
+        for support in supports:
+            if not isinstance(support, dict):
+                out.append(Violation("qualification.factory_verifier_support", "each verifier support must be an object", benchmark_id, cid))
+                continue
+            if support.get("source_id") not in source_ids:
+                out.append(Violation("qualification.factory_verifier_source", "verifier support source must belong to record source_ids", benchmark_id, cid))
+            if not isinstance(support.get("locator"), str) or not support["locator"].strip():
+                out.append(Violation("qualification.factory_verifier_locator", "verifier support locator is required", benchmark_id, cid))
+            for field in ("excerpt_sha256", "support_text_sha256"):
+                if not _is_sha256(support.get(field)):
+                    out.append(Violation("qualification.factory_verifier_hash", f"verifier support {field} must be sha256", benchmark_id, cid))
+    return out
+
+
+def _validate_factory_risk_policy(record: dict[str, Any], benchmark_id: str,
+                                  benchmark_policy: dict[str, Any] | None) -> list[Violation]:
+    if not isinstance(benchmark_policy, dict) or int(benchmark_policy.get("risk_tier", 0)) < 3:
+        return []
+    if record.get("gold_status") != "source_attributed":
+        return []
+    ap = record.get("answer_provenance")
+    if not isinstance(ap, dict):
+        return []
+    if ap.get("extraction_method") == "ai" and ap.get("human_reviewed") is False:
+        return [Violation(
+            "qualification.risk_tier_human_gate",
+            "risk-tier 3 AI-extracted source_attributed cases require human/authority review before qualification",
+            benchmark_id, record.get("case_id"),
+        )]
+    return []
+
+
 def validate_record(record: dict[str, Any], benchmark_id: str, registry: dict[str, dict[str, Any]],
                     sealed_holdout_required: bool = False) -> list[Violation]:
     out: list[Violation] = []
@@ -255,6 +326,7 @@ def validate_record(record: dict[str, Any], benchmark_id: str, registry: dict[st
         out.append(Violation("record.content_fingerprint", "content_fingerprint must be lowercase sha256", benchmark_id, cid))
     out.extend(_validate_annotation(record, benchmark_id))
     out.extend(_validate_answer_support(record, benchmark_id))
+    out.extend(_validate_factory_verification(record, benchmark_id))
     return out
 
 
@@ -270,8 +342,11 @@ def validate_benchmark(root: Path, bspec: dict[str, Any], campaign_spec: dict[st
     counts: Counter[str] = Counter()
 
     sealed_holdout_required = campaign_spec.get("qualification", {}).get("require_sealed_holdout_gold") is True
+    policy_path = root / "config" / "factory-policy.json"
+    factory_policy = load_json(policy_path).get("benchmarks", {}).get(benchmark_id, {}) if policy_path.exists() else {}
     for r in records:
         violations.extend(validate_record(r, benchmark_id, registry, sealed_holdout_required))
+        violations.extend(_validate_factory_risk_policy(r, benchmark_id, factory_policy))
         cid = r.get("case_id")
         if isinstance(cid, str):
             if cid in seen_case_ids:

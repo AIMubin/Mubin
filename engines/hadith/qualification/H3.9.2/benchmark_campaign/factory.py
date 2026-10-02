@@ -45,12 +45,33 @@ def _is_inside(root: Path, path: Path) -> bool:
         return False
 
 
-def enforce_partition_boundary(root: Path, partition: str, output_path: Path, custodian_mode: bool) -> None:
+def enforce_partition_boundary(root: Path, partition: str, artifact_path: Path, custodian_mode: bool) -> None:
     if partition in {"holdout", "all"}:
         if not custodian_mode:
             raise ValueError("holdout-bearing operations require custodian_mode")
-        if _is_inside(root, output_path):
-            raise ValueError("holdout-bearing output must be outside the campaign checkout")
+        if _is_inside(root, artifact_path):
+            raise ValueError("holdout-bearing artifact paths must be outside the campaign checkout")
+
+
+def _task_rows(path: Path) -> list[dict[str, Any]]:
+    rows = load_jsonl(path)
+    ids = [str(r.get("task_id", "")) for r in rows]
+    if any(not x for x in ids):
+        raise ValueError("every factory task requires a non-empty task_id")
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate factory task IDs")
+    return rows
+
+
+def _task_partition(rows: list[dict[str, Any]]) -> str:
+    partitions = {str(t.get("partition", "")) for t in rows}
+    if not rows:
+        return "empty"
+    if partitions == {"holdout"}:
+        return "holdout"
+    if partitions == {"non_holdout"}:
+        return "non_holdout"
+    raise ValueError("do not mix holdout and non-holdout tasks in one factory operation")
 
 
 def _segment_text(text: str, max_chars: int, overlap: int) -> list[tuple[int, int, str]]:
@@ -86,6 +107,7 @@ def _segment_text(text: str, max_chars: int, overlap: int) -> list[tuple[int, in
 def build_source_index(root: Path, cache_dir: Path, out_dir: Path, partition: str = "non_holdout",
                        custodian_mode: bool = False, max_chars: int = 3200,
                        overlap: int = 320) -> dict[str, Any]:
+    enforce_partition_boundary(root, partition, cache_dir, custodian_mode)
     enforce_partition_boundary(root, partition, out_dir, custodian_mode)
     source_ids = partition_source_ids(root, partition)
     check = verify_source_cache(root, cache_dir, allowed_source_ids=source_ids)
@@ -189,6 +211,7 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
                         partition: str = "non_holdout", custodian_mode: bool = False) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
         raise ValueError("factory tasks are built one partition at a time")
+    enforce_partition_boundary(root, partition, index_dir, custodian_mode)
     enforce_partition_boundary(root, partition, out_path, custodian_mode)
     plan = load_json(plan_path)
     policy = _policy(root)
@@ -248,8 +271,14 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
     }
 
 
-def prepare_verifier_tasks(tasks_path: Path, curator_responses_path: Path, out_path: Path) -> dict[str, Any]:
-    tasks = {str(t["task_id"]): t for t in load_jsonl(tasks_path)}
+def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path: Path, out_path: Path,
+                           custodian_mode: bool = False) -> dict[str, Any]:
+    task_rows = _task_rows(tasks_path)
+    partition = _task_partition(task_rows)
+    if partition == "holdout":
+        for p in (tasks_path, curator_responses_path, out_path):
+            enforce_partition_boundary(root, "holdout", p, custodian_mode)
+    tasks = {str(t["task_id"]): t for t in task_rows}
     responses = load_jsonl(curator_responses_path)
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -301,6 +330,29 @@ def prepare_verifier_tasks(tasks_path: Path, curator_responses_path: Path, out_p
     }
 
 
+def _gold_contract_error(gold: Any, task: dict[str, Any]) -> str | None:
+    if not isinstance(gold, dict):
+        return "gold_must_be_object"
+    allowed = set(str(x) for x in task.get("allowed_labels", []))
+    task_type = task.get("task_type")
+    if task_type == "classification":
+        label = gold.get("label")
+        if not isinstance(label, str) or label not in allowed:
+            return "classification_label_outside_contract"
+        return None
+    if task_type == "multilabel":
+        labels = gold.get("labels")
+        if not isinstance(labels, list) or not labels:
+            return "multilabel_labels_must_be_nonempty_list"
+        normalized = [str(x) for x in labels]
+        if len(normalized) != len(set(normalized)):
+            return "multilabel_labels_must_be_unique"
+        if not set(normalized).issubset(allowed):
+            return "multilabel_label_outside_contract"
+        return None
+    return "unsupported_task_type"
+
+
 def _validate_response_identity(response: dict[str, Any], task: dict[str, Any], role: str) -> None:
     if response.get("task_fingerprint") != task.get("task_fingerprint"):
         raise ValueError(f"{role} task fingerprint mismatch: {task['task_id']}")
@@ -349,14 +401,15 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
                       verifier_responses_path: Path, source_cache_dir: Path,
                       reviewed_dir: Path, adjudication_path: Path, ledger_path: Path,
                       custodian_mode: bool = False) -> dict[str, Any]:
-    tasks = {str(t["task_id"]): t for t in load_jsonl(tasks_path)}
-    partitions = {str(t["partition"]) for t in tasks.values()}
-    if partitions == {"holdout"}:
-        enforce_partition_boundary(root, "holdout", reviewed_dir, custodian_mode)
-        enforce_partition_boundary(root, "holdout", adjudication_path, custodian_mode)
-        enforce_partition_boundary(root, "holdout", ledger_path, custodian_mode)
-    elif "holdout" in partitions:
-        raise ValueError("do not reconcile holdout and non-holdout tasks in one run")
+    task_rows = _task_rows(tasks_path)
+    partition = _task_partition(task_rows)
+    tasks = {str(t["task_id"]): t for t in task_rows}
+    if partition == "holdout":
+        for p in (
+            tasks_path, curator_responses_path, verifier_responses_path, source_cache_dir,
+            reviewed_dir, adjudication_path, ledger_path,
+        ):
+            enforce_partition_boundary(root, "holdout", p, custodian_mode)
 
     curators = {str(r["task_id"]): r for r in load_jsonl(curator_responses_path)}
     verifiers = {str(r["task_id"]): r for r in load_jsonl(verifier_responses_path)}
@@ -424,6 +477,18 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             adjudication.append({"task_id": tid, "reason": "curator_gold_missing"})
             log(tid, "adjudication", curator, verifier, "curator_gold_missing")
             continue
+        curator_gold_error = _gold_contract_error(payload["gold"], task)
+        if curator_gold_error is not None:
+            reason = f"curator_gold_contract_invalid:{curator_gold_error}"
+            adjudication.append({"task_id": tid, "reason": reason})
+            log(tid, "adjudication", curator, verifier, reason)
+            continue
+        verifier_gold_error = _gold_contract_error(answer.get("gold"), task)
+        if verifier_gold_error is not None:
+            reason = f"verifier_gold_contract_invalid:{verifier_gold_error}"
+            adjudication.append({"task_id": tid, "reason": reason})
+            log(tid, "adjudication", curator, verifier, reason)
+            continue
         if canonical_json_bytes(payload["gold"]) != canonical_json_bytes(answer.get("gold")):
             adjudication.append({
                 "task_id": tid,
@@ -477,11 +542,17 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             continue
 
         candidate = json.loads(json.dumps(candidate, ensure_ascii=False))
+        curator_response_sha256 = sha256_bytes(canonical_json_bytes(curator))
+        verifier_response_sha256 = sha256_bytes(canonical_json_bytes(verifier))
         candidate["factory_verification"] = {
+            "factory_version": int(_policy(root).get("factory_version", 0)),
+            "risk_tier": int(task.get("risk_tier", 0)),
             "curator_model_family": curator["model_family"],
             "curator_model_ref": curator["model_ref"],
             "verifier_model_family": verifier["model_family"],
             "verifier_model_ref": verifier["model_ref"],
+            "curator_response_sha256": curator_response_sha256,
+            "verifier_response_sha256": verifier_response_sha256,
             "verifier_supports": verifier_supports,
             "agreement": "exact_gold_match",
             "task_fingerprint": task["task_fingerprint"],
@@ -493,6 +564,7 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             log(tid, "adjudication", curator, verifier, "curator_candidate_failed_qualification_contract")
             continue
         sealed["factory_task_id"] = tid
+        sealed["factory_slot_id"] = task.get("slot_id", tid)
         sealed["factory_task_fingerprint"] = task["task_fingerprint"]
         promoted.append(sealed)
         log(tid, "promoted", curator, verifier, case_id=str(sealed.get("case_id")))
@@ -504,12 +576,21 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         out = reviewed_dir / bid / "reviewed.jsonl"
         existing = load_jsonl(out)
         existing_ids = {str(r.get("case_id")) for r in existing}
+        existing_slots = {
+            str(r.get("factory_slot_id")) for r in existing
+            if isinstance(r.get("factory_slot_id"), str)
+        }
         for row in rows:
             cid = str(row.get("case_id"))
+            slot_id = row.get("factory_slot_id")
             if cid in existing_ids:
                 raise ValueError(f"duplicate promoted case_id: {cid}")
+            if isinstance(slot_id, str) and slot_id in existing_slots:
+                raise ValueError(f"factory slot already promoted: {slot_id}")
             existing.append(row)
             existing_ids.add(cid)
+            if isinstance(slot_id, str):
+                existing_slots.add(slot_id)
         dump_jsonl(out, existing)
 
     dump_jsonl(adjudication_path, adjudication)
