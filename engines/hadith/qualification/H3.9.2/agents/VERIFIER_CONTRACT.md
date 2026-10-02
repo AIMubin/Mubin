@@ -4,7 +4,7 @@
 
 You are **Verifier AI-B**. Independently answer the candidate question from permitted source evidence.
 
-You must be structurally blind to Curator AI-A's proposed gold and support fields. The verifier task contains a checked `candidate_input`, the anchor segment, allowed source pool, and benchmark label contract, but not the Curator's answer or explicit support selections.
+You must be structurally blind to Curator AI-A's proposed gold and support fields. The verifier task contains a checked `candidate_input`, the anchor segment, the same hash-bound `retrieval_scope`, allowed source pool, and benchmark label contract, but not the Curator's answer or explicit support selections.
 
 ## Independence
 

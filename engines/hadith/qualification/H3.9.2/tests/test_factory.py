@@ -146,6 +146,11 @@ class FactoryTests(unittest.TestCase):
         task = load_jsonl(tasks)[0]
         self.assertEqual(task["allowed_source_pool"], ["s1"])
         self.assertEqual(task["forbidden_source_pool"], ["s2"])
+        self.assertEqual(task["retrieval_scope"]["source_ids"], ["s1"])
+        self.assertEqual(task["retrieval_scope"]["partition"], "non_holdout")
+        self.assertEqual(task["retrieval_scope"]["access_mode"], "full_partition_index")
+        self.assertRegex(task["retrieval_scope"]["segments_sha256"], r"^[a-f0-9]{64}$")
+        self.assertRegex(task["retrieval_scope"]["index_manifest_sha256"], r"^[a-f0-9]{64}$")
         return cache, tasks, task
 
     def test_verifier_task_is_blind_to_curator_gold_and_supports(self):
@@ -170,6 +175,7 @@ class FactoryTests(unittest.TestCase):
             prepare_verifier_tasks(root, tasks, curator, out)
             row = load_jsonl(out)[0]
             self.assertEqual(row["candidate_input"], {"pair": ["A", "B"]})
+            self.assertEqual(row["retrieval_scope"], task["retrieval_scope"])
             self.assertNotIn("candidate", row)
             self.assertNotIn("source_refs", row)
             self.assertNotIn("answer_provenance", row)

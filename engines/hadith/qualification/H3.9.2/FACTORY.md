@@ -83,7 +83,7 @@ All subsequent holdout commands use `--custodian-holdout` and `/custodian/...` p
 
 ## File-based AI interface
 
-The factory intentionally uses JSONL contracts instead of embedding one model-provider SDK. The 1,280-slot plan is re-derived from frozen quotas/spec/policy whenever tasks are built, each task fingerprint is recomputed before use, and the source-index manifest hashes `segments.jsonl`; tampering with any of these surfaces fails closed. Curator and Verifier can be local or remote as long as each records a stable `model_family` and `model_ref` and obeys the contracts.
+The factory intentionally uses JSONL contracts instead of embedding one model-provider SDK. Each task includes a hash-bound `retrieval_scope` for the complete allowed partition index; the anchor segment is only the starting point, so multi-source H3.8/H3.9 cases can retrieve corroborating material without crossing the frozen source boundary. The 1,280-slot plan is re-derived from frozen quotas/spec/policy whenever tasks are built, each task fingerprint is recomputed before use, and the source-index manifest hashes `segments.jsonl`; tampering with any of these surfaces fails closed. Curator and Verifier can be local or remote as long as each records a stable `model_family` and `model_ref` and obeys the contracts.
 
 ## Curation ledger
 

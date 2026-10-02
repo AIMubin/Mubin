@@ -110,6 +110,19 @@ def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) 
             raise ValueError(f"factory task allowed_source_pool differs from frozen plan: {slot_id}")
         if task.get("forbidden_source_pool") != bp.get(other_key):
             raise ValueError(f"factory task forbidden_source_pool differs from frozen plan: {slot_id}")
+        retrieval = task.get("retrieval_scope")
+        if not isinstance(retrieval, dict):
+            raise ValueError(f"factory task retrieval_scope missing: {slot_id}")
+        if retrieval.get("access_mode") != "full_partition_index":
+            raise ValueError(f"factory task retrieval_scope mode mismatch: {slot_id}")
+        if retrieval.get("partition") != partition:
+            raise ValueError(f"factory task retrieval_scope partition mismatch: {slot_id}")
+        if retrieval.get("source_ids") != bp.get(pool_key):
+            raise ValueError(f"factory task retrieval_scope source pool mismatch: {slot_id}")
+        for hash_field in ("segments_sha256", "index_manifest_sha256"):
+            value = retrieval.get(hash_field)
+            if not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{64}", value) is None:
+                raise ValueError(f"factory task retrieval_scope {hash_field} invalid: {slot_id}")
         seg = task.get("anchor_segment")
         if not isinstance(seg, dict):
             raise ValueError(f"factory task anchor_segment missing: {slot_id}")
@@ -316,6 +329,15 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
             "forbidden_source_pool": bplan[other_key],
             "allowed_labels": slot["allowed_labels"],
             "task_type": slot["task_type"],
+            "retrieval_scope": {
+                "access_mode": "full_partition_index",
+                "partition": partition,
+                "source_ids": bplan[pool_key],
+                "segments_sha256": index_manifest["segments_sha256"],
+                "index_manifest_sha256": hashlib.sha256(
+                    index_manifest_path.read_bytes()
+                ).hexdigest(),
+            },
             "anchor_segment": seg,
             "instructions": {
                 "contract": "agents/CURATOR_CONTRACT.md",
@@ -416,6 +438,7 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
             "allowed_labels": task["allowed_labels"],
             "task_type": task["task_type"],
             "anchor_source_id": task["anchor_source_id"],
+            "retrieval_scope": task["retrieval_scope"],
             "anchor_segment": task["anchor_segment"],
             "candidate_input": payload["input"],
             "instructions": {
