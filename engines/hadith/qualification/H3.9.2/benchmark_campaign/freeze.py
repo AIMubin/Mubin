@@ -306,6 +306,8 @@ def verify_freeze(root: Path, manifest_path: Path, anchor_path: Path | None = No
                         mismatches.append({"reason": "anchor_git_manifest_mismatch"})
                 except Exception as exc:
                     mismatches.append({"reason": "anchor_git_binding_failed", "detail": str(exc)})
+        except Exception as exc:
+            mismatches.append({"reason": "anchor_unreadable", "detail": str(exc)})
 
     return {
         "freeze_id": manifest.get("freeze_id"),
