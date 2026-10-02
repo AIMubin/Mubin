@@ -20,10 +20,10 @@ jobs:
       run:
         working-directory: engines/hadith/qualification/H3.9.2
     env:
-      CACHE_DIR: ${{ runner.temp }}/h392-source-cache
-      INDEX_DIR: ${{ runner.temp }}/h392-source-index
-      WORK_DIR: ${{ runner.temp }}/h392-factory
-      EVIDENCE_DIR: ${{ runner.temp }}/h392-evidence
+      CACHE_DIR: /tmp/h392-source-cache
+      INDEX_DIR: /tmp/h392-source-index
+      WORK_DIR: /tmp/h392-factory
+      EVIDENCE_DIR: /tmp/h392-evidence
 
     steps:
       - name: Checkout Mubin
@@ -194,6 +194,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: h392-nonholdout-acquisition-evidence
-          path: ${{ runner.temp }}/h392-evidence
+          path: /tmp/h392-evidence
           if-no-files-found: error
           retention-days: 14
