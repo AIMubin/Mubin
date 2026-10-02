@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     lm.add_argument("--freeze-manifest", type=Path, default=Path("artifacts/FREEZE_MANIFEST.json"))
     lm.add_argument("--model-ref", required=True)
     lm.add_argument("--system-commit", required=True)
-    lm.add_argument("--model-artifact-sha256", required=True)
+    lm.add_argument("--model-artifact", type=Path, required=True)
     lm.add_argument("--model-config", type=Path, required=True)
     lm.add_argument("--generation-config", type=Path, required=True)
 
@@ -223,11 +223,12 @@ def main(argv: list[str] | None = None) -> int:
         freeze_manifest = _resolve(root, args.freeze_manifest)
         model_config = _resolve(root, args.model_config)
         generation_config = _resolve(root, args.generation_config)
-        assert freeze_manifest is not None and model_config is not None and generation_config is not None
+        model_artifact = _resolve(root, args.model_artifact)
+        assert freeze_manifest is not None and model_config is not None and generation_config is not None and model_artifact is not None
         marker = lock_model(
             root, freeze_manifest, args.model_ref, model_config,
             system_commit=args.system_commit,
-            model_artifact_sha256=args.model_artifact_sha256,
+            model_artifact_path=model_artifact,
             generation_config_path=generation_config,
         )
         print(json.dumps(marker, indent=2, ensure_ascii=False))

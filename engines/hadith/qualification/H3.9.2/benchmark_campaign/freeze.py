@@ -25,6 +25,9 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "schemas" / "benchmark-record.schema.json",
         root / "schemas" / "source-registry.schema.json",
         root / "requirements.txt",
+        root / "benchmark_campaign" / "__init__.py",
+        root / "benchmark_campaign" / "__main__.py",
+        root / "benchmark_campaign" / "cli.py",
         root / "benchmark_campaign" / "validate.py",
         root / "benchmark_campaign" / "split.py",
         root / "benchmark_campaign" / "evaluate.py",
@@ -37,6 +40,8 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "benchmark_campaign" / "holdout_seal.py",
         root / "benchmark_campaign" / "queue_plan.py",
         root / "benchmark_campaign" / "curation.py",
+        root / "benchmark_campaign" / "manifests.py",
+        root / "benchmark_campaign" / "source_cache.py",
     ]
     for rel in ("config/curation-plan.json", "config/curation-quotas.json"):
         p = root / rel
@@ -161,17 +166,53 @@ def freeze_campaign(root: Path, spec_path: Path, out_path: Path) -> dict[str, An
     return manifest
 
 
+def _git_repo_root(path: Path) -> Path:
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+            text=True, stderr=subprocess.STDOUT,
+        ).strip()
+    except Exception as exc:
+        raise ValueError("qualification operation requires a Git checkout") from exc
+    return Path(out).resolve()
+
+
+def _verify_manifest_at_commit(manifest_path: Path, source_commit: str) -> tuple[Path, str]:
+    repo_root = _git_repo_root(manifest_path.parent)
+    try:
+        subprocess.run(
+            ["git", "-C", str(repo_root), "cat-file", "-e", f"{source_commit}^{{commit}}"],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except Exception as exc:
+        raise ValueError("source_commit does not resolve to a Git commit") from exc
+    rel = str(manifest_path.resolve().relative_to(repo_root))
+    try:
+        committed = subprocess.check_output(
+            ["git", "-C", str(repo_root), "show", f"{source_commit}:{rel}"],
+            stderr=subprocess.STDOUT,
+        )
+    except Exception as exc:
+        raise ValueError("freeze manifest is not present at source_commit") from exc
+    if hashlib.sha256(committed).hexdigest() != sha256_file(manifest_path):
+        raise ValueError("working freeze manifest differs from the manifest stored at source_commit")
+    return repo_root, rel
+
+
 def create_freeze_anchor(manifest_path: Path, anchor_path: Path, source_commit: str) -> dict[str, Any]:
     if not re.fullmatch(r"[a-f0-9]{40}", source_commit):
         raise ValueError("source_commit must be a full 40-hex Git commit SHA")
     if anchor_path.exists():
         raise FileExistsError(f"refusing to overwrite freeze anchor: {anchor_path}")
+    repo_root, manifest_repo_path = _verify_manifest_at_commit(manifest_path, source_commit)
     manifest = load_json(manifest_path)
     obj = {
         "schema_version": ANCHOR_SCHEMA_VERSION,
         "freeze_id": manifest.get("freeze_id"),
         "manifest_sha256": sha256_file(manifest_path),
         "source_commit": source_commit,
+        "manifest_repo_path": manifest_repo_path,
+        "git_binding_verified": True,
         "policy": "detached anchor; store outside tracked campaign tree and pin source_commit in protected Git history/release record",
     }
     write_json(anchor_path, obj)
@@ -228,6 +269,22 @@ def verify_freeze(root: Path, manifest_path: Path, anchor_path: Path | None = No
                 mismatches.append({"reason": "anchor_manifest_hash_mismatch"})
             if not isinstance(source_commit, str) or re.fullmatch(r"[a-f0-9]{40}", source_commit) is None:
                 mismatches.append({"reason": "anchor_source_commit_invalid"})
+            elif anchor.get("git_binding_verified") is not True:
+                mismatches.append({"reason": "anchor_git_binding_not_verified"})
+            else:
+                try:
+                    repo_root = _git_repo_root(manifest_path.parent)
+                    rel = anchor.get("manifest_repo_path")
+                    if not isinstance(rel, str) or not rel:
+                        raise ValueError("manifest_repo_path missing")
+                    committed = subprocess.check_output(
+                        ["git", "-C", str(repo_root), "show", f"{source_commit}:{rel}"],
+                        stderr=subprocess.STDOUT,
+                    )
+                    if hashlib.sha256(committed).hexdigest() != sha256_file(manifest_path):
+                        mismatches.append({"reason": "anchor_git_manifest_mismatch"})
+                except Exception as exc:
+                    mismatches.append({"reason": "anchor_git_binding_failed", "detail": str(exc)})
         except Exception as exc:
             mismatches.append({"reason": "anchor_unreadable", "detail": str(exc)})
 

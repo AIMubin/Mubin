@@ -61,6 +61,8 @@ def _validate_annotation(record: dict[str, Any], benchmark_id: str) -> list[Viol
                 out.append(Violation("qualification.extraction_method", "extraction_method must be ai or human", benchmark_id, cid))
             if ap.get("source_verified") is not True:
                 out.append(Violation("qualification.answer_source_unverified", "source_attributed requires source_verified=true", benchmark_id, cid))
+            if ap.get("mode") not in {"direct_extract", "attributed_composite"}:
+                out.append(Violation("qualification.answer_mode", "source_attributed mode must be direct_extract or attributed_composite", benchmark_id, cid))
             if not isinstance(ap.get("human_reviewed"), bool):
                 out.append(Violation("qualification.human_reviewed", "human_reviewed must be an explicit boolean", benchmark_id, cid))
             elif ap.get("human_reviewed") is True and len(reviewers) < 1:

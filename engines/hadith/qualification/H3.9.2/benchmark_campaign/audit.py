@@ -38,7 +38,7 @@ def _read_architecture_gate(root: Path, path: Path | None, expected_system_commi
     if not isinstance(evs, list) or not evs:
         reasons.append("evidence_missing")
     else:
-        root_resolved = root.resolve()
+        bundle_root = path.parent.resolve()
         for i, ev in enumerate(evs):
             if not isinstance(ev, dict):
                 reasons.append(f"evidence_{i}_invalid")
@@ -48,9 +48,9 @@ def _read_architecture_gate(root: Path, path: Path | None, expected_system_commi
             if not isinstance(rel, str) or not isinstance(expected_sha, str) or re.fullmatch(r"[a-f0-9]{64}", expected_sha) is None:
                 reasons.append(f"evidence_{i}_contract")
                 continue
-            p = (root / rel).resolve()
+            p = (bundle_root / rel).resolve()
             try:
-                p.relative_to(root_resolved)
+                p.relative_to(bundle_root)
             except ValueError:
                 reasons.append(f"evidence_{i}_path_escape")
                 continue

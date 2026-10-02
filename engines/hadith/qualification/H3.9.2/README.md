@@ -75,7 +75,8 @@ source acquisition
 → prepare manifests
 → validate
 → FREEZE
-→ create detached freeze anchor bound to immutable Git commit
+→ commit the frozen manifest + frozen file set to Git
+→ create detached freeze anchor bound to that immutable Git commit
 → export tuning pack (development + validation only)
 → optional tuning
 → MODEL LOCK
@@ -92,10 +93,12 @@ python -m benchmark_campaign build-splits --holdout-key-file /secure/off-repo/mu
 python -m benchmark_campaign prepare-manifests
 python -m benchmark_campaign validate
 python -m benchmark_campaign freeze
-python -m benchmark_campaign anchor-freeze --source-commit <40-hex-commit>\npython -m benchmark_campaign verify-freeze
+git add artifacts/FREEZE_MANIFEST.json artifacts/HOLDOUT_MANIFEST.json artifacts/PROVENANCE_MANIFEST.json artifacts/DISJOINTNESS_REPORT.json benchmarks sealed-holdout config sources schemas benchmark_campaign requirements.txt
+git commit -m "freeze: H3.9.2 qualification set"
+python -m benchmark_campaign anchor-freeze --source-commit $(git rev-parse HEAD)\npython -m benchmark_campaign verify-freeze
 python -m benchmark_campaign export-tuning-pack
 python -m benchmark_campaign mark-tuning-started --model-ref <ref>
-python -m benchmark_campaign lock-model --model-ref <immutable-ref> --system-commit <40-hex-commit> --model-artifact-sha256 <sha256> --model-config <file> --generation-config <file>
+python -m benchmark_campaign lock-model --model-ref <immutable-ref> --system-commit <40-hex-commit> --model-artifact <artifact-file> --model-config <file> --generation-config <file>
 python -m benchmark_campaign evaluate-holdout \
   --predictions-dir <dir> \
   --holdout-key-file /secure/off-repo/mubin-m392.key

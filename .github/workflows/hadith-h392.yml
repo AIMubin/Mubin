@@ -6,7 +6,7 @@ on:
       - "engines/hadith/qualification/H3.9.2/**"
       - ".github/workflows/hadith-h392.yml"
   push:
-    branches: [main]
+    branches: [main, "bootstrap/**"]
     paths:
       - "engines/hadith/qualification/H3.9.2/**"
 

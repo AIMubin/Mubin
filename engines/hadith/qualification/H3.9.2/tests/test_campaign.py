@@ -505,6 +505,43 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(sum(x["target_cases"] for x in b["non_holdout"]["anchor_quotas"]), 3)
         self.assertEqual({x["anchor_source_id"] for x in b["holdout"]["anchor_quotas"]}, {"s-ho"})
 
+    def test_actual_records_must_match_frozen_anchor_quotas(self):
+        self.write_good()
+        self.spec["qualification"]["require_frozen_curation_quotas"] = True
+        write_json(self.spec_path, self.spec)
+        write_json(self.root / "config" / "curation-plan.json", {
+            "campaign_id": "H3.9.2-test",
+            "global_source_partition": {"holdout": ["s-ho"], "non_holdout": ["s-dev", "s-val", "s-extra"]},
+            "benchmarks": {"b1": {
+                "holdout_source_pool": ["s-ho"],
+                "non_holdout_source_pool": ["s-dev", "s-val", "s-extra"],
+                "target_holdout": 1, "target_non_holdout": 3,
+            }},
+        })
+        quotas = build_curation_queue_plan(self.root, self.spec)
+        write_json(self.root / "config" / "curation-quotas.json", quotas)
+        report = validate_campaign(self.root, self.spec)
+        codes = {v["code"] for v in report["campaign_violations"]}
+        self.assertIn("curation_quotas.non_holdout_counts", codes)
+        self.assertFalse(report["all_benchmarks_qualified"])
+
+    def test_model_lock_rejects_nonexistent_system_commit(self):
+        self.write_good()
+        manifest_path = self._freeze()
+        model_cfg = self.root / "model-config.json"
+        generation_cfg = self.root / "generation-config.json"
+        model_artifact = self.root / "model.bin"
+        write_json(model_cfg, {"model": "test"})
+        write_json(generation_cfg, {"temperature": 0})
+        model_artifact.write_bytes(b"model")
+        with self.assertRaisesRegex(ValueError, "system_commit"):
+            lock_model(
+                self.root, manifest_path, "test-model", model_cfg,
+                system_commit="0" * 40,
+                model_artifact_path=model_artifact,
+                generation_config_path=generation_cfg,
+            )
+
     def test_frozen_curation_quota_mismatch_fails_campaign_validation(self):
         self.write_good()
         self.spec["qualification"]["require_frozen_curation_quotas"] = True
