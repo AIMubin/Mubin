@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "campaign_id": "H3.9.2",
+  "evidence_kind": "non_holdout_source_acquisition_and_index",
+  "canonical_main_evidence": true,
+  "runner_commit": "5d05903735d80df7efc5510f4788440136d04e78",
+  "workflow": {
+    "path": ".github/workflows/h392-nonholdout-acquisition.yml",
+    "run_id": 37075157665,
+    "event": "push",
+    "conclusion": "success"
+  },
+  "artifact": {
+    "id": 11255079467,
+    "name": "h392-nonholdout-acquisition-evidence",
+    "digest": "sha256:d175aad25ed83697815799d53ee576deae9110f73ef9bcabe5f17bfe7d3acd71",
+    "size_bytes": 11897,
+    "expires_at_utc": "2026-10-16T22:57:50Z",
+    "redacted": true
+  },
+  "source_partition": {
+    "partition": "non_holdout",
+    "source_count": 12,
+    "expected_source_count": 12,
+    "all_sources_verified": true,
+    "source_set_matches_frozen_partition": true,
+    "holdout_source_count_in_acquisition": 0,
+    "total_source_bytes": 119090785
+  },
+  "index": {
+    "source_count": 12,
+    "segment_count": 24212,
+    "segments_sha256": "14d3be3df7ad57a0f44fecaa05274bb60371491e94793bec243ac698afb18014",
+    "per_source": {
+      "openiti:0279Tirmidhi.Sunan": 75,
+      "openiti:0354IbnHibbanBusti.Thiqat": 992,
+      "openiti:0365IbnCadiJurjani.KamilFiDucafa": 1611,
+      "openiti:0458Bayhaqi.SunanKubra": 3765,
+      "openiti:0463KhatibBaghdadi.TarikhBaghdad": 3632,
+      "openiti:0742Mizzi.TahdhibKamal": 5058,
+      "openiti:0748Dhahabi.MizanIctidal": 1112,
+      "openiti:0751IbnQayyimJawziyya.ZadMacad": 1046,
+      "openiti:0762IbnYusufZaylaci.NasbRaya": 1096,
+      "openiti:0774IbnKathir.TafsirQuran": 2809,
+      "openiti:0852IbnHajarCasqalani.TaqribTahdhib": 396,
+      "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi": 2620
+    }
+  },
+  "factory": {
+    "slot_count": 1280,
+    "non_holdout_slots": 896,
+    "holdout_slots": 384,
+    "non_holdout_task_count": 896,
+    "curator_tasks_sha256": "1ccb15355f8def95aed80cc64872e22acfdacaef3ff963bca5ac0923829b5dc9",
+    "holdout_source_count_in_task_scope": 0
+  },
+  "reproducibility": {
+    "prior_successful_runs": [
+      37074604469,
+      37074828773
+    ],
+    "canonical_main_run": 37075157665,
+    "index_sha256_reproduced": true,
+    "per_source_segment_counts_reproduced": true,
+    "curator_task_count_reproduced": true,
+    "curator_tasks_sha256_reproduced": true
+  },
+  "artifact_policy": {
+    "source_text_committed": false,
+    "source_text_uploaded": false,
+    "segment_text_uploaded": false,
+    "curator_tasks_uploaded": false,
+    "persisted_evidence_contains_only_hashes_counts_and_identifiers": true
+  },
+  "qualification_effect": {
+    "curation_completed_cases": 0,
+    "benchmark_gate_passed": false,
+    "architecture_gate_passed": false,
+    "h4_development_allowed": true,
+    "h4_qualification_allowed": false,
+    "h4_release_allowed": false,
+    "note": "This evidence proves acquisition/index/task-generation readiness only; it does not create benchmark gold or qualification cases."
+  }
+}
