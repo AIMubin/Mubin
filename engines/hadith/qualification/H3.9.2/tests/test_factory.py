@@ -313,7 +313,10 @@ class FactoryTests(unittest.TestCase):
             }])
             dump_jsonl(curator, [])
             with self.assertRaisesRegex(ValueError, "outside"):
-                prepare_verifier_tasks(root, tasks, curator, out, True)
+                prepare_verifier_tasks(
+                    root, tasks, curator, out,
+                    partition="holdout", custodian_mode=True
+                )
 
     def test_duplicate_factory_task_ids_are_rejected(self):
         with tempfile.TemporaryDirectory() as d:
@@ -331,6 +334,68 @@ class FactoryTests(unittest.TestCase):
             dump_jsonl(curator, [])
             with self.assertRaisesRegex(ValueError, "duplicate factory task IDs"):
                 prepare_verifier_tasks(root, tasks, curator, out)
+
+    def test_task_fingerprint_tamper_is_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, tasks, task = self._build_one_task(root)
+            rows = load_jsonl(tasks)
+            rows[0]["risk_tier"] = 3
+            dump_jsonl(tasks, rows)
+            curator = root / "factory-work" / "curator.jsonl"
+            dump_jsonl(curator, [])
+            with self.assertRaisesRegex(ValueError, "task fingerprint mismatch"):
+                prepare_verifier_tasks(root, tasks, curator, root / "factory-work" / "v.jsonl")
+
+    def test_factory_plan_tamper_is_rejected_before_task_generation(self):
+        project = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            plan_path = work / "plan.json"
+            plan = build_factory_plan(project, plan_path)
+            plan["slots"][0]["auto_promotion"] = not plan["slots"][0]["auto_promotion"]
+            write_json(plan_path, plan)
+            index = work / "index"
+            index.mkdir()
+            dump_jsonl(index / "segments.jsonl", [])
+            write_json(index / "INDEX_MANIFEST.json", {
+                "partition": "non_holdout",
+                "segments_sha256": hashlib.sha256((index / "segments.jsonl").read_bytes()).hexdigest(),
+            })
+            with self.assertRaisesRegex(ValueError, "factory plan does not match"):
+                build_factory_tasks(project, plan_path, index, work / "tasks.jsonl", "non_holdout")
+
+    def test_source_index_hash_tamper_is_rejected_before_task_generation(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+            plan = root / "factory-work" / "plan.json"
+            # Use a fixture-local plan that is intentionally not used here; index validation
+            # is exercised after replacing build_factory_plan inputs below.
+            write_json(root / "config" / "benchmark-spec.json", {
+                "campaign_id": "x",
+                "benchmarks": [{
+                    "id": "b1",
+                    "evaluation": {"task_type": "classification", "labels": ["yes", "no"]},
+                }],
+            })
+            write_json(root / "config" / "curation-quotas.json", {
+                "total_target": 2,
+                "benchmarks": [{
+                    "benchmark_id": "b1",
+                    "non_holdout": {"anchor_quotas": [{"anchor_source_id": "s1", "target_cases": 1}]},
+                    "holdout": {"anchor_quotas": [{"anchor_source_id": "s2", "target_cases": 1}]},
+                }],
+            })
+            build_factory_plan(root, plan)
+            with (index / "segments.jsonl").open("a", encoding="utf-8") as fh:
+                fh.write("{}\n")
+            with self.assertRaisesRegex(ValueError, "source index segments hash mismatch"):
+                build_factory_tasks(root, plan, index, root / "factory-work" / "tasks.jsonl", "non_holdout")
 
     def test_gold_contract_rejects_out_of_contract_labels(self):
         task = {"task_type": "classification", "allowed_labels": ["yes", "no"]}

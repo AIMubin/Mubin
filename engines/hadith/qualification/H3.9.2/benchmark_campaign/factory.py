@@ -60,6 +60,13 @@ def _task_rows(path: Path) -> list[dict[str, Any]]:
         raise ValueError("every factory task requires a non-empty task_id")
     if len(ids) != len(set(ids)):
         raise ValueError("duplicate factory task IDs")
+    for row in rows:
+        stored = row.get("task_fingerprint")
+        unsigned = dict(row)
+        unsigned.pop("task_fingerprint", None)
+        expected = sha256_bytes(canonical_json_bytes(unsigned))
+        if stored != expected:
+            raise ValueError(f"factory task fingerprint mismatch: {row.get('task_id')}")
     return rows
 
 
@@ -161,7 +168,7 @@ def build_source_index(root: Path, cache_dir: Path, out_dir: Path, partition: st
     return manifest
 
 
-def build_factory_plan(root: Path, out_path: Path) -> dict[str, Any]:
+def build_factory_plan(root: Path, out_path: Path | None = None) -> dict[str, Any]:
     quotas = _quota_plan(root)
     spec = load_json(root / "config" / "benchmark-spec.json")
     bspec = {b["id"]: b for b in spec["benchmarks"]}
@@ -199,7 +206,8 @@ def build_factory_plan(root: Path, out_path: Path) -> dict[str, Any]:
     }
     if plan["slot_count"] != int(quotas["total_target"]):
         raise ValueError("factory slot count does not match frozen curation target")
-    write_json(out_path, plan)
+    if out_path is not None:
+        write_json(out_path, plan)
     return plan
 
 
@@ -214,9 +222,21 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
     enforce_partition_boundary(root, partition, index_dir, custodian_mode)
     enforce_partition_boundary(root, partition, out_path, custodian_mode)
     plan = load_json(plan_path)
+    expected_plan = build_factory_plan(root)
+    if canonical_json_bytes(plan) != canonical_json_bytes(expected_plan):
+        raise ValueError("factory plan does not match the frozen quotas/spec/policy")
     policy = _policy(root)
     cplan = _curation_plan(root)
-    segments = load_jsonl(index_dir / "segments.jsonl")
+    index_manifest_path = index_dir / "INDEX_MANIFEST.json"
+    if not index_manifest_path.exists():
+        raise FileNotFoundError(index_manifest_path)
+    index_manifest = load_json(index_manifest_path)
+    segments_path = index_dir / "segments.jsonl"
+    if index_manifest.get("partition") != partition:
+        raise ValueError("source index partition does not match requested task partition")
+    if index_manifest.get("segments_sha256") != hashlib.sha256(segments_path.read_bytes()).hexdigest():
+        raise ValueError("source index segments hash mismatch")
+    segments = load_jsonl(segments_path)
     by_source: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for seg in segments:
         by_source[str(seg["source_id"])].append(seg)
@@ -272,12 +292,16 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
 
 
 def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path: Path, out_path: Path,
-                           custodian_mode: bool = False) -> dict[str, Any]:
-    task_rows = _task_rows(tasks_path)
-    partition = _task_partition(task_rows)
+                           partition: str = "non_holdout", custodian_mode: bool = False) -> dict[str, Any]:
+    if partition not in {"holdout", "non_holdout"}:
+        raise ValueError("partition must be holdout or non_holdout")
     if partition == "holdout":
         for p in (tasks_path, curator_responses_path, out_path):
             enforce_partition_boundary(root, "holdout", p, custodian_mode)
+    task_rows = _task_rows(tasks_path)
+    actual_partition = _task_partition(task_rows)
+    if actual_partition != partition:
+        raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
     tasks = {str(t["task_id"]): t for t in task_rows}
     responses = load_jsonl(curator_responses_path)
     out: list[dict[str, Any]] = []
@@ -400,16 +424,20 @@ def _verify_supports(root: Path, source_cache_dir: Path, supports: Any, allowed_
 def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path,
                       verifier_responses_path: Path, source_cache_dir: Path,
                       reviewed_dir: Path, adjudication_path: Path, ledger_path: Path,
-                      custodian_mode: bool = False) -> dict[str, Any]:
-    task_rows = _task_rows(tasks_path)
-    partition = _task_partition(task_rows)
-    tasks = {str(t["task_id"]): t for t in task_rows}
+                      custodian_mode: bool = False, partition: str = "non_holdout") -> dict[str, Any]:
+    if partition not in {"holdout", "non_holdout"}:
+        raise ValueError("partition must be holdout or non_holdout")
     if partition == "holdout":
         for p in (
             tasks_path, curator_responses_path, verifier_responses_path, source_cache_dir,
             reviewed_dir, adjudication_path, ledger_path,
         ):
             enforce_partition_boundary(root, "holdout", p, custodian_mode)
+    task_rows = _task_rows(tasks_path)
+    actual_partition = _task_partition(task_rows)
+    if actual_partition != partition:
+        raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
+    tasks = {str(t["task_id"]): t for t in task_rows}
 
     curators = {str(r["task_id"]): r for r in load_jsonl(curator_responses_path)}
     verifiers = {str(r["task_id"]): r for r in load_jsonl(verifier_responses_path)}

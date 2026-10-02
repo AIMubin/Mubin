@@ -83,7 +83,7 @@ All subsequent holdout commands use `--custodian-holdout` and `/custodian/...` p
 
 ## File-based AI interface
 
-The factory intentionally uses JSONL contracts instead of embedding one model-provider SDK. Curator and Verifier can be local or remote as long as each records a stable `model_family` and `model_ref` and obeys the contracts.
+The factory intentionally uses JSONL contracts instead of embedding one model-provider SDK. The 1,280-slot plan is re-derived from frozen quotas/spec/policy whenever tasks are built, each task fingerprint is recomputed before use, and the source-index manifest hashes `segments.jsonl`; tampering with any of these surfaces fails closed. Curator and Verifier can be local or remote as long as each records a stable `model_family` and `model_ref` and obeys the contracts.
 
 ## Curation ledger
 
@@ -94,3 +94,7 @@ The factory intentionally uses JSONL contracts instead of embedding one model-pr
 A case goes to adjudication when Curator and Verifier disagree, model families are not independent, source support is invalid or crosses partitions, benchmark/anchor identity differs from the frozen slot, policy forbids auto-promotion, or the candidate fails the source-attributed qualification contract.
 
 No disagreement is silently discarded or rewritten into agreement.
+
+## Orchestration trust boundary
+
+`model_family` and `model_ref` are **orchestration metadata**, not scholarly evidence and not a model's self-asserted authority. The runner/custodian is responsible for wrapping model output with the actual model family/ref used for that run. The factory enforces structural separation and hashes both response envelopes; it does not claim cryptographic proof of a provider identity.

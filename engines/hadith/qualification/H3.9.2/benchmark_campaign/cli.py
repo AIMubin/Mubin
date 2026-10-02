@@ -95,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
     fv.add_argument("--tasks", type=Path, required=True)
     fv.add_argument("--curator-responses", type=Path, required=True)
     fv.add_argument("--out", type=Path, required=True)
+    fv.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
     fv.add_argument("--custodian-holdout", action="store_true")
 
     fr = sub.add_parser("factory-reconcile")
@@ -105,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     fr.add_argument("--reviewed-dir", type=Path, required=True)
     fr.add_argument("--adjudication-out", type=Path, required=True)
     fr.add_argument("--ledger-out", type=Path, required=True)
+    fr.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
     fr.add_argument("--custodian-holdout", action="store_true")
 
     fs = sub.add_parser("factory-status")
@@ -268,7 +270,10 @@ def main(argv: list[str] | None = None) -> int:
         curator = _resolve(root, args.curator_responses)
         out = _resolve(root, args.out)
         assert tasks is not None and curator is not None and out is not None
-        report = prepare_verifier_tasks(root, tasks, curator, out, args.custodian_holdout)
+        report = prepare_verifier_tasks(
+            root, tasks, curator, out,
+            partition=args.partition, custodian_mode=args.custodian_holdout
+        )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
 
@@ -283,7 +288,7 @@ def main(argv: list[str] | None = None) -> int:
         assert all(x is not None for x in (tasks, curator, verifier, cache_dir, reviewed_dir, adjudication, ledger))
         report = reconcile_factory(
             root, tasks, curator, verifier, cache_dir, reviewed_dir, adjudication,
-            ledger, args.custodian_holdout
+            ledger, custodian_mode=args.custodian_holdout, partition=args.partition
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
