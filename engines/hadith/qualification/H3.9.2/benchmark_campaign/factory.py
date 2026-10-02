@@ -347,13 +347,14 @@ def _verify_supports(root: Path, source_cache_dir: Path, supports: Any, allowed_
 
 def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path,
                       verifier_responses_path: Path, source_cache_dir: Path,
-                      reviewed_dir: Path, adjudication_path: Path,
+                      reviewed_dir: Path, adjudication_path: Path, ledger_path: Path,
                       custodian_mode: bool = False) -> dict[str, Any]:
     tasks = {str(t["task_id"]): t for t in load_jsonl(tasks_path)}
     partitions = {str(t["partition"]) for t in tasks.values()}
     if partitions == {"holdout"}:
         enforce_partition_boundary(root, "holdout", reviewed_dir, custodian_mode)
         enforce_partition_boundary(root, "holdout", adjudication_path, custodian_mode)
+        enforce_partition_boundary(root, "holdout", ledger_path, custodian_mode)
     elif "holdout" in partitions:
         raise ValueError("do not reconcile holdout and non-holdout tasks in one run")
 
@@ -366,33 +367,62 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
 
     promoted: list[dict[str, Any]] = []
     adjudication: list[dict[str, Any]] = []
+    ledger: list[dict[str, Any]] = []
     skipped = 0
+
+    def log(tid: str, outcome: str, curator: dict[str, Any] | None = None,
+            verifier: dict[str, Any] | None = None, reason: str | None = None,
+            case_id: str | None = None) -> None:
+        ledger.append({
+            "task_id": tid,
+            "task_fingerprint": tasks[tid]["task_fingerprint"],
+            "benchmark_id": tasks[tid]["benchmark_id"],
+            "partition": tasks[tid]["partition"],
+            "outcome": outcome,
+            "reason": reason,
+            "case_id": case_id,
+            "curator_response_sha256": (
+                sha256_bytes(canonical_json_bytes(curator)) if isinstance(curator, dict) else None
+            ),
+            "verifier_response_sha256": (
+                sha256_bytes(canonical_json_bytes(verifier)) if isinstance(verifier, dict) else None
+            ),
+            "curator_model_family": curator.get("model_family") if isinstance(curator, dict) else None,
+            "verifier_model_family": verifier.get("model_family") if isinstance(verifier, dict) else None,
+        })
+
     for tid, task in tasks.items():
         curator = curators.get(tid)
         if curator is None or curator.get("status") != "candidate":
             skipped += 1
+            log(tid, "skipped", curator=curator, reason="no_curator_candidate")
             continue
         verifier = verifiers.get(tid)
         if verifier is None:
             adjudication.append({"task_id": tid, "reason": "missing_verifier_response"})
+            log(tid, "adjudication", curator=curator, reason="missing_verifier_response")
             continue
         _validate_response_identity(curator, task, "curator")
         _validate_response_identity(verifier, task, "verifier")
         if curator["model_family"] == verifier["model_family"]:
             adjudication.append({"task_id": tid, "reason": "model_family_not_independent"})
+            log(tid, "adjudication", curator, verifier, "model_family_not_independent")
             continue
         if verifier.get("status") != "candidate":
             adjudication.append({"task_id": tid, "reason": "verifier_no_candidate"})
+            log(tid, "adjudication", curator, verifier, "verifier_no_candidate")
             continue
 
         candidate = curator.get("candidate")
         answer = verifier.get("answer")
         if not isinstance(candidate, dict) or not isinstance(answer, dict):
             adjudication.append({"task_id": tid, "reason": "malformed_candidate_or_verifier_answer"})
+            log(tid, "adjudication", curator, verifier, "malformed_candidate_or_verifier_answer")
             continue
         payload = candidate.get("payload")
         if not isinstance(payload, dict) or "gold" not in payload:
             adjudication.append({"task_id": tid, "reason": "curator_gold_missing"})
+            log(tid, "adjudication", curator, verifier, "curator_gold_missing")
             continue
         if canonical_json_bytes(payload["gold"]) != canonical_json_bytes(answer.get("gold")):
             adjudication.append({
@@ -401,6 +431,7 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
                 "curator_model_family": curator["model_family"],
                 "verifier_model_family": verifier["model_family"],
             })
+            log(tid, "adjudication", curator, verifier, "gold_disagreement")
             continue
 
         try:
@@ -409,6 +440,7 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             )
         except Exception as exc:
             adjudication.append({"task_id": tid, "reason": "verifier_support_invalid", "detail": str(exc)})
+            log(tid, "adjudication", curator, verifier, "verifier_support_invalid")
             continue
 
         if task.get("auto_promotion") is not True:
@@ -418,10 +450,21 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
                 "curator_model_family": curator["model_family"],
                 "verifier_model_family": verifier["model_family"],
             })
+            log(tid, "adjudication", curator, verifier, "policy_requires_human_or_authority_gate")
             continue
 
         if candidate.get("gold_status") != "source_attributed":
             adjudication.append({"task_id": tid, "reason": "auto_promotion_requires_source_attributed"})
+            log(tid, "adjudication", curator, verifier, "auto_promotion_requires_source_attributed")
+            continue
+
+        if candidate.get("benchmark_id") != task["benchmark_id"]:
+            adjudication.append({"task_id": tid, "reason": "benchmark_id_mismatch"})
+            log(tid, "adjudication", curator, verifier, "benchmark_id_mismatch")
+            continue
+        if candidate.get("anchor_source_id") != task["anchor_source_id"]:
+            adjudication.append({"task_id": tid, "reason": "anchor_source_id_mismatch"})
+            log(tid, "adjudication", curator, verifier, "anchor_source_id_mismatch")
             continue
 
         source_ids = {
@@ -430,6 +473,7 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         }
         if not source_ids or not source_ids.issubset(set(task["allowed_source_pool"])):
             adjudication.append({"task_id": tid, "reason": "curator_source_partition_violation"})
+            log(tid, "adjudication", curator, verifier, "curator_source_partition_violation")
             continue
 
         candidate = json.loads(json.dumps(candidate, ensure_ascii=False))
@@ -446,10 +490,12 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             sealed = seal_reviewed_record(root, candidate, source_cache_dir)
         except Exception as exc:
             adjudication.append({"task_id": tid, "reason": "curator_candidate_failed_qualification_contract", "detail": str(exc)})
+            log(tid, "adjudication", curator, verifier, "curator_candidate_failed_qualification_contract")
             continue
         sealed["factory_task_id"] = tid
         sealed["factory_task_fingerprint"] = task["task_fingerprint"]
         promoted.append(sealed)
+        log(tid, "promoted", curator, verifier, case_id=str(sealed.get("case_id")))
 
     by_benchmark: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in promoted:
@@ -467,11 +513,13 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         dump_jsonl(out, existing)
 
     dump_jsonl(adjudication_path, adjudication)
+    dump_jsonl(ledger_path, ledger)
     return {
         "task_count": len(tasks),
         "promoted_count": len(promoted),
         "adjudication_count": len(adjudication),
         "skipped_count": skipped,
+        "ledger_count": len(ledger),
         "promoted_by_benchmark": dict(sorted(Counter(str(r["benchmark_id"]) for r in promoted).items())),
     }
 

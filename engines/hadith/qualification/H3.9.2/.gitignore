@@ -1,8 +1,5 @@
-__pycache__/
-*.pyc
-artifacts/*.tmp
-source-cache/*.source
-source-cache/*.tmp
+source-cache/
+factory-work/
 private/
+staging/
 *.key
-*.holdout-key

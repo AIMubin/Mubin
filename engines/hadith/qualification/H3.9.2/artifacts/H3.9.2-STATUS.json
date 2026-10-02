@@ -1,9 +1,14 @@
 {
   "campaign_id": "H3.9.2",
-  "release": "3.9.2-r3",
+  "release": "3.9.2-r4",
   "scope": "Hadith Benchmark Expansion Campaign only",
   "ci_authoritative": true,
   "ci_workflow": ".github/workflows/hadith-h392.yml",
+  "benchmark_factory_ready": true,
+  "benchmark_factory_provider_neutral": true,
+  "factory_slot_target": 1280,
+  "curator_verifier_independence_required": true,
+  "holdout_factory_requires_external_custodian_boundary": true,
   "source_registry_entries": 19,
   "qualification_source_count": 18,
   "candidate_only_source_count": 1,
@@ -23,6 +28,6 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "The 1,280 real source-grounded cases have not yet been populated. No final holdout ciphertext or freeze exists, so H4 development may proceed but H4 qualification and release remain closed.",
-  "next_action": "Acquire and Git-blob-verify the 18 pinned sources, populate 1,280 source-attributed and/or expert-adjudicated cases to the frozen quotas, then build and seal the preregistered splits."
+  "reason": "The Benchmark Factory is implemented, but the real 1,280 source-grounded cases have not yet been populated. No final holdout freeze or evaluation exists.",
+  "next_action": "Acquire the non-holdout source partition and begin Curator/Verifier population; run holdout population separately under the external custodian boundary."
 }
