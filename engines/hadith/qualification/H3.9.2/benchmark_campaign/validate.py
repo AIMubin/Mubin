@@ -15,6 +15,7 @@ REQUIRED_FIELDS = {
     "case_id",
     "split",
     "source_ids",
+    "anchor_source_id",
     "family_id",
     "content_fingerprint",
     "gold_status",
@@ -49,7 +50,22 @@ def _validate_annotation(record: dict[str, Any], benchmark_id: str) -> list[Viol
         out.append(Violation("annotation.reviewers_not_independent", "reviewer IDs must be unique", benchmark_id, cid))
 
     status = record.get("gold_status")
-    if status == "reference_pilot":
+    if status == "source_attributed":
+        ap = record.get("answer_provenance")
+        if not isinstance(ap, dict):
+            out.append(Violation("qualification.answer_provenance", "source_attributed requires answer_provenance", benchmark_id, cid))
+        else:
+            if ap.get("answer_origin") != "human_authored_source":
+                out.append(Violation("qualification.answer_origin", "answer_origin must be human_authored_source", benchmark_id, cid))
+            if ap.get("extraction_method") not in {"ai", "human"}:
+                out.append(Violation("qualification.extraction_method", "extraction_method must be ai or human", benchmark_id, cid))
+            if ap.get("source_verified") is not True:
+                out.append(Violation("qualification.answer_source_unverified", "source_attributed requires source_verified=true", benchmark_id, cid))
+            if not isinstance(ap.get("human_reviewed"), bool):
+                out.append(Violation("qualification.human_reviewed", "human_reviewed must be an explicit boolean", benchmark_id, cid))
+            elif ap.get("human_reviewed") is True and len(reviewers) < 1:
+                out.append(Violation("qualification.human_review_missing", "human_reviewed=true requires a reviewer ID", benchmark_id, cid))
+    elif status == "reference_pilot":
         if ann.get("source_verified") is not True:
             out.append(Violation("qualification.reference_not_verified", "reference_pilot requires source_verified=true", benchmark_id, cid))
         if len(reviewers) < 1:
@@ -89,6 +105,10 @@ def validate_record(record: dict[str, Any], benchmark_id: str, registry: dict[st
         source_ids = []
     elif len(set(source_ids)) != len(source_ids):
         out.append(Violation("provenance.duplicate_source_ids", "source_ids must be unique", benchmark_id, cid))
+
+    anchor_source_id = record.get("anchor_source_id")
+    if not isinstance(anchor_source_id, str) or anchor_source_id not in source_ids:
+        out.append(Violation("provenance.anchor_source_id", "anchor_source_id must be a source_id used by the case", benchmark_id, cid))
 
     for source_id in source_ids:
         source = registry.get(source_id)
@@ -303,6 +323,23 @@ def validate_campaign(root: Path, spec: dict[str, Any]) -> dict[str, Any]:
             if bp.get("target_holdout") != b["target_holdout"] or bp.get("target_non_holdout") != b["target_development"] + b["target_validation"]:
                 campaign_violations.append(Violation("curation_plan.target_mismatch", "curation-plan target counts do not match benchmark spec", b["id"]).to_dict())
 
+    # Enforce the preregistered partition against the actual records, not merely the plan file.
+    if plan_path.exists():
+        plan = load_json(plan_path)
+        for b in spec["benchmarks"]:
+            bp = plan.get("benchmarks", {}).get(b["id"], {})
+            hold_pool = set(bp.get("holdout_source_pool", []))
+            non_pool = set(bp.get("non_holdout_source_pool", []))
+            for r in load_jsonl(root / "benchmarks" / b["id"] / "records.jsonl"):
+                srcs = set(str(x) for x in r.get("source_ids", []) if isinstance(x, str))
+                allowed = hold_pool if r.get("split") == "holdout" else non_pool
+                if srcs and not srcs.issubset(allowed):
+                    campaign_violations.append(Violation(
+                        "curation_plan.record_partition_mismatch",
+                        f"record sources {sorted(srcs)} escape preregistered pool for split {r.get('split')}",
+                        b["id"], r.get("case_id"),
+                    ).to_dict())
+
     quotas_path = root / "config" / "curation-quotas.json"
     if spec.get("qualification", {}).get("require_frozen_curation_quotas") is True:
         if not quotas_path.exists():
@@ -313,6 +350,24 @@ def validate_campaign(root: Path, spec: dict[str, Any]) -> dict[str, Any]:
                 expected_quotas = build_curation_queue_plan(root, spec)
                 if canonical_json_bytes(actual_quotas) != canonical_json_bytes(expected_quotas):
                     campaign_violations.append(Violation("curation_quotas.mismatch", "curation quotas do not match the frozen spec/source partition").to_dict())
+                else:
+                    by_benchmark = {x["benchmark_id"]: x for x in actual_quotas.get("benchmarks", [])}
+                    for b in spec["benchmarks"]:
+                        q = by_benchmark.get(b["id"], {})
+                        expected_hold = {x["anchor_source_id"]: int(x["target_cases"]) for x in q.get("holdout", {}).get("anchor_quotas", [])}
+                        expected_non = {x["anchor_source_id"]: int(x["target_cases"]) for x in q.get("non_holdout", {}).get("anchor_quotas", [])}
+                        actual_hold: Counter[str] = Counter()
+                        actual_non: Counter[str] = Counter()
+                        for r in load_jsonl(root / "benchmarks" / b["id"] / "records.jsonl"):
+                            anchor = r.get("anchor_source_id")
+                            if not isinstance(anchor, str):
+                                campaign_violations.append(Violation("curation_quotas.anchor_missing", "record lacks anchor_source_id", b["id"], r.get("case_id")).to_dict())
+                                continue
+                            (actual_hold if r.get("split") == "holdout" else actual_non)[anchor] += 1
+                        if dict(actual_hold) != expected_hold:
+                            campaign_violations.append(Violation("curation_quotas.holdout_counts", f"actual holdout anchor counts {dict(actual_hold)} != frozen quotas {expected_hold}", b["id"]).to_dict())
+                        if dict(actual_non) != expected_non:
+                            campaign_violations.append(Violation("curation_quotas.non_holdout_counts", f"actual non-holdout anchor counts {dict(actual_non)} != frozen quotas {expected_non}", b["id"]).to_dict())
             except Exception as exc:
                 campaign_violations.append(Violation("curation_quotas.invalid", f"unable to validate curation quotas: {exc}").to_dict())
 

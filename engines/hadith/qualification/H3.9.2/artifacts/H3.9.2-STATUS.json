@@ -19,7 +19,9 @@
   "holdouts_frozen": false,
   "benchmark_gate_passed": false,
   "architecture_gate_passed": false,
-  "h4_entry_allowed": false,
+  "h4_development_allowed": true,
+  "h4_qualification_allowed": false,
+  "h4_release_allowed": false,
   "reason": "Real provenance-bearing H3.5-H3.9 cases have not yet been curated. Public benchmark files remain empty, so no holdout ciphertext or freeze can exist and H4 remains closed.",
   "next_action": "Acquire the 18 pinned source bytes in a network-enabled environment, curate the 1,280 real reviewed cases to the frozen quotas, then build splits with an external holdout key."
 }

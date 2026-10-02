@@ -11,7 +11,7 @@ from benchmark_campaign.audit import build_pre_m4_audit
 from benchmark_campaign.core import dump_jsonl, load_json, write_json
 from benchmark_campaign.curation import curate_reviewed_file
 from benchmark_campaign.evaluate import evaluate_holdout
-from benchmark_campaign.freeze import freeze_campaign, verify_freeze
+from benchmark_campaign.freeze import create_freeze_anchor, freeze_campaign, verify_freeze
 from benchmark_campaign.manifests import emit_campaign_manifests
 from benchmark_campaign.holdout_seal import generate_holdout_key, sealed_gold_path
 from benchmark_campaign.lifecycle import export_tuning_pack, lock_model
@@ -111,7 +111,7 @@ class CampaignTests(unittest.TestCase):
             })
         return {
             "benchmark_id": "b1", "case_id": cid, "split": split,
-            "source_ids": list(sources), "family_id": fam,
+            "source_ids": list(sources), "anchor_source_id": sources[0], "family_id": fam,
             "content_fingerprint": fingerprint_payload(payload), "gold_status": gold,
             "synthetic": synthetic, "source_refs": refs,
             "annotation": {"reviewers": ["r1"], "source_verified": True, "adjudicated": False, "adjudicator": None},
@@ -130,6 +130,7 @@ class CampaignTests(unittest.TestCase):
     def _freeze(self):
         p = self.root / "artifacts" / "FREEZE_MANIFEST.json"
         freeze_campaign(self.root, self.spec_path, p)
+        create_freeze_anchor(p, self.root / "private" / "FREEZE_ANCHOR.json", "a" * 40)
         return p
 
     def _perfect_predictions(self, path: Path, label="yes"):
@@ -137,7 +138,31 @@ class CampaignTests(unittest.TestCase):
         dump_jsonl(path / "b1.jsonl", [{"case_id": "h1", "prediction": {"label": label}}])
 
     def _lock_model(self, manifest_path: Path):
-        return lock_model(self.root, manifest_path, "test-model@locked")
+        model_cfg = self.root / "model-config.json"
+        generation_cfg = self.root / "generation-config.json"
+        write_json(model_cfg, {"model": "test"})
+        write_json(generation_cfg, {"temperature": 0})
+        return lock_model(
+            self.root, manifest_path, "test-model@locked", model_cfg,
+            system_commit="b" * 40,
+            model_artifact_sha256="c" * 64,
+            generation_config_path=generation_cfg,
+        )
+
+    def _architecture_audit(self):
+        evidence = self.root / "architecture-evidence.json"
+        write_json(evidence, {"check": "passed"})
+        arch = self.root / "architecture.json"
+        write_json(arch, {
+            "schema_version": 1,
+            "audit_kind": "architecture_qualification",
+            "audit_id": "test-architecture-audit",
+            "candidate_commit": "b" * 40,
+            "frozen": True,
+            "architecture_gate_passed": True,
+            "evidence": [{"path": str(evidence.relative_to(self.root)), "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest()}],
+        })
+        return arch
 
     def _enable_sealed_holdout(self):
         self.spec["qualification"]["require_sealed_holdout_gold"] = True
@@ -270,33 +295,34 @@ class CampaignTests(unittest.TestCase):
         self.assertFalse(audit["benchmark_gate_passed"])
 
     def test_m4_gate_requires_passing_frozen_holdout_evaluation(self):
-        self.write_good()
+        key_path = self._build_sealed_good()
         manifest_path = self._freeze()
         self._lock_model(manifest_path)
         preds = self.root / "predictions"
         self._perfect_predictions(preds)
         evaluation = self.root / "artifacts" / "HOLDOUT_EVALUATION.json"
-        report = evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation)
+        report = evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation, holdout_key_path=key_path)
         self.assertTrue(report["all_benchmarks_passed"])
-        arch = self.root / "architecture.json"
-        write_json(arch, {"architecture_gate_passed": True})
-        audit = build_pre_m4_audit(self.root, self.spec_path, manifest_path, arch, evaluation)
+        arch = self._architecture_audit()
+        audit = build_pre_m4_audit(self.root, self.spec_path, manifest_path, arch, evaluation, key_path)
         self.assertTrue(audit["benchmark_gate_passed"])
         self.assertTrue(audit["architecture_gate_passed"])
-        self.assertTrue(audit["h4_entry_allowed"])
+        self.assertTrue(audit["h4_development_allowed"])
+        self.assertTrue(audit["h4_qualification_allowed"])
+        self.assertFalse(audit["h4_release_allowed"])
 
     def test_holdout_is_one_shot_except_identical_replay(self):
-        self.write_good()
+        key_path = self._build_sealed_good()
         manifest_path = self._freeze()
         self._lock_model(manifest_path)
         preds = self.root / "predictions"
         self._perfect_predictions(preds)
         evaluation = self.root / "artifacts" / "HOLDOUT_EVALUATION.json"
-        evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation)
-        evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation)
+        evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation, holdout_key_path=key_path)
+        evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation, holdout_key_path=key_path)
         self._perfect_predictions(preds, label="no")
         with self.assertRaises(RuntimeError):
-            evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation)
+            evaluate_holdout(self.root, self.spec_path, manifest_path, preds, evaluation, holdout_key_path=key_path)
 
     def test_split_components_include_every_source_id(self):
         staging = self.root / "staging" / "b1"
@@ -318,7 +344,14 @@ class CampaignTests(unittest.TestCase):
         cache = self.root / "source-cache"
         cache.mkdir()
         text = "prefix EXACT EXCERPT suffix"
-        (cache / cache_filename("s-dev")).write_text(text, encoding="utf-8")
+        cache_path = cache / cache_filename("s-dev")
+        cache_path.write_text(text, encoding="utf-8")
+        registry_path = self.root / "sources" / "source-registry.json"
+        registry = load_json(registry_path)
+        for src in registry["sources"]:
+            if src["source_id"] == "s-dev":
+                src["source_blob_sha"] = git_blob_sha(cache_path.read_bytes())
+        write_json(registry_path, registry)
         inp = self.root / "candidate.jsonl"
         row = {
             "case_id": "c1", "family_id": "f1", "gold_status": "reference_pilot", "synthetic": False,

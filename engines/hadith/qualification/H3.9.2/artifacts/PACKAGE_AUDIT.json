@@ -9,6 +9,8 @@
   "validation_violation_count": 45,
   "benchmark_gate_passed": false,
   "architecture_gate_passed": false,
-  "h4_entry_allowed": false,
+  "h4_development_allowed": true,
+  "h4_qualification_allowed": false,
+  "h4_release_allowed": false,
   "expected_red_state": true
 }

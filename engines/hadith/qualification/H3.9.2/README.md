@@ -75,6 +75,7 @@ source acquisition
 → prepare manifests
 → validate
 → FREEZE
+→ create detached freeze anchor bound to immutable Git commit
 → export tuning pack (development + validation only)
 → optional tuning
 → MODEL LOCK
@@ -91,14 +92,14 @@ python -m benchmark_campaign build-splits --holdout-key-file /secure/off-repo/mu
 python -m benchmark_campaign prepare-manifests
 python -m benchmark_campaign validate
 python -m benchmark_campaign freeze
-python -m benchmark_campaign verify-freeze
+python -m benchmark_campaign anchor-freeze --source-commit <40-hex-commit>\npython -m benchmark_campaign verify-freeze
 python -m benchmark_campaign export-tuning-pack
 python -m benchmark_campaign mark-tuning-started --model-ref <ref>
-python -m benchmark_campaign lock-model --model-ref <immutable-ref>
+python -m benchmark_campaign lock-model --model-ref <immutable-ref> --system-commit <40-hex-commit> --model-artifact-sha256 <sha256> --model-config <file> --generation-config <file>
 python -m benchmark_campaign evaluate-holdout \
   --predictions-dir <dir> \
   --holdout-key-file /secure/off-repo/mubin-m392.key
-python -m benchmark_campaign pre-h4-audit --architecture-audit <architecture-audit.json>
+python -m benchmark_campaign pre-h4-audit --architecture-audit <architecture-audit.json> --holdout-key-file /secure/off-repo/mubin-m392.key
 python -m unittest discover -s tests -v
 ```
 
@@ -108,21 +109,23 @@ The final holdout is one-shot under one freeze. Byte-identical prediction replay
 
 `benchmark_gate_passed` requires all expanded datasets to qualify, campaign/local disjointness to pass, the freeze to verify, the candidate model to be locked, evaluator-produced one-shot holdout evidence to match the same freeze/model/ciphertext/predictions, and every preregistered threshold to pass.
 
-H4 remains derived only as:
+H4 lifecycle state is reported as:
 
 ```ini
 [pre-h4-audit]
 benchmark_gate_passed = true
 architecture_gate_passed = true
-h4_entry_allowed = true
+h4_development_allowed = true
+h4_qualification_allowed = true
+h4_release_allowed = false
 ```
 
 with:
 
 ```text
-h4_entry_allowed = benchmark_gate_passed AND architecture_gate_passed
+h4_qualification_allowed = benchmark_gate_passed AND architecture_gate_passed
 ```
 
 ## Current state
 
-The five canonical benchmark files remain intentionally empty. Population is **0 / 1,280**, so the campaign is correctly red and cannot freeze. Source pins, source partitions, curation quotas, evaluator thresholds, sealed-holdout protocol, and qualification invariants are fixed; real reviewed cases still have to be curated. No synthetic records are used to make the gate green.
+The five canonical benchmark files remain intentionally empty. Population is **0 / 1,280**, so the campaign is correctly red and cannot freeze. Source pins, source partitions, enforced curation quotas, evaluator thresholds/denominator minima, detached-freeze protocol, sealed-holdout protocol, and qualification invariants are fixed; real reviewed cases still have to be curated. No synthetic records are used to make the gate green.

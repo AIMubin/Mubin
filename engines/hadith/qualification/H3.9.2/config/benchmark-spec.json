@@ -6,7 +6,7 @@
   "final_holdout_policy": "one-shot",
   "qualification": {
     "synthetic_eligible": false,
-    "allowed_gold_status": ["reference_pilot", "expert_gold"],
+    "allowed_gold_status": ["source_attributed", "reference_pilot", "expert_gold"],
     "require_source_disjoint_holdout": true,
     "require_family_disjoint_holdout": true,
     "require_cross_split_fingerprint_disjointness": true,
@@ -71,7 +71,8 @@
         "labels": ["heard_from","heard_by_inverse","did_not_hear","did_not_meet","hearing_not_known","hearing_uncertain","partial_hearing","met"],
         "threshold_basis": "preregistered before expanded holdout inspection; anchored to H3.6 final small-holdout F1=.857 and directionality as a critical semantic invariant",
         "thresholds": {"accuracy":{"min":0.85},"macro_f1":{"min":0.85},"direction_error_rate":{"max":0.02}},
-        "safety_metrics": {"direction": true}
+        "safety_metrics": {"direction": true},
+        "minimum_denominators": {"direction": 15}
       }
     },
     {
@@ -93,7 +94,8 @@
         "labels": ["established","plausible","contradicted","unresolved"],
         "threshold_basis": "preregistered engineering threshold; H3.7's key invariant is preventing pair-general hearing from becoming report-specific certainty",
         "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"scope_collapse_rate":{"max":0.02}},
-        "safety_metrics": {"scope_collapse":{"protected_gold_labels":["plausible","unresolved"],"forbidden_prediction_labels":["established"]}}
+        "safety_metrics": {"scope_collapse":{"protected_gold_labels":["plausible","unresolved"],"forbidden_prediction_labels":["established"]}},
+        "minimum_denominators": {"scope_collapse": 12}
       }
     },
     {
@@ -115,7 +117,8 @@
         "labels": ["same_report","same_report_variant","related_not_same"],
         "threshold_basis": "preregistered engineering threshold with zero tolerance for unsafe merge of reviewed related-not-same reports",
         "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"unsafe_merge_rate":{"max":0.0}},
-        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]}}
+        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]}},
+        "minimum_denominators": {"unsafe_merge": 18}
       }
     },
     {
@@ -137,7 +140,8 @@
         "labels": ["same_report","same_report_variant","related_not_same"],
         "threshold_basis": "preregistered engineering threshold; graph-level corruption is treated as a safety failure even when aggregate F1 is high",
         "thresholds": {"accuracy":{"min":0.9},"macro_f1":{"min":0.9},"unsafe_merge_rate":{"max":0.0},"provenance_preservation_rate":{"min":1.0}},
-        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]},"provenance_preservation":true}
+        "safety_metrics": {"unsafe_merge":{"negative_gold_labels":["related_not_same"],"merge_prediction_labels":["same_report","same_report_variant"]},"provenance_preservation":true},
+        "minimum_denominators": {"unsafe_merge": 23, "provenance_preservation": 90}
       }
     }
   ]

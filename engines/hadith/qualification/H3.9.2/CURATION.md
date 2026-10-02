@@ -6,7 +6,7 @@ Curation is performed by a source-review custodian. The developer/tuning surface
 
 The external holdout key is a release secret. Do not commit it, copy it into artifacts, attach it to the package, or expose it to the model/tuning process.
 
-## Human-reviewed input
+## Source-grounded input
 
 The input to `curate-reviewed` is JSONL. Do not provide split, hashes, or derived `source_ids`; the tool derives them. Minimal single-source record:
 
@@ -14,7 +14,8 @@ The input to `curate-reviewed` is JSONL. Do not provide split, hashes, or derive
 {
   "case_id": "stable-case-id",
   "family_id": "globally-canonical-semantic-family-id",
-  "gold_status": "reference_pilot",
+  "gold_status": "source_attributed",
+  "anchor_source_id": "openiti:0742Mizzi.TahdhibKamal",
   "synthetic": false,
   "source_refs": [
     {
@@ -23,8 +24,15 @@ The input to `curate-reviewed` is JSONL. Do not provide split, hashes, or derive
       "excerpt": "exact verbatim source text"
     }
   ],
+  "answer_provenance": {
+    "answer_origin": "human_authored_source",
+    "extraction_method": "ai",
+    "human_reviewed": false,
+    "source_verified": true,
+    "mode": "direct_extract"
+  },
   "annotation": {
-    "reviewers": ["reviewer:pseudonym"],
+    "reviewers": [],
     "source_verified": true,
     "adjudicated": false,
     "adjudicator": null
@@ -40,7 +48,7 @@ For H3.8/H3.9, include every work used by the comparison as a separate `source_r
 
 ## Qualification levels
 
-`reference_pilot` requires source verification and at least one reviewer. `expert_gold` requires two distinct reviewers plus an independent adjudicator. Synthetic records and automatically inferred labels are never qualification-eligible.
+`source_attributed` is the default extractive track: the answer originates in a human-authored source and may be extracted/structured by AI without pretending that a human reviewed the case. It requires `answer_origin=human_authored_source`, `extraction_method=ai|human`, an explicit `human_reviewed` boolean, and `source_verified=true`. `reference_pilot` remains available for genuinely human-reviewed pilot material. `expert_gold` requires two distinct reviewers plus an independent adjudicator. Synthetic records and AI-invented judgments are never qualification-eligible.
 
 ## Family IDs
 
@@ -48,7 +56,7 @@ For H3.8/H3.9, include every work used by the comparison as a separate `source_r
 
 ## Curation quotas
 
-Use `config/curation-quotas.json`. Each case is counted once against an operational `anchor_source_id`, while `source_ids` still enumerates every canonical source used. The anchor quota is a sampling-control mechanism only; it does not change the provenance contract.
+Use `config/curation-quotas.json`. Each case is counted once against the required `anchor_source_id`, while `source_ids` still enumerates every canonical source used. For single-source cases the curator derives the anchor automatically; multi-source cases must declare it explicitly. Validation checks the actual record counts against the frozen quotas, so the quota plan is a gating invariant rather than advisory metadata.
 
 The quota plan is frozen before case selection. Do not rebalance it after seeing model performance or final-holdout labels. If source feasibility makes a quota impossible, invalidate the campaign version and issue a new preregistered plan rather than silently editing the current one.
 
@@ -73,4 +81,4 @@ Keep at least two securely controlled backups of the key. Losing it makes the fr
 
 ## No automatic gold
 
-Candidate discovery, regex mining, embedding similarity, Itqan links, LLM suggestions, or heuristic parsers may propose cases. They do not create qualification labels. A label enters the reviewed pool only through the declared human/source-grounded review contract.
+Candidate discovery, regex mining, embedding similarity, Itqan links, LLM suggestions, or heuristic parsers may propose cases. An AI may extract an answer that is explicitly attributable to a pinned human-authored source and record it as `source_attributed`; the AI's own unsupported opinion may never become gold. Derived/adjudicative judgments require `expert_gold` or an explicit human-authored authority statement.

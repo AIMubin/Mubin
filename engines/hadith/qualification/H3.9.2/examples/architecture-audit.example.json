@@ -1,1 +1,10 @@
-{"architecture_gate_passed":true,"note":"Example only. H3.9.2 must consume the actual frozen architecture audit from the foundation tree."}
+{
+  "schema_version": 1,
+  "audit_kind": "example_only",
+  "audit_id": "example-not-qualifying",
+  "candidate_commit": "0000000000000000000000000000000000000000",
+  "frozen": false,
+  "architecture_gate_passed": false,
+  "evidence": [],
+  "note": "Example only. The gate validator intentionally rejects this document."
+}

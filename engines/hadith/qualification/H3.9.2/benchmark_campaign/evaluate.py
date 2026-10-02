@@ -5,7 +5,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from .core import load_json, load_jsonl, sha256_file, write_json
+from .core import canonical_json_bytes, load_json, load_jsonl, sha256_file, write_json
 from .freeze import verify_freeze
 from .holdout_seal import decrypt_gold_map, key_id, load_holdout_key, sealed_gold_path
 
@@ -75,6 +75,11 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
     model_lock = load_json(model_lock_path)
     if model_lock.get("freeze_id") != freeze_id:
         raise ValueError("MODEL_LOCK freeze_id does not match the verified benchmark freeze")
+    if model_lock.get("freeze_anchor_sha256") != verification.get("anchor_sha256"):
+        raise ValueError("MODEL_LOCK is not bound to the current detached freeze anchor")
+    for required in ("system_commit", "model_artifact_sha256", "model_config_sha256", "generation_config_sha256"):
+        if not isinstance(model_lock.get(required), str) or not model_lock.get(required):
+            raise ValueError(f"MODEL_LOCK missing content-addressed field: {required}")
     model_lock_sha256 = sha256_file(model_lock_path)
 
     prediction_hashes = {}
@@ -192,6 +197,11 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
         "benchmarks": results,
         "all_benchmarks_passed": all_pass,
     }
+    if holdout_key is None:
+        raise ValueError("final evaluation attestation requires sealed holdout key")
+    report["evaluation_attestation_hmac_sha256"] = hmac.new(
+        holdout_key, canonical_json_bytes(report), hashlib.sha256
+    ).hexdigest()
     write_json(out_path, report)
     if consume and not access_marker.exists():
         write_json(access_marker, {

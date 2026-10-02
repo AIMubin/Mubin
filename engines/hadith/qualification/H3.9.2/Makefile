@@ -1,6 +1,8 @@
-.PHONY: test curation-queue-plan acquire-sources verify-source-cache build-splits prepare-manifests validate freeze verify-freeze export-tuning-pack pre-h4-audit
+.PHONY: test curation-queue-plan acquire-sources verify-source-cache build-splits prepare-manifests validate freeze anchor-freeze verify-freeze export-tuning-pack pre-h4-audit
 
-HOLDOUT_KEY ?= /secure/off-repo/mubin-m392.key
+HOLDOUT_KEY ?= /secure/off-repo/mubin-h392.key
+FREEZE_ANCHOR ?= /secure/off-repo/mubin-h392-freeze-anchor.json
+SOURCE_COMMIT ?= $(shell git rev-parse HEAD)
 
 test:
 	python -m unittest discover -s tests -v
@@ -26,8 +28,11 @@ validate:
 freeze:
 	python -m benchmark_campaign freeze
 
+anchor-freeze:
+	python -m benchmark_campaign anchor-freeze --anchor-file $(FREEZE_ANCHOR) --source-commit $(SOURCE_COMMIT)
+
 verify-freeze:
-	python -m benchmark_campaign verify-freeze
+	python -m benchmark_campaign verify-freeze --anchor-file $(FREEZE_ANCHOR)
 
 export-tuning-pack:
 	python -m benchmark_campaign export-tuning-pack

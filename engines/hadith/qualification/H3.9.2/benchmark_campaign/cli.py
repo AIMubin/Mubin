@@ -8,7 +8,7 @@ from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
-from .freeze import freeze_campaign, verify_freeze
+from .freeze import create_freeze_anchor, freeze_campaign, verify_freeze
 from .lifecycle import export_tuning_pack, lock_model, mark_tuning_started
 from .holdout_seal import generate_holdout_key
 from .manifests import emit_campaign_manifests
@@ -71,8 +71,14 @@ def main(argv: list[str] | None = None) -> int:
     f.add_argument("--spec", type=Path)
     f.add_argument("--out", type=Path, default=Path("artifacts/FREEZE_MANIFEST.json"))
 
+    af = sub.add_parser("anchor-freeze")
+    af.add_argument("--manifest", type=Path, default=Path("artifacts/FREEZE_MANIFEST.json"))
+    af.add_argument("--anchor-file", type=Path, default=Path("private/FREEZE_ANCHOR.json"))
+    af.add_argument("--source-commit", required=True)
+
     vf = sub.add_parser("verify-freeze")
     vf.add_argument("--manifest", type=Path, default=Path("artifacts/FREEZE_MANIFEST.json"))
+    vf.add_argument("--anchor-file", type=Path, default=Path("private/FREEZE_ANCHOR.json"))
 
     tp = sub.add_parser("export-tuning-pack")
     tp.add_argument("--spec", type=Path)
@@ -87,7 +93,10 @@ def main(argv: list[str] | None = None) -> int:
     lm = sub.add_parser("lock-model")
     lm.add_argument("--freeze-manifest", type=Path, default=Path("artifacts/FREEZE_MANIFEST.json"))
     lm.add_argument("--model-ref", required=True)
-    lm.add_argument("--model-config", type=Path)
+    lm.add_argument("--system-commit", required=True)
+    lm.add_argument("--model-artifact-sha256", required=True)
+    lm.add_argument("--model-config", type=Path, required=True)
+    lm.add_argument("--generation-config", type=Path, required=True)
 
     ev = sub.add_parser("evaluate-holdout")
     ev.add_argument("--spec", type=Path)
@@ -101,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--freeze-manifest", type=Path, default=Path("artifacts/FREEZE_MANIFEST.json"))
     a.add_argument("--evaluation-report", type=Path, default=Path("artifacts/HOLDOUT_EVALUATION.json"))
     a.add_argument("--architecture-audit", type=Path)
+    a.add_argument("--holdout-key-file", type=Path)
     a.add_argument("--json-out", type=Path, default=Path("artifacts/PRE_H4_AUDIT.json"))
     a.add_argument("--ini-out", type=Path, default=Path("artifacts/pre-h4-audit.ini"))
 
@@ -177,10 +187,19 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(manifest, indent=2, ensure_ascii=False))
         return 0
 
+    if args.cmd == "anchor-freeze":
+        manifest = _resolve(root, args.manifest)
+        anchor_file = _resolve(root, args.anchor_file)
+        assert manifest is not None and anchor_file is not None
+        result = create_freeze_anchor(manifest, anchor_file, args.source_commit)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+
     if args.cmd == "verify-freeze":
         manifest = _resolve(root, args.manifest)
-        assert manifest is not None
-        result = verify_freeze(root, manifest)
+        anchor_file = _resolve(root, args.anchor_file)
+        assert manifest is not None and anchor_file is not None
+        result = verify_freeze(root, manifest, anchor_file)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0 if result["verified"] else 3
 
@@ -203,8 +222,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "lock-model":
         freeze_manifest = _resolve(root, args.freeze_manifest)
         model_config = _resolve(root, args.model_config)
-        assert freeze_manifest is not None
-        marker = lock_model(root, freeze_manifest, args.model_ref, model_config)
+        generation_config = _resolve(root, args.generation_config)
+        assert freeze_manifest is not None and model_config is not None and generation_config is not None
+        marker = lock_model(
+            root, freeze_manifest, args.model_ref, model_config,
+            system_commit=args.system_commit,
+            model_artifact_sha256=args.model_artifact_sha256,
+            generation_config_path=generation_config,
+        )
         print(json.dumps(marker, indent=2, ensure_ascii=False))
         return 0
 
@@ -222,12 +247,16 @@ def main(argv: list[str] | None = None) -> int:
         freeze_manifest = _resolve(root, args.freeze_manifest)
         evaluation_report = _resolve(root, args.evaluation_report)
         architecture_audit = _resolve(root, args.architecture_audit)
+        holdout_key_file = _resolve(root, args.holdout_key_file)
         json_out = _resolve(root, args.json_out)
         ini_out = _resolve(root, args.ini_out)
         assert json_out and ini_out
-        audit = emit_pre_m4_audit(root, spec_path, freeze_manifest, architecture_audit, evaluation_report, json_out, ini_out)
+        audit = emit_pre_m4_audit(
+            root, spec_path, freeze_manifest, architecture_audit, evaluation_report,
+            holdout_key_file, json_out, ini_out
+        )
         print(json.dumps(audit, indent=2, ensure_ascii=False))
-        return 0 if audit["h4_entry_allowed"] else 4
+        return 0 if audit["h4_qualification_allowed"] else 4
 
     return 1
 

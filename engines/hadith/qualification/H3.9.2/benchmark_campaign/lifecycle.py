@@ -48,18 +48,31 @@ def mark_tuning_started(root: Path, freeze_manifest: Path, model_ref: str, model
     return obj
 
 
-def lock_model(root: Path, freeze_manifest: Path, model_ref: str, model_config_path: Path | None = None) -> dict[str, Any]:
+def lock_model(root: Path, freeze_manifest: Path, model_ref: str, model_config_path: Path | None = None,
+               system_commit: str | None = None, model_artifact_sha256: str | None = None,
+               generation_config_path: Path | None = None) -> dict[str, Any]:
     verification = verify_freeze(root, freeze_manifest)
     if not verification["verified"]:
         raise ValueError("model cannot be locked before a verified benchmark freeze")
     if (root / "artifacts" / "HOLDOUT_ACCESSED.json").exists():
         raise RuntimeError("model cannot be locked after final holdout access")
+    import re
+    if not isinstance(system_commit, str) or re.fullmatch(r"[a-f0-9]{40}", system_commit) is None:
+        raise ValueError("MODEL_LOCK requires a 40-hex system_commit")
+    if not isinstance(model_artifact_sha256, str) or re.fullmatch(r"[a-f0-9]{64}", model_artifact_sha256) is None:
+        raise ValueError("MODEL_LOCK requires model_artifact_sha256")
+    if model_config_path is None or generation_config_path is None:
+        raise ValueError("MODEL_LOCK requires model and generation configuration files")
     marker = root / "artifacts" / "MODEL_LOCK.json"
     obj = {
         "freeze_id": verification["freeze_id"],
+        "freeze_anchor_sha256": verification.get("anchor_sha256"),
         "model_ref": model_ref,
-        "model_config_sha256": sha256_file(model_config_path) if model_config_path else None,
-        "rule": "candidate model/configuration is immutable for final holdout evaluation under this freeze",
+        "system_commit": system_commit,
+        "model_artifact_sha256": model_artifact_sha256,
+        "model_config_sha256": sha256_file(model_config_path),
+        "generation_config_sha256": sha256_file(generation_config_path),
+        "rule": "candidate system/model/configuration is content-addressed and immutable for final holdout evaluation under this freeze",
     }
     if marker.exists():
         prior = load_json(marker)
