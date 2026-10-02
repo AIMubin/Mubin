@@ -1,0 +1,220 @@
+{
+  "campaign_id": "H3.9.2",
+  "audit_id": "source-pin-audit-r3",
+  "verified_on": "2026-10-02",
+  "qualification_source_count": 18,
+  "candidate_only_source_count": 1,
+  "all_pins_verified": true,
+  "entries": [
+    {
+      "source_id": "openiti:0279Tirmidhi.Sunan",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/i.cex",
+      "repo_ref": "87be191ba0a66536b399c5925c6a16bff5e9d163",
+      "source_path": "data/JK000140-ara1-01400.cex",
+      "observed_blob_sha": "d13f05c06645a7cde1da9557a39a0378b79abbbe",
+      "registry_blob_sha": "d13f05c06645a7cde1da9557a39a0378b79abbbe",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0385Daraqutni.Sunan",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/i.cex",
+      "repo_ref": "87be191ba0a66536b399c5925c6a16bff5e9d163",
+      "source_path": "data/JK000477-ara1-01200.cex",
+      "observed_blob_sha": "d4784eb81737a87cf1bb08b8fced80413c6afec1",
+      "registry_blob_sha": "d4784eb81737a87cf1bb08b8fced80413c6afec1",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0458Bayhaqi.SunanKubra",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/RELEASE",
+      "repo_ref": "cfc4157a3cf2054c0888f133970a4eaa3e22e58c",
+      "source_path": "data/0458Bayhaqi/0458Bayhaqi.SunanKubra/0458Bayhaqi.SunanKubra.JK000484-ara1",
+      "observed_blob_sha": "8082c36960466b37e778bc3edb02285bae092554",
+      "registry_blob_sha": "8082c36960466b37e778bc3edb02285bae092554",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0458Bayhaqi.SunanSaghir",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/i.cex",
+      "repo_ref": "87be191ba0a66536b399c5925c6a16bff5e9d163",
+      "source_path": "data/Shamela0012415-ara1-01000.cex",
+      "observed_blob_sha": "28446ee89f2d6c89cc16d173ceecf45c4d4cc917",
+      "registry_blob_sha": "28446ee89f2d6c89cc16d173ceecf45c4d4cc917",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0852IbnHajarCasqalani.TalkhisHabir",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/RELEASE",
+      "repo_ref": "cfc4157a3cf2054c0888f133970a4eaa3e22e58c",
+      "source_path": "data/0852IbnHajarCasqalani/0852IbnHajarCasqalani.TalkhisHabir/0852IbnHajarCasqalani.TalkhisHabir.JK000559-ara1",
+      "observed_blob_sha": "622d72a782ff7341d84ea0e3df294c7084770171",
+      "registry_blob_sha": "622d72a782ff7341d84ea0e3df294c7084770171",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0762IbnYusufZaylaci.NasbRaya",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/RELEASE",
+      "repo_ref": "cfc4157a3cf2054c0888f133970a4eaa3e22e58c",
+      "source_path": "data/0762IbnYusufZaylaci/0762IbnYusufZaylaci.NasbRaya/0762IbnYusufZaylaci.NasbRaya.JK000471-ara1",
+      "observed_blob_sha": "a0e20d7641efeae7fe3ead3bd484604759e04336",
+      "registry_blob_sha": "a0e20d7641efeae7fe3ead3bd484604759e04336",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/RELEASE",
+      "repo_ref": "cfc4157a3cf2054c0888f133970a4eaa3e22e58c",
+      "source_path": "data/1353IbnCabdRahimMubarakfuri/1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi/1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi.JK000201-ara1",
+      "observed_blob_sha": "b10bdda8aeda4f8bb236c8a5b7526830fe3c82e0",
+      "registry_blob_sha": "b10bdda8aeda4f8bb236c8a5b7526830fe3c82e0",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0774IbnKathir.TafsirQuran",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/RELEASE",
+      "repo_ref": "cfc4157a3cf2054c0888f133970a4eaa3e22e58c",
+      "source_path": "data/0774IbnKathir/0774IbnKathir.TafsirQuran/0774IbnKathir.TafsirQuran.JK000161-ara2",
+      "observed_blob_sha": "2cc04d4967440882ab6254a131e0b9c204fb0d7f",
+      "registry_blob_sha": "2cc04d4967440882ab6254a131e0b9c204fb0d7f",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:1255Shawkani.NaylAwtar",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/RELEASE",
+      "repo_ref": "cfc4157a3cf2054c0888f133970a4eaa3e22e58c",
+      "source_path": "data/1255Shawkani/1255Shawkani.NaylAwtar/1255Shawkani.NaylAwtar.JK000165-ara1",
+      "observed_blob_sha": "b1901358449cb84dbf095394a310dfe3c66447e0",
+      "registry_blob_sha": "b1901358449cb84dbf095394a310dfe3c66447e0",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0751IbnQayyimJawziyya.ZadMacad",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/RELEASE",
+      "repo_ref": "cfc4157a3cf2054c0888f133970a4eaa3e22e58c",
+      "source_path": "data/0751IbnQayyimJawziyya/0751IbnQayyimJawziyya.ZadMacad/0751IbnQayyimJawziyya.ZadMacad.JK000105-ara1",
+      "observed_blob_sha": "fbce5eabc2320f5c92961259bc4fe22748a1c4b3",
+      "registry_blob_sha": "fbce5eabc2320f5c92961259bc4fe22748a1c4b3",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0742Mizzi.TahdhibKamal",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0750AH",
+      "repo_ref": "7c9c84d9f98581470aa2b7f8bee00ae285c5c707",
+      "source_path": "data/0742Mizzi/0742Mizzi.TahdhibKamal/0742Mizzi.TahdhibKamal.Shamela0003722-ara1.mARkdown",
+      "observed_blob_sha": "a9d02692fd4b5a9864f29214cbea11ed5314f29d",
+      "registry_blob_sha": "a9d02692fd4b5a9864f29214cbea11ed5314f29d",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0748Dhahabi.MizanIctidal",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0750AH",
+      "repo_ref": "7c9c84d9f98581470aa2b7f8bee00ae285c5c707",
+      "source_path": "data/0748Dhahabi/0748Dhahabi.MizanIctidal/0748Dhahabi.MizanIctidal.JK001293BK1-ara1.mARkdown",
+      "observed_blob_sha": "403453b3131a14c8ad4a891552fd0788bbcf9ea0",
+      "registry_blob_sha": "403453b3131a14c8ad4a891552fd0788bbcf9ea0",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0327IbnAbiHatimRazi.JarhWaTacdil",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0350AH",
+      "repo_ref": "3f52b87dc367365000b32f815a3d0077451c46f4",
+      "source_path": "data/0327IbnAbiHatimRazi/0327IbnAbiHatimRazi.JarhWaTacdil/0327IbnAbiHatimRazi.JarhWaTacdil.Shamela0002170-ara1.completed",
+      "observed_blob_sha": "4cdc2d13e0491cc901555e9b5ccc4adcfa8bf0f0",
+      "registry_blob_sha": "4cdc2d13e0491cc901555e9b5ccc4adcfa8bf0f0",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0354IbnHibbanBusti.Thiqat",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0375AH",
+      "repo_ref": "ab52219710c6bf15a93d6e39886f0ca602d27952",
+      "source_path": "data/0354IbnHibbanBusti/0354IbnHibbanBusti.Thiqat/0354IbnHibbanBusti.Thiqat.Shamela0005816-ara1.completed",
+      "observed_blob_sha": "3f297f123388fe2cb1e03dd47d18b4fc21ec4859",
+      "registry_blob_sha": "3f297f123388fe2cb1e03dd47d18b4fc21ec4859",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0365IbnCadiJurjani.KamilFiDucafa",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0375AH",
+      "repo_ref": "ab52219710c6bf15a93d6e39886f0ca602d27952",
+      "source_path": "data/0365IbnCadiJurjani/0365IbnCadiJurjani.KamilFiDucafa/0365IbnCadiJurjani.KamilFiDucafa.Shamela0012579-ara1.mARkdown",
+      "observed_blob_sha": "8b7df6336ceb5ca7bf2bae5e803b615ef909e01f",
+      "registry_blob_sha": "8b7df6336ceb5ca7bf2bae5e803b615ef909e01f",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0463KhatibBaghdadi.TarikhBaghdad",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0475AH",
+      "repo_ref": "cc9beb0d9645e8cdce892556423b9926a127054f",
+      "source_path": "data/0463KhatibBaghdadi/0463KhatibBaghdadi.TarikhBaghdad/0463KhatibBaghdadi.TarikhBaghdad.Shamela0000736-ara2.mARkdown",
+      "observed_blob_sha": "e2eb4c05bed4bff2c9d1208b2ad392e7b198ce65",
+      "registry_blob_sha": "e2eb4c05bed4bff2c9d1208b2ad392e7b198ce65",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0852IbnHajarCasqalani.TahdhibTahdhib",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0875AH",
+      "repo_ref": "5835c183b8bbf4ea454d5c1be2b168b669403771",
+      "source_path": "data/0852IbnHajarCasqalani/0852IbnHajarCasqalani.TahdhibTahdhib/0852IbnHajarCasqalani.TahdhibTahdhib.JK000134-ara1.mARkdown",
+      "observed_blob_sha": "9b413e5b5b0a7c5f14cc97a35e2ec941c756acaf",
+      "registry_blob_sha": "9b413e5b5b0a7c5f14cc97a35e2ec941c756acaf",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "openiti:0852IbnHajarCasqalani.TaqribTahdhib",
+      "qualification_eligible": true,
+      "source_repo": "OpenITI/0875AH",
+      "repo_ref": "5835c183b8bbf4ea454d5c1be2b168b669403771",
+      "source_path": "data/0852IbnHajarCasqalani/0852IbnHajarCasqalani.TaqribTahdhib/0852IbnHajarCasqalani.TaqribTahdhib.JK000121-ara1.completed",
+      "observed_blob_sha": "5b228f649820c43ff4e5a9f2b5293d19b7cb7988",
+      "registry_blob_sha": "5b228f649820c43ff4e5a9f2b5293d19b7cb7988",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    },
+    {
+      "source_id": "discovery:itqan:199d870",
+      "qualification_eligible": false,
+      "source_repo": "R3GENESI5/Itqan",
+      "repo_ref": "199d870da5b726356b4a8dbaa096140cffb7d0ab",
+      "source_path": "README.md",
+      "observed_blob_sha": "14bc17681f83f85178838e3a6439742c9bd60c7f",
+      "registry_blob_sha": "14bc17681f83f85178838e3a6439742c9bd60c7f",
+      "verified": true,
+      "verification_method": "GitHub connector fetch/search against pinned repository ref"
+    }
+  ],
+  "note": "This audit verifies repository/path/ref/blob identities. Qualification records additionally require verbatim source excerpts checked against a locally acquired, git-blob-verified source cache. R3 retains these verified pins unchanged and adds sealed-holdout/curation-quota controls."
+}

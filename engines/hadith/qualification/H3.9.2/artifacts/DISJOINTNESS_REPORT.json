@@ -1,0 +1,52 @@
+{
+  "all_disjoint": true,
+  "benchmarks": [
+    {
+      "benchmark_id": "external-critical-commentary",
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "leakage_violations": [],
+      "source_disjoint": true
+    },
+    {
+      "benchmark_id": "transmission-language",
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "leakage_violations": [],
+      "source_disjoint": true
+    },
+    {
+      "benchmark_id": "biographical-scope",
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "leakage_violations": [],
+      "source_disjoint": true
+    },
+    {
+      "benchmark_id": "cross-witness-identity",
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "leakage_violations": [],
+      "source_disjoint": true
+    },
+    {
+      "benchmark_id": "report-family-identity",
+      "family_disjoint": true,
+      "fingerprint_disjoint": true,
+      "leakage_violations": [],
+      "source_disjoint": true
+    }
+  ],
+  "campaign_id": "H3.9.2",
+  "global_disjointness": {
+    "family_disjoint": true,
+    "family_overlap": [],
+    "fingerprint_disjoint": true,
+    "fingerprint_overlap": [],
+    "source_disjoint": true,
+    "source_overlap": []
+  },
+  "global_violations": [],
+  "population_complete": false,
+  "qualification_ready": false
+}

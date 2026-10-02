@@ -1,0 +1,32 @@
+name: Hadith H3.9.2 integrity
+
+on:
+  pull_request:
+    paths:
+      - "engines/hadith/qualification/H3.9.2/**"
+      - ".github/workflows/hadith-h392.yml"
+  push:
+    branches: [main, "bootstrap/**"]
+    paths:
+      - "engines/hadith/qualification/H3.9.2/**"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m compileall -q benchmark_campaign tests
+      - run: python -m unittest discover -s tests -v

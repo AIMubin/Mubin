@@ -1,0 +1,35 @@
+{
+  "benchmarks": [
+    {
+      "benchmark_id": "external-critical-commentary",
+      "families": [],
+      "gold_status_counts": {},
+      "sources": []
+    },
+    {
+      "benchmark_id": "transmission-language",
+      "families": [],
+      "gold_status_counts": {},
+      "sources": []
+    },
+    {
+      "benchmark_id": "biographical-scope",
+      "families": [],
+      "gold_status_counts": {},
+      "sources": []
+    },
+    {
+      "benchmark_id": "cross-witness-identity",
+      "families": [],
+      "gold_status_counts": {},
+      "sources": []
+    },
+    {
+      "benchmark_id": "report-family-identity",
+      "families": [],
+      "gold_status_counts": {},
+      "sources": []
+    }
+  ],
+  "campaign_id": "H3.9.2"
+}

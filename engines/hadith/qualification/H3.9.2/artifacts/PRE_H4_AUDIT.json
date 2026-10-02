@@ -1,0 +1,18 @@
+{
+  "architecture_evidence": {"source":"missing_architecture_audit"},
+  "architecture_gate_passed": false,
+  "benchmark_evidence": {
+    "all_benchmarks_qualified": false,
+    "evaluation": {"reason":"missing_evaluation_report"},
+    "freeze_id": null,
+    "freeze_reason": "missing_freeze_manifest",
+    "freeze_verified": false,
+    "violation_count": 45
+  },
+  "benchmark_gate_passed": false,
+  "campaign_id": "H3.9.2",
+  "h4_development_allowed": true,
+  "h4_qualification_allowed": false,
+  "h4_release_allowed": false,
+  "h4_release_reason": "H4 release requires its own post-development release audit; H3.9.2 cannot authorize release."
+}

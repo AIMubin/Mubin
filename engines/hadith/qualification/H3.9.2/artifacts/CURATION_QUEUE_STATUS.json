@@ -1,0 +1,254 @@
+{
+  "campaign_id": "H3.9.2",
+  "release": "3.9.2-r3",
+  "total_target": 1280,
+  "completed": 0,
+  "pending": 1280,
+  "benchmarks": [
+    {
+      "benchmark_id": "external-critical-commentary",
+      "target_total": 300,
+      "completed": 0,
+      "pending": 300,
+      "holdout_target": 90,
+      "non_holdout_target": 210,
+      "holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0385Daraqutni.Sunan",
+          "target_cases": 23
+        },
+        {
+          "anchor_source_id": "openiti:0458Bayhaqi.SunanSaghir",
+          "target_cases": 23
+        },
+        {
+          "anchor_source_id": "openiti:0852IbnHajarCasqalani.TalkhisHabir",
+          "target_cases": 22
+        },
+        {
+          "anchor_source_id": "openiti:1255Shawkani.NaylAwtar",
+          "target_cases": 22
+        }
+      ],
+      "non_holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0279Tirmidhi.Sunan",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0458Bayhaqi.SunanKubra",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0762IbnYusufZaylaci.NasbRaya",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0774IbnKathir.TafsirQuran",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0751IbnQayyimJawziyya.ZadMacad",
+          "target_cases": 35
+        }
+      ]
+    },
+    {
+      "benchmark_id": "transmission-language",
+      "target_total": 240,
+      "completed": 0,
+      "pending": 240,
+      "holdout_target": 72,
+      "non_holdout_target": 168,
+      "holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0327IbnAbiHatimRazi.JarhWaTacdil",
+          "target_cases": 36
+        },
+        {
+          "anchor_source_id": "openiti:0852IbnHajarCasqalani.TahdhibTahdhib",
+          "target_cases": 36
+        }
+      ],
+      "non_holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0742Mizzi.TahdhibKamal",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0748Dhahabi.MizanIctidal",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0354IbnHibbanBusti.Thiqat",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0365IbnCadiJurjani.KamilFiDucafa",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0463KhatibBaghdadi.TarikhBaghdad",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0852IbnHajarCasqalani.TaqribTahdhib",
+          "target_cases": 28
+        }
+      ]
+    },
+    {
+      "benchmark_id": "biographical-scope",
+      "target_total": 200,
+      "completed": 0,
+      "pending": 200,
+      "holdout_target": 60,
+      "non_holdout_target": 140,
+      "holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0327IbnAbiHatimRazi.JarhWaTacdil",
+          "target_cases": 30
+        },
+        {
+          "anchor_source_id": "openiti:0852IbnHajarCasqalani.TahdhibTahdhib",
+          "target_cases": 30
+        }
+      ],
+      "non_holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0742Mizzi.TahdhibKamal",
+          "target_cases": 24
+        },
+        {
+          "anchor_source_id": "openiti:0748Dhahabi.MizanIctidal",
+          "target_cases": 24
+        },
+        {
+          "anchor_source_id": "openiti:0354IbnHibbanBusti.Thiqat",
+          "target_cases": 23
+        },
+        {
+          "anchor_source_id": "openiti:0365IbnCadiJurjani.KamilFiDucafa",
+          "target_cases": 23
+        },
+        {
+          "anchor_source_id": "openiti:0463KhatibBaghdadi.TarikhBaghdad",
+          "target_cases": 23
+        },
+        {
+          "anchor_source_id": "openiti:0852IbnHajarCasqalani.TaqribTahdhib",
+          "target_cases": 23
+        }
+      ]
+    },
+    {
+      "benchmark_id": "cross-witness-identity",
+      "target_total": 240,
+      "completed": 0,
+      "pending": 240,
+      "holdout_target": 72,
+      "non_holdout_target": 168,
+      "holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0385Daraqutni.Sunan",
+          "target_cases": 18
+        },
+        {
+          "anchor_source_id": "openiti:0458Bayhaqi.SunanSaghir",
+          "target_cases": 18
+        },
+        {
+          "anchor_source_id": "openiti:0852IbnHajarCasqalani.TalkhisHabir",
+          "target_cases": 18
+        },
+        {
+          "anchor_source_id": "openiti:1255Shawkani.NaylAwtar",
+          "target_cases": 18
+        }
+      ],
+      "non_holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0279Tirmidhi.Sunan",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0458Bayhaqi.SunanKubra",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0762IbnYusufZaylaci.NasbRaya",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0774IbnKathir.TafsirQuran",
+          "target_cases": 28
+        },
+        {
+          "anchor_source_id": "openiti:0751IbnQayyimJawziyya.ZadMacad",
+          "target_cases": 28
+        }
+      ]
+    },
+    {
+      "benchmark_id": "report-family-identity",
+      "target_total": 300,
+      "completed": 0,
+      "pending": 300,
+      "holdout_target": 90,
+      "non_holdout_target": 210,
+      "holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0385Daraqutni.Sunan",
+          "target_cases": 23
+        },
+        {
+          "anchor_source_id": "openiti:0458Bayhaqi.SunanSaghir",
+          "target_cases": 23
+        },
+        {
+          "anchor_source_id": "openiti:0852IbnHajarCasqalani.TalkhisHabir",
+          "target_cases": 22
+        },
+        {
+          "anchor_source_id": "openiti:1255Shawkani.NaylAwtar",
+          "target_cases": 22
+        }
+      ],
+      "non_holdout_anchor_quotas": [
+        {
+          "anchor_source_id": "openiti:0279Tirmidhi.Sunan",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0458Bayhaqi.SunanKubra",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0762IbnYusufZaylaci.NasbRaya",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0774IbnKathir.TafsirQuran",
+          "target_cases": 35
+        },
+        {
+          "anchor_source_id": "openiti:0751IbnQayyimJawziyya.ZadMacad",
+          "target_cases": 35
+        }
+      ]
+    }
+  ],
+  "note": "Operational sampling quotas only. Gold labels must come from source-grounded human review and are sealed before developer/tuning access."
+}

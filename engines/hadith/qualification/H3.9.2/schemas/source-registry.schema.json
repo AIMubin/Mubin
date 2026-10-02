@@ -1,0 +1,9 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://aimubin.org/schemas/h3.9.2-source-registry.schema.json",
+  "title":"Mubin H3.9.2 source registry",
+  "type":"object",
+  "required":["schema_version","sources"],
+  "properties":{"schema_version":{"type":"integer","minimum":1},"sources":{"type":"array","items":{"type":"object","required":["source_id","work_id","qualification_eligible","provider","source_repo","source_path","source_blob_sha","version_id","repo_ref"],"properties":{"source_id":{"type":"string","minLength":1},"work_id":{"type":"string","minLength":1},"qualification_eligible":{"type":"boolean"},"source_blob_sha":{"type":"string","pattern":"^[a-f0-9]{40}$"},"repo_ref":{"type":"string","pattern":"^[a-f0-9]{40}$"}},"additionalProperties":true}}},
+  "additionalProperties":true
+}

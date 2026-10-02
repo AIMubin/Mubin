@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aimubin.org/schemas/h3.9.2-benchmark-record-v6.schema.json",
+  "title": "Mubin H3.9.2 qualification benchmark record",
+  "type": "object",
+  "required": [
+    "benchmark_id",
+    "case_id",
+    "split",
+    "source_ids",
+    "anchor_source_id",
+    "family_id",
+    "content_fingerprint",
+    "gold_status",
+    "synthetic",
+    "source_refs",
+    "annotation",
+    "payload"
+  ],
+  "properties": {
+    "benchmark_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "split": {
+      "enum": [
+        "development",
+        "validation",
+        "holdout"
+      ]
+    },
+    "source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "anchor_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "family_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "gold_status": {
+      "enum": [
+        "source_attributed",
+        "reference_pilot",
+        "expert_gold"
+      ]
+    },
+    "synthetic": {
+      "const": false
+    },
+    "answer_provenance": {
+      "type": "object",
+      "required": [
+        "answer_origin",
+        "extraction_method",
+        "human_reviewed",
+        "source_verified",
+        "mode",
+        "supports",
+        "gold_binding_sha256"
+      ],
+      "properties": {
+        "answer_origin": {
+          "const": "human_authored_source"
+        },
+        "extraction_method": {
+          "enum": [
+            "ai",
+            "human"
+          ]
+        },
+        "human_reviewed": {
+          "type": "boolean"
+        },
+        "source_verified": {
+          "const": true
+        },
+        "mode": {
+          "enum": [
+            "direct_extract",
+            "attributed_composite"
+          ]
+        },
+        "verbatim_answer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "extractor_family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supports": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "source_id",
+              "support_text",
+              "support_text_sha256",
+              "source_excerpt_sha256"
+            ],
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "support_text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "support_text_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source_excerpt_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "gold_binding_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "independent_verification": {
+          "type": "object",
+          "required": [
+            "verdict",
+            "verifier_family"
+          ],
+          "properties": {
+            "verdict": {
+              "const": "supported"
+            },
+            "verifier_family": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "direct_extract"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "verbatim_answer"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "attributed_composite"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "extractor_family",
+              "independent_verification"
+            ],
+            "properties": {
+              "supports": {
+                "minItems": 2
+              }
+            }
+          }
+        }
+      ]
+    },
+    "annotation": {
+      "type": "object",
+      "required": [
+        "reviewers",
+        "source_verified",
+        "adjudicated"
+      ],
+      "properties": {
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "source_verified": {
+          "type": "boolean"
+        },
+        "adjudicated": {
+          "type": "boolean"
+        },
+        "adjudicator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "input"
+      ],
+      "properties": {
+        "input": {},
+        "gold": {
+          "type": "object"
+        },
+        "gold_sealed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "source_id",
+          "locator",
+          "source_blob_sha",
+          "excerpt",
+          "excerpt_sha256"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_blob_sha": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$"
+          },
+          "excerpt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "excerpt_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "split": {
+            "const": "holdout"
+          }
+        },
+        "required": [
+          "split"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "required": [
+              "input",
+              "gold_sealed"
+            ],
+            "properties": {
+              "gold_sealed": {
+                "const": true
+              }
+            },
+            "not": {
+              "required": [
+                "gold"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "payload": {
+            "required": [
+              "input",
+              "gold"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "gold_status": {
+            "const": "source_attributed"
+          }
+        },
+        "required": [
+          "gold_status"
+        ]
+      },
+      "then": {
+        "required": [
+          "answer_provenance"
+        ]
+      }
+    }
+  ]
+}
