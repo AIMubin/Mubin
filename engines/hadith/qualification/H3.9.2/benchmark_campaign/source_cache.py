@@ -43,12 +43,15 @@ def verify_cached_source(path: Path, source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def acquire_sources(root: Path, cache_dir: Path, include_ineligible: bool = False) -> dict[str, Any]:
+def acquire_sources(root: Path, cache_dir: Path, include_ineligible: bool = False,
+                    allowed_source_ids: set[str] | None = None) -> dict[str, Any]:
     registry = load_source_registry(root)
     cache_dir.mkdir(parents=True, exist_ok=True)
     results = []
     for source in registry.get("sources", []):
         if source.get("qualification_eligible") is not True and not include_ineligible:
+            continue
+        if allowed_source_ids is not None and source.get("source_id") not in allowed_source_ids:
             continue
         path = cache_dir / cache_filename(source["source_id"])
         if path.exists():
@@ -100,11 +103,14 @@ def acquire_sources(root: Path, cache_dir: Path, include_ineligible: bool = Fals
     return manifest
 
 
-def verify_source_cache(root: Path, cache_dir: Path, include_ineligible: bool = False) -> dict[str, Any]:
+def verify_source_cache(root: Path, cache_dir: Path, include_ineligible: bool = False,
+                        allowed_source_ids: set[str] | None = None) -> dict[str, Any]:
     registry = load_source_registry(root)
     results = []
     for source in registry.get("sources", []):
         if source.get("qualification_eligible") is not True and not include_ineligible:
+            continue
+        if allowed_source_ids is not None and source.get("source_id") not in allowed_source_ids:
             continue
         path = cache_dir / cache_filename(source["source_id"])
         if not path.exists():

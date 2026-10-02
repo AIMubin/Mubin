@@ -1,0 +1,89 @@
+{
+  "factory_version": 1,
+  "independence": {
+    "curator_and_verifier_must_use_distinct_model_family": true,
+    "verifier_blind_to_curator_gold": true,
+    "verifier_blind_to_curator_supports": true
+  },
+  "benchmarks": {
+    "external-critical-commentary": {
+      "risk_tier": 1,
+      "auto_promotion": true,
+      "candidate_keywords": [
+        "لم يسمع",
+        "لم يلق",
+        "لا يصح",
+        "لا يثبت",
+        "مرسل",
+        "وهم",
+        "أخطأ",
+        "ضعيف",
+        "تفرد",
+        "تفرد به",
+        "وقفه",
+        "رفعه"
+      ]
+    },
+    "transmission-language": {
+      "risk_tier": 1,
+      "auto_promotion": true,
+      "candidate_keywords": [
+        "سمع من",
+        "سمعت",
+        "حدثنا",
+        "حدثني",
+        "لم يسمع",
+        "لم يدرك",
+        "لم يلق",
+        "لقي",
+        "رأى",
+        "روى عن"
+      ]
+    },
+    "biographical-scope": {
+      "risk_tier": 2,
+      "auto_promotion": true,
+      "candidate_keywords": [
+        "سمع من",
+        "روى عن",
+        "لم يسمع",
+        "لم يدرك",
+        "لقي",
+        "صحب",
+        "رأى",
+        "مولده",
+        "وفاته"
+      ]
+    },
+    "cross-witness-identity": {
+      "risk_tier": 3,
+      "auto_promotion": false,
+      "candidate_keywords": [
+        "يروى",
+        "رواه",
+        "من حديث",
+        "نحوه",
+        "مثله",
+        "بمعناه",
+        "إسناده",
+        "طريق",
+        "طرق"
+      ]
+    },
+    "report-family-identity": {
+      "risk_tier": 3,
+      "auto_promotion": false,
+      "candidate_keywords": [
+        "يروى",
+        "رواه",
+        "من حديث",
+        "نحوه",
+        "مثله",
+        "بمعناه",
+        "إسناده",
+        "طريق",
+        "طرق"
+      ]
+    }
+  }
+}

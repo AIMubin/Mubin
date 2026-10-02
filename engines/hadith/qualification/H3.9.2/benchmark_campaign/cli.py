@@ -8,6 +8,16 @@ from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
+from .factory import (
+    build_factory_plan,
+    build_factory_tasks,
+    build_source_index,
+    enforce_partition_boundary,
+    factory_status,
+    partition_source_ids,
+    prepare_verifier_tasks,
+    reconcile_factory,
+)
 from .freeze import create_freeze_anchor, freeze_campaign, verify_freeze
 from .lifecycle import export_tuning_pack, lock_model, mark_tuning_started
 from .holdout_seal import generate_holdout_key
@@ -48,16 +58,60 @@ def main(argv: list[str] | None = None) -> int:
     acq = sub.add_parser("acquire-sources")
     acq.add_argument("--cache-dir", type=Path, default=Path("source-cache"))
     acq.add_argument("--include-ineligible", action="store_true")
+    acq.add_argument("--partition", choices=["non_holdout", "holdout", "all"], default="non_holdout")
+    acq.add_argument("--custodian-holdout", action="store_true")
 
     vcs = sub.add_parser("verify-source-cache")
     vcs.add_argument("--cache-dir", type=Path, default=Path("source-cache"))
     vcs.add_argument("--include-ineligible", action="store_true")
+    vcs.add_argument("--partition", choices=["non_holdout", "holdout", "all"], default="non_holdout")
+    vcs.add_argument("--custodian-holdout", action="store_true")
 
     cr = sub.add_parser("curate-reviewed")
     cr.add_argument("--benchmark-id", required=True)
     cr.add_argument("--input", type=Path, required=True)
     cr.add_argument("--out", type=Path)
     cr.add_argument("--source-cache-dir", type=Path, default=Path("source-cache"))
+
+    fp = sub.add_parser("factory-plan")
+    fp.add_argument("--out", type=Path, default=Path("factory-work/plan.json"))
+
+    fi = sub.add_parser("factory-index-sources")
+    fi.add_argument("--cache-dir", type=Path, default=Path("source-cache"))
+    fi.add_argument("--out-dir", type=Path, default=Path("factory-work/source-index"))
+    fi.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
+    fi.add_argument("--custodian-holdout", action="store_true")
+    fi.add_argument("--max-chars", type=int, default=3200)
+    fi.add_argument("--overlap", type=int, default=320)
+
+    ft = sub.add_parser("factory-build-tasks")
+    ft.add_argument("--plan", type=Path, default=Path("factory-work/plan.json"))
+    ft.add_argument("--index-dir", type=Path, default=Path("factory-work/source-index"))
+    ft.add_argument("--out", type=Path, default=Path("factory-work/curator-tasks.jsonl"))
+    ft.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
+    ft.add_argument("--custodian-holdout", action="store_true")
+
+    fv = sub.add_parser("factory-prepare-verifier")
+    fv.add_argument("--tasks", type=Path, required=True)
+    fv.add_argument("--curator-responses", type=Path, required=True)
+    fv.add_argument("--out", type=Path, required=True)
+
+    fr = sub.add_parser("factory-reconcile")
+    fr.add_argument("--tasks", type=Path, required=True)
+    fr.add_argument("--curator-responses", type=Path, required=True)
+    fr.add_argument("--verifier-responses", type=Path, required=True)
+    fr.add_argument("--source-cache-dir", type=Path, required=True)
+    fr.add_argument("--reviewed-dir", type=Path, required=True)
+    fr.add_argument("--adjudication-out", type=Path, required=True)
+    fr.add_argument("--ledger-out", type=Path, required=True)
+    fr.add_argument("--custodian-holdout", action="store_true")
+
+    fs = sub.add_parser("factory-status")
+    fs.add_argument("--plan", type=Path, default=Path("factory-work/plan.json"))
+    fs.add_argument("--curator-responses", type=Path)
+    fs.add_argument("--verifier-responses", type=Path)
+    fs.add_argument("--adjudication", type=Path)
+    fs.add_argument("--reviewed-dir", type=Path)
 
     prep = sub.add_parser("prepare-manifests")
     prep.add_argument("--spec", type=Path)
@@ -149,14 +203,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "acquire-sources":
         cache_dir = _resolve(root, args.cache_dir)
         assert cache_dir is not None
-        report = acquire_sources(root, cache_dir, args.include_ineligible)
+        enforce_partition_boundary(root, args.partition, cache_dir, args.custodian_holdout)
+        allowed = partition_source_ids(root, args.partition)
+        if args.include_ineligible and args.partition == "all":
+            allowed = None
+        report = acquire_sources(root, cache_dir, args.include_ineligible, allowed)
+        report["partition"] = args.partition
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0 if report["all_verified"] else 7
 
     if args.cmd == "verify-source-cache":
         cache_dir = _resolve(root, args.cache_dir)
         assert cache_dir is not None
-        report = verify_source_cache(root, cache_dir, args.include_ineligible)
+        enforce_partition_boundary(root, args.partition, cache_dir, args.custodian_holdout)
+        allowed = partition_source_ids(root, args.partition)
+        if args.include_ineligible and args.partition == "all":
+            allowed = None
+        report = verify_source_cache(root, cache_dir, args.include_ineligible, allowed)
+        report["partition"] = args.partition
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0 if report["all_verified"] else 7
 
@@ -166,6 +230,71 @@ def main(argv: list[str] | None = None) -> int:
         out = _resolve(root, args.out) if args.out else root / "staging" / args.benchmark_id / "reviewed.jsonl"
         assert inp and cache_dir and out
         report = curate_reviewed_file(root, args.benchmark_id, inp, out, cache_dir)
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "factory-plan":
+        out = _resolve(root, args.out)
+        assert out is not None
+        report = build_factory_plan(root, out)
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "factory-index-sources":
+        cache_dir = _resolve(root, args.cache_dir)
+        out_dir = _resolve(root, args.out_dir)
+        assert cache_dir is not None and out_dir is not None
+        report = build_source_index(
+            root, cache_dir, out_dir, args.partition, args.custodian_holdout,
+            args.max_chars, args.overlap,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "factory-build-tasks":
+        plan = _resolve(root, args.plan)
+        index_dir = _resolve(root, args.index_dir)
+        out = _resolve(root, args.out)
+        assert plan is not None and index_dir is not None and out is not None
+        report = build_factory_tasks(
+            root, plan, index_dir, out, args.partition, args.custodian_holdout
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "factory-prepare-verifier":
+        tasks = _resolve(root, args.tasks)
+        curator = _resolve(root, args.curator_responses)
+        out = _resolve(root, args.out)
+        assert tasks is not None and curator is not None and out is not None
+        report = prepare_verifier_tasks(tasks, curator, out)
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "factory-reconcile":
+        tasks = _resolve(root, args.tasks)
+        curator = _resolve(root, args.curator_responses)
+        verifier = _resolve(root, args.verifier_responses)
+        cache_dir = _resolve(root, args.source_cache_dir)
+        reviewed_dir = _resolve(root, args.reviewed_dir)
+        adjudication = _resolve(root, args.adjudication_out)
+        ledger = _resolve(root, args.ledger_out)
+        assert all(x is not None for x in (tasks, curator, verifier, cache_dir, reviewed_dir, adjudication, ledger))
+        report = reconcile_factory(
+            root, tasks, curator, verifier, cache_dir, reviewed_dir, adjudication,
+            ledger, args.custodian_holdout
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "factory-status":
+        plan = _resolve(root, args.plan)
+        curator = _resolve(root, args.curator_responses)
+        verifier = _resolve(root, args.verifier_responses)
+        adjudication = _resolve(root, args.adjudication)
+        reviewed_dir = _resolve(root, args.reviewed_dir)
+        assert plan is not None
+        report = factory_status(plan, curator, verifier, adjudication, reviewed_dir)
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
 
