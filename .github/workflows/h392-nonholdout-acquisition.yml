@@ -1,0 +1,222 @@
+name: H3.9.2 non-holdout acquisition
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - h392/nonholdout-acquisition
+    paths:
+      - ".github/workflows/h392-nonholdout-acquisition.yml"
+      - "engines/hadith/qualification/H3.9.2/sources/source-registry.json"
+      - "engines/hadith/qualification/H3.9.2/config/curation-plan.json"
+      - "engines/hadith/qualification/H3.9.2/config/curation-quotas.json"
+      - "engines/hadith/qualification/H3.9.2/config/benchmark-spec.json"
+      - "engines/hadith/qualification/H3.9.2/config/factory-policy.json"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/factory.py"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/source_cache.py"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/cli.py"
+      - "engines/hadith/qualification/H3.9.2/requirements.txt"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/h392-nonholdout-acquisition.yml"
+      - "engines/hadith/qualification/H3.9.2/sources/source-registry.json"
+      - "engines/hadith/qualification/H3.9.2/config/curation-plan.json"
+      - "engines/hadith/qualification/H3.9.2/config/curation-quotas.json"
+      - "engines/hadith/qualification/H3.9.2/config/benchmark-spec.json"
+      - "engines/hadith/qualification/H3.9.2/config/factory-policy.json"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/factory.py"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/source_cache.py"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/cli.py"
+      - "engines/hadith/qualification/H3.9.2/requirements.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  acquire-index-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+    env:
+      CACHE_DIR: /tmp/h392-source-cache
+      INDEX_DIR: /tmp/h392-source-index
+      WORK_DIR: /tmp/h392-factory
+      EVIDENCE_DIR: /tmp/h392-evidence
+
+    steps:
+      - name: Checkout Mubin
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+
+      - name: Install campaign dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Create ephemeral work areas
+        run: |
+          mkdir -p "$CACHE_DIR" "$INDEX_DIR" "$WORK_DIR" "$EVIDENCE_DIR"
+
+      - name: Acquire pinned non-holdout sources
+        run: |
+          python -m benchmark_campaign acquire-sources \
+            --partition non_holdout \
+            --cache-dir "$CACHE_DIR" \
+            > "$EVIDENCE_DIR/acquire-report.json"
+
+      - name: Re-verify acquired source bytes
+        run: |
+          python -m benchmark_campaign verify-source-cache \
+            --partition non_holdout \
+            --cache-dir "$CACHE_DIR" \
+            > "$EVIDENCE_DIR/verify-report.json"
+
+      - name: Build ephemeral non-holdout source index
+        run: |
+          python -m benchmark_campaign factory-index-sources \
+            --partition non_holdout \
+            --cache-dir "$CACHE_DIR" \
+            --out-dir "$INDEX_DIR" \
+            > "$EVIDENCE_DIR/index-run-report.json"
+
+      - name: Build frozen factory plan
+        run: |
+          python -m benchmark_campaign factory-plan \
+            --out "$WORK_DIR/factory-plan.json" \
+            > /dev/null
+
+      - name: Build ephemeral non-holdout Curator tasks
+        run: |
+          python -m benchmark_campaign factory-build-tasks \
+            --partition non_holdout \
+            --plan "$WORK_DIR/factory-plan.json" \
+            --index-dir "$INDEX_DIR" \
+            --out "$WORK_DIR/curator-tasks.jsonl" \
+            > "$EVIDENCE_DIR/task-build-report.json"
+
+      - name: Produce redacted acquisition evidence
+        shell: bash
+        run: |
+          cp "$CACHE_DIR/SOURCE_CACHE_MANIFEST.json" "$EVIDENCE_DIR/SOURCE_CACHE_MANIFEST.json"
+          cp "$INDEX_DIR/INDEX_MANIFEST.json" "$EVIDENCE_DIR/INDEX_MANIFEST.json"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path.cwd()
+          evidence_dir = Path(os.environ["EVIDENCE_DIR"])
+          cache_manifest = json.loads((Path(os.environ["CACHE_DIR"]) / "SOURCE_CACHE_MANIFEST.json").read_text(encoding="utf-8"))
+          index_manifest = json.loads((Path(os.environ["INDEX_DIR"]) / "INDEX_MANIFEST.json").read_text(encoding="utf-8"))
+          plan = json.loads((Path(os.environ["WORK_DIR"]) / "factory-plan.json").read_text(encoding="utf-8"))
+          tasks_path = Path(os.environ["WORK_DIR"]) / "curator-tasks.jsonl"
+          curation_plan = json.loads((root / "config" / "curation-plan.json").read_text(encoding="utf-8"))
+
+          expected_non = sorted(curation_plan["global_source_partition"]["non_holdout"])
+          expected_hold = set(curation_plan["global_source_partition"]["holdout"])
+          acquired = sorted(x["source_id"] for x in cache_manifest["sources"])
+          index_sources = sorted(index_manifest["per_source"].keys())
+
+          task_count = 0
+          task_source_ids = set()
+          with tasks_path.open(encoding="utf-8") as fh:
+              for line in fh:
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  task_count += 1
+                  task_source_ids.update(row["retrieval_scope"]["source_ids"])
+                  if row["partition"] != "non_holdout":
+                      raise SystemExit("non-holdout task file contains a non-non-holdout task")
+
+          if not cache_manifest.get("all_verified"):
+              raise SystemExit("source cache did not verify")
+          if acquired != expected_non:
+              raise SystemExit(f"acquired source set mismatch: {acquired} != {expected_non}")
+          if index_sources != expected_non:
+              raise SystemExit(f"index source set mismatch: {index_sources} != {expected_non}")
+          if task_source_ids & expected_hold:
+              raise SystemExit("holdout source leaked into non-holdout tasks")
+          if task_count != int(plan["non_holdout_slots"]):
+              raise SystemExit("task count does not equal frozen non-holdout slot count")
+          if int(plan["slot_count"]) != 1280 or int(plan["holdout_slots"]) != 384 or int(plan["non_holdout_slots"]) != 896:
+              raise SystemExit("factory plan cardinality mismatch")
+
+          source_rows = []
+          for item in sorted(cache_manifest["sources"], key=lambda x: x["source_id"]):
+              source_rows.append({
+                  "source_id": item["source_id"],
+                  "verified": item["verified"],
+                  "git_blob_sha": item["git_blob_sha"],
+                  "expected_git_blob_sha": item["expected_git_blob_sha"],
+                  "sha256": item["sha256"],
+                  "size_bytes": item["size_bytes"],
+              })
+
+          evidence = {
+              "schema_version": 1,
+              "campaign_id": "H3.9.2",
+              "partition": "non_holdout",
+              "runner_commit": os.environ.get("GITHUB_SHA"),
+              "source_count": len(source_rows),
+              "all_sources_verified": all(x["verified"] for x in source_rows),
+              "sources": source_rows,
+              "source_set_matches_frozen_partition": acquired == expected_non,
+              "holdout_source_count_in_acquisition": len(set(acquired) & expected_hold),
+              "index": {
+                  "source_count": index_manifest["source_count"],
+                  "segment_count": index_manifest["segment_count"],
+                  "segments_sha256": index_manifest["segments_sha256"],
+                  "per_source": index_manifest["per_source"],
+              },
+              "factory": {
+                  "slot_count": plan["slot_count"],
+                  "non_holdout_slots": plan["non_holdout_slots"],
+                  "holdout_slots": plan["holdout_slots"],
+                  "non_holdout_task_count": task_count,
+                  "curator_tasks_sha256": hashlib.sha256(tasks_path.read_bytes()).hexdigest(),
+                  "holdout_source_count_in_task_scope": len(task_source_ids & expected_hold),
+              },
+              "artifact_policy": {
+                  "source_text_uploaded": False,
+                  "segment_text_uploaded": False,
+                  "curator_tasks_uploaded": False,
+                  "uploaded_material": [
+                      "acquisition/verification reports",
+                      "source cache manifest",
+                      "index manifest",
+                      "redacted evidence summary"
+                  ],
+              },
+          }
+          (evidence_dir / "ACQUISITION_EVIDENCE.json").write_text(
+              json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Prove evidence artifact contains no source text payloads
+        run: |
+          test ! -e "$EVIDENCE_DIR/segments.jsonl"
+          test ! -e "$EVIDENCE_DIR/curator-tasks.jsonl"
+          test ! -e "$EVIDENCE_DIR/factory-plan.json"
+
+      - name: Upload redacted acquisition evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: h392-nonholdout-acquisition-evidence
+          path: /tmp/h392-evidence
+          if-no-files-found: error
+          retention-days: 14
