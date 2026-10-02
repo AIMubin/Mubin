@@ -91,6 +91,28 @@ class FactoryTests(unittest.TestCase):
                 }
             },
         })
+        write_json(root / "config" / "benchmark-spec.json", {
+            "campaign_id": "fixture",
+            "benchmarks": [{
+                "id": "b1",
+                "evaluation": {
+                    "task_type": "classification",
+                    "labels": ["yes", "no"],
+                },
+            }],
+        })
+        write_json(root / "config" / "curation-quotas.json", {
+            "total_target": 2,
+            "benchmarks": [{
+                "benchmark_id": "b1",
+                "non_holdout": {
+                    "anchor_quotas": [{"anchor_source_id": "s1", "target_cases": 1}],
+                },
+                "holdout": {
+                    "anchor_quotas": [{"anchor_source_id": "s2", "target_cases": 1}],
+                },
+            }],
+        })
         return cache, text1
 
     def test_source_index_verifies_pinned_bytes_and_builds_segments(self):
@@ -112,20 +134,7 @@ class FactoryTests(unittest.TestCase):
         index = root / "factory-work" / "index"
         build_source_index(root, cache, index, "non_holdout", False, 512, 64)
         plan = root / "factory-work" / "plan.json"
-        write_json(plan, {
-            "slots": [{
-                "slot_id": "b1:non_holdout:s1:0001",
-                "benchmark_id": "b1",
-                "partition": "non_holdout",
-                "anchor_source_id": "s1",
-                "ordinal": 1,
-                "task_type": "classification",
-                "allowed_labels": ["yes", "no"],
-                "auto_promotion": True,
-                "risk_tier": 1,
-                "visibility": "development_safe",
-            }]
-        })
+        build_factory_plan(root, plan)
         tasks = root / "factory-work" / "tasks.jsonl"
         report = build_factory_tasks(root, plan, index, tasks, "non_holdout", False)
         self.assertEqual(report["task_count"], 1)
@@ -376,21 +385,6 @@ class FactoryTests(unittest.TestCase):
             plan = root / "factory-work" / "plan.json"
             # Use a fixture-local plan that is intentionally not used here; index validation
             # is exercised after replacing build_factory_plan inputs below.
-            write_json(root / "config" / "benchmark-spec.json", {
-                "campaign_id": "x",
-                "benchmarks": [{
-                    "id": "b1",
-                    "evaluation": {"task_type": "classification", "labels": ["yes", "no"]},
-                }],
-            })
-            write_json(root / "config" / "curation-quotas.json", {
-                "total_target": 2,
-                "benchmarks": [{
-                    "benchmark_id": "b1",
-                    "non_holdout": {"anchor_quotas": [{"anchor_source_id": "s1", "target_cases": 1}]},
-                    "holdout": {"anchor_quotas": [{"anchor_source_id": "s2", "target_cases": 1}]},
-                }],
-            })
             build_factory_plan(root, plan)
             with (index / "segments.jsonl").open("a", encoding="utf-8") as fh:
                 fh.write("{}\n")
