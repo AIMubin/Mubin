@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -36,7 +37,9 @@ def _multilabel_micro(gold: list[set[str]], pred: list[set[str]]) -> dict[str, f
     return {"micro_precision": precision, "micro_recall": recall, "micro_f1": f1}
 
 
-def _threshold_pass(metrics: dict[str, float], thresholds: dict[str, Any]) -> tuple[bool, list[dict[str, Any]]]:
+def _threshold_pass(metrics: dict[str, float], thresholds: dict[str, Any],
+                    denominators: dict[str, int] | None = None,
+                    minimum_denominators: dict[str, int] | None = None) -> tuple[bool, list[dict[str, Any]]]:
     checks = []
     passed = True
     for metric, rule in thresholds.items():
@@ -52,6 +55,18 @@ def _threshold_pass(metrics: dict[str, float], thresholds: dict[str, Any]) -> tu
             expected = rule
         passed = passed and ok
         checks.append({"metric": metric, "actual": actual, "expected": expected, "passed": ok})
+
+    denominators = denominators or {}
+    for name, minimum in (minimum_denominators or {}).items():
+        actual = int(denominators.get(name, 0))
+        ok = actual >= int(minimum)
+        passed = passed and ok
+        checks.append({
+            "metric": f"{name}_denominator",
+            "actual": actual,
+            "expected": {"min": int(minimum)},
+            "passed": ok,
+        })
     return passed, checks
 
 
@@ -114,6 +129,8 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
             gold_map = {str(r["case_id"]): r["payload"]["gold"] for r in rows}
         preds = load_jsonl(predictions_dir / f"{bid}.jsonl")
         pred_map = {str(p["case_id"]): p for p in preds}
+        if len(pred_map) != len(preds):
+            raise ValueError(f"{bid}: duplicate prediction case_id")
         expected_ids = {str(r["case_id"]) for r in rows}
         if set(pred_map) != expected_ids:
             missing = sorted(expected_ids - set(pred_map))
@@ -123,15 +140,21 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
         contract = b["evaluation"]
         task = contract["task_type"]
         metrics: dict[str, float] = {}
+        denominators: dict[str, int] = {}
+        allowed_labels = set(contract.get("labels", []))
         if task == "multilabel":
             gold = [set(gold_map[str(r["case_id"])]["labels"]) for r in rows]
             pred = [set(pred_map[str(r["case_id"])]["prediction"]["labels"]) for r in rows]
+            if any(not p.issubset(allowed_labels) for p in pred):
+                raise ValueError(f"{bid}: prediction contains label outside preregistered label set")
             metrics.update(_multilabel_micro(gold, pred))
             metrics["exact_accuracy"] = _safe_div(sum(g == p for g, p in zip(gold, pred)), len(gold))
         elif task == "classification":
             labels = list(contract["labels"])
             gold = [str(gold_map[str(r["case_id"])]["label"]) for r in rows]
             pred = [str(pred_map[str(r["case_id"])]["prediction"]["label"]) for r in rows]
+            if any(p not in allowed_labels for p in pred):
+                raise ValueError(f"{bid}: prediction contains label outside preregistered label set")
             metrics["accuracy"] = _safe_div(sum(g == p for g, p in zip(gold, pred)), len(gold))
             metrics["macro_f1"] = _macro_f1(gold, pred, labels)
         else:
@@ -148,6 +171,7 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
                     den += 1
                     if p in cfg["merge_prediction_labels"]:
                         num += 1
+            denominators["unsafe_merge"] = den
             metrics["unsafe_merge_rate"] = _safe_div(num, den)
         if "direction" in safety:
             num = den = 0
@@ -159,6 +183,7 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
                 pd = pred_map[str(r["case_id"])]["prediction"].get("direction")
                 if pd != gd:
                     num += 1
+            denominators["direction"] = den
             metrics["direction_error_rate"] = _safe_div(num, den)
         if "scope_collapse" in safety:
             cfg = safety["scope_collapse"]
@@ -170,18 +195,35 @@ def evaluate_holdout(root: Path, spec_path: Path, freeze_manifest: Path, predict
                     den += 1
                     if p in cfg["forbidden_prediction_labels"]:
                         num += 1
+            denominators["scope_collapse"] = den
             metrics["scope_collapse_rate"] = _safe_div(num, den)
         if safety.get("provenance_preservation"):
-            vals = [bool(pred_map[str(r["case_id"])]["prediction"].get("preserves_provenance", False)) for r in rows]
+            vals = []
+            for r in rows:
+                provenance = pred_map[str(r["case_id"])]["prediction"].get("provenance")
+                ok = (
+                    isinstance(provenance, dict)
+                    and sorted(str(x) for x in provenance.get("source_ids", []))
+                        == sorted(str(x) for x in r.get("source_ids", []))
+                    and provenance.get("family_id") == r.get("family_id")
+                )
+                vals.append(ok)
+            denominators["provenance_preservation"] = len(vals)
             metrics["provenance_preservation_rate"] = _safe_div(sum(vals), len(vals))
 
-        passed, checks = _threshold_pass(metrics, contract["thresholds"])
+        passed, checks = _threshold_pass(
+            metrics,
+            contract["thresholds"],
+            denominators,
+            contract.get("minimum_denominators"),
+        )
         all_pass = all_pass and passed
         results.append({
             "benchmark_id": bid,
             "holdout_count": len(rows),
             "metrics": {k: round(v, 6) for k, v in sorted(metrics.items())},
             "threshold_checks": checks,
+            "safety_denominators": denominators,
             "passed": passed,
         })
 

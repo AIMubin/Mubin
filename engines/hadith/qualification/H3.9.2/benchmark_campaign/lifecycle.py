@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
+import subprocess
 from typing import Any
 
 from .core import load_json, sha256_file, write_json
