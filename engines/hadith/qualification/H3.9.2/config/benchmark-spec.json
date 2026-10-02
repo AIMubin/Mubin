@@ -1,7 +1,7 @@
 {
   "campaign_id": "H3.9.2",
   "campaign_name": "Benchmark Expansion Campaign",
-  "schema_version": 4,
+  "schema_version": 5,
   "freeze_required_before_tuning": true,
   "final_holdout_policy": "one-shot",
   "qualification": {
@@ -26,7 +26,8 @@
     "require_sealed_holdout_gold": true,
     "holdout_gold_encryption": "AES-256-GCM; external 256-bit key; key excluded from repository/artifacts",
     "require_frozen_curation_quotas": true,
-    "require_label_coverage": true
+    "require_label_coverage": true,
+    "require_answer_evidence_binding": true
   },
   "split_policy": {
     "development_fraction": 0.5,

@@ -10,6 +10,7 @@ from benchmark_campaign.audit import _read_architecture_gate
 from benchmark_campaign.core import dump_jsonl, load_json, write_json
 from benchmark_campaign.curation import curate_reviewed_file
 from benchmark_campaign.evaluate import _label_coverage_checks, _threshold_pass
+from benchmark_campaign.holdout_seal import decrypt_gold_map, seal_holdout_rows
 from benchmark_campaign.normalization import fingerprint_payload
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
 from benchmark_campaign.validate import _validate_annotation, validate_campaign
@@ -71,6 +72,50 @@ class ReviewRegressionTests(unittest.TestCase):
             },
         }
         self.assertEqual(_validate_annotation(record, "b"), [])
+
+    def test_sealed_holdout_binds_answer_provenance(self):
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        from benchmark_campaign.core import canonical_json_bytes, sha256_bytes
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            excerpt = "قال أبو عيسى هذا حديث حسن صحيح"
+            support_text = "هذا حديث حسن صحيح"
+            excerpt_sha = hashlib.sha256(excerpt.encode()).hexdigest()
+            support = {
+                "source_id": "s1",
+                "support_text": support_text,
+                "support_text_sha256": hashlib.sha256(support_text.encode()).hexdigest(),
+                "source_excerpt_sha256": excerpt_sha,
+            }
+            gold = {"label": "hasan_sahih"}
+            ap = {
+                "answer_origin": "human_authored_source",
+                "extraction_method": "ai",
+                "human_reviewed": False,
+                "source_verified": True,
+                "mode": "direct_extract",
+                "verbatim_answer": "حسن صحيح",
+                "supports": [support],
+            }
+            ap["gold_binding_sha256"] = sha256_bytes(canonical_json_bytes({
+                "gold": gold, "supports": [support], "mode": "direct_extract"
+            }))
+            record = {
+                "case_id": "c1",
+                "content_fingerprint": "a" * 64,
+                "source_ids": ["s1"],
+                "family_id": "f1",
+                "gold_status": "source_attributed",
+                "answer_provenance": ap,
+                "payload": {"input": {"q": "x"}, "gold": gold},
+            }
+            key = AESGCM.generate_key(bit_length=256)
+            sealed = seal_holdout_rows(root, "campaign", "b1", [record], key)
+            public_rows = sealed["public_rows"]
+            self.assertEqual(decrypt_gold_map(root, "campaign", "b1", public_rows, key)["c1"], gold)
+            public_rows[0]["answer_provenance"]["verbatim_answer"] = "تم العبث"
+            with self.assertRaisesRegex(ValueError, "bind"):
+                decrypt_gold_map(root, "campaign", "b1", public_rows, key)
 
     def test_tampered_source_cache_is_rejected_inside_curation(self):
         with tempfile.TemporaryDirectory() as d:

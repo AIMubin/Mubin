@@ -4,7 +4,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-from .core import SPLITS, Violation, canonical_json_bytes, load_json, load_jsonl
+from .core import SPLITS, Violation, canonical_json_bytes, load_json, load_jsonl, sha256_bytes
 from .normalization import fingerprint_payload
 from .source_registry import load_source_registry, source_map
 from .holdout_seal import validate_public_seal_binding
@@ -82,6 +82,78 @@ def _validate_annotation(record: dict[str, Any], benchmark_id: str) -> list[Viol
             out.append(Violation("qualification.expert_adjudicator", "expert_gold requires an adjudicator ID", benchmark_id, cid))
         elif adjudicator in reviewers:
             out.append(Violation("qualification.adjudicator_not_independent", "adjudicator must be independent of reviewers", benchmark_id, cid))
+    return out
+
+
+def _validate_answer_support(record: dict[str, Any], benchmark_id: str) -> list[Violation]:
+    out: list[Violation] = []
+    if record.get("gold_status") != "source_attributed":
+        return out
+    cid = record.get("case_id")
+    ap = record.get("answer_provenance")
+    if not isinstance(ap, dict):
+        return out
+    refs = record.get("source_refs")
+    if not isinstance(refs, list):
+        return out
+    refs_by_id = {r.get("source_id"): r for r in refs if isinstance(r, dict) and isinstance(r.get("source_id"), str)}
+    supports = ap.get("supports")
+    if not isinstance(supports, list) or not supports:
+        return [Violation("qualification.answer_supports", "source_attributed requires non-empty supports", benchmark_id, cid)]
+    for support in supports:
+        if not isinstance(support, dict):
+            out.append(Violation("qualification.answer_support", "each support must be an object", benchmark_id, cid))
+            continue
+        sid = support.get("source_id")
+        text = support.get("support_text")
+        ref = refs_by_id.get(sid)
+        if ref is None:
+            out.append(Violation("qualification.answer_support_source", "support source_id must reference source_refs", benchmark_id, cid))
+            continue
+        if not isinstance(text, str) or not text.strip() or text not in str(ref.get("excerpt", "")):
+            out.append(Violation("qualification.answer_support_text", "support_text must occur verbatim in the pinned source excerpt", benchmark_id, cid))
+            continue
+        expected_support_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if support.get("support_text_sha256") != expected_support_sha:
+            out.append(Violation("qualification.answer_support_hash", "support_text_sha256 mismatch", benchmark_id, cid))
+        if support.get("source_excerpt_sha256") != ref.get("excerpt_sha256"):
+            out.append(Violation("qualification.answer_support_excerpt_binding", "support is not bound to the cited source excerpt", benchmark_id, cid))
+    mode = ap.get("mode")
+    if mode == "direct_extract":
+        verbatim_answer = ap.get("verbatim_answer")
+        if not isinstance(verbatim_answer, str) or not verbatim_answer.strip() or not any(
+            isinstance(s, dict) and isinstance(s.get("support_text"), str) and verbatim_answer in s["support_text"]
+            for s in supports
+        ):
+            out.append(Violation("qualification.verbatim_answer", "direct_extract verbatim_answer must occur in support_text", benchmark_id, cid))
+    elif mode == "attributed_composite":
+        if len(supports) < 2:
+            out.append(Violation("qualification.composite_support_count", "attributed_composite requires at least two supports", benchmark_id, cid))
+        iv = ap.get("independent_verification")
+        extractor = ap.get("extractor_family")
+        verifier = iv.get("verifier_family") if isinstance(iv, dict) else None
+        if not isinstance(iv, dict) or iv.get("verdict") != "supported":
+            out.append(Violation("qualification.composite_verification", "attributed_composite requires independent supported verification", benchmark_id, cid))
+        if not isinstance(extractor, str) or not extractor.strip() or not isinstance(verifier, str) or not verifier.strip() or extractor == verifier:
+            out.append(Violation("qualification.composite_independence", "extractor_family and verifier_family must be distinct", benchmark_id, cid))
+    payload = record.get("payload")
+    if isinstance(payload, dict) and "gold" in payload:
+        normalized_supports = [
+            {
+                "source_id": s.get("source_id"),
+                "support_text": s.get("support_text"),
+                "support_text_sha256": s.get("support_text_sha256"),
+                "source_excerpt_sha256": s.get("source_excerpt_sha256"),
+            }
+            for s in supports if isinstance(s, dict)
+        ]
+        expected_binding = sha256_bytes(canonical_json_bytes({
+            "gold": payload["gold"],
+            "supports": normalized_supports,
+            "mode": mode,
+        }))
+        if ap.get("gold_binding_sha256") != expected_binding:
+            out.append(Violation("qualification.gold_binding", "gold_binding_sha256 mismatch", benchmark_id, cid))
     return out
 
 
@@ -182,6 +254,7 @@ def validate_record(record: dict[str, Any], benchmark_id: str, registry: dict[st
     if not _is_sha256(record["content_fingerprint"]):
         out.append(Violation("record.content_fingerprint", "content_fingerprint must be lowercase sha256", benchmark_id, cid))
     out.extend(_validate_annotation(record, benchmark_id))
+    out.extend(_validate_answer_support(record, benchmark_id))
     return out
 
 

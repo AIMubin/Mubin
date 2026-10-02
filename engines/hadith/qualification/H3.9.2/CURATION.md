@@ -29,7 +29,14 @@ The input to `curate-reviewed` is JSONL. Do not provide split, hashes, or derive
     "extraction_method": "ai",
     "human_reviewed": false,
     "source_verified": true,
-    "mode": "direct_extract"
+    "mode": "direct_extract",
+    "verbatim_answer": "النص البشري الذي يمثل الجواب مباشرة",
+    "supports": [
+      {
+        "source_id": "openiti:0742Mizzi.TahdhibKamal",
+        "support_text": "النص الحرفي الداعم الموجود داخل source_refs.excerpt"
+      }
+    ]
   },
   "annotation": {
     "reviewers": [],
@@ -48,7 +55,7 @@ For H3.8/H3.9, include every work used by the comparison as a separate `source_r
 
 ## Qualification levels
 
-`source_attributed` is the default extractive track: the answer originates in a human-authored source and may be extracted/structured by AI without pretending that a human reviewed the case. It requires `answer_origin=human_authored_source`, `extraction_method=ai|human`, an explicit `human_reviewed` boolean, and `source_verified=true`. `reference_pilot` remains available for genuinely human-reviewed pilot material. `expert_gold` requires two distinct reviewers plus an independent adjudicator. Synthetic records and AI-invented judgments are never qualification-eligible.
+`source_attributed` is the default extractive track: the answer originates in a human-authored source and may be extracted/structured by AI without pretending that a human reviewed the case. Every such answer must carry one or more literal `supports` bound to the pinned source excerpts; the curator derives support hashes and a `gold_binding_sha256` over the gold answer and supports. It requires `answer_origin=human_authored_source`, `extraction_method=ai|human`, an explicit `human_reviewed` boolean, and `source_verified=true`. `reference_pilot` remains available for genuinely human-reviewed pilot material. `expert_gold` requires two distinct reviewers plus an independent adjudicator. Synthetic records and AI-invented judgments are never qualification-eligible.
 
 ## Family IDs
 
@@ -82,3 +89,8 @@ Keep at least two securely controlled backups of the key. Losing it makes the fr
 ## No automatic gold
 
 Candidate discovery, regex mining, embedding similarity, Itqan links, LLM suggestions, or heuristic parsers may propose cases. An AI may extract an answer that is explicitly attributable to a pinned human-authored source and record it as `source_attributed`; the AI's own unsupported opinion may never become gold. Derived/adjudicative judgments require `expert_gold` or an explicit human-authored authority statement.
+
+
+### Direct vs composite attribution
+
+For `direct_extract`, `verbatim_answer` must occur literally inside at least one `support_text`. For `attributed_composite`, provide at least two source-grounded supports plus `extractor_family` and `independent_verification.verifier_family`; the two model families must differ and the verifier verdict must be `supported`. This metadata does not turn an AI opinion into authority: the underlying supports remain human-authored source statements.

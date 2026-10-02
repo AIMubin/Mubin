@@ -4,7 +4,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from .core import dump_jsonl, load_jsonl
+from .core import canonical_json_bytes, dump_jsonl, load_jsonl, sha256_bytes
 from .normalization import fingerprint_payload
 from .source_cache import cache_filename, verify_cached_source
 from .source_registry import load_source_registry, source_map
@@ -84,6 +84,57 @@ def seal_reviewed_record(root: Path, record: dict[str, Any], source_cache_dir: P
             raise ValueError("source_attributed requires source_verified=true")
         if not isinstance(answer_provenance.get("human_reviewed"), bool):
             raise ValueError("source_attributed requires human_reviewed boolean")
+        mode = answer_provenance.get("mode")
+        if mode not in {"direct_extract", "attributed_composite"}:
+            raise ValueError("source_attributed mode must be direct_extract or attributed_composite")
+        supports = answer_provenance.get("supports")
+        if not isinstance(supports, list) or not supports:
+            raise ValueError("source_attributed requires non-empty supports")
+        refs_by_id = {r["source_id"]: r for r in sealed_refs}
+        normalized_supports = []
+        for support in supports:
+            if not isinstance(support, dict):
+                raise ValueError("each answer support must be an object")
+            sid = support.get("source_id")
+            support_text = support.get("support_text")
+            if sid not in refs_by_id:
+                raise ValueError("answer support source_id must reference source_refs")
+            if not isinstance(support_text, str) or not support_text.strip():
+                raise ValueError("answer support_text must be non-empty")
+            if support_text not in refs_by_id[sid]["excerpt"]:
+                raise ValueError("answer support_text must occur verbatim inside the pinned source excerpt")
+            normalized_supports.append({
+                "source_id": sid,
+                "support_text": support_text,
+                "support_text_sha256": _excerpt_hash(support_text),
+                "source_excerpt_sha256": refs_by_id[sid]["excerpt_sha256"],
+            })
+        if mode == "direct_extract":
+            verbatim_answer = answer_provenance.get("verbatim_answer")
+            if not isinstance(verbatim_answer, str) or not verbatim_answer.strip():
+                raise ValueError("direct_extract requires verbatim_answer")
+            if not any(verbatim_answer in s["support_text"] for s in normalized_supports):
+                raise ValueError("verbatim_answer must occur inside at least one support_text")
+        else:
+            if len(normalized_supports) < 2:
+                raise ValueError("attributed_composite requires at least two source-grounded supports")
+            verification = answer_provenance.get("independent_verification")
+            if not isinstance(verification, dict) or verification.get("verdict") != "supported":
+                raise ValueError("attributed_composite requires independent verification with verdict=supported")
+            extractor_family = answer_provenance.get("extractor_family")
+            verifier_family = verification.get("verifier_family")
+            if not isinstance(extractor_family, str) or not extractor_family.strip():
+                raise ValueError("attributed_composite requires extractor_family")
+            if not isinstance(verifier_family, str) or not verifier_family.strip() or verifier_family == extractor_family:
+                raise ValueError("attributed_composite verifier_family must be non-empty and independent of extractor_family")
+        answer_provenance = dict(answer_provenance)
+        answer_provenance["supports"] = normalized_supports
+        answer_provenance["gold_binding_sha256"] = sha256_bytes(canonical_json_bytes({
+            "gold": payload["gold"],
+            "supports": normalized_supports,
+            "mode": mode,
+        }))
+        out["answer_provenance"] = answer_provenance
 
     out["source_ids"] = source_ids
     out["source_refs"] = sealed_refs

@@ -60,6 +60,10 @@ def _public_binding(record: dict[str, Any]) -> dict[str, Any]:
         "source_ids": sorted(str(x) for x in record.get("source_ids", [])),
         "family_id": str(record.get("family_id", "")),
         "gold_status": str(record.get("gold_status", "")),
+        "answer_provenance_sha256": (
+            sha256_bytes(canonical_json_bytes(record["answer_provenance"]))
+            if isinstance(record.get("answer_provenance"), dict) else None
+        ),
     }
 
 
@@ -217,13 +221,39 @@ def decrypt_gold_map(root: Path, campaign_id: str, benchmark_id: str,
     if actual_binding != expected_binding:
         raise ValueError("sealed gold does not bind to the current public holdout records")
     gold_map: dict[str, Any] = {}
+    public_by_case = {str(r["case_id"]): r for r in public_rows}
     for r in records:
         cid = str(r.get("case_id"))
         if cid in gold_map:
             raise ValueError(f"duplicate case_id inside sealed holdout: {cid}")
         if "gold" not in r:
             raise ValueError(f"sealed holdout gold missing for {cid}")
-        gold_map[cid] = r["gold"]
+        gold = r["gold"]
+        public = public_by_case.get(cid)
+        if isinstance(public, dict) and public.get("gold_status") == "source_attributed":
+            ap = public.get("answer_provenance")
+            if not isinstance(ap, dict):
+                raise ValueError(f"source_attributed holdout missing answer_provenance: {cid}")
+            supports = ap.get("supports")
+            if not isinstance(supports, list) or not supports:
+                raise ValueError(f"source_attributed holdout missing supports: {cid}")
+            normalized_supports = [
+                {
+                    "source_id": s.get("source_id"),
+                    "support_text": s.get("support_text"),
+                    "support_text_sha256": s.get("support_text_sha256"),
+                    "source_excerpt_sha256": s.get("source_excerpt_sha256"),
+                }
+                for s in supports if isinstance(s, dict)
+            ]
+            expected_gold_binding = sha256_bytes(canonical_json_bytes({
+                "gold": gold,
+                "supports": normalized_supports,
+                "mode": ap.get("mode"),
+            }))
+            if ap.get("gold_binding_sha256") != expected_gold_binding:
+                raise ValueError(f"source_attributed holdout gold binding mismatch: {cid}")
+        gold_map[cid] = gold
     if set(gold_map) != set(expected_binding):
         raise ValueError("sealed holdout case set mismatch")
     return gold_map
