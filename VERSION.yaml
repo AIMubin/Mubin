@@ -1,0 +1,23 @@
+system:
+  name: Mubin
+  version: 0.1.0-alpha
+  maturity: foundation
+
+components:
+  quran_engine:
+    milestone: Q0.0
+    maturity: planned
+  hadith_engine:
+    milestone: H3.9.2
+    maturity: qualification
+  usul_engine:
+    milestone: U0.0
+    maturity: planned
+  fiqh_engine:
+    milestone: F0.0
+    maturity: planned
+
+policy:
+  system_version_scheme: semver
+  component_milestones: namespaced_internal
+  component_versions_do_not_imply_system_release: true
