@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from benchmark_campaign.core import dump_jsonl, load_jsonl, write_json
+from benchmark_campaign.core import dump_jsonl, load_json, load_jsonl, write_json
 from benchmark_campaign.factory import (
     build_factory_plan,
     build_factory_tasks,
@@ -129,8 +129,13 @@ class FactoryTests(unittest.TestCase):
             self.assertEqual({r["source_id"] for r in rows}, {"s1"})
             self.assertTrue(all(r["locator"].startswith("gitblob:") for r in rows))
 
-    def _build_one_task(self, root: Path):
+    def _build_one_task(self, root: Path, risk_tier: int = 1, auto_promotion: bool = True):
         cache, _ = self._fixture(root)
+        policy_path = root / "config" / "factory-policy.json"
+        policy = load_json(policy_path)
+        policy["benchmarks"]["b1"]["risk_tier"] = risk_tier
+        policy["benchmarks"]["b1"]["auto_promotion"] = auto_promotion
+        write_json(policy_path, policy)
         index = root / "factory-work" / "index"
         build_source_index(root, cache, index, "non_holdout", False, 512, 64)
         plan = root / "factory-work" / "plan.json"
@@ -357,6 +362,23 @@ class FactoryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "task fingerprint mismatch"):
                 prepare_verifier_tasks(root, tasks, curator, root / "factory-work" / "v.jsonl")
 
+    def test_rehashed_task_policy_tamper_is_still_rejected_against_frozen_plan(self):
+        from benchmark_campaign.core import canonical_json_bytes, sha256_bytes
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, tasks, _ = self._build_one_task(root)
+            rows = load_jsonl(tasks)
+            rows[0]["risk_tier"] = 3
+            unsigned = dict(rows[0])
+            unsigned.pop("task_fingerprint", None)
+            rows[0]["task_fingerprint"] = sha256_bytes(canonical_json_bytes(unsigned))
+            dump_jsonl(tasks, rows)
+            curator = root / "factory-work" / "curator.jsonl"
+            dump_jsonl(curator, [])
+            with self.assertRaisesRegex(ValueError, "differs from frozen slot"):
+                prepare_verifier_tasks(root, tasks, curator, root / "factory-work" / "v.jsonl")
+
     def test_factory_plan_tamper_is_rejected_before_task_generation(self):
         project = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as d:
@@ -450,9 +472,7 @@ class FactoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
             root.mkdir()
-            cache, _, task = self._build_one_task(root)
-            task["auto_promotion"] = False
-            task["risk_tier"] = 3
+            cache, _, task = self._build_one_task(root, risk_tier=3, auto_promotion=False)
             excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
             curator, verifier = self._responses(task, excerpt)
             report, _, adjudication, _ = self._reconcile(root, task, cache, curator, verifier)

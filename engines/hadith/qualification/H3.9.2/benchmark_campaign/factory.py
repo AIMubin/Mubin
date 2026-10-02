@@ -81,6 +81,49 @@ def _task_partition(rows: list[dict[str, Any]]) -> str:
     raise ValueError("do not mix holdout and non-holdout tasks in one factory operation")
 
 
+def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) -> None:
+    expected_plan = build_factory_plan(root)
+    slots = {str(s["slot_id"]): s for s in expected_plan["slots"]}
+    cplan = _curation_plan(root)
+    registry = source_map(load_source_registry(root))
+    policy_fields = (
+        "benchmark_id", "partition", "anchor_source_id", "task_type",
+        "allowed_labels", "auto_promotion", "risk_tier", "visibility",
+    )
+    for task in rows:
+        slot_id = str(task.get("slot_id", ""))
+        expected = slots.get(slot_id)
+        if expected is None:
+            raise ValueError(f"factory task references unknown frozen slot: {slot_id}")
+        if task.get("task_id") != slot_id:
+            raise ValueError(f"factory task_id must equal frozen slot_id: {slot_id}")
+        for field in policy_fields:
+            if task.get(field) != expected.get(field):
+                raise ValueError(f"factory task {field} differs from frozen slot: {slot_id}")
+        bid = expected["benchmark_id"]
+        partition = expected["partition"]
+        bp = cplan.get("benchmarks", {}).get(bid, {})
+        pool_key = "holdout_source_pool" if partition == "holdout" else "non_holdout_source_pool"
+        other_key = "non_holdout_source_pool" if partition == "holdout" else "holdout_source_pool"
+        if task.get("allowed_source_pool") != bp.get(pool_key):
+            raise ValueError(f"factory task allowed_source_pool differs from frozen plan: {slot_id}")
+        if task.get("forbidden_source_pool") != bp.get(other_key):
+            raise ValueError(f"factory task forbidden_source_pool differs from frozen plan: {slot_id}")
+        seg = task.get("anchor_segment")
+        if not isinstance(seg, dict):
+            raise ValueError(f"factory task anchor_segment missing: {slot_id}")
+        anchor = expected["anchor_source_id"]
+        src = registry.get(anchor)
+        if src is None or seg.get("source_id") != anchor or seg.get("source_blob_sha") != src.get("source_blob_sha"):
+            raise ValueError(f"factory task anchor segment is not bound to frozen anchor source: {slot_id}")
+        text = seg.get("text")
+        if not isinstance(text, str) or seg.get("text_sha256") != hashlib.sha256(text.encode("utf-8")).hexdigest():
+            raise ValueError(f"factory task anchor segment text hash mismatch: {slot_id}")
+        locator = seg.get("locator")
+        if not isinstance(locator, str) or not locator.startswith(f"gitblob:{src['source_blob_sha']}#char="):
+            raise ValueError(f"factory task anchor segment locator mismatch: {slot_id}")
+
+
 def _segment_text(text: str, max_chars: int, overlap: int) -> list[tuple[int, int, str]]:
     if max_chars < 512:
         raise ValueError("max_chars must be >= 512")
@@ -302,6 +345,7 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
     actual_partition = _task_partition(task_rows)
     if actual_partition != partition:
         raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
+    _validate_tasks_against_frozen_plan(root, task_rows)
     tasks = {str(t["task_id"]): t for t in task_rows}
     responses = load_jsonl(curator_responses_path)
     out: list[dict[str, Any]] = []
@@ -437,6 +481,7 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
     actual_partition = _task_partition(task_rows)
     if actual_partition != partition:
         raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
+    _validate_tasks_against_frozen_plan(root, task_rows)
     tasks = {str(t["task_id"]): t for t in task_rows}
 
     curators = {str(r["task_id"]): r for r in load_jsonl(curator_responses_path)}
