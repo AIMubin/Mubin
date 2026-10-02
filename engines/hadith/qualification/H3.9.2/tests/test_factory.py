@@ -17,7 +17,7 @@ from benchmark_campaign.factory import (
     _gold_contract_error,
 )
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
-from benchmark_campaign.validate import _validate_factory_verification, _validate_factory_risk_policy
+from benchmark_campaign.validate import (_validate_factory_slot_binding, _validate_factory_verification, _validate_factory_risk_policy)
 
 
 class FactoryTests(unittest.TestCase):
@@ -240,6 +240,10 @@ class FactoryTests(unittest.TestCase):
                 "model_family_not_independent",
             )
 
+    def _factory_locator(self, task: dict, excerpt: str) -> str:
+        blob = task["anchor_segment"]["source_blob_sha"]
+        return f"gitblob:{blob}#char=0:{len(excerpt)}"
+
     def _candidate(self, task: dict, excerpt: str):
         return {
             "benchmark_id": task["benchmark_id"],
@@ -250,7 +254,7 @@ class FactoryTests(unittest.TestCase):
             "synthetic": False,
             "source_refs": [{
                 "source_id": "s1",
-                "locator": "test:s1:1",
+                "locator": self._factory_locator(task, excerpt),
                 "excerpt": excerpt,
             }],
             "answer_provenance": {
@@ -297,7 +301,7 @@ class FactoryTests(unittest.TestCase):
                 "gold": {"label": verifier_gold},
                 "supports": [{
                     "source_id": "s1",
-                    "locator": "test:s1:1",
+                    "locator": self._factory_locator(task, excerpt),
                     "excerpt": excerpt,
                     "support_text": "سمع من شيخه",
                 }],
@@ -337,6 +341,12 @@ class FactoryTests(unittest.TestCase):
             self.assertEqual(rows[0]["factory_verification"]["agreement"], "exact_gold_match")
             self.assertEqual(rows[0]["factory_verification"]["risk_tier"], 1)
             self.assertEqual(rows[0]["factory_verification"]["factory_version"], 1)
+            self.assertEqual(rows[0]["factory_slot_id"], task["slot_id"])
+            self.assertEqual(rows[0]["factory_task_id"], task["slot_id"])
+            self.assertRegex(
+                rows[0]["factory_verification"]["slot_binding_sha256"],
+                r"^[a-f0-9]{64}$",
+            )
             self.assertRegex(rows[0]["factory_verification"]["curator_response_sha256"], r"^[a-f0-9]{64}$")
             self.assertRegex(rows[0]["factory_verification"]["verifier_response_sha256"], r"^[a-f0-9]{64}$")
             self.assertNotEqual(
@@ -347,6 +357,46 @@ class FactoryTests(unittest.TestCase):
             ledger_rows = load_jsonl(ledger)
             self.assertEqual(ledger_rows[0]["outcome"], "promoted")
             self.assertNotIn('"label": "yes"', ledger.read_text(encoding="utf-8"))
+
+    def test_invalid_curator_locator_routes_to_adjudication(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(task, excerpt)
+            blob = task["anchor_segment"]["source_blob_sha"]
+            curator["candidate"]["source_refs"][0]["locator"] = (
+                f"gitblob:{blob}#char=1:{len(excerpt) + 1}"
+            )
+            report, _, adjudication, _ = self._reconcile(
+                root, task, cache, curator, verifier
+            )
+            self.assertEqual(report["promoted_count"], 0)
+            self.assertEqual(
+                load_jsonl(adjudication)[0]["reason"],
+                "curator_locator_invalid",
+            )
+
+    def test_slot_binding_tamper_fails_validator(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(task, excerpt)
+            report, reviewed, _, _ = self._reconcile(
+                root, task, cache, curator, verifier
+            )
+            self.assertEqual(report["promoted_count"], 1)
+            row = load_jsonl(reviewed / "b1" / "reviewed.jsonl")[0]
+            row["split"] = "development"
+            self.assertEqual(_validate_factory_slot_binding(root, row, "b1"), [])
+            row["factory_verification"]["slot_binding_sha256"] = "0" * 64
+            codes = {
+                v.code for v in _validate_factory_slot_binding(root, row, "b1")
+            }
+            self.assertIn("qualification.factory_slot_binding", codes)
 
     def test_same_model_family_routes_to_adjudication(self):
         with tempfile.TemporaryDirectory() as d:

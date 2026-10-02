@@ -18,6 +18,7 @@ The task contains no gold answer. Work only from `allowed_source_pool`.
 8. Risk-tier 3 cases may be proposed, but the factory routes them to adjudication rather than auto-promotion.
 9. `anchor_source_id` and `benchmark_id` must match the task exactly.
 10. `source_refs` must include every canonical source used to produce the answer.
+11. For Factory-generated cases, each locator must be the exact deterministic form `gitblob:<pinned-blob-sha>#char=<start>:<end>` and the character slice must equal the quoted excerpt byte-for-text after UTF-8 decoding.
 
 ## Response envelope
 

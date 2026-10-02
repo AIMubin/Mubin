@@ -182,7 +182,7 @@ def _validate_factory_verification(record: dict[str, Any], benchmark_id: str) ->
         and fv.get("curator_model_family") == fv.get("verifier_model_family")
     ):
         out.append(Violation("qualification.factory_verification_independence", "curator and verifier model families must differ", benchmark_id, cid))
-    for field in ("curator_response_sha256", "verifier_response_sha256", "task_fingerprint"):
+    for field in ("curator_response_sha256", "verifier_response_sha256", "task_fingerprint", "slot_binding_sha256"):
         if not _is_sha256(fv.get(field)):
             out.append(Violation("qualification.factory_verification_hash", f"factory_verification.{field} must be sha256", benchmark_id, cid))
     if fv.get("agreement") != "exact_gold_match":
@@ -226,6 +226,111 @@ def _validate_factory_risk_policy(record: dict[str, Any], benchmark_id: str,
             benchmark_id, record.get("case_id"),
         )]
     return []
+
+
+def _requires_factory_slot_binding(record: dict[str, Any]) -> bool:
+    if record.get("gold_status") != "source_attributed":
+        return False
+    ap = record.get("answer_provenance")
+    return bool(
+        isinstance(ap, dict)
+        and ap.get("extraction_method") == "ai"
+        and ap.get("human_reviewed") is False
+    )
+
+
+def _validate_factory_slot_binding(root: Path, record: dict[str, Any],
+                                   benchmark_id: str) -> list[Violation]:
+    if not _requires_factory_slot_binding(record):
+        return []
+    cid = record.get("case_id")
+    out: list[Violation] = []
+    try:
+        from .factory import build_factory_plan
+        plan = build_factory_plan(root)
+    except Exception as exc:
+        return [Violation(
+            "qualification.factory_plan_unavailable",
+            f"cannot re-derive frozen factory plan: {exc}",
+            benchmark_id, cid,
+        )]
+    slots = {str(s["slot_id"]): s for s in plan.get("slots", [])}
+    slot_id = record.get("factory_slot_id")
+    task_id = record.get("factory_task_id")
+    if not isinstance(slot_id, str) or not slot_id:
+        return [Violation(
+            "qualification.factory_slot_missing",
+            "unreviewed AI source_attributed record requires factory_slot_id",
+            benchmark_id, cid,
+        )]
+    if task_id != slot_id:
+        out.append(Violation(
+            "qualification.factory_task_slot_mismatch",
+            "factory_task_id must equal factory_slot_id",
+            benchmark_id, cid,
+        ))
+    slot = slots.get(slot_id)
+    if slot is None:
+        out.append(Violation(
+            "qualification.factory_slot_unknown",
+            "factory_slot_id is not present in the frozen 1,280-slot plan",
+            benchmark_id, cid,
+        ))
+        return out
+
+    expected_partition = "holdout" if record.get("split") == "holdout" else "non_holdout"
+    checks = {
+        "benchmark_id": benchmark_id,
+        "partition": expected_partition,
+        "anchor_source_id": record.get("anchor_source_id"),
+    }
+    for field, actual in checks.items():
+        if slot.get(field) != actual:
+            out.append(Violation(
+                f"qualification.factory_slot_{field}",
+                f"record {field} does not match frozen factory slot",
+                benchmark_id, cid,
+            ))
+    if slot.get("auto_promotion") is not True:
+        out.append(Violation(
+            "qualification.factory_slot_not_auto_promotable",
+            "unreviewed AI record cannot qualify from a slot that requires adjudication",
+            benchmark_id, cid,
+        ))
+
+    fv = record.get("factory_verification")
+    if not isinstance(fv, dict):
+        return out
+    expected_slot_hash = sha256_bytes(canonical_json_bytes(slot))
+    if fv.get("slot_binding_sha256") != expected_slot_hash:
+        out.append(Violation(
+            "qualification.factory_slot_binding",
+            "factory_verification.slot_binding_sha256 does not match frozen slot",
+            benchmark_id, cid,
+        ))
+    if fv.get("risk_tier") != slot.get("risk_tier"):
+        out.append(Violation(
+            "qualification.factory_slot_risk_tier",
+            "factory_verification risk_tier does not match frozen slot",
+            benchmark_id, cid,
+        ))
+    policy_path = root / "config" / "factory-policy.json"
+    if policy_path.exists():
+        policy_version = load_json(policy_path).get("factory_version")
+        if fv.get("factory_version") != policy_version:
+            out.append(Violation(
+                "qualification.factory_version_mismatch",
+                "factory_verification factory_version does not match frozen factory policy",
+                benchmark_id, cid,
+            ))
+    task_fp = record.get("factory_task_fingerprint")
+    if not _is_sha256(task_fp) or task_fp != fv.get("task_fingerprint"):
+        out.append(Violation(
+            "qualification.factory_task_fingerprint_binding",
+            "factory task fingerprint must be sha256 and match factory_verification.task_fingerprint",
+            benchmark_id, cid,
+        ))
+    return out
 
 
 def validate_record(record: dict[str, Any], benchmark_id: str, registry: dict[str, dict[str, Any]],
@@ -347,6 +452,7 @@ def validate_benchmark(root: Path, bspec: dict[str, Any], campaign_spec: dict[st
     for r in records:
         violations.extend(validate_record(r, benchmark_id, registry, sealed_holdout_required))
         violations.extend(_validate_factory_risk_policy(r, benchmark_id, factory_policy))
+        violations.extend(_validate_factory_slot_binding(root, r, benchmark_id))
         cid = r.get("case_id")
         if isinstance(cid, str):
             if cid in seen_case_ids:

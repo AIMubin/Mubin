@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 import hashlib
 import json
+import re
 
 from .core import canonical_json_bytes, dump_jsonl, load_json, load_jsonl, sha256_bytes, write_json
 from .curation import seal_reviewed_record
@@ -465,6 +466,65 @@ def _validate_response_identity(response: dict[str, Any], task: dict[str, Any], 
             raise ValueError(f"{role} response requires {field}: {task['task_id']}")
 
 
+_FACTORY_LOCATOR_RE = re.compile(r"^gitblob:([a-f0-9]{40})#char=(\d+):(\d+)$")
+
+
+def _slot_binding_sha256(slot: dict[str, Any]) -> str:
+    return sha256_bytes(canonical_json_bytes(slot))
+
+
+def _verify_factory_locator(root: Path, source_cache_dir: Path, source_id: str,
+                            locator: str, excerpt: str) -> dict[str, Any]:
+    registry = source_map(load_source_registry(root))
+    src = registry.get(source_id)
+    if src is None or src.get("qualification_eligible") is not True:
+        raise ValueError(f"factory source is not qualification eligible: {source_id}")
+    if not isinstance(locator, str):
+        raise ValueError(f"factory locator must be a string: {source_id}")
+    match = _FACTORY_LOCATOR_RE.fullmatch(locator)
+    if match is None:
+        raise ValueError(f"factory locator must use gitblob:<sha>#char=start:end: {source_id}")
+    blob_sha, raw_start, raw_end = match.groups()
+    if blob_sha != src.get("source_blob_sha"):
+        raise ValueError(f"factory locator blob does not match pinned source: {source_id}")
+    start, end = int(raw_start), int(raw_end)
+    if start < 0 or end <= start:
+        raise ValueError(f"factory locator character range is invalid: {source_id}")
+    cache_path = source_cache_dir / cache_filename(source_id)
+    if not cache_path.exists() or not verify_cached_source(cache_path, src)["verified"]:
+        raise ValueError(f"factory source cache is missing or unverified: {source_id}")
+    source_text = cache_path.read_text(encoding="utf-8", errors="strict")
+    if end > len(source_text):
+        raise ValueError(f"factory locator exceeds source length: {source_id}")
+    if source_text[start:end] != excerpt:
+        raise ValueError(f"factory locator does not resolve exactly to excerpt: {source_id}")
+    return {
+        "source_id": source_id,
+        "locator": locator,
+        "excerpt_sha256": hashlib.sha256(excerpt.encode("utf-8")).hexdigest(),
+        "source_blob_sha": blob_sha,
+        "char_start": start,
+        "char_end": end,
+    }
+
+
+def _verify_factory_candidate_refs(root: Path, source_cache_dir: Path,
+                                   refs: Any, allowed_source_pool: set[str]) -> None:
+    if not isinstance(refs, list) or not refs:
+        raise ValueError("factory candidate requires non-empty source_refs")
+    for ref in refs:
+        if not isinstance(ref, dict):
+            raise ValueError("factory candidate source_ref must be an object")
+        sid = ref.get("source_id")
+        locator = ref.get("locator")
+        excerpt = ref.get("excerpt")
+        if sid not in allowed_source_pool:
+            raise ValueError(f"factory candidate source escapes partition: {sid}")
+        if not isinstance(excerpt, str) or not excerpt:
+            raise ValueError(f"factory candidate excerpt missing: {sid}")
+        _verify_factory_locator(root, source_cache_dir, str(sid), locator, excerpt)
+
+
 def _verify_supports(root: Path, source_cache_dir: Path, supports: Any, allowed_source_pool: set[str]) -> list[dict[str, Any]]:
     if not isinstance(supports, list) or not supports:
         raise ValueError("verifier answer requires non-empty supports")
@@ -479,23 +539,15 @@ def _verify_supports(root: Path, source_cache_dir: Path, supports: Any, allowed_
         locator = support.get("locator")
         if sid not in allowed_source_pool:
             raise ValueError(f"verifier support source escapes partition: {sid}")
-        src = registry.get(str(sid))
-        if src is None or src.get("qualification_eligible") is not True:
-            raise ValueError(f"verifier support source is not qualification eligible: {sid}")
-        cache_path = source_cache_dir / cache_filename(str(sid))
-        if not cache_path.exists() or not verify_cached_source(cache_path, src)["verified"]:
-            raise ValueError(f"verifier source cache is missing or unverified: {sid}")
-        source_text = cache_path.read_text(encoding="utf-8", errors="strict")
-        if not isinstance(excerpt, str) or not excerpt or excerpt not in source_text:
-            raise ValueError(f"verifier excerpt not found verbatim in pinned source: {sid}")
+        if not isinstance(excerpt, str) or not excerpt:
+            raise ValueError(f"verifier excerpt missing: {sid}")
         if not isinstance(support_text, str) or not support_text or support_text not in excerpt:
             raise ValueError(f"verifier support_text not found inside excerpt: {sid}")
-        if not isinstance(locator, str) or not locator.strip():
-            raise ValueError(f"verifier locator missing: {sid}")
+        located = _verify_factory_locator(
+            root, source_cache_dir, str(sid), locator, excerpt
+        )
         verified.append({
-            "source_id": sid,
-            "locator": locator,
-            "excerpt_sha256": hashlib.sha256(excerpt.encode("utf-8")).hexdigest(),
+            **located,
             "support_text_sha256": hashlib.sha256(support_text.encode("utf-8")).hexdigest(),
         })
     return verified
@@ -581,6 +633,20 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             adjudication.append({"task_id": tid, "reason": "malformed_candidate_or_verifier_answer"})
             log(tid, "adjudication", curator, verifier, "malformed_candidate_or_verifier_answer")
             continue
+        try:
+            _verify_factory_candidate_refs(
+                root, source_cache_dir, candidate.get("source_refs"),
+                set(task["allowed_source_pool"]),
+            )
+        except Exception as exc:
+            adjudication.append({
+                "task_id": tid,
+                "reason": "curator_locator_invalid",
+                "detail": str(exc),
+            })
+            log(tid, "adjudication", curator, verifier, "curator_locator_invalid")
+            continue
+
         payload = candidate.get("payload")
         if not isinstance(payload, dict) or "gold" not in payload:
             adjudication.append({"task_id": tid, "reason": "curator_gold_missing"})
@@ -661,9 +727,14 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         candidate = json.loads(json.dumps(candidate, ensure_ascii=False))
         curator_response_sha256 = sha256_bytes(canonical_json_bytes(curator))
         verifier_response_sha256 = sha256_bytes(canonical_json_bytes(verifier))
+        expected_slots = {
+            str(s["slot_id"]): s for s in build_factory_plan(root)["slots"]
+        }
+        expected_slot = expected_slots[task["slot_id"]]
         candidate["factory_verification"] = {
             "factory_version": int(_policy(root).get("factory_version", 0)),
             "risk_tier": int(task.get("risk_tier", 0)),
+            "slot_binding_sha256": _slot_binding_sha256(expected_slot),
             "curator_model_family": curator["model_family"],
             "curator_model_ref": curator["model_ref"],
             "verifier_model_family": verifier["model_family"],

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aimubin.org/schemas/h3.9.2-benchmark-record-v7.schema.json",
+  "$id": "https://aimubin.org/schemas/h3.9.2-benchmark-record-v8.schema.json",
   "title": "Mubin H3.9.2 qualification benchmark record",
   "type": "object",
   "required": [
@@ -292,6 +292,7 @@
       "required": [
         "factory_version",
         "risk_tier",
+        "slot_binding_sha256",
         "curator_model_family",
         "curator_model_ref",
         "verifier_model_family",
@@ -313,6 +314,10 @@
             2,
             3
           ]
+        },
+        "slot_binding_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
         },
         "curator_model_family": {
           "type": "string",
@@ -338,47 +343,31 @@
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
         },
+        "verifier_supports": {
+          "type": "array",
+          "minItems": 1
+        },
         "agreement": {
           "const": "exact_gold_match"
         },
         "task_fingerprint": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
-        },
-        "verifier_supports": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "required": [
-              "source_id",
-              "locator",
-              "excerpt_sha256",
-              "support_text_sha256"
-            ],
-            "properties": {
-              "source_id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "locator": {
-                "type": "string",
-                "minLength": 1
-              },
-              "excerpt_sha256": {
-                "type": "string",
-                "pattern": "^[a-f0-9]{64}$"
-              },
-              "support_text_sha256": {
-                "type": "string",
-                "pattern": "^[a-f0-9]{64}$"
-              }
-            },
-            "additionalProperties": false
-          }
         }
       },
       "additionalProperties": true
+    },
+    "factory_task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "factory_slot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "factory_task_fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   },
   "additionalProperties": true,

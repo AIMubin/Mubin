@@ -44,7 +44,7 @@ This does not make public source books secret. It prevents H4 development artifa
 | cross-witness-identity | 3 | no; adjudication required |
 | report-family-identity | 3 | no; adjudication required |
 
-Auto-promotion still requires literal source support and all H3.9.2 provenance checks. AI agreement alone never qualifies a case. The promoted record embeds Curator/Verifier model identities, response SHA-256 hashes, task fingerprint, risk tier, and independently verified support hashes; the validator rejects unreviewed AI `source_attributed` records that bypass this contract.
+Auto-promotion still requires literal source support, an exact `gitblob:<sha>#char=start:end` locator that resolves to the excerpt, a record-to-frozen-slot binding hash, and all H3.9.2 provenance checks. AI agreement alone never qualifies a case. The promoted record embeds Curator/Verifier model identities, response SHA-256 hashes, task fingerprint, risk tier, and independently verified support hashes; the validator rejects unreviewed AI `source_attributed` records that bypass this contract.
 
 ## Non-holdout workflow
 
