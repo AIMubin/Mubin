@@ -26,6 +26,11 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "sources" / "source-registry.json",
         root / "schemas" / "benchmark-record.schema.json",
         root / "schemas" / "source-registry.schema.json",
+        root / "schemas" / "factory-curator-response.schema.json",
+        root / "schemas" / "factory-verifier-response.schema.json",
+        root / "config" / "factory-policy.json",
+        root / "agents" / "CURATOR_CONTRACT.md",
+        root / "agents" / "VERIFIER_CONTRACT.md",
         root / "requirements.txt",
         root / "benchmark_campaign" / "__init__.py",
         root / "benchmark_campaign" / "__main__.py",
@@ -44,6 +49,7 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "benchmark_campaign" / "curation.py",
         root / "benchmark_campaign" / "manifests.py",
         root / "benchmark_campaign" / "source_cache.py",
+        root / "benchmark_campaign" / "factory.py",
     ]
     for rel in ("config/curation-plan.json", "config/curation-quotas.json"):
         p = root / rel

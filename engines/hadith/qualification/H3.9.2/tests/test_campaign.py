@@ -35,6 +35,11 @@ class CampaignTests(unittest.TestCase):
         for rel in [
             "schemas/benchmark-record.schema.json",
             "schemas/source-registry.schema.json",
+            "schemas/factory-curator-response.schema.json",
+            "schemas/factory-verifier-response.schema.json",
+            "config/factory-policy.json",
+            "agents/CURATOR_CONTRACT.md",
+            "agents/VERIFIER_CONTRACT.md",
             "benchmark_campaign/__init__.py",
             "benchmark_campaign/__main__.py",
             "benchmark_campaign/cli.py",
@@ -52,6 +57,7 @@ class CampaignTests(unittest.TestCase):
             "benchmark_campaign/curation.py",
             "benchmark_campaign/manifests.py",
             "benchmark_campaign/source_cache.py",
+            "benchmark_campaign/factory.py",
         ]:
             dst = self.root / rel
             dst.parent.mkdir(parents=True, exist_ok=True)

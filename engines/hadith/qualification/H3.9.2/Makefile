@@ -1,4 +1,4 @@
-.PHONY: test curation-queue-plan acquire-sources verify-source-cache build-splits prepare-manifests validate freeze anchor-freeze verify-freeze export-tuning-pack pre-h4-audit
+.PHONY: test curation-queue-plan acquire-sources verify-source-cache factory-plan factory-index factory-tasks build-splits prepare-manifests validate freeze anchor-freeze verify-freeze export-tuning-pack pre-h4-audit
 
 HOLDOUT_KEY ?= /secure/off-repo/mubin-h392.key
 FREEZE_ANCHOR ?= /secure/off-repo/mubin-h392-freeze-anchor.json
@@ -11,10 +11,19 @@ curation-queue-plan:
 	python -m benchmark_campaign curation-queue-plan
 
 acquire-sources:
-	python -m benchmark_campaign acquire-sources
+	python -m benchmark_campaign acquire-sources --partition non_holdout
 
 verify-source-cache:
-	python -m benchmark_campaign verify-source-cache
+	python -m benchmark_campaign verify-source-cache --partition non_holdout
+
+factory-plan:
+	python -m benchmark_campaign factory-plan
+
+factory-index:
+	python -m benchmark_campaign factory-index-sources --partition non_holdout
+
+factory-tasks:
+	python -m benchmark_campaign factory-build-tasks --partition non_holdout
 
 build-splits:
 	python -m benchmark_campaign build-splits --holdout-key-file $(HOLDOUT_KEY)

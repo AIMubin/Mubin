@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aimubin.org/schemas/h3.9.2-factory-curator-response-v1.schema.json",
+  "type": "object",
+  "required": [
+    "task_id",
+    "task_fingerprint",
+    "model_family",
+    "model_ref",
+    "status"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "model_family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "candidate",
+        "no_candidate"
+      ]
+    },
+    "candidate": {
+      "type": "object"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "candidate"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "candidate"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": true
+}

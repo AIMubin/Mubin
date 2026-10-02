@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aimubin.org/schemas/h3.9.2-factory-verifier-response-v1.schema.json",
+  "type": "object",
+  "required": [
+    "task_id",
+    "task_fingerprint",
+    "model_family",
+    "model_ref",
+    "status"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "model_family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "candidate",
+        "no_candidate"
+      ]
+    },
+    "answer": {
+      "type": "object",
+      "required": [
+        "gold",
+        "supports"
+      ],
+      "properties": {
+        "gold": {
+          "type": "object"
+        },
+        "supports": {
+          "type": "array",
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "candidate"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "answer"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": true
+}
