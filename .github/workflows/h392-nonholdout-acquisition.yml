@@ -4,10 +4,19 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - h392/nonholdout-acquisition
     paths:
       - ".github/workflows/h392-nonholdout-acquisition.yml"
-      - "engines/hadith/qualification/H3.9.2/**"
+      - "engines/hadith/qualification/H3.9.2/sources/source-registry.json"
+      - "engines/hadith/qualification/H3.9.2/config/curation-plan.json"
+      - "engines/hadith/qualification/H3.9.2/config/curation-quotas.json"
+      - "engines/hadith/qualification/H3.9.2/config/benchmark-spec.json"
+      - "engines/hadith/qualification/H3.9.2/config/factory-policy.json"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/factory.py"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/source_cache.py"
+      - "engines/hadith/qualification/H3.9.2/benchmark_campaign/cli.py"
+      - "engines/hadith/qualification/H3.9.2/requirements.txt"
 
 permissions:
   contents: read
