@@ -25,7 +25,8 @@
     "require_model_lock_before_holdout": true,
     "require_sealed_holdout_gold": true,
     "holdout_gold_encryption": "AES-256-GCM; external 256-bit key; key excluded from repository/artifacts",
-    "require_frozen_curation_quotas": true
+    "require_frozen_curation_quotas": true,
+    "require_label_coverage": true
   },
   "split_policy": {
     "development_fraction": 0.5,
