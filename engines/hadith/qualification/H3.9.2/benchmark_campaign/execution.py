@@ -48,6 +48,15 @@ def _normalized_family(value: str) -> str:
     return " ".join(value.strip().casefold().split())
 
 
+def _collectable_task_failure(error_code: str | None) -> bool:
+    if not isinstance(error_code, str):
+        return False
+    return (
+        error_code.startswith("adapter:contract_")
+        or error_code.startswith("adapter:model_output_")
+    )
+
+
 def _require_nonempty_string(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
@@ -60,7 +69,7 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
         raise ValueError("agent execution config must be an object")
     allowed_top = {
         "schema_version", "role", "model_family", "model_ref", "adapter",
-        "batch_size", "timeout_seconds", "max_attempts",
+        "batch_size", "timeout_seconds", "max_attempts", "task_failure_policy",
     }
     unknown = set(cfg) - allowed_top
     if unknown:
@@ -117,12 +126,17 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
     batch_size = cfg.get("batch_size", 8)
     timeout_seconds = cfg.get("timeout_seconds", 900)
     max_attempts = cfg.get("max_attempts", 2)
+    task_failure_policy = cfg.get("task_failure_policy", "fail_fast")
     if not isinstance(batch_size, int) or not 1 <= batch_size <= 128:
         raise ValueError("batch_size must be an integer in [1, 128]")
     if not isinstance(timeout_seconds, int) or not 1 <= timeout_seconds <= 7200:
         raise ValueError("timeout_seconds must be an integer in [1, 7200]")
     if not isinstance(max_attempts, int) or not 1 <= max_attempts <= 3:
         raise ValueError("max_attempts must be an integer in [1, 3]")
+    if task_failure_policy not in {"fail_fast", "record_rejection"}:
+        raise ValueError("task_failure_policy must be fail_fast or record_rejection")
+    if task_failure_policy == "record_rejection" and batch_size != 1:
+        raise ValueError("record_rejection requires batch_size=1 so failures are task-local")
 
     return {
         "schema_version": 1,
@@ -137,6 +151,7 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
         "batch_size": batch_size,
         "timeout_seconds": timeout_seconds,
         "max_attempts": max_attempts,
+        "task_failure_policy": task_failure_policy,
     }
 
 
@@ -174,6 +189,7 @@ def _config_binding(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         "batch_size": cfg["batch_size"],
         "timeout_seconds": cfg["timeout_seconds"],
         "max_attempts": cfg["max_attempts"],
+        "task_failure_policy": cfg["task_failure_policy"],
     }
 
 
