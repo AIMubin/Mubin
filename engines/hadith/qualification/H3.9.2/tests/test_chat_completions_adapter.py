@@ -16,6 +16,7 @@ from adapters.chat_completions import (
     _extract_finish_reason,
     _extract_message_content,
     _has_reasoning_content,
+    _parse_completion_budget,
     _parse_model_json_object,
     _strip_json_fence,
     _supports_from_model,
@@ -146,6 +147,8 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                     10,
                     0.0,
                     128,
+                    "max_tokens",
+                    None,
                     "off",
                 )
             self.assertEqual(ctx.exception.code, "response_too_large")
@@ -174,6 +177,8 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                     10,
                     0.0,
                     128,
+                    "max_tokens",
+                    None,
                     "off",
                 )
             self.assertEqual(ctx.exception.code, "http_401")
@@ -197,10 +202,82 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                     10,
                     0.0,
                     128,
+                    "max_tokens",
+                    None,
                     "off",
                 )
             self.assertEqual(ctx.exception.code, "connection_failed")
             self.assertNotIn("sensitive transport detail", str(ctx.exception))
+
+    def test_completion_budget_parser_accepts_auto_or_unbounded_positive_integer(self):
+        self.assertIsNone(_parse_completion_budget("auto"))
+        self.assertIsNone(_parse_completion_budget(" AUTO "))
+        self.assertEqual(_parse_completion_budget("8192"), 8192)
+        self.assertEqual(_parse_completion_budget("1000000"), 1000000)
+        for value in ("0", "-1", "8k", ""):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    _parse_completion_budget(value)
+
+    def test_auto_completion_budget_omits_token_cap_and_reasoning_control(self):
+        captured = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def read(self, size):
+                return b'{"choices":[{"message":{"content":"{}"}}]}'
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                captured["payload"] = json.loads(req.data.decode("utf-8"))
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            _call_chat(
+                "https://example.test/v1", "secret", "bearer", "model-x",
+                "system", "user", 10, 0.0, None, "max_tokens", None, "off",
+            )
+        payload = captured["payload"]
+        self.assertNotIn("max_tokens", payload)
+        self.assertNotIn("max_completion_tokens", payload)
+        self.assertNotIn("reasoning_effort", payload)
+
+    def test_explicit_completion_budget_uses_selected_field_and_reasoning_effort(self):
+        captured = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def read(self, size):
+                return b'{"choices":[{"message":{"content":"{}"}}]}'
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                captured["payload"] = json.loads(req.data.decode("utf-8"))
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            _call_chat(
+                "https://example.test/v1", "secret", "bearer", "model-x",
+                "system", "user", 10, 0.0, 32768,
+                "max_completion_tokens", "low", "json_object",
+            )
+        payload = captured["payload"]
+        self.assertEqual(payload["max_completion_tokens"], 32768)
+        self.assertNotIn("max_tokens", payload)
+        self.assertEqual(payload["reasoning_effort"], "low")
+        self.assertEqual(payload["response_format"], {"type": "json_object"})
 
     def test_model_json_parser_accepts_direct_object(self):
         obj, mode = _parse_model_json_object('{"status":"no_candidate","reason":"x"}')
