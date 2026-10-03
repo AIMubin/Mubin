@@ -13,6 +13,23 @@ class CurationWorkflowTests(unittest.TestCase):
             encoding="utf-8"
         )
 
+    def test_secret_bearing_workflow_pins_third_party_actions_to_commits(self):
+        self.assertIn(
+            "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            self.workflow,
+        )
+        self.assertIn(
+            "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            self.workflow,
+        )
+        self.assertIn(
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            self.workflow,
+        )
+        self.assertNotIn("actions/checkout@v4", self.workflow)
+        self.assertNotIn("actions/setup-python@v5", self.workflow)
+        self.assertNotIn("actions/upload-artifact@v4", self.workflow)
+
     def test_actions_expressions_are_not_backslash_escaped(self):
         escaped = "\\" + "$" + "{{"
         expected = "$" + "{{ secrets.H392_CURATOR_API_KEY }}"
