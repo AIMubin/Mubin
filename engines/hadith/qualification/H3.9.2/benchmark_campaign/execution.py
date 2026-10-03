@@ -502,7 +502,10 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
         for key, value in identity.items():
             if previous.get(key) != value:
                 raise ValueError(f"execution manifest identity mismatch: {key}")
-        batches = list(previous.get("batches", []))
+        raw_batches = previous.get("batches", [])
+        if not isinstance(raw_batches, list):
+            raise ValueError("execution manifest batches must be a list")
+        batches = list(raw_batches)
         raw_rejections = previous.get("rejections", [])
         if not isinstance(raw_rejections, list):
             raise ValueError("execution manifest rejections must be a list")
@@ -551,16 +554,22 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
             seen_rejections.add(tid)
             rejections.append(rejection)
 
-        rejected_batches = {
-            str(batch.get("batch_id")): batch
-            for batch in batches
-            if isinstance(batch, dict) and batch.get("outcome") == "rejected"
-        }
         for rejection in rejections:
-            batch = rejected_batches.get(str(rejection["batch_id"]))
+            matching_batches = [
+                batch for batch in batches
+                if (
+                    isinstance(batch, dict)
+                    and batch.get("outcome") == "rejected"
+                    and batch.get("batch_id") == rejection["batch_id"]
+                )
+            ]
+            if len(matching_batches) != 1:
+                raise ValueError(
+                    f"execution manifest rejection batch record mismatch: {rejection['task_id']}"
+                )
+            batch = matching_batches[0]
             if (
-                batch is None
-                or batch.get("error_code") != rejection["error_code"]
+                batch.get("error_code") != rejection["error_code"]
                 or batch.get("request_sha256") != rejection["request_sha256"]
                 or batch.get("attempts_allowed") != rejection["attempts_allowed"]
                 or batch.get("attempts_used") != rejection["attempts_used"]
