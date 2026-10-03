@@ -465,6 +465,7 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
             ({"status": "unexpected"}, "contract_status_invalid"),
             ({"gold": {"label": "other"}}, "contract_gold_invalid"),
             ({"family_id": ""}, "contract_family_id_missing"),
+            ({"family_id": " family-x "}, "contract_family_id_invalid"),
             ({"input": None}, "contract_input_missing"),
             ({"mode": "other"}, "contract_mode_invalid"),
             ({"verbatim_answer": ""}, "contract_verbatim_missing"),
