@@ -14,6 +14,7 @@ from adapters.chat_completions import (
     _call_chat,
     _curator_row,
     _extract_message_content,
+    _parse_model_json_object,
     _strip_json_fence,
     _supports_from_model,
     _system_prompt,
@@ -198,6 +199,54 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                 )
             self.assertEqual(ctx.exception.code, "connection_failed")
             self.assertNotIn("sensitive transport detail", str(ctx.exception))
+
+    def test_model_json_parser_accepts_direct_object(self):
+        obj, mode = _parse_model_json_object('{"status":"no_candidate","reason":"x"}')
+        self.assertEqual(obj["status"], "no_candidate")
+        self.assertEqual(mode, "direct_json")
+
+    def test_model_json_parser_accepts_single_fenced_object(self):
+        fence = chr(96) * 3
+        raw = fence + "json\n{\"status\":\"no_candidate\",\"reason\":\"x\"}\n" + fence
+        obj, mode = _parse_model_json_object(raw)
+        self.assertEqual(obj["status"], "no_candidate")
+        self.assertEqual(mode, "single_fenced_json")
+
+    def test_model_json_parser_accepts_one_embedded_object_only(self):
+        raw = 'Preface text. {"status":"no_candidate","reason":"x"} End text.'
+        obj, mode = _parse_model_json_object(raw)
+        self.assertEqual(obj["status"], "no_candidate")
+        self.assertEqual(mode, "single_embedded_json")
+
+    def test_model_json_parser_nested_object_is_not_ambiguous(self):
+        raw = 'Result: {"status":"candidate","gold":{"label":"yes"},"supports":[]}'
+        obj, mode = _parse_model_json_object(raw)
+        self.assertEqual(obj["gold"], {"label": "yes"})
+        self.assertEqual(mode, "single_embedded_json")
+
+    def test_model_json_parser_rejects_multiple_top_level_objects(self):
+        raw = '{"status":"no_candidate"} text {"status":"no_candidate"}'
+        with self.assertRaises(AdapterDiagnosticError) as ctx:
+            _parse_model_json_object(raw)
+        self.assertEqual(ctx.exception.code, "model_output_ambiguous_json")
+
+    def test_model_json_parser_rejects_array_even_if_it_contains_object(self):
+        raw = '[{"status":"no_candidate"}]'
+        with self.assertRaises(AdapterDiagnosticError) as ctx:
+            _parse_model_json_object(raw)
+        self.assertEqual(ctx.exception.code, "model_output_not_object")
+
+    def test_model_json_parser_rejects_structured_payload_outside_embedded_object(self):
+        raw = '[metadata] {"status":"no_candidate"}'
+        with self.assertRaises(AdapterDiagnosticError) as ctx:
+            _parse_model_json_object(raw)
+        self.assertEqual(ctx.exception.code, "model_output_ambiguous_json")
+
+    def test_model_json_parser_rejects_malformed_single_object(self):
+        raw = 'Result: {"status":"no_candidate",}'
+        with self.assertRaises(AdapterDiagnosticError) as ctx:
+            _parse_model_json_object(raw)
+        self.assertEqual(ctx.exception.code, "model_output_invalid_json")
 
     def test_support_mapping_requires_verbatim_retrieved_evidence(self):
         evidence = [{
