@@ -37,6 +37,14 @@ class AdapterDiagnosticError(RuntimeError):
         self.code = code
 
 
+class ModelContractError(ValueError):
+    def __init__(self, code: str, message: str):
+        if not code.startswith("contract_") or _DIAGNOSTIC_CODE_RE.fullmatch(code) is None:
+            raise ValueError("invalid model contract diagnostic code")
+        super().__init__(message)
+        self.code = code
+
+
 def _emit_diagnostic(code: str) -> None:
     if _DIAGNOSTIC_CODE_RE.fullmatch(code) is None:
         code = "adapter_internal_error"
@@ -444,25 +452,48 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
 
 def _supports_from_model(value: Any, evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not value:
-        raise ValueError("candidate supports must be a non-empty list")
+        raise ModelContractError(
+            "contract_supports_missing",
+            "candidate supports must be a non-empty list",
+        )
     by_id = {str(x["evidence_id"]): x for x in evidence}
     supports = []
     seen_sources: set[str] = set()
     for item in value:
         if not isinstance(item, dict):
-            raise ValueError("each support must be an object")
-        eid = str(item.get("evidence_id", ""))
-        source = by_id.get(eid)
+            raise ModelContractError(
+                "contract_support_item_invalid",
+                "each support must be an object",
+            )
+        raw_eid = item.get("evidence_id")
+        if not isinstance(raw_eid, str) or not raw_eid:
+            raise ModelContractError(
+                "contract_evidence_id_invalid",
+                "support evidence_id must be a non-empty string",
+            )
+        source = by_id.get(raw_eid)
         if source is None:
-            raise ValueError(f"support references unavailable evidence_id: {eid}")
+            raise ModelContractError(
+                "contract_evidence_id_invalid",
+                "support references unavailable evidence_id",
+            )
         support_text = item.get("support_text")
         if not isinstance(support_text, str) or not support_text.strip():
-            raise ValueError("support_text must be non-empty")
+            raise ModelContractError(
+                "contract_support_text_missing",
+                "support_text must be non-empty",
+            )
         if support_text not in source["excerpt"]:
-            raise ValueError("support_text must be verbatim inside the selected evidence excerpt")
+            raise ModelContractError(
+                "contract_support_not_verbatim",
+                "support_text must be verbatim inside the selected evidence excerpt",
+            )
         sid = str(source["source_id"])
         if sid in seen_sources:
-            raise ValueError("at most one evidence window per source may be cited")
+            raise ModelContractError(
+                "contract_support_source_duplicate",
+                "at most one evidence window per source may be cited",
+            )
         seen_sources.add(sid)
         supports.append({
             "source_id": sid,
@@ -482,8 +513,9 @@ def _valid_gold(gold: Any, task: dict[str, Any]) -> bool:
         labels = gold.get("labels")
         return (
             isinstance(labels, list) and bool(labels)
-            and len(labels) == len(set(map(str, labels)))
-            and set(map(str, labels)).issubset(allowed)
+            and all(isinstance(label, str) for label in labels)
+            and len(labels) == len(set(labels))
+            and set(labels).issubset(allowed)
         )
     return False
 
@@ -495,21 +527,43 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
     tid = str(task["task_id"])
     if model_obj.get("status") == "no_candidate":
         reason = model_obj.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ModelContractError(
+                "contract_reason_missing",
+                "no_candidate requires a non-empty reason",
+            )
         return {
             "task_id": tid, "status": "no_candidate",
-            "reason": reason if isinstance(reason, str) and reason.strip() else "source evidence insufficient",
+            "reason": reason,
         }
     if model_obj.get("status") != "candidate":
-        raise ValueError("Curator model output status must be candidate or no_candidate")
+        raise ModelContractError(
+            "contract_status_invalid",
+            "Curator model output status must be candidate or no_candidate",
+        )
     gold = model_obj.get("gold")
     if not _valid_gold(gold, task):
-        raise ValueError("Curator gold violates task label contract")
+        raise ModelContractError(
+            "contract_gold_invalid",
+            "Curator gold violates task label contract",
+        )
     family_id = model_obj.get("family_id")
-    if not isinstance(family_id, str) or not family_id.strip():
-        raise ValueError("Curator candidate requires a non-empty family_id")
+    if not isinstance(family_id, str) or not family_id:
+        raise ModelContractError(
+            "contract_family_id_missing",
+            "Curator candidate requires a non-empty family_id",
+        )
+    if family_id != family_id.strip():
+        raise ModelContractError(
+            "contract_family_id_invalid",
+            "Curator family_id must not contain leading or trailing whitespace",
+        )
     candidate_input = model_obj.get("input")
     if candidate_input is None:
-        raise ValueError("Curator candidate requires input")
+        raise ModelContractError(
+            "contract_input_missing",
+            "Curator candidate requires input",
+        )
     supports = _supports_from_model(model_obj.get("supports"), evidence)
     evidence_by_source = {str(e["source_id"]): e for e in evidence}
     anchor_sid = str(task["anchor_source_id"])
@@ -519,7 +573,10 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
     for sid in sorted(used_sources):
         source = evidence_by_source.get(sid)
         if source is None:
-            raise ValueError(f"candidate cites source outside retrieved evidence: {sid}")
+            raise ModelContractError(
+                "contract_source_ref_invalid",
+                "candidate cites source outside retrieved evidence",
+            )
         source_refs.append({
             "source_id": sid, "locator": source["locator"], "excerpt": source["excerpt"],
         })
@@ -527,7 +584,10 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
     risk_tier = int(task.get("risk_tier", 0))
     mode = model_obj.get("mode")
     if mode not in {"direct_extract", "adjudication_required"}:
-        raise ValueError("Curator mode must be direct_extract or adjudication_required")
+        raise ModelContractError(
+            "contract_mode_invalid",
+            "Curator mode must be direct_extract or adjudication_required",
+        )
     answer_provenance: dict[str, Any] = {
         "answer_origin": "human_authored_source",
         "extraction_method": "ai",
@@ -541,9 +601,15 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
     if mode == "direct_extract":
         verbatim = model_obj.get("verbatim_answer")
         if not isinstance(verbatim, str) or not verbatim.strip():
-            raise ValueError("direct_extract requires verbatim_answer")
+            raise ModelContractError(
+                "contract_verbatim_missing",
+                "direct_extract requires verbatim_answer",
+            )
         if not any(verbatim in s["support_text"] for s in supports):
-            raise ValueError("verbatim_answer must occur inside a cited support_text")
+            raise ModelContractError(
+                "contract_verbatim_not_supported",
+                "verbatim_answer must occur inside a cited support_text",
+            )
         answer_provenance["verbatim_answer"] = verbatim
     elif risk_tier < 3:
         answer_provenance["mode"] = "adjudication_required"
@@ -555,7 +621,7 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
             "benchmark_id": task["benchmark_id"],
             "case_id": _case_id(tid),
             "anchor_source_id": anchor_sid,
-            "family_id": family_id.strip(),
+            "family_id": family_id,
             "gold_status": "source_attributed",
             "synthetic": False,
             "source_refs": source_refs,
@@ -573,15 +639,26 @@ def _verifier_row(task: dict[str, Any], model_obj: dict[str, Any],
     tid = str(task["task_id"])
     if model_obj.get("status") == "no_candidate":
         reason = model_obj.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ModelContractError(
+                "contract_reason_missing",
+                "no_candidate requires a non-empty reason",
+            )
         return {
             "task_id": tid, "status": "no_candidate",
-            "reason": reason if isinstance(reason, str) and reason.strip() else "independent evidence insufficient",
+            "reason": reason,
         }
     if model_obj.get("status") != "candidate":
-        raise ValueError("Verifier model output status must be candidate or no_candidate")
+        raise ModelContractError(
+            "contract_status_invalid",
+            "Verifier model output status must be candidate or no_candidate",
+        )
     gold = model_obj.get("gold")
     if not _valid_gold(gold, task):
-        raise ValueError("Verifier gold violates task label contract")
+        raise ModelContractError(
+            "contract_gold_invalid",
+            "Verifier gold violates task label contract",
+        )
     supports = _supports_from_model(model_obj.get("supports"), evidence)
     return {"task_id": tid, "status": "candidate", "answer": {"gold": gold, "supports": supports}}
 
@@ -760,6 +837,8 @@ def main() -> int:
                 if role == "curator"
                 else _verifier_row(task, model_obj, evidence)
             )
+        except ModelContractError as exc:
+            raise AdapterDiagnosticError(exc.code) from None
         except ValueError:
             raise AdapterDiagnosticError("contract_validation_error") from None
         output.append(row)

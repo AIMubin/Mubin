@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from adapters.chat_completions import (
     AdapterDiagnosticError,
+    ModelContractError,
     RetrievalIndex,
     MAX_RESPONSE_BYTES,
     _NoRedirect,
@@ -379,11 +380,104 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
             "locator": "gitblob:" + "a" * 40 + "#char=0:10",
             "excerpt": "سمع من شيخه",
         }]
-        with self.assertRaisesRegex(ValueError, "verbatim"):
+        with self.assertRaises(ModelContractError) as ctx:
             _supports_from_model(
                 [{"evidence_id": "E01", "support_text": "نص غير موجود"}],
                 evidence,
             )
+        self.assertEqual(ctx.exception.code, "contract_support_not_verbatim")
+        self.assertIn("verbatim", str(ctx.exception))
+
+    def test_support_contract_diagnostics_are_bounded_and_content_safe(self):
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:10",
+            "excerpt": "سمع من شيخه",
+        }]
+        cases = [
+            (None, "contract_supports_missing"),
+            ([42], "contract_support_item_invalid"),
+            ([{"evidence_id": 1, "support_text": "x"}], "contract_evidence_id_invalid"),
+            ([{"evidence_id": "EXFIL", "support_text": "x"}], "contract_evidence_id_invalid"),
+            ([{"evidence_id": "E01", "support_text": ""}], "contract_support_text_missing"),
+        ]
+        for value, code in cases:
+            with self.subTest(code=code):
+                with self.assertRaises(ModelContractError) as ctx:
+                    _supports_from_model(value, evidence)
+                self.assertEqual(ctx.exception.code, code)
+                self.assertNotIn("EXFIL", ctx.exception.code)
+
+    def test_no_candidate_reason_is_required_not_repaired(self):
+        task = self._task()
+        with self.assertRaises(ModelContractError) as ctx:
+            _curator_row(task, {"status": "no_candidate"}, [])
+        self.assertEqual(ctx.exception.code, "contract_reason_missing")
+
+        verifier_task = self._task()
+        verifier_task["candidate_input"] = {"question": "q"}
+        with self.assertRaises(ModelContractError) as ctx:
+            _verifier_row(verifier_task, {"status": "no_candidate", "reason": ""}, [])
+        self.assertEqual(ctx.exception.code, "contract_reason_missing")
+
+    def test_multilabel_gold_rejects_type_coercion(self):
+        task = self._task()
+        task["task_type"] = "multilabel"
+        task["allowed_labels"] = ["1", "yes"]
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:20",
+            "excerpt": "قال الإمام سمع من شيخه",
+        }]
+        obj = {
+            "status": "candidate",
+            "family_id": "family-x",
+            "input": {"question": "q"},
+            "gold": {"labels": [1]},
+            "mode": "direct_extract",
+            "verbatim_answer": "سمع من شيخه",
+            "supports": [{"evidence_id": "E01", "support_text": "سمع من شيخه"}],
+        }
+        with self.assertRaises(ModelContractError) as ctx:
+            _curator_row(task, obj, evidence)
+        self.assertEqual(ctx.exception.code, "contract_gold_invalid")
+
+    def test_curator_contract_diagnostics_identify_semantic_failure_class(self):
+        task = self._task()
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:20",
+            "excerpt": "قال الإمام سمع من شيخه",
+        }]
+        base = {
+            "status": "candidate",
+            "family_id": "family-x",
+            "input": {"question": "هل ثبت السماع؟"},
+            "gold": {"label": "yes"},
+            "mode": "direct_extract",
+            "verbatim_answer": "سمع من شيخه",
+            "supports": [{"evidence_id": "E01", "support_text": "سمع من شيخه"}],
+        }
+        mutations = [
+            ({"status": "unexpected"}, "contract_status_invalid"),
+            ({"gold": {"label": "other"}}, "contract_gold_invalid"),
+            ({"family_id": ""}, "contract_family_id_missing"),
+            ({"family_id": " family-x "}, "contract_family_id_invalid"),
+            ({"input": None}, "contract_input_missing"),
+            ({"mode": "other"}, "contract_mode_invalid"),
+            ({"verbatim_answer": ""}, "contract_verbatim_missing"),
+            ({"verbatim_answer": "غير موجود"}, "contract_verbatim_not_supported"),
+        ]
+        for change, code in mutations:
+            with self.subTest(code=code):
+                obj = dict(base)
+                obj.update(change)
+                with self.assertRaises(ModelContractError) as ctx:
+                    _curator_row(task, obj, evidence)
+                self.assertEqual(ctx.exception.code, code)
 
     def test_curator_adapter_constructs_deterministic_record_fields(self):
         task = self._task()

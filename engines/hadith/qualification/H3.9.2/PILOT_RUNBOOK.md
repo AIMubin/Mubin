@@ -133,6 +133,8 @@ A high adjudication rate is not itself a pilot failure. It is evidence about tas
 
 If a pilot fails with `model_output_reasoning_only`, first rerun the same deterministic task chunk with `completion_budget = auto`. If that still produces reasoning-only output, test an endpoint-supported lower reasoning effort before changing the benchmark prompt, retrieval policy, or output parser. Do not copy or transform private reasoning into the required JSON answer.
 
+If the model reaches valid JSON but violates the Curator/Verifier contract, the adapter reports a bounded `contract_*` diagnostic such as `contract_gold_invalid`, `contract_support_not_verbatim`, or `contract_verbatim_not_supported`. Keep the same deterministic task chunk and inference policy while diagnosing that class. Do not loosen source-verbatim, allowed-label, evidence-ID, or provenance constraints merely to make the pilot pass.
+
 ## Expansion sequence
 
 Only after reviewing the 8-task pilot:
