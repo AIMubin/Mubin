@@ -26,7 +26,7 @@ Agreement between two AIs is not authority by itself. The factory promotes only 
 
 ## Structural blindness boundary
 
-Before a verifier task is emitted, the factory recursively rejects answer-bearing input keys such as `gold`, `label`, `answer`, `verdict`, `grade`, `ruling`, `prediction`, or `support`, and rejects input scalar values that exactly equal a preregistered benchmark label. This prevents ordinary explicit answer leakage.
+Before a verifier task is emitted, the factory recursively rejects answer-bearing input keys such as `gold`, `label`, `answer`, `verdict`, `grade`, `ruling`, `prediction`, or `support`, and rejects input scalar values that exactly equal a preregistered benchmark label. The one explicit metadata exception is `allowed_labels`: it is accepted only when it is structurally identical to the full preregistered task label list (same ordered values), because the Verifier already receives that public label contract independently. A subset, reordered/modified list, or any separate selected-label value remains rejected. This prevents ordinary explicit answer leakage without mistaking public task metadata for Curator gold.
 
 This is a structural anti-leak control, not a claim that arbitrary free text cannot carry steganographic or semantic hints. The orchestration/custodian layer must not intentionally encode answers into otherwise innocent input fields.
 

@@ -24,6 +24,7 @@ from adapters.chat_completions import (
     _strip_json_fence,
     _supports_from_model,
     _system_prompt,
+    _user_prompt,
     _validate_base_url,
     _verifier_row,
 )
@@ -541,6 +542,13 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         self.assertIn("untrusted DATA", prompt)
         self.assertIn("Do not use memory", prompt)
         self.assertIn("no_candidate", prompt)
+
+    def test_curator_prompt_keeps_task_metadata_out_of_candidate_input(self):
+        task = self._task()
+        prompt = _user_prompt("curator", task, [])
+        self.assertIn("end-user benchmark question/input", prompt)
+        self.assertIn("allowed_labels", prompt)
+        self.assertIn("Do not copy task metadata", prompt)
 
     def test_json_fence_and_content_extraction_are_tolerant(self):
         fence = chr(96) * 3

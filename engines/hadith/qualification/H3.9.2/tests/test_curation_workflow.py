@@ -126,6 +126,8 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn('"rejected_task_count"', summary)
         self.assertIn('"rejection_counts"', summary)
         self.assertIn('"response_counts"', summary)
+        self.assertIn('"verifier_preparation"', summary)
+        self.assertIn("verifier-task-report.json", summary)
 
     def test_plaintext_source_bearing_outputs_are_not_uploaded(self):
         upload = self.workflow.split(

@@ -70,6 +70,8 @@ The executor separates **obtaining model output** from **admitting output into t
 
 The manifest distinguishes `attempted_task_count`, `completed_task_count` (valid adapter responses, including `no_candidate`), `rejected_task_count`, `pending_task_count`, and aggregate `rejection_counts`. Rejected tasks never become Curator/Verifier responses and therefore cannot enter reconciliation or promotion as valid candidates.
 
+On the non-holdout collection surface, a second task-local filter exists between Curator collection and Verifier execution: verifier-task preparation checks that `candidate.payload.input` is structurally blind to the Curator's selected answer. A blindness violation suppresses only that Verifier task, increments the redacted verifier-preparation rejection count, and leaves the Curator candidate available for reconciliation/adjudication. Holdout preparation remains fail-closed. The full preregistered `allowed_labels` list is not treated as selected-answer leakage when it exactly matches the task contract, because Verifier AI-B receives the same label vocabulary independently.
+
 ## Inference policy
 
 The reference adapter defaults to ordinary provider-native inference behavior:

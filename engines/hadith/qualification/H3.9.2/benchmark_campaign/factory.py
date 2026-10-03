@@ -377,6 +377,13 @@ def _blind_input_error(value: Any, task: dict[str, Any], path: str = "input") ->
     if isinstance(value, dict):
         for key, child in value.items():
             normalized_key = str(key).strip().casefold().replace("-", "_").replace(".", "_")
+            if normalized_key == "allowed_labels":
+                if child != task.get("allowed_labels"):
+                    return f"allowed_labels differs from task label contract at {path}.{key}"
+                # The full preregistered label vocabulary is already exposed to the
+                # Verifier as task metadata. An exact duplicate does not reveal the
+                # Curator's selected gold and must not be mistaken for answer leakage.
+                continue
             tokens = {x for x in normalized_key.split("_") if x}
             if normalized_key in _ANSWER_BEARING_INPUT_KEYS or tokens & _ANSWER_BEARING_INPUT_KEYS:
                 return f"answer-bearing key at {path}.{key}"
@@ -411,6 +418,8 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
     responses = load_jsonl(curator_responses_path)
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
+    input_candidates = 0
+    blindness_rejections = 0
     for response in responses:
         tid = str(response.get("task_id", ""))
         if tid in seen:
@@ -423,6 +432,7 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
             raise ValueError(f"curator response task fingerprint mismatch: {tid}")
         if response.get("status") != "candidate":
             continue
+        input_candidates += 1
         candidate = response.get("candidate")
         if not isinstance(candidate, dict):
             raise ValueError(f"candidate payload missing: {tid}")
@@ -431,7 +441,16 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
             raise ValueError(f"candidate payload.input missing: {tid}")
         blind_error = _blind_input_error(payload["input"], task)
         if blind_error is not None:
-            raise ValueError(f"candidate payload.input violates verifier blindness: {tid}: {blind_error}")
+            if partition == "holdout":
+                raise ValueError(
+                    f"candidate payload.input violates verifier blindness: {tid}: {blind_error}"
+                )
+            # On the non-holdout collection surface this is a candidate-quality
+            # failure, not an orchestration-integrity failure. Keep the Curator
+            # response for reconciliation/adjudication, but do not expose the
+            # unsafe input to the independent Verifier.
+            blindness_rejections += 1
+            continue
         verifier_task = {
             "task_id": tid,
             "task_fingerprint": task["task_fingerprint"],
@@ -462,8 +481,14 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
         out.append(verifier_task)
     dump_jsonl(out_path, out)
     return {
-        "input_candidates": len(out),
+        "input_candidates": input_candidates,
         "verifier_tasks": len(out),
+        "rejected_candidates": blindness_rejections,
+        "rejection_counts": (
+            {"candidate_input_blindness": blindness_rejections}
+            if blindness_rejections
+            else {}
+        ),
         "tasks_sha256": hashlib.sha256(out_path.read_bytes()).hexdigest(),
     }
 
