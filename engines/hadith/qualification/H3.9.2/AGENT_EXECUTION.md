@@ -44,12 +44,12 @@ The executor exposes controlled runtime metadata through `MUBIN_AGENT_ROLE`, `MU
 {
   "schema_version": 1,
   "role": "curator",
-  "model_family": "provider-model-family-a",
-  "model_ref": "provider/model-a@immutable-or-recorded-revision",
+  "model_family": "model-family-a",
+  "model_ref": "model-a@immutable-or-recorded-revision",
   "adapter": {
-    "command": ["python", "adapters/openai_compatible.py", "--input", "{input}", "--output", "{output}", "--index", "{index_dir}", "--contract", "{contract}", "--base-url", "https://provider.example/v1"],
-    "env_allowlist": ["MUBIN_OPENAI_API_KEY"],
-    "artifacts": ["adapters/openai_compatible.py"]
+    "command": ["python", "adapters/chat_completions.py", "--input", "{input}", "--output", "{output}", "--index", "{index_dir}", "--contract", "{contract}", "--base-url", "https://endpoint.example/v1"],
+    "env_allowlist": ["MUBIN_MODEL_API_KEY"],
+    "artifacts": ["adapters/chat_completions.py"]
   },
   "batch_size": 8,
   "timeout_seconds": 900,
