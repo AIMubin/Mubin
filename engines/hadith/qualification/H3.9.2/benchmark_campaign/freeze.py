@@ -12,7 +12,7 @@ from .manifests import emit_campaign_manifests
 from .holdout_seal import sealed_gold_path
 from .validate import validate_campaign
 
-FREEZE_SCHEMA_VERSION = 11
+FREEZE_SCHEMA_VERSION = 12
 ANCHOR_SCHEMA_VERSION = 1
 DEFAULT_ANCHOR_RELATIVE = Path("private/FREEZE_ANCHOR.json")
 
