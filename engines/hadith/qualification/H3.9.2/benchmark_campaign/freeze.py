@@ -52,6 +52,7 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "benchmark_campaign" / "factory.py",
         root / "benchmark_campaign" / "execution.py",
         root / "AGENT_EXECUTION.md",
+        root / "adapters" / "openai_compatible.py",
     ]
     for rel in ("config/curation-plan.json", "config/curation-quotas.json"):
         p = root / rel

@@ -300,11 +300,25 @@ class FactoryTests(unittest.TestCase):
 
     def _responses(self, task: dict, excerpt: str, verifier_family: str = "family-b",
                    verifier_gold: str = "yes"):
+        def binding(seed: str):
+            return {
+                "protocol_version": 1,
+                "config_sha256": seed * 64,
+                "batch_id": seed * 24,
+                "raw_response_sha256": seed * 64,
+                "adapter_command_sha256": seed * 64,
+                "adapter_artifacts": [{
+                    "path": "adapters/test.py",
+                    "sha256": seed * 64,
+                    "size_bytes": 123,
+                }],
+            }
         curator = {
             "task_id": task["task_id"],
             "task_fingerprint": task["task_fingerprint"],
             "model_family": "family-a",
             "model_ref": "a@1",
+            "execution_binding": binding("a"),
             "status": "candidate",
             "candidate": self._candidate(task, excerpt),
         }
@@ -313,6 +327,7 @@ class FactoryTests(unittest.TestCase):
             "task_fingerprint": task["task_fingerprint"],
             "model_family": verifier_family,
             "model_ref": "b@1",
+            "execution_binding": binding("b"),
             "status": "candidate",
             "answer": {
                 "gold": {"label": verifier_gold},

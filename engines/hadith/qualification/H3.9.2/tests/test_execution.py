@@ -160,6 +160,7 @@ class AgentExecutionTests(unittest.TestCase):
                     mode,
                 ],
                 "env_allowlist": [],
+                "artifacts": [str(adapter)],
             },
             "batch_size": 1,
             "timeout_seconds": 30,
@@ -209,6 +210,27 @@ class AgentExecutionTests(unittest.TestCase):
             self.assertEqual(row["model_ref"], "family-a@test-revision")
             self.assertRegex(row["execution_binding"]["config_sha256"], r"^[a-f0-9]{64}$")
             self.assertRegex(row["execution_binding"]["raw_response_sha256"], r"^[a-f0-9]{64}$")
+            self.assertRegex(row["execution_binding"]["adapter_command_sha256"], r"^[a-f0-9]{64}$")
+            self.assertEqual(len(row["execution_binding"]["adapter_artifacts"]), 1)
+            self.assertEqual(
+                row["execution_binding"]["adapter_artifacts"][0]["sha256"],
+                sha256_file(adapter),
+            )
+
+    def test_resume_rejects_changed_adapter_artifact_bytes(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            config = self._config(root, adapter, "curator", "family-a")
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            run_agent_execution(root, "curator", tasks, index, config, out, manifest)
+            adapter.write_text(ADAPTER + "\n# changed bytes\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "execution binding mismatch|manifest identity mismatch"):
+                run_agent_execution(
+                    root, "curator", tasks, index, config, out, manifest, resume=True
+                )
 
     def test_adapter_cannot_spoof_model_identity(self):
         with tempfile.TemporaryDirectory() as d:
@@ -311,6 +333,7 @@ class AgentExecutionTests(unittest.TestCase):
                         "{output}",
                     ],
                     "env_allowlist": [],
+                    "artifacts": ["adapter.py"],
                 },
                 "batch_size": 1,
                 "timeout_seconds": 30,
