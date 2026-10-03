@@ -93,6 +93,10 @@ The factory intentionally uses JSONL contracts instead of embedding one model-pr
 
 A case goes to adjudication when Curator and Verifier disagree, model families are not independent, source support is invalid or crosses partitions, benchmark/anchor identity differs from the frozen slot, policy forbids auto-promotion, or the candidate fails the source-attributed qualification contract.
 
+On the non-holdout collection surface, a Curator candidate whose `payload.input` would leak a selected answer to Verifier AI-B is not allowed into the verifier task set. That candidate is counted as a verifier-preparation rejection and later reaches reconciliation without a verifier response, which routes it to adjudication rather than aborting unrelated tasks. Holdout preparation remains fail-closed.
+
+The full preregistered `allowed_labels` vocabulary is public task metadata, not a selected answer. An exact duplicate inside `payload.input` is therefore permitted; a subset or modified list is rejected.
+
 No disagreement is silently discarded or rewritten into agreement.
 
 ## Orchestration trust boundary
