@@ -47,7 +47,7 @@ The executor exposes controlled runtime metadata through `MUBIN_AGENT_ROLE`, `MU
   "model_family": "model-family-a",
   "model_ref": "model-a@immutable-or-recorded-revision",
   "adapter": {
-    "command": ["python", "adapters/chat_completions.py", "--input", "{input}", "--output", "{output}", "--index", "{index_dir}", "--contract", "{contract}", "--base-url", "https://endpoint.example/v1"],
+    "command": ["python", "adapters/chat_completions.py", "--input", "{input}", "--output", "{output}", "--index", "{index_dir}", "--contract", "{contract}", "--base-url", "https://endpoint.example/v1", "--completion-budget", "auto", "--completion-budget-field", "max_tokens", "--reasoning-effort", "provider_default"],
     "env_allowlist": ["MUBIN_MODEL_API_KEY"],
     "artifacts": ["adapters/chat_completions.py"]
   },
@@ -58,6 +58,18 @@ The executor exposes controlled runtime metadata through `MUBIN_AGENT_ROLE`, `MU
 ```
 
 Do not put an API key, bearer token, password, or request header value in this JSON.
+
+## Inference policy
+
+The reference adapter separates the benchmark output contract from provider inference controls:
+
+- `--completion-budget auto` omits both `max_tokens` and `max_completion_tokens`, allowing the endpoint/model to use its configured completion policy without an artificial Mubin cap.
+- An explicit positive integer may be supplied when a qualification run requires a fixed budget. There is no Mubin-defined upper bound; the endpoint remains authoritative for its supported limit.
+- `--completion-budget-field` selects `max_tokens` or `max_completion_tokens` only when an explicit budget is used.
+- `--reasoning-effort provider_default` sends no reasoning-control field. `low`, `medium`, or `high` opt in to the common `reasoning_effort` chat-completions capability.
+- Unsupported provider capabilities must fail at the endpoint boundary rather than being silently translated or retried with a different request shape.
+
+These values are command/config inputs and therefore remain bound by the existing execution-config hash and manifest provenance. `auto` is useful for capability discovery and pilot runs; qualification-critical runs should record the exact provider/model revision and use an explicit budget/field when reproducibility requires it.
 
 ## Flow
 

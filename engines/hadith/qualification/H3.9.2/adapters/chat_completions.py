@@ -360,9 +360,32 @@ def _extract_message_content(response: dict[str, Any]) -> str:
             return "".join(parts)
     raise ValueError("model response contains no textual message content")
 
+
+def _empty_output_diagnostic(finish_reason: str | None, has_reasoning: bool) -> str:
+    if finish_reason in {"length", "max_tokens"}:
+        return "model_output_truncated"
+    if has_reasoning:
+        return "model_output_reasoning_only"
+    return "model_output_empty"
+
+
+def _parse_completion_budget(value: str) -> int | None:
+    normalized = value.strip().casefold()
+    if normalized == "auto":
+        return None
+    if not normalized.isdigit():
+        raise ValueError("completion budget must be 'auto' or a positive integer")
+    budget = int(normalized)
+    if budget < 1:
+        raise ValueError("completion budget must be greater than zero")
+    return budget
+
+
 def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
                system_prompt: str, user_prompt: str, timeout: int,
-               temperature: float, max_tokens: int, json_mode: str) -> dict[str, Any]:
+               temperature: float, completion_budget: int | None,
+               completion_budget_field: str, reasoning_effort: str | None,
+               json_mode: str) -> dict[str, Any]:
     base_url = _validate_base_url(base_url)
     url = base_url + "/chat/completions"
     payload: dict[str, Any] = {
@@ -372,8 +395,15 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
             {"role": "user", "content": user_prompt},
         ],
         "temperature": temperature,
-        "max_tokens": max_tokens,
     }
+    if completion_budget is not None:
+        if completion_budget_field not in {"max_tokens", "max_completion_tokens"}:
+            raise ValueError("unsupported completion budget field")
+        payload[completion_budget_field] = completion_budget
+    if reasoning_effort is not None:
+        if reasoning_effort not in {"low", "medium", "high"}:
+            raise ValueError("unsupported reasoning effort")
+        payload["reasoning_effort"] = reasoning_effort
     if json_mode == "json_object":
         payload["response_format"] = {"type": "json_object"}
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -634,7 +664,21 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--json-mode", choices=["off", "json_object"], default="off")
     p.add_argument("--timeout", type=int, default=180)
     p.add_argument("--temperature", type=float, default=0.0)
-    p.add_argument("--max-tokens", type=int, default=1800)
+    p.add_argument(
+        "--completion-budget",
+        default="auto",
+        help="auto omits a completion-token cap; otherwise use a positive integer",
+    )
+    p.add_argument(
+        "--completion-budget-field",
+        choices=["max_tokens", "max_completion_tokens"],
+        default="max_tokens",
+    )
+    p.add_argument(
+        "--reasoning-effort",
+        choices=["provider_default", "low", "medium", "high"],
+        default="provider_default",
+    )
     p.add_argument("--max-evidence-sources", type=int, default=12)
     p.add_argument("--max-excerpt-chars", type=int, default=1800)
     return p.parse_args()
@@ -655,6 +699,14 @@ def main() -> int:
     if not api_key:
         raise SystemExit(f"required API key environment variable is unset: {args.api_key_env}")
     contract = args.contract.read_text(encoding="utf-8")
+    try:
+        completion_budget = _parse_completion_budget(args.completion_budget)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
+    reasoning_effort = (
+        None if args.reasoning_effort == "provider_default"
+        else args.reasoning_effort
+    )
     tasks = _load_jsonl(args.input)
     index = RetrievalIndex(args.index)
     output: list[dict[str, Any]] = []
@@ -667,18 +719,28 @@ def main() -> int:
             args.base_url, api_key, args.auth_style, model,
             _system_prompt(role, contract), _user_prompt(role, task, evidence),
             timeout=max(1, args.timeout), temperature=args.temperature,
-            max_tokens=max(128, args.max_tokens), json_mode=args.json_mode,
+            completion_budget=completion_budget,
+            completion_budget_field=args.completion_budget_field,
+            reasoning_effort=reasoning_effort,
+            json_mode=args.json_mode,
         )
         try:
-            text = _extract_message_content(response)
             finish_reason = _extract_finish_reason(response)
-            reasoning_only = _has_reasoning_content(response) and not text.strip()
+            has_reasoning = _has_reasoning_content(response)
         except ValueError:
             raise AdapterDiagnosticError("response_shape_invalid") from None
+        try:
+            text = _extract_message_content(response)
+        except ValueError:
+            if has_reasoning or finish_reason in {"length", "max_tokens"}:
+                raise AdapterDiagnosticError(
+                    _empty_output_diagnostic(finish_reason, has_reasoning)
+                ) from None
+            raise AdapterDiagnosticError("response_shape_invalid") from None
         if not text.strip():
-            if reasoning_only:
-                raise AdapterDiagnosticError("model_output_reasoning_only")
-            raise AdapterDiagnosticError("model_output_empty")
+            raise AdapterDiagnosticError(
+                _empty_output_diagnostic(finish_reason, has_reasoning)
+            )
         try:
             model_obj, _parse_mode = _parse_model_json_object(text)
         except AdapterDiagnosticError as exc:

@@ -51,13 +51,22 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("adapters/chat_completions.py", self.workflow)
         self.assertIn("MUBIN_MODEL_API_KEY", self.workflow)
 
-    def test_completion_budget_is_explicit_and_bounded(self):
+    def test_completion_budget_supports_auto_without_artificial_upper_cap(self):
         dispatch = self.workflow.split("permissions:", 1)[0]
-        self.assertIn("curator_max_tokens:", dispatch)
-        self.assertIn("verifier_max_tokens:", dispatch)
-        self.assertIn('default: "4096"', dispatch)
-        self.assertIn('"--max-tokens", str(max_tokens)', self.workflow)
-        self.assertIn('if value < 256 or value > 8192:', self.workflow)
+        self.assertIn("curator_completion_budget:", dispatch)
+        self.assertIn("verifier_completion_budget:", dispatch)
+        self.assertGreaterEqual(dispatch.count('default: "auto"'), 2)
+        self.assertIn('"--completion-budget", completion_budget', self.workflow)
+        self.assertIn('"--completion-budget-field", completion_budget_field', self.workflow)
+        self.assertNotIn("value > 8192", self.workflow)
+        self.assertIn('must be \'auto\' or a positive integer', self.workflow)
+
+    def test_reasoning_control_is_provider_default_unless_opted_in(self):
+        dispatch = self.workflow.split("permissions:", 1)[0]
+        self.assertIn("curator_reasoning_effort:", dispatch)
+        self.assertIn("verifier_reasoning_effort:", dispatch)
+        self.assertGreaterEqual(dispatch.count("default: provider_default"), 2)
+        self.assertIn('"--reasoning-effort", reasoning_effort', self.workflow)
 
     def test_provider_keys_are_step_scoped_not_job_scoped(self):
         job_env = self.workflow.split("    env:\n", 1)[1].split("\n\n    steps:", 1)[0]
