@@ -548,10 +548,15 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
             "Curator gold violates task label contract",
         )
     family_id = model_obj.get("family_id")
-    if not isinstance(family_id, str) or not family_id.strip():
+    if not isinstance(family_id, str) or not family_id:
         raise ModelContractError(
             "contract_family_id_missing",
             "Curator candidate requires a non-empty family_id",
+        )
+    if family_id != family_id.strip():
+        raise ModelContractError(
+            "contract_family_id_invalid",
+            "Curator family_id must not contain leading or trailing whitespace",
         )
     candidate_input = model_obj.get("input")
     if candidate_input is None:
@@ -616,7 +621,7 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
             "benchmark_id": task["benchmark_id"],
             "case_id": _case_id(tid),
             "anchor_source_id": anchor_sid,
-            "family_id": family_id.strip(),
+            "family_id": family_id,
             "gold_status": "source_attributed",
             "synthetic": False,
             "source_refs": source_refs,
