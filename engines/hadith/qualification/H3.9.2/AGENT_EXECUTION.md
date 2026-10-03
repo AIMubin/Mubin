@@ -5,14 +5,14 @@ The execution layer runs Curator AI-A and Verifier AI-B through an external comm
 ## Security and provenance boundary
 
 - Adapter commands are executed as an argument vector; no shell interpolation is used.
-- Secrets are never stored in the execution config. The config contains an `env_allowlist` of variable **names** only; values are inherited at runtime and are not written to manifests.
+- The supported secret path is `env_allowlist`: the config stores variable **names** only, values are inherited at runtime, and values are never written to manifests. Common secret-bearing command flags are rejected. Arbitrary opaque command arguments cannot be proven non-secret, so operators must not embed credentials in command tokens.
 - The adapter is not allowed to set `model_family`, `model_ref`, task fingerprints, or execution bindings. The executor stamps those fields centrally from the reviewed config.
 - Every Curator task is revalidated against the frozen Factory plan before execution.
 - Every Verifier task has its own self-fingerprint in addition to the original task fingerprint.
 - The source-index manifest and `segments.jsonl` hashes must match every task's retrieval scope before a model is invoked.
-- Verifier execution requires a Curator execution manifest and rejects the same normalized model family.
+- Verifier execution requires a valid Curator execution manifest for the same partition and identical source-index hashes, and rejects the same normalized model family.
 - Holdout execution inherits the existing external custodian-path rule.
-- Resume is allowed only when the task/index/config/contract/model identity bindings are unchanged.
+- Resume is allowed only when the task/index/config/contract/model identity bindings are unchanged; existing response payloads are rehashed before reuse.
 
 ## Adapter protocol
 
@@ -69,3 +69,6 @@ factory-build-tasks
 ```
 
 The execution layer validates transport/provenance integrity. It does not elevate AI output into authority; promotion remains governed by Factory source verification, risk policy, and adjudication.
+
+
+Adapter stdout and stderr are discarded by the executor rather than persisted, reducing accidental leakage of source excerpts or credentials through provider logs. Batch failure reports expose only sanitized error classes/return codes, not command arguments.

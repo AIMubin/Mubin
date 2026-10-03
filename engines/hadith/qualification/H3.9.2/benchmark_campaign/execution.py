@@ -15,8 +15,12 @@ from .factory import _task_rows, _validate_tasks_against_frozen_plan, enforce_pa
 
 _SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 _SAFE_BASE_ENV = (
-    "PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "TMPDIR",
+    "PATH", "LANG", "LC_ALL", "TMPDIR",
     "SSL_CERT_FILE", "SSL_CERT_DIR", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+)
+_SECRET_FLAG_RE = re.compile(
+    r"^(?:--)?(?:api[-_]?key|access[-_]?token|auth[-_]?token|token|password|secret|authorization)(?:=|$)",
+    re.IGNORECASE,
 )
 _RESERVED_ADAPTER_FIELDS = {
     "task_fingerprint", "verifier_task_fingerprint", "model_family", "model_ref",
@@ -68,6 +72,12 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
     joined = "\n".join(command)
     if "{input}" not in joined or "{output}" not in joined:
         raise ValueError("adapter.command must include {input} and {output} placeholders")
+    for token in command:
+        stripped = token.strip()
+        if _SECRET_FLAG_RE.match(stripped) or stripped.casefold().startswith("bearer "):
+            raise ValueError(
+                "adapter.command must not carry secret-bearing arguments; use adapter.env_allowlist"
+            )
     env_allowlist = adapter.get("env_allowlist", [])
     if not isinstance(env_allowlist, list) or not all(
         isinstance(x, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", x)
@@ -309,6 +319,16 @@ def _validate_existing_responses(rows: list[dict[str, Any]], tasks: dict[str, di
         binding = row.get("execution_binding")
         if not isinstance(binding, dict) or binding.get("config_sha256") != config_sha256:
             raise ValueError(f"existing response execution binding mismatch: {tid}")
+        if binding.get("protocol_version") != 1 or not isinstance(binding.get("batch_id"), str):
+            raise ValueError(f"existing response execution metadata invalid: {tid}")
+        raw = dict(row)
+        raw.pop("task_fingerprint", None)
+        raw.pop("model_family", None)
+        raw.pop("model_ref", None)
+        raw.pop("execution_binding", None)
+        expected_raw_sha = sha256_bytes(canonical_json_bytes(raw))
+        if binding.get("raw_response_sha256") != expected_raw_sha:
+            raise ValueError(f"existing response raw payload hash mismatch: {tid}")
 
 
 def _manifest_identity(root: Path, role: str, partition: str, cfg: dict[str, Any],
@@ -346,15 +366,29 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
         for path in (tasks_path, index_dir, output_path, manifest_path):
             enforce_partition_boundary(root, "holdout", path, custodian_mode)
 
+    prior: dict[str, Any] | None = None
     if role == "verifier":
         if independent_from_manifest is None:
             raise ValueError("verifier execution requires independent_from_manifest")
         prior = load_json(independent_from_manifest)
+        if not isinstance(prior, dict) or prior.get("role") != "curator":
+            raise ValueError("independent_from_manifest must be a Curator execution manifest")
+        if prior.get("partition") != partition:
+            raise ValueError("Curator and Verifier execution partitions must match")
         prior_family = _require_nonempty_string(prior.get("model_family"), "independent model_family")
         if _normalized_family(prior_family) == _normalized_family(cfg["model_family"]):
             raise ValueError("verifier model_family must differ from Curator model_family")
+        if not isinstance(prior.get("config_sha256"), str) or _SHA256_RE.fullmatch(prior["config_sha256"]) is None:
+            raise ValueError("Curator execution manifest is missing a valid config binding")
+        if not isinstance(prior.get("completed_task_count"), int) or prior["completed_task_count"] < 1:
+            raise ValueError("Curator execution manifest has no completed tasks")
 
     index = _validate_index_binding(tasks, index_dir)
+    if prior is not None:
+        if prior.get("index_manifest_sha256") != index["manifest_sha256"]:
+            raise ValueError("Curator and Verifier source-index manifests differ")
+        if prior.get("index_segments_sha256") != index["segments_sha256"]:
+            raise ValueError("Curator and Verifier source-index segments differ")
     contract = _contract_path(root, role)
     identity = _manifest_identity(root, role, partition, cfg, tasks_path, index, contract)
     config_sha = identity["config_sha256"]
@@ -387,11 +421,13 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
             "task_ids": task_ids,
             "task_fingerprints": [t["task_fingerprint"] for t in batch],
         }))[:24]
-        last_error: Exception | None = None
+        last_error_code: str | None = None
         stamped: list[dict[str, Any]] | None = None
+        attempt_used = 0
         request_sha = sha256_bytes(canonical_json_bytes(batch))
 
         for attempt in range(1, cfg["max_attempts"] + 1):
+            attempt_used = attempt
             with tempfile.TemporaryDirectory(prefix="mubin-h392-agent-") as td:
                 tmp = Path(td)
                 input_path = tmp / "input.jsonl"
@@ -411,24 +447,30 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                         command,
                         cwd=str(root),
                         env=env,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
                         check=False,
                         timeout=cfg["timeout_seconds"],
                     )
                     if proc.returncode != 0:
-                        raise RuntimeError(f"adapter exited non-zero: {proc.returncode}")
+                        last_error_code = f"nonzero_exit:{proc.returncode}"
+                        continue
                     if not raw_output.exists():
-                        raise RuntimeError("adapter did not create output file")
-                    raw_rows = load_jsonl(raw_output)
-                    checked = _validate_raw_adapter_rows(raw_rows, batch, role)
+                        last_error_code = "missing_output"
+                        continue
+                    try:
+                        raw_rows = load_jsonl(raw_output)
+                        checked = _validate_raw_adapter_rows(raw_rows, batch, role)
+                    except ValueError as exc:
+                        last_error_code = f"invalid_output:{exc}"
+                        continue
                     stamped = _stamp_rows(checked, batch, cfg, config_sha, batch_id)
                     break
-                except (subprocess.TimeoutExpired, ValueError, RuntimeError) as exc:
-                    last_error = exc
+                except subprocess.TimeoutExpired:
+                    last_error_code = "timeout"
         if stamped is None:
             raise RuntimeError(
-                f"adapter batch failed after {cfg['max_attempts']} attempts: {batch_id}: {last_error}"
+                f"adapter batch failed after {cfg['max_attempts']} attempts: {batch_id}: {last_error_code or 'unknown_error'}"
             )
 
         existing.extend(stamped)
@@ -440,6 +482,7 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
             "request_sha256": request_sha,
             "responses_sha256": sha256_bytes(canonical_json_bytes(stamped)),
             "attempts_allowed": cfg["max_attempts"],
+            "attempts_used": attempt_used,
         })
         write_json(manifest_path, {
             **identity,

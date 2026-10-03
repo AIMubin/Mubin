@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from benchmark_campaign.core import dump_jsonl, load_json, load_jsonl, write_json
-from benchmark_campaign.execution import run_agent_execution
+from benchmark_campaign.execution import load_agent_execution_config, run_agent_execution
 from benchmark_campaign.factory import (
     build_factory_plan,
     build_factory_tasks,
@@ -234,6 +234,71 @@ class AgentExecutionTests(unittest.TestCase):
                 run_agent_execution(
                     root, "curator", tasks, index, changed, out, manifest, resume=True
                 )
+
+    def test_resume_rejects_tampered_existing_response_payload(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            config = self._config(root, adapter, "curator", "family-a")
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            run_agent_execution(root, "curator", tasks, index, config, out, manifest)
+            row = load_jsonl(out)[0]
+            row["candidate"]["payload"]["input"]["question"] = "tampered after execution"
+            dump_jsonl(out, [row])
+            with self.assertRaisesRegex(ValueError, "raw payload hash mismatch"):
+                run_agent_execution(
+                    root, "curator", tasks, index, config, out, manifest, resume=True
+                )
+
+    def test_verifier_rejects_non_curator_independence_manifest(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            _, curator_out, curator_manifest = self._run_curator(
+                root, index, tasks, adapter, "family-a"
+            )
+            verifier_tasks = root / "factory-work" / "verifier-tasks.jsonl"
+            prepare_verifier_tasks(root, tasks, curator_out, verifier_tasks)
+            fake = load_json(curator_manifest)
+            fake["role"] = "verifier"
+            fake_path = root / "factory-work" / "fake-prior.json"
+            write_json(fake_path, fake)
+            verifier_config = self._config(root, adapter, "verifier", "family-b")
+            with self.assertRaisesRegex(ValueError, "must be a Curator execution manifest"):
+                run_agent_execution(
+                    root, "verifier", verifier_tasks, index, verifier_config,
+                    root / "factory-work" / "verifier-responses.jsonl",
+                    root / "factory-work" / "verifier-run.json",
+                    independent_from_manifest=fake_path,
+                )
+
+    def test_execution_config_rejects_common_inline_secret_flags(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            cfg = root / "bad.json"
+            write_json(cfg, {
+                "schema_version": 1,
+                "role": "curator",
+                "model_family": "family-a",
+                "model_ref": "family-a@test",
+                "adapter": {
+                    "command": [
+                        "adapter",
+                        "--api-key=literal-secret",
+                        "{input}",
+                        "{output}",
+                    ],
+                    "env_allowlist": [],
+                },
+                "batch_size": 1,
+                "timeout_seconds": 30,
+                "max_attempts": 1,
+            })
+            with self.assertRaisesRegex(ValueError, "secret-bearing"):
+                load_agent_execution_config(cfg, "curator")
 
     def test_verifier_rejects_same_model_family_before_adapter_call(self):
         with tempfile.TemporaryDirectory() as d:
