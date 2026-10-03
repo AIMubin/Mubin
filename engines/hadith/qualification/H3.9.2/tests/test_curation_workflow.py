@@ -47,6 +47,11 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn('"model_family"', summary)
         self.assertNotIn('"model_ref"', summary)
 
+    def test_full_execution_manifests_are_not_written_to_redacted_directory(self):
+        self.assertNotIn("curator-execution-report.json", self.workflow)
+        self.assertNotIn("verifier-execution-report.json", self.workflow)
+        self.assertGreaterEqual(self.workflow.count("> /dev/null"), 3)
+
     def test_neutral_adapter_and_runtime_key_names(self):
         self.assertIn("adapters/chat_completions.py", self.workflow)
         self.assertIn("MUBIN_MODEL_API_KEY", self.workflow)
