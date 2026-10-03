@@ -67,21 +67,18 @@ jobs:
       INDEX_DIR: /tmp/h392-curation/index
       RUN_DIR: /tmp/h392-curation/run
       REDACTED_DIR: /tmp/h392-curation/redacted
-      CURATOR_BASE_URL: \${{ vars.H392_CURATOR_BASE_URL }}
-      VERIFIER_BASE_URL: \${{ vars.H392_VERIFIER_BASE_URL }}
-      CURATOR_API_KEY: \${{ secrets.H392_CURATOR_API_KEY }}
-      VERIFIER_API_KEY: \${{ secrets.H392_VERIFIER_API_KEY }}
-      ARTIFACT_KEY: \${{ secrets.H392_CURATION_ARTIFACT_KEY }}
-      TASK_OFFSET: \${{ inputs.task_offset }}
-      TASK_LIMIT: \${{ inputs.task_limit }}
-      CURATOR_MODEL_FAMILY: \${{ inputs.curator_model_family }}
-      CURATOR_MODEL_REF: \${{ inputs.curator_model_ref }}
-      VERIFIER_MODEL_FAMILY: \${{ inputs.verifier_model_family }}
-      VERIFIER_MODEL_REF: \${{ inputs.verifier_model_ref }}
-      CURATOR_AUTH_STYLE: \${{ inputs.curator_auth_style }}
-      VERIFIER_AUTH_STYLE: \${{ inputs.verifier_auth_style }}
-      CURATOR_JSON_MODE: \${{ inputs.curator_json_mode }}
-      VERIFIER_JSON_MODE: \${{ inputs.verifier_json_mode }}
+      CURATOR_BASE_URL: ${{ vars.H392_CURATOR_BASE_URL }}
+      VERIFIER_BASE_URL: ${{ vars.H392_VERIFIER_BASE_URL }}
+      TASK_OFFSET: ${{ inputs.task_offset }}
+      TASK_LIMIT: ${{ inputs.task_limit }}
+      CURATOR_MODEL_FAMILY: ${{ inputs.curator_model_family }}
+      CURATOR_MODEL_REF: ${{ inputs.curator_model_ref }}
+      VERIFIER_MODEL_FAMILY: ${{ inputs.verifier_model_family }}
+      VERIFIER_MODEL_REF: ${{ inputs.verifier_model_ref }}
+      CURATOR_AUTH_STYLE: ${{ inputs.curator_auth_style }}
+      VERIFIER_AUTH_STYLE: ${{ inputs.verifier_auth_style }}
+      CURATOR_JSON_MODE: ${{ inputs.curator_json_mode }}
+      VERIFIER_JSON_MODE: ${{ inputs.verifier_json_mode }}
 
     steps:
       - name: Checkout Mubin
@@ -100,6 +97,10 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Fail closed if runtime credentials or endpoints are absent
+        env:
+          CURATOR_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
+          VERIFIER_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
         run: |
           set -eu
           test -n "$CURATOR_BASE_URL"
@@ -109,7 +110,12 @@ jobs:
           test -n "$ARTIFACT_KEY"
           case "$CURATOR_BASE_URL" in https://*) ;; *) echo "Curator base URL must be HTTPS" >&2; exit 1;; esac
           case "$VERIFIER_BASE_URL" in https://*) ;; *) echo "Verifier base URL must be HTTPS" >&2; exit 1;; esac
-          test "$CURATOR_MODEL_FAMILY" != "$VERIFIER_MODEL_FAMILY"
+          python - <<'PY'
+          import os
+          normalize = lambda s: " ".join(s.strip().casefold().split())
+          if normalize(os.environ["CURATOR_MODEL_FAMILY"]) == normalize(os.environ["VERIFIER_MODEL_FAMILY"]):
+              raise SystemExit("Curator and Verifier model families must differ")
+          PY
 
       - name: Validate chunk bounds
         run: |
@@ -250,7 +256,7 @@ jobs:
 
       - name: Run Curator AI-A
         env:
-          MUBIN_OPENAI_API_KEY: \${{ secrets.H392_CURATOR_API_KEY }}
+          MUBIN_OPENAI_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
         run: |
           python -m benchmark_campaign factory-run-agent \
             --role curator \
@@ -276,7 +282,7 @@ jobs:
       - name: Run independent Verifier AI-B
         if: steps.verifier_tasks.outputs.count != '0'
         env:
-          MUBIN_OPENAI_API_KEY: \${{ secrets.H392_VERIFIER_API_KEY }}
+          MUBIN_OPENAI_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
         run: |
           python -m benchmark_campaign factory-run-agent \
             --role verifier \
@@ -392,14 +398,16 @@ jobs:
           PY
 
       - name: Encrypt all source-bearing run evidence
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
         run: |
           set -eu
           tar -C "$RUN_DIR" -czf /tmp/h392-curation-source-bearing.tar.gz .
-          openssl enc -aes-256-cbc -pbkdf2 -salt \
-            -in /tmp/h392-curation-source-bearing.tar.gz \
-            -out "$REDACTED_DIR/h392-curation-source-bearing.tar.gz.enc" \
-            -pass env:ARTIFACT_KEY
-          sha256sum "$REDACTED_DIR/h392-curation-source-bearing.tar.gz.enc" \
+          python -m benchmark_campaign.artifact_crypto encrypt \
+            --input /tmp/h392-curation-source-bearing.tar.gz \
+            --output "$REDACTED_DIR/h392-curation-source-bearing.tar.gz.aesgcm" \
+            --passphrase-env ARTIFACT_KEY
+          sha256sum "$REDACTED_DIR/h392-curation-source-bearing.tar.gz.aesgcm" \
             | awk '{print $1}' > "$REDACTED_DIR/ENCRYPTED_BUNDLE_SHA256.txt"
           rm -f /tmp/h392-curation-source-bearing.tar.gz
 
@@ -411,12 +419,12 @@ jobs:
           test ! -e "$REDACTED_DIR/verifier-tasks.jsonl"
           test ! -e "$REDACTED_DIR/curator-tasks.jsonl"
           test ! -e "$REDACTED_DIR/segments.jsonl"
-          test -s "$REDACTED_DIR/h392-curation-source-bearing.tar.gz.enc"
+          test -s "$REDACTED_DIR/h392-curation-source-bearing.tar.gz.aesgcm"
 
       - name: Upload encrypted curation bundle and redacted summary
         uses: actions/upload-artifact@v4
         with:
-          name: h392-curation-chunk-\${{ inputs.task_offset }}-\${{ inputs.task_limit }}
+          name: h392-curation-chunk-${{ inputs.task_offset }}-${{ inputs.task_limit }}
           path: /tmp/h392-curation/redacted
           if-no-files-found: error
           retention-days: 30
