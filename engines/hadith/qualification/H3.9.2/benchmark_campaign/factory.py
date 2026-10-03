@@ -441,9 +441,14 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
             raise ValueError(f"candidate payload.input missing: {tid}")
         blind_error = _blind_input_error(payload["input"], task)
         if blind_error is not None:
-            # This is a candidate-quality failure, not an orchestration-integrity
-            # failure. Keep the Curator response for reconciliation/adjudication,
-            # but do not expose the unsafe input to the independent Verifier.
+            if partition == "holdout":
+                raise ValueError(
+                    f"candidate payload.input violates verifier blindness: {tid}: {blind_error}"
+                )
+            # On the non-holdout collection surface this is a candidate-quality
+            # failure, not an orchestration-integrity failure. Keep the Curator
+            # response for reconciliation/adjudication, but do not expose the
+            # unsafe input to the independent Verifier.
             blindness_rejections += 1
             continue
         verifier_task = {
