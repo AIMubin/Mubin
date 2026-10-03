@@ -25,6 +25,23 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn("H392_VERIFIER_API_KEY", job_env)
         self.assertNotIn("H392_CURATION_ARTIFACT_KEY", job_env)
 
+    def test_secret_bearing_workflow_pins_action_commits(self):
+        self.assertIn(
+            "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            self.workflow,
+        )
+        self.assertIn(
+            "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            self.workflow,
+        )
+        self.assertIn(
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            self.workflow,
+        )
+        self.assertNotIn("actions/checkout@v", self.workflow)
+        self.assertNotIn("actions/setup-python@v", self.workflow)
+        self.assertNotIn("actions/upload-artifact@v", self.workflow)
+
     def test_workflow_uses_authenticated_bundle_encryption(self):
         self.assertIn("benchmark_campaign.artifact_crypto encrypt", self.workflow)
         self.assertIn(".aesgcm", self.workflow)
