@@ -465,8 +465,13 @@ def _supports_from_model(value: Any, evidence: list[dict[str, Any]]) -> list[dic
                 "contract_support_item_invalid",
                 "each support must be an object",
             )
-        eid = str(item.get("evidence_id", ""))
-        source = by_id.get(eid)
+        raw_eid = item.get("evidence_id")
+        if not isinstance(raw_eid, str) or not raw_eid:
+            raise ModelContractError(
+                "contract_evidence_id_invalid",
+                "support evidence_id must be a non-empty string",
+            )
+        source = by_id.get(raw_eid)
         if source is None:
             raise ModelContractError(
                 "contract_evidence_id_invalid",
@@ -508,8 +513,9 @@ def _valid_gold(gold: Any, task: dict[str, Any]) -> bool:
         labels = gold.get("labels")
         return (
             isinstance(labels, list) and bool(labels)
-            and len(labels) == len(set(map(str, labels)))
-            and set(map(str, labels)).issubset(allowed)
+            and all(isinstance(label, str) for label in labels)
+            and len(labels) == len(set(labels))
+            and set(labels).issubset(allowed)
         )
     return False
 
@@ -521,9 +527,14 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
     tid = str(task["task_id"])
     if model_obj.get("status") == "no_candidate":
         reason = model_obj.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ModelContractError(
+                "contract_reason_missing",
+                "no_candidate requires a non-empty reason",
+            )
         return {
             "task_id": tid, "status": "no_candidate",
-            "reason": reason if isinstance(reason, str) and reason.strip() else "source evidence insufficient",
+            "reason": reason,
         }
     if model_obj.get("status") != "candidate":
         raise ModelContractError(
@@ -623,9 +634,14 @@ def _verifier_row(task: dict[str, Any], model_obj: dict[str, Any],
     tid = str(task["task_id"])
     if model_obj.get("status") == "no_candidate":
         reason = model_obj.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ModelContractError(
+                "contract_reason_missing",
+                "no_candidate requires a non-empty reason",
+            )
         return {
             "task_id": tid, "status": "no_candidate",
-            "reason": reason if isinstance(reason, str) and reason.strip() else "independent evidence insufficient",
+            "reason": reason,
         }
     if model_obj.get("status") != "candidate":
         raise ModelContractError(
