@@ -22,7 +22,7 @@ The task contains no gold answer. Work only from `allowed_source_pool`. `anchor_
 
 ## Response envelope
 
-Return one JSON object per task. Candidate responses include: `task_id`, `task_fingerprint`, stable `model_family`, specific `model_ref`, `status=candidate`, and a `candidate` object that conforms to the H3.9.2 benchmark-record contract before hashes are derived.
+Return one JSON object per task. When using the provider-neutral execution layer, the adapter returns only `task_id`, `status`, and the role payload (`candidate` or `reason`); the executor binds `task_fingerprint`, stable `model_family`, specific `model_ref`, and execution hashes centrally. Manual integrations that bypass the executor must provide the full envelope themselves.
 
 The candidate should use `gold_status=source_attributed`, `synthetic=false`, source refs with exact locators and verbatim excerpts, `answer_provenance` with literal supports, and a payload containing `input` and proposed `gold`.
 

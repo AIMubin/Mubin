@@ -15,7 +15,7 @@ You must be structurally blind to Curator AI-A's proposed gold and support field
 
 ## Candidate response
 
-Return `task_id`, `task_fingerprint`, stable `model_family`, specific `model_ref`, `status=candidate`, and `answer` containing `gold` plus one or more source supports. Each support must include `source_id`, exact `locator`, verbatim `excerpt`, and literal `support_text` inside the excerpt.
+Return `task_id`, `status=candidate`, and `answer` containing `gold` plus one or more source supports. Each support must include `source_id`, exact `locator`, verbatim `excerpt`, and literal `support_text` inside the excerpt. Under the provider-neutral execution layer, the executor binds the original task fingerprint, model identity, and execution hashes centrally; manual integrations must provide the full envelope themselves.
 
 For unsupported cases return `status=no_candidate` with a reason.
 
@@ -29,3 +29,8 @@ Agreement between two AIs is not authority by itself. The factory promotes only 
 Before a verifier task is emitted, the factory recursively rejects answer-bearing input keys such as `gold`, `label`, `answer`, `verdict`, `grade`, `ruling`, `prediction`, or `support`, and rejects input scalar values that exactly equal a preregistered benchmark label. This prevents ordinary explicit answer leakage.
 
 This is a structural anti-leak control, not a claim that arbitrary free text cannot carry steganographic or semantic hints. The orchestration/custodian layer must not intentionally encode answers into otherwise innocent input fields.
+
+
+## Verifier-task integrity
+
+Prepared Verifier tasks carry both the original Curator-task `task_fingerprint` and a self-binding `verifier_task_fingerprint`. The execution layer verifies the latter before invoking a model, so any alteration of `candidate_input`, retrieval scope, or blindness fields fails closed.

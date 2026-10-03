@@ -449,6 +449,10 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
             },
         }
         verifier_task["task_fingerprint"] = task["task_fingerprint"]
+        unsigned_verifier_task = dict(verifier_task)
+        verifier_task["verifier_task_fingerprint"] = sha256_bytes(
+            canonical_json_bytes(unsigned_verifier_task)
+        )
         out.append(verifier_task)
     dump_jsonl(out_path, out)
     return {
