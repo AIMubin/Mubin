@@ -262,6 +262,7 @@ jobs:
             > "$REDACTED_DIR/curator-execution-report.json"
 
       - name: Prepare structurally blind Verifier tasks
+        id: verifier_tasks
         run: |
           python -m benchmark_campaign factory-prepare-verifier \
             --partition non_holdout \
@@ -269,8 +270,11 @@ jobs:
             --curator-responses "$RUN_DIR/curator-responses.jsonl" \
             --out "$RUN_DIR/verifier-tasks.jsonl" \
             > "$REDACTED_DIR/verifier-task-report.json"
+          count="$(python -c 'import json,os; print(json.load(open(os.path.join(os.environ["REDACTED_DIR"],"verifier-task-report.json")))["verifier_tasks"])')"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
 
       - name: Run independent Verifier AI-B
+        if: steps.verifier_tasks.outputs.count != '0'
         env:
           MUBIN_OPENAI_API_KEY: \${{ secrets.H392_VERIFIER_API_KEY }}
         run: |
@@ -285,6 +289,7 @@ jobs:
             > "$REDACTED_DIR/verifier-execution-report.json"
 
       - name: Reconcile source evidence and policy gates
+        if: steps.verifier_tasks.outputs.count != '0'
         run: |
           mkdir -p "$RUN_DIR/reviewed"
           python -m benchmark_campaign factory-reconcile \
@@ -297,6 +302,35 @@ jobs:
             --adjudication "$RUN_DIR/adjudication.jsonl" \
             --ledger "$RUN_DIR/CURATION_LEDGER.jsonl" \
             > "$REDACTED_DIR/reconcile-report.json"
+
+      - name: Record zero-candidate reconciliation result
+        if: steps.verifier_tasks.outputs.count == '0'
+        run: |
+          mkdir -p "$RUN_DIR/reviewed"
+          : > "$RUN_DIR/verifier-responses.jsonl"
+          : > "$RUN_DIR/adjudication.jsonl"
+          : > "$RUN_DIR/CURATION_LEDGER.jsonl"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          curator = [
+              json.loads(line) for line in (Path(os.environ["RUN_DIR"]) / "curator-responses.jsonl").read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          report = {
+              "task_count": len(curator),
+              "promoted_count": 0,
+              "adjudication_count": 0,
+              "skipped_count": len(curator),
+              "ledger_count": 0,
+              "promoted_by_benchmark": {},
+              "reason": "no_curator_candidates",
+          }
+          (Path(os.environ["REDACTED_DIR"]) / "reconcile-report.json").write_text(
+              json.dumps(report, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
 
       - name: Build redacted run summary
         run: |
@@ -313,7 +347,8 @@ jobs:
               return json.loads(path.read_text(encoding="utf-8"))
 
           curator = load(run / "curator-run.json")
-          verifier = load(run / "verifier-run.json")
+          verifier_path = run / "verifier-run.json"
+          verifier = load(verifier_path) if verifier_path.exists() else None
           reconcile = load(redacted / "reconcile-report.json")
           chunk = load(redacted / "chunk.json")
           summary = {
@@ -331,7 +366,7 @@ jobs:
                   "completed_task_count": curator["completed_task_count"],
                   "output_sha256": curator["output_sha256"],
               },
-              "verifier": {
+              "verifier": ({
                   "model_family": verifier["model_family"],
                   "model_ref": verifier["model_ref"],
                   "config_sha256": verifier["config_sha256"],
@@ -339,7 +374,12 @@ jobs:
                   "completed_task_count": verifier["completed_task_count"],
                   "output_sha256": verifier["output_sha256"],
                   "independent_curator_manifest_sha256": verifier["independent_curator_manifest_sha256"],
-              },
+              } if verifier is not None else {
+                  "model_family": os.environ["VERIFIER_MODEL_FAMILY"],
+                  "model_ref": os.environ["VERIFIER_MODEL_REF"],
+                  "completed_task_count": 0,
+                  "not_run_reason": "no_curator_candidates",
+              }),
               "reconciliation": reconcile,
               "contains_source_text": False,
               "contains_gold_payloads": False,
