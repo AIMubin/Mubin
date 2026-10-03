@@ -13,7 +13,9 @@ from adapters.chat_completions import (
     _NoRedirect,
     _call_chat,
     _curator_row,
+    _extract_finish_reason,
     _extract_message_content,
+    _has_reasoning_content,
     _parse_model_json_object,
     _strip_json_fence,
     _supports_from_model,
@@ -247,6 +249,36 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         with self.assertRaises(AdapterDiagnosticError) as ctx:
             _parse_model_json_object(raw)
         self.assertEqual(ctx.exception.code, "model_output_invalid_json")
+
+    def test_model_json_parser_rejects_nonstandard_constants(self):
+        for raw in (
+            '{"status":"no_candidate","reason":"x","extra":NaN}',
+            '{"status":"no_candidate","reason":"x","extra":Infinity}',
+            '{"status":"no_candidate","reason":"x","extra":-Infinity}',
+            'Result: {"status":"no_candidate","reason":"x","extra":NaN}',
+        ):
+            with self.subTest(raw=raw):
+                with self.assertRaises(AdapterDiagnosticError) as ctx:
+                    _parse_model_json_object(raw)
+                self.assertEqual(ctx.exception.code, "model_output_invalid_json")
+
+    def test_model_json_parser_distinguishes_missing_and_unbalanced_objects(self):
+        with self.assertRaises(AdapterDiagnosticError) as ctx:
+            _parse_model_json_object("plain text only")
+        self.assertEqual(ctx.exception.code, "model_output_no_json_object")
+        with self.assertRaises(AdapterDiagnosticError) as ctx:
+            _parse_model_json_object('Result: {"status":"no_candidate"')
+        self.assertEqual(ctx.exception.code, "model_output_unbalanced_json")
+
+    def test_response_metadata_helpers_are_content_safe(self):
+        response = {
+            "choices": [{
+                "finish_reason": "length",
+                "message": {"content": "", "reasoning_content": "private reasoning"},
+            }]
+        }
+        self.assertEqual(_extract_finish_reason(response), "length")
+        self.assertTrue(_has_reasoning_content(response))
 
     def test_support_mapping_requires_verbatim_retrieved_evidence(self):
         evidence = [{
