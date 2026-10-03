@@ -441,6 +441,8 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
     actual_partition = _task_partition(tasks)
     if actual_partition != partition:
         raise ValueError(f"task partition {actual_partition} does not match requested {partition}")
+    if partition == "holdout" and cfg["task_failure_policy"] != "fail_fast":
+        raise ValueError("holdout execution requires task_failure_policy=fail_fast")
     if partition == "holdout":
         for path in (tasks_path, index_dir, output_path, manifest_path):
             enforce_partition_boundary(root, "holdout", path, custodian_mode)
