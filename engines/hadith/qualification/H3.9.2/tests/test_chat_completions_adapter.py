@@ -13,6 +13,7 @@ from adapters.chat_completions import (
     _NoRedirect,
     _call_chat,
     _curator_row,
+    _empty_output_diagnostic,
     _extract_finish_reason,
     _extract_message_content,
     _has_reasoning_content,
@@ -356,6 +357,20 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         }
         self.assertEqual(_extract_finish_reason(response), "length")
         self.assertTrue(_has_reasoning_content(response))
+
+    def test_empty_output_diagnostic_prefers_truncation_signal(self):
+        self.assertEqual(
+            _empty_output_diagnostic("length", True),
+            "model_output_truncated",
+        )
+        self.assertEqual(
+            _empty_output_diagnostic(None, True),
+            "model_output_reasoning_only",
+        )
+        self.assertEqual(
+            _empty_output_diagnostic(None, False),
+            "model_output_empty",
+        )
 
     def test_support_mapping_requires_verbatim_retrieved_evidence(self):
         evidence = [{
