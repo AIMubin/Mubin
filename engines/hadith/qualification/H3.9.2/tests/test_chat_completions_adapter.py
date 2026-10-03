@@ -132,7 +132,7 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
             "adapters.chat_completions.urllib.request.build_opener",
             return_value=FakeOpener(),
         ):
-            with self.assertRaisesRegex(ValueError, "response exceeds size limit"):
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
                 _call_chat(
                     "https://example.test/v1",
                     "secret",
@@ -145,6 +145,7 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                     128,
                     "off",
                 )
+            self.assertEqual(ctx.exception.code, "response_too_large")
 
     def test_http_status_is_reduced_to_safe_diagnostic_code(self):
         import urllib.error
