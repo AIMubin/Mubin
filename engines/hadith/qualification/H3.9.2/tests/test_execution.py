@@ -34,6 +34,9 @@ with open(input_path, encoding="utf-8") as fh:
         if not line.strip():
             continue
         task = json.loads(line)
+        if mode == "contract-first" and task["task_id"].endswith(":0001"):
+            print("MUBIN_DIAGNOSTIC:contract_gold_invalid", file=sys.stderr)
+            raise SystemExit(1)
         if role == "curator":
             row = {
                 "task_id": task["task_id"],
@@ -149,7 +152,11 @@ class AgentExecutionTests(unittest.TestCase):
         adapter.write_text(ADAPTER, encoding="utf-8")
         return cache, index, tasks, adapter
 
-    def _config(self, root: Path, adapter: Path, role: str, family: str, mode: str = "ok"):
+    def _config(
+        self, root: Path, adapter: Path, role: str, family: str,
+        mode: str = "ok", task_failure_policy: str = "fail_fast",
+        batch_size: int = 1,
+    ):
         path = root / f"{role}-{family}.json"
         write_json(path, {
             "schema_version": 1,
@@ -167,9 +174,10 @@ class AgentExecutionTests(unittest.TestCase):
                 "env_allowlist": [],
                 "artifacts": [adapter.relative_to(root).as_posix()],
             },
-            "batch_size": 1,
+            "batch_size": batch_size,
             "timeout_seconds": 30,
             "max_attempts": 1,
+            "task_failure_policy": task_failure_policy,
         })
         return path
 
