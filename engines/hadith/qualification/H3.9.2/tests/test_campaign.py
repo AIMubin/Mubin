@@ -58,6 +58,8 @@ class CampaignTests(unittest.TestCase):
             "benchmark_campaign/manifests.py",
             "benchmark_campaign/source_cache.py",
             "benchmark_campaign/factory.py",
+            "benchmark_campaign/execution.py",
+            "AGENT_EXECUTION.md",
         ]:
             dst = self.root / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
