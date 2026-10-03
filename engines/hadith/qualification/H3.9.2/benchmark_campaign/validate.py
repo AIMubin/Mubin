@@ -191,6 +191,50 @@ def _validate_factory_verification(record: dict[str, Any], benchmark_id: str) ->
         out.append(Violation("qualification.factory_version", "factory_version must be a positive integer", benchmark_id, cid))
     if not isinstance(fv.get("risk_tier"), int) or int(fv.get("risk_tier", 0)) not in {1, 2, 3}:
         out.append(Violation("qualification.factory_risk_tier", "risk_tier must be 1, 2, or 3", benchmark_id, cid))
+    for role in ("curator", "verifier"):
+        binding = fv.get(f"{role}_execution_binding")
+        if not isinstance(binding, dict):
+            out.append(Violation(
+                "qualification.factory_execution_binding",
+                f"factory_verification.{role}_execution_binding is required",
+                benchmark_id, cid,
+            ))
+            continue
+        for field in ("config_sha256", "raw_response_sha256", "adapter_command_sha256"):
+            if not _is_sha256(binding.get(field)):
+                out.append(Violation(
+                    "qualification.factory_execution_hash",
+                    f"{role} execution binding {field} must be sha256",
+                    benchmark_id, cid,
+                ))
+        if binding.get("protocol_version") != 1:
+            out.append(Violation(
+                "qualification.factory_execution_protocol",
+                f"{role} execution binding protocol_version must be 1",
+                benchmark_id, cid,
+            ))
+        artifacts = binding.get("adapter_artifacts")
+        if not isinstance(artifacts, list) or not artifacts:
+            out.append(Violation(
+                "qualification.factory_adapter_artifacts",
+                f"{role} execution binding requires adapter artifact hashes",
+                benchmark_id, cid,
+            ))
+        else:
+            for artifact in artifacts:
+                if (
+                    not isinstance(artifact, dict)
+                    or not isinstance(artifact.get("path"), str)
+                    or not artifact["path"].strip()
+                    or not _is_sha256(artifact.get("sha256"))
+                    or not isinstance(artifact.get("size_bytes"), int)
+                    or artifact["size_bytes"] < 1
+                ):
+                    out.append(Violation(
+                        "qualification.factory_adapter_artifact",
+                        f"{role} execution adapter artifact binding is invalid",
+                        benchmark_id, cid,
+                    ))
     supports = fv.get("verifier_supports")
     if not isinstance(supports, list) or not supports:
         out.append(Violation("qualification.factory_verifier_supports", "independent verifier supports are required", benchmark_id, cid))

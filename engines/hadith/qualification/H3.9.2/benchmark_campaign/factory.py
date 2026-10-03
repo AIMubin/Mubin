@@ -86,6 +86,7 @@ def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) 
     expected_plan = build_factory_plan(root)
     slots = {str(s["slot_id"]): s for s in expected_plan["slots"]}
     cplan = _curation_plan(root)
+    factory_policy = _policy(root)
     registry = source_map(load_source_registry(root))
     policy_fields = (
         "benchmark_id", "partition", "anchor_source_id", "task_type",
@@ -110,6 +111,9 @@ def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) 
             raise ValueError(f"factory task allowed_source_pool differs from frozen plan: {slot_id}")
         if task.get("forbidden_source_pool") != bp.get(other_key):
             raise ValueError(f"factory task forbidden_source_pool differs from frozen plan: {slot_id}")
+        expected_terms = list(factory_policy.get("benchmarks", {}).get(bid, {}).get("candidate_keywords", []))
+        if task.get("retrieval_terms") != expected_terms:
+            raise ValueError(f"factory task retrieval_terms differ from frozen policy: {slot_id}")
         retrieval = task.get("retrieval_scope")
         if not isinstance(retrieval, dict):
             raise ValueError(f"factory task retrieval_scope missing: {slot_id}")
@@ -329,6 +333,7 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
             "forbidden_source_pool": bplan[other_key],
             "allowed_labels": slot["allowed_labels"],
             "task_type": slot["task_type"],
+            "retrieval_terms": list(bp.get("candidate_keywords", [])),
             "retrieval_scope": {
                 "access_mode": "full_partition_index",
                 "partition": partition,
@@ -437,6 +442,7 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
             "forbidden_source_pool": task["forbidden_source_pool"],
             "allowed_labels": task["allowed_labels"],
             "task_type": task["task_type"],
+            "retrieval_terms": task["retrieval_terms"],
             "anchor_source_id": task["anchor_source_id"],
             "retrieval_scope": task["retrieval_scope"],
             "anchor_segment": task["anchor_segment"],
@@ -491,6 +497,36 @@ def _validate_response_identity(response: dict[str, Any], task: dict[str, Any], 
     for field in ("model_family", "model_ref"):
         if not isinstance(response.get(field), str) or not response[field].strip():
             raise ValueError(f"{role} response requires {field}: {task['task_id']}")
+    binding = response.get("execution_binding")
+    if not isinstance(binding, dict):
+        raise ValueError(f"{role} response requires execution_binding: {task['task_id']}")
+    for field in ("config_sha256", "raw_response_sha256", "adapter_command_sha256"):
+        value = binding.get(field)
+        if not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{64}", value) is None:
+            raise ValueError(f"{role} execution binding {field} invalid: {task['task_id']}")
+    if binding.get("protocol_version") != 1 or not isinstance(binding.get("batch_id"), str):
+        raise ValueError(f"{role} execution binding metadata invalid: {task['task_id']}")
+    artifacts = binding.get("adapter_artifacts")
+    if not isinstance(artifacts, list) or not artifacts:
+        raise ValueError(f"{role} execution binding adapter artifacts missing: {task['task_id']}")
+    for artifact in artifacts:
+        if (
+            not isinstance(artifact, dict)
+            or not isinstance(artifact.get("path"), str)
+            or not artifact["path"].strip()
+            or not isinstance(artifact.get("sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", artifact["sha256"]) is None
+            or not isinstance(artifact.get("size_bytes"), int)
+            or artifact["size_bytes"] < 1
+        ):
+            raise ValueError(f"{role} execution binding adapter artifact invalid: {task['task_id']}")
+    raw = dict(response)
+    raw.pop("task_fingerprint", None)
+    raw.pop("model_family", None)
+    raw.pop("model_ref", None)
+    raw.pop("execution_binding", None)
+    if binding.get("raw_response_sha256") != sha256_bytes(canonical_json_bytes(raw)):
+        raise ValueError(f"{role} raw response hash mismatch: {task['task_id']}")
 
 
 _FACTORY_LOCATOR_RE = re.compile(r"^gitblob:([a-f0-9]{40})#char=(\d+):(\d+)$")
@@ -768,6 +804,8 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             "verifier_model_ref": verifier["model_ref"],
             "curator_response_sha256": curator_response_sha256,
             "verifier_response_sha256": verifier_response_sha256,
+            "curator_execution_binding": curator.get("execution_binding"),
+            "verifier_execution_binding": verifier.get("execution_binding"),
             "verifier_supports": verifier_supports,
             "agreement": "exact_gold_match",
             "task_fingerprint": task["task_fingerprint"],

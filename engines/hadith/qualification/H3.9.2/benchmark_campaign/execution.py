@@ -62,7 +62,7 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
     adapter = cfg.get("adapter")
     if not isinstance(adapter, dict):
         raise ValueError("adapter must be an object")
-    allowed_adapter = {"command", "env_allowlist"}
+    allowed_adapter = {"command", "env_allowlist", "artifacts"}
     unknown_adapter = set(adapter) - allowed_adapter
     if unknown_adapter:
         raise ValueError(f"unknown adapter config fields: {sorted(unknown_adapter)}")
@@ -86,6 +86,17 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
         raise ValueError("adapter.env_allowlist must contain environment variable names only")
     if len(env_allowlist) != len(set(env_allowlist)):
         raise ValueError("adapter.env_allowlist contains duplicates")
+    artifacts = adapter.get("artifacts")
+    if not isinstance(artifacts, list) or not artifacts or not all(
+        isinstance(x, str) and x.strip() for x in artifacts
+    ):
+        raise ValueError("adapter.artifacts must be a non-empty list of file paths")
+    if len(artifacts) != len(set(artifacts)):
+        raise ValueError("adapter.artifacts contains duplicates")
+    for raw in artifacts:
+        p = Path(raw)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError("adapter.artifacts must be campaign-root-relative paths without parent traversal")
 
     batch_size = cfg.get("batch_size", 8)
     timeout_seconds = cfg.get("timeout_seconds", 900)
@@ -105,6 +116,7 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
         "adapter": {
             "command": command,
             "env_allowlist": env_allowlist,
+            "artifacts": artifacts,
         },
         "batch_size": batch_size,
         "timeout_seconds": timeout_seconds,
@@ -112,13 +124,36 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
     }
 
 
-def _config_binding(cfg: dict[str, Any]) -> dict[str, Any]:
+def _adapter_artifact_bindings(root: Path, cfg: dict[str, Any]) -> list[dict[str, Any]]:
+    bindings: list[dict[str, Any]] = []
+    root_resolved = root.resolve()
+    for raw in cfg["adapter"]["artifacts"]:
+        p = Path(raw)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError(f"adapter artifact path must stay inside campaign root: {raw}")
+        resolved = (root_resolved / p).resolve()
+        try:
+            resolved.relative_to(root_resolved)
+        except ValueError as exc:
+            raise ValueError(f"adapter artifact resolves outside campaign root: {raw}") from exc
+        if not resolved.exists() or not resolved.is_file():
+            raise ValueError(f"adapter artifact does not exist or is not a file: {raw}")
+        bindings.append({
+            "path": p.as_posix(),
+            "sha256": sha256_file(resolved),
+            "size_bytes": resolved.stat().st_size,
+        })
+    return bindings
+
+
+def _config_binding(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": cfg["schema_version"],
         "role": cfg["role"],
         "model_family": cfg["model_family"],
         "model_ref": cfg["model_ref"],
         "adapter_command_sha256": sha256_bytes(canonical_json_bytes(cfg["adapter"]["command"])),
+        "adapter_artifacts": _adapter_artifact_bindings(root, cfg),
         "env_names": sorted(cfg["adapter"]["env_allowlist"]),
         "batch_size": cfg["batch_size"],
         "timeout_seconds": cfg["timeout_seconds"],
@@ -275,7 +310,9 @@ def _validate_raw_adapter_rows(rows: list[dict[str, Any]], batch: list[dict[str,
 
 
 def _stamp_rows(raw_rows: list[dict[str, Any]], batch: list[dict[str, Any]],
-                cfg: dict[str, Any], config_sha256: str, batch_id: str) -> list[dict[str, Any]]:
+                cfg: dict[str, Any], config_sha256: str, batch_id: str,
+                adapter_command_sha256: str,
+                adapter_artifacts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     tasks = {str(t["task_id"]): t for t in batch}
     stamped: list[dict[str, Any]] = []
     for raw in raw_rows:
@@ -290,6 +327,8 @@ def _stamp_rows(raw_rows: list[dict[str, Any]], batch: list[dict[str, Any]],
             "config_sha256": config_sha256,
             "batch_id": batch_id,
             "raw_response_sha256": sha256_bytes(canonical_json_bytes(raw)),
+            "adapter_command_sha256": adapter_command_sha256,
+            "adapter_artifacts": adapter_artifacts,
         }
         stamped.append(row)
     return stamped
@@ -303,7 +342,9 @@ def _write_jsonl_atomic(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def _validate_existing_responses(rows: list[dict[str, Any]], tasks: dict[str, dict[str, Any]],
-                                 cfg: dict[str, Any], config_sha256: str) -> None:
+                                 cfg: dict[str, Any], config_sha256: str,
+                                 adapter_command_sha256: str,
+                                 adapter_artifacts: list[dict[str, Any]]) -> None:
     seen: set[str] = set()
     for row in rows:
         tid = str(row.get("task_id", ""))
@@ -321,6 +362,11 @@ def _validate_existing_responses(rows: list[dict[str, Any]], tasks: dict[str, di
             raise ValueError(f"existing response execution binding mismatch: {tid}")
         if binding.get("protocol_version") != 1 or not isinstance(binding.get("batch_id"), str):
             raise ValueError(f"existing response execution metadata invalid: {tid}")
+        if binding.get("adapter_command_sha256") != adapter_command_sha256:
+            raise ValueError(f"existing response adapter command binding mismatch: {tid}")
+        artifacts = binding.get("adapter_artifacts")
+        if canonical_json_bytes(artifacts) != canonical_json_bytes(adapter_artifacts):
+            raise ValueError(f"existing response adapter artifact binding mismatch: {tid}")
         raw = dict(row)
         raw.pop("task_fingerprint", None)
         raw.pop("model_family", None)
@@ -333,7 +379,7 @@ def _validate_existing_responses(rows: list[dict[str, Any]], tasks: dict[str, di
 
 def _manifest_identity(root: Path, role: str, partition: str, cfg: dict[str, Any],
                        tasks_path: Path, index: dict[str, Any], contract_path: Path) -> dict[str, Any]:
-    binding = _config_binding(cfg)
+    binding = _config_binding(root, cfg)
     return {
         "protocol_version": 1,
         "role": role,
@@ -342,6 +388,7 @@ def _manifest_identity(root: Path, role: str, partition: str, cfg: dict[str, Any
         "model_ref": cfg["model_ref"],
         "config_sha256": sha256_bytes(canonical_json_bytes(binding)),
         "adapter_command_sha256": binding["adapter_command_sha256"],
+        "adapter_artifacts": binding["adapter_artifacts"],
         "adapter_env_names": binding["env_names"],
         "tasks_sha256": sha256_file(tasks_path),
         "index_manifest_sha256": index["manifest_sha256"],
@@ -405,7 +452,11 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
     if existing and not resume:
         raise ValueError("output already contains responses; use resume to continue")
     task_map = {str(t["task_id"]): t for t in tasks}
-    _validate_existing_responses(existing, task_map, cfg, config_sha)
+    _validate_existing_responses(
+        existing, task_map, cfg, config_sha,
+        identity["adapter_command_sha256"],
+        identity["adapter_artifacts"],
+    )
     completed = {str(r["task_id"]) for r in existing}
     pending = [t for t in tasks if str(t["task_id"]) not in completed]
 
@@ -472,7 +523,11 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                     except ValueError as exc:
                         last_error_code = f"invalid_output:{exc}"
                         continue
-                    stamped = _stamp_rows(checked, batch, cfg, config_sha, batch_id)
+                    stamped = _stamp_rows(
+                        checked, batch, cfg, config_sha, batch_id,
+                        identity["adapter_command_sha256"],
+                        identity["adapter_artifacts"],
+                    )
                     break
                 except subprocess.TimeoutExpired:
                     last_error_code = "timeout"

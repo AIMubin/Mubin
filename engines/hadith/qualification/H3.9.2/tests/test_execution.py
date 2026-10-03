@@ -160,6 +160,7 @@ class AgentExecutionTests(unittest.TestCase):
                     mode,
                 ],
                 "env_allowlist": [],
+                "artifacts": [adapter.relative_to(root).as_posix()],
             },
             "batch_size": 1,
             "timeout_seconds": 30,
@@ -209,6 +210,67 @@ class AgentExecutionTests(unittest.TestCase):
             self.assertEqual(row["model_ref"], "family-a@test-revision")
             self.assertRegex(row["execution_binding"]["config_sha256"], r"^[a-f0-9]{64}$")
             self.assertRegex(row["execution_binding"]["raw_response_sha256"], r"^[a-f0-9]{64}$")
+            self.assertRegex(row["execution_binding"]["adapter_command_sha256"], r"^[a-f0-9]{64}$")
+            self.assertEqual(len(row["execution_binding"]["adapter_artifacts"]), 1)
+            self.assertEqual(
+                row["execution_binding"]["adapter_artifacts"][0]["sha256"],
+                sha256_file(adapter),
+            )
+
+    def test_resume_rejects_changed_adapter_artifact_bytes(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            config = self._config(root, adapter, "curator", "family-a")
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            run_agent_execution(root, "curator", tasks, index, config, out, manifest)
+            adapter.write_text(ADAPTER + "\n# changed bytes\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "execution binding mismatch|manifest identity mismatch"):
+                run_agent_execution(
+                    root, "curator", tasks, index, config, out, manifest, resume=True
+                )
+
+    def test_resume_rejects_tampered_adapter_binding_in_existing_response(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            config = self._config(root, adapter, "curator", "family-a")
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            run_agent_execution(root, "curator", tasks, index, config, out, manifest)
+            row = load_jsonl(out)[0]
+            row["execution_binding"]["adapter_artifacts"][0]["sha256"] = "0" * 64
+            dump_jsonl(out, [row])
+            with self.assertRaisesRegex(ValueError, "adapter artifact binding mismatch"):
+                run_agent_execution(
+                    root, "curator", tasks, index, config, out, manifest, resume=True
+                )
+
+    def test_execution_config_rejects_absolute_adapter_artifact_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            adapter = root / "adapter.py"
+            adapter.write_text("print('x')\n", encoding="utf-8")
+            cfg = root / "bad-absolute.json"
+            write_json(cfg, {
+                "schema_version": 1,
+                "role": "curator",
+                "model_family": "family-a",
+                "model_ref": "family-a@test",
+                "adapter": {
+                    "command": ["python", str(adapter), "{input}", "{output}"],
+                    "env_allowlist": [],
+                    "artifacts": [str(adapter)],
+                },
+                "batch_size": 1,
+                "timeout_seconds": 30,
+                "max_attempts": 1,
+            })
+            with self.assertRaisesRegex(ValueError, "campaign-root-relative"):
+                load_agent_execution_config(cfg, "curator")
 
     def test_adapter_cannot_spoof_model_identity(self):
         with tempfile.TemporaryDirectory() as d:
@@ -311,6 +373,7 @@ class AgentExecutionTests(unittest.TestCase):
                         "{output}",
                     ],
                     "env_allowlist": [],
+                    "artifacts": ["adapter.py"],
                 },
                 "batch_size": 1,
                 "timeout_seconds": 30,

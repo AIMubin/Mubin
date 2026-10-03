@@ -4,7 +4,7 @@ The execution layer runs Curator AI-A and Verifier AI-B through an external comm
 
 ## Security and provenance boundary
 
-- Adapter commands are executed as an argument vector; no shell interpolation is used.
+- Adapter commands are executed as an argument vector; no shell interpolation is used. Every execution config must declare one or more `adapter.artifacts`; their SHA-256 digests and sizes are bound into the execution config/manifest and every stamped response.
 - The supported secret path is `env_allowlist`: the config stores variable **names** only, values are inherited at runtime, and values are never written to manifests. Common secret-bearing command flags are rejected. Arbitrary opaque command arguments cannot be proven non-secret, so operators must not embed credentials in command tokens.
 - The adapter is not allowed to set `model_family`, `model_ref`, task fingerprints, or execution bindings. The executor stamps those fields centrally from the reviewed config.
 - Every Curator task is revalidated against the frozen Factory plan before execution.
@@ -47,8 +47,9 @@ The executor exposes controlled runtime metadata through `MUBIN_AGENT_ROLE`, `MU
   "model_family": "provider-model-family-a",
   "model_ref": "provider/model-a@immutable-or-recorded-revision",
   "adapter": {
-    "command": ["python", "/opt/mubin-adapters/model_a.py", "--input", "{input}", "--output", "{output}", "--index", "{index_dir}", "--contract", "{contract}"],
-    "env_allowlist": ["MODEL_A_API_KEY"]
+    "command": ["python", "adapters/openai_compatible.py", "--input", "{input}", "--output", "{output}", "--index", "{index_dir}", "--contract", "{contract}", "--base-url", "https://provider.example/v1"],
+    "env_allowlist": ["MUBIN_OPENAI_API_KEY"],
+    "artifacts": ["adapters/openai_compatible.py"]
   },
   "batch_size": 8,
   "timeout_seconds": 900,
