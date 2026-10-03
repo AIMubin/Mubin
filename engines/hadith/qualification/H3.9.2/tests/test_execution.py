@@ -364,6 +364,28 @@ class AgentExecutionTests(unittest.TestCase):
             self.assertEqual(resumed["rejected_task_count"], 1)
             self.assertEqual(len(load_jsonl(out)), 1)
 
+    def test_collection_mode_rejects_tampered_rejection_binding_on_resume(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, _, adapter = self._fixture(root)
+            tasks = self._expand_to_two_non_holdout_tasks(root, index)
+            config = self._config(
+                root, adapter, "curator", "family-a", "contract-first",
+                task_failure_policy="record_rejection",
+            )
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            run_agent_execution(root, "curator", tasks, index, config, out, manifest)
+
+            data = load_json(manifest)
+            data["rejections"][0]["request_sha256"] = "0" * 64
+            write_json(manifest, data)
+            with self.assertRaisesRegex(ValueError, "request binding mismatch"):
+                run_agent_execution(
+                    root, "curator", tasks, index, config, out, manifest, resume=True
+                )
+
     def test_collection_mode_does_not_swallow_infrastructure_failure(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
