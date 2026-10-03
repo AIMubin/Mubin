@@ -339,6 +339,7 @@ jobs:
           curator = load(run / "curator-run.json")
           verifier_path = run / "verifier-run.json"
           verifier = load(verifier_path) if verifier_path.exists() else None
+          verifier_preparation = load(redacted / "verifier-task-report.json")
           reconcile = load(redacted / "reconcile-report.json")
           chunk = load(redacted / "chunk.json")
           summary = {
@@ -359,6 +360,7 @@ jobs:
                   "response_counts": response_counts(run / "curator-responses.jsonl"),
                   "output_sha256": curator["output_sha256"],
               },
+              "verifier_preparation": verifier_preparation,
               "verifier": ({
                   "config_sha256": verifier["config_sha256"],
                   "adapter_artifacts": verifier["adapter_artifacts"],
