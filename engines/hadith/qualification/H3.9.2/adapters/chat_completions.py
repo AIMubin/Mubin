@@ -203,6 +203,116 @@ def _strip_json_fence(text: str) -> str:
             value = value.rstrip()[:-len(fence)]
     return value.strip()
 
+
+def _single_fenced_json_payload(text: str) -> str | None:
+    value = text.strip()
+    fence = chr(96) * 3
+    if not value.startswith(fence):
+        return None
+    first_newline = value.find("\n")
+    if first_newline < 0:
+        raise AdapterDiagnosticError("model_output_invalid_json")
+    header = value[len(fence):first_newline].strip().casefold()
+    if header not in {"", "json"}:
+        raise AdapterDiagnosticError("model_output_invalid_json")
+    closing = value.rfind(fence)
+    if closing <= first_newline:
+        raise AdapterDiagnosticError("model_output_invalid_json")
+    if value[closing + len(fence):].strip():
+        raise AdapterDiagnosticError("model_output_invalid_json")
+    payload = value[first_newline + 1:closing]
+    if fence in payload:
+        raise AdapterDiagnosticError("model_output_ambiguous_json")
+    return payload.strip()
+
+
+def _top_level_object_spans(text: str) -> tuple[list[tuple[int, int]], bool]:
+    spans: list[tuple[int, int]] = []
+    depth = 0
+    start = -1
+    in_string = False
+    escaped = False
+
+    for index, char in enumerate(text):
+        if depth == 0:
+            if char == "{":
+                start = index
+                depth = 1
+                in_string = False
+                escaped = False
+            elif char == "}":
+                return spans, False
+            continue
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                spans.append((start, index + 1))
+                start = -1
+
+    return spans, depth == 0 and not in_string
+
+
+def _parse_model_json_object(text: str) -> tuple[dict[str, Any], str]:
+    value = text.strip()
+    if not value:
+        raise AdapterDiagnosticError("model_output_invalid_json")
+
+    try:
+        direct = json.loads(value)
+    except json.JSONDecodeError:
+        direct = None
+    else:
+        if not isinstance(direct, dict):
+            raise AdapterDiagnosticError("model_output_not_object")
+        return direct, "direct_json"
+
+    fenced = _single_fenced_json_payload(value)
+    if fenced is not None:
+        try:
+            parsed = json.loads(fenced)
+        except json.JSONDecodeError:
+            raise AdapterDiagnosticError("model_output_invalid_json") from None
+        if not isinstance(parsed, dict):
+            raise AdapterDiagnosticError("model_output_not_object")
+        return parsed, "single_fenced_json"
+
+    spans, balanced = _top_level_object_spans(value)
+    if not balanced:
+        raise AdapterDiagnosticError("model_output_invalid_json")
+    if len(spans) == 0:
+        raise AdapterDiagnosticError("model_output_invalid_json")
+    if len(spans) != 1:
+        raise AdapterDiagnosticError("model_output_ambiguous_json")
+
+    start, end = spans[0]
+    outside = value[:start] + value[end:]
+    fence = chr(96) * 3
+    if fence in outside or any(char in outside for char in "[]{}"):
+        raise AdapterDiagnosticError("model_output_ambiguous_json")
+
+    candidate = value[start:end]
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        raise AdapterDiagnosticError("model_output_invalid_json") from None
+    if not isinstance(parsed, dict):
+        raise AdapterDiagnosticError("model_output_not_object")
+    return parsed, "single_embedded_json"
+
 def _extract_message_content(response: dict[str, Any]) -> str:
     choices = response.get("choices")
     if not isinstance(choices, list) or not choices:
@@ -425,6 +535,7 @@ SECURITY AND EPISTEMIC RULES:
 - Never invent Quran text, hadith text, isnad, narrator facts, quotations, grades, rulings, or scholarly attributions.
 - If literal evidence is insufficient, return status=no_candidate.
 - Output exactly one JSON object and no markdown, commentary, or chain-of-thought.
+- Prefer the first non-whitespace character to be {{ and the last non-whitespace character to be }}.
 - Cite evidence only by the provided evidence_id and copy support_text verbatim from its excerpt.
 
 ROLE CONTRACT:
@@ -529,15 +640,10 @@ def main() -> int:
             max_tokens=max(128, args.max_tokens), json_mode=args.json_mode,
         )
         try:
-            text = _strip_json_fence(_extract_message_content(response))
+            text = _extract_message_content(response)
         except ValueError:
             raise AdapterDiagnosticError("response_shape_invalid") from None
-        try:
-            model_obj = json.loads(text)
-        except json.JSONDecodeError:
-            raise AdapterDiagnosticError("model_output_invalid_json") from None
-        if not isinstance(model_obj, dict):
-            raise AdapterDiagnosticError("model_output_invalid_json")
+        model_obj, _parse_mode = _parse_model_json_object(text)
         try:
             row = (
                 _curator_row(task, model_obj, evidence)
