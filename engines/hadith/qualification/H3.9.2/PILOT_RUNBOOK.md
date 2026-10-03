@@ -50,10 +50,16 @@ Start with:
 
 - `task_offset = 0`
 - `task_limit = 8`
+- `curator_completion_budget = auto`
+- `verifier_completion_budget = auto`
+- `curator_reasoning_effort = provider_default`
+- `verifier_reasoning_effort = provider_default`
 
-At dispatch time provide only the task offset/limit plus generic authentication and JSON-mode choices. Endpoint and model identity are loaded from protected Secrets and are not workflow inputs.
+With `completion_budget = auto`, Mubin does not send `max_tokens` or `max_completion_tokens`. This prevents the pilot harness from imposing an arbitrary completion ceiling on reasoning-heavy models. If an explicit budget is later required, provide any positive integer and select the endpoint-supported field (`max_tokens` or `max_completion_tokens`); Mubin does not impose its own upper bound.
 
-The workflow validates internally that the two protected model-family identifiers differ before either model is invoked.
+Reasoning control is opt-in. `provider_default` sends no reasoning parameter. Select `low`, `medium`, or `high` only when the endpoint supports the common `reasoning_effort` capability. Mubin never reads reasoning text as benchmark output.
+
+Endpoint and model identity remain loaded from protected Secrets and are not workflow inputs. The workflow validates internally that the two protected model-family identifiers differ before either model is invoked.
 
 ## What the workflow does
 
@@ -124,6 +130,8 @@ An 8-task pilot is operationally acceptable only when all of the following are t
 - no qualification or H4 gate changes as a side effect of the pilot.
 
 A high adjudication rate is not itself a pilot failure. It is evidence about task difficulty, retrieval quality, or model suitability.
+
+If a pilot fails with `model_output_reasoning_only`, first rerun the same deterministic task chunk with `completion_budget = auto`. If that still produces reasoning-only output, test an endpoint-supported lower reasoning effort before changing the benchmark prompt, retrieval policy, or output parser. Do not copy or transform private reasoning into the required JSON answer.
 
 ## Expansion sequence
 
