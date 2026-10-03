@@ -709,7 +709,9 @@ def _user_prompt(role: str, task: dict[str, Any], evidence: list[dict[str, Any]]
         instruction = (
             "For risk tiers 1-2, use direct_extract only when the proposed gold is literally supported. "
             "If interpretation is required, use adjudication_required. For risk tier 3, "
-            "adjudication_required is expected for judgment-heavy identity claims."
+            "adjudication_required is expected for judgment-heavy identity claims. "
+            "The input field is only the end-user benchmark question/input. Do not copy task metadata "
+            "such as task_id, benchmark_id, risk_tier, task_type, allowed_labels, or anchor_source_id into input."
         )
     else:
         output_contract = {
