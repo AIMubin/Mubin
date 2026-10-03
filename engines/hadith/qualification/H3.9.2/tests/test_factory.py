@@ -176,6 +176,17 @@ class FactoryTests(unittest.TestCase):
             row = load_jsonl(out)[0]
             self.assertEqual(row["candidate_input"], {"pair": ["A", "B"]})
             self.assertEqual(row["retrieval_scope"], task["retrieval_scope"])
+            self.assertRegex(row["verifier_task_fingerprint"], r"^[a-f0-9]{64}$")
+            unsigned = dict(row)
+            unsigned.pop("verifier_task_fingerprint")
+            self.assertEqual(
+                row["verifier_task_fingerprint"],
+                hashlib.sha256(
+                    json.dumps(
+                        unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                    ).encode("utf-8")
+                ).hexdigest(),
+            )
             self.assertNotIn("candidate", row)
             self.assertNotIn("source_refs", row)
             self.assertNotIn("answer_provenance", row)

@@ -8,6 +8,7 @@ from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
+from .execution import run_agent_execution
 from .factory import (
     build_factory_plan,
     build_factory_tasks,
@@ -97,6 +98,18 @@ def main(argv: list[str] | None = None) -> int:
     fv.add_argument("--out", type=Path, required=True)
     fv.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
     fv.add_argument("--custodian-holdout", action="store_true")
+
+    fa = sub.add_parser("factory-run-agent")
+    fa.add_argument("--role", choices=["curator", "verifier"], required=True)
+    fa.add_argument("--tasks", type=Path, required=True)
+    fa.add_argument("--index-dir", type=Path, required=True)
+    fa.add_argument("--config", type=Path, required=True)
+    fa.add_argument("--out", type=Path, required=True)
+    fa.add_argument("--manifest", type=Path, required=True)
+    fa.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
+    fa.add_argument("--custodian-holdout", action="store_true")
+    fa.add_argument("--resume", action="store_true")
+    fa.add_argument("--independent-from-manifest", type=Path)
 
     fr = sub.add_parser("factory-reconcile")
     fr.add_argument("--tasks", type=Path, required=True)
@@ -273,6 +286,24 @@ def main(argv: list[str] | None = None) -> int:
         report = prepare_verifier_tasks(
             root, tasks, curator, out,
             partition=args.partition, custodian_mode=args.custodian_holdout
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "factory-run-agent":
+        tasks = _resolve(root, args.tasks)
+        index_dir = _resolve(root, args.index_dir)
+        config = _resolve(root, args.config)
+        out = _resolve(root, args.out)
+        manifest = _resolve(root, args.manifest)
+        independent = _resolve(root, args.independent_from_manifest)
+        assert tasks is not None and index_dir is not None and config is not None and out is not None and manifest is not None
+        report = run_agent_execution(
+            root, args.role, tasks, index_dir, config, out, manifest,
+            partition=args.partition,
+            custodian_mode=args.custodian_holdout,
+            resume=args.resume,
+            independent_from_manifest=independent,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
