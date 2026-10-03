@@ -20,6 +20,7 @@ from adapters.chat_completions import (
     _has_reasoning_content,
     _parse_completion_budget,
     _parse_model_json_object,
+    parse_args,
     _strip_json_fence,
     _supports_from_model,
     _system_prompt,
@@ -210,6 +211,21 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                 )
             self.assertEqual(ctx.exception.code, "connection_failed")
             self.assertNotIn("sensitive transport detail", str(ctx.exception))
+
+    def test_reference_adapter_defaults_to_native_inference_and_600_second_timeout(self):
+        argv = [
+            "chat_completions.py",
+            "--input", "in.jsonl",
+            "--output", "out.jsonl",
+            "--index", "index",
+            "--contract", "contract.md",
+            "--base-url", "https://example.test/v1",
+        ]
+        with patch("sys.argv", argv):
+            args = parse_args()
+        self.assertEqual(args.timeout, 600)
+        self.assertEqual(args.completion_budget, "auto")
+        self.assertEqual(args.reasoning_effort, "provider_default")
 
     def test_completion_budget_parser_accepts_auto_or_unbounded_positive_integer(self):
         self.assertIsNone(_parse_completion_budget("auto"))
