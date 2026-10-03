@@ -6,14 +6,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from benchmark_campaign.core import dump_jsonl, load_json, load_jsonl, write_json
-from benchmark_campaign.execution import load_agent_execution_config, run_agent_execution
+from benchmark_campaign.core import dump_jsonl, load_json, load_jsonl, sha256_file, write_json
+from benchmark_campaign.execution import (_validate_raw_adapter_rows, load_agent_execution_config, run_agent_execution)
 from benchmark_campaign.factory import (
     build_factory_plan,
     build_factory_tasks,
     build_source_index,
     prepare_verifier_tasks,
 )
+from benchmark_campaign.freeze import _frozen_protocol_files
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
 
 
@@ -175,6 +176,24 @@ class AgentExecutionTests(unittest.TestCase):
             root, "curator", tasks, index, config, out, manifest
         )
         return report, out, manifest
+
+    def test_adapter_response_order_is_normalized_to_batch_order(self):
+        batch = [
+            {"task_id": "t1"},
+            {"task_id": "t2"},
+        ]
+        rows = [
+            {"task_id": "t2", "status": "no_candidate", "reason": "none"},
+            {"task_id": "t1", "status": "no_candidate", "reason": "none"},
+        ]
+        checked = _validate_raw_adapter_rows(rows, batch, "curator")
+        self.assertEqual([r["task_id"] for r in checked], ["t1", "t2"])
+
+    def test_execution_protocol_is_part_of_freeze_surface(self):
+        project = Path(__file__).resolve().parents[1]
+        frozen = {p.name for p in _frozen_protocol_files(project)}
+        self.assertIn("execution.py", frozen)
+        self.assertIn("AGENT_EXECUTION.md", frozen)
 
     def test_curator_executor_stamps_identity_and_fingerprint(self):
         with tempfile.TemporaryDirectory() as d:
@@ -363,6 +382,18 @@ class AgentExecutionTests(unittest.TestCase):
             original = load_jsonl(tasks)[0]
             self.assertEqual(response["task_fingerprint"], original["task_fingerprint"])
             self.assertEqual(response["model_family"], "family-b")
+            self.assertEqual(
+                report["independent_curator_manifest_sha256"],
+                sha256_file(curator_manifest),
+            )
+            self.assertEqual(
+                report["independent_curator_model_family"],
+                "family-a",
+            )
+            self.assertEqual(
+                report["independent_curator_config_sha256"],
+                load_json(curator_manifest)["config_sha256"],
+            )
 
 
 if __name__ == "__main__":

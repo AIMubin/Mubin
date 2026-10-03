@@ -243,7 +243,7 @@ def _validate_raw_adapter_rows(rows: list[dict[str, Any]], batch: list[dict[str,
     if len(rows) != len(batch):
         raise ValueError("adapter must return exactly one response per batch task")
     seen: set[str] = set()
-    out: list[dict[str, Any]] = []
+    by_id: dict[str, dict[str, Any]] = {}
     for raw in rows:
         tid = str(raw.get("task_id", ""))
         if tid not in expected:
@@ -270,8 +270,8 @@ def _validate_raw_adapter_rows(rows: list[dict[str, Any]], batch: list[dict[str,
                 raise ValueError(f"verifier candidate response missing answer object: {tid}")
             if "candidate" in raw:
                 raise ValueError(f"verifier adapter must not return curator candidate: {tid}")
-        out.append(raw)
-    return out
+        by_id[tid] = raw
+    return [by_id[str(task["task_id"])] for task in batch]
 
 
 def _stamp_rows(raw_rows: list[dict[str, Any]], batch: list[dict[str, Any]],
@@ -391,6 +391,14 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
             raise ValueError("Curator and Verifier source-index segments differ")
     contract = _contract_path(root, role)
     identity = _manifest_identity(root, role, partition, cfg, tasks_path, index, contract)
+    if prior is not None and independent_from_manifest is not None:
+        identity.update({
+            "independent_curator_manifest_sha256": sha256_file(independent_from_manifest),
+            "independent_curator_config_sha256": prior["config_sha256"],
+            "independent_curator_model_family": prior["model_family"],
+            "independent_curator_model_ref": prior.get("model_ref"),
+            "independent_curator_tasks_sha256": prior.get("tasks_sha256"),
+        })
     config_sha = identity["config_sha256"]
 
     existing = load_jsonl(output_path) if output_path.exists() else []

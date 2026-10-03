@@ -10,7 +10,7 @@ The execution layer runs Curator AI-A and Verifier AI-B through an external comm
 - Every Curator task is revalidated against the frozen Factory plan before execution.
 - Every Verifier task has its own self-fingerprint in addition to the original task fingerprint.
 - The source-index manifest and `segments.jsonl` hashes must match every task's retrieval scope before a model is invoked.
-- Verifier execution requires a valid Curator execution manifest for the same partition and identical source-index hashes, and rejects the same normalized model family.
+- Verifier execution requires a valid Curator execution manifest for the same partition and identical source-index hashes, rejects the same normalized model family, and records the Curator-manifest SHA-256 plus Curator config/model/task bindings in the Verifier execution manifest.
 - Holdout execution inherits the existing external custodian-path rule.
 - Resume is allowed only when the task/index/config/contract/model identity bindings are unchanged; existing response payloads are rehashed before reuse.
 
@@ -72,3 +72,6 @@ The execution layer validates transport/provenance integrity. It does not elevat
 
 
 Adapter stdout and stderr are discarded by the executor rather than persisted, reducing accidental leakage of source excerpts or credentials through provider logs. Batch failure reports expose only sanitized error classes/return codes, not command arguments.
+
+
+The execution implementation and this protocol document are part of the H3.9.2 freeze surface. Changing either after benchmark freeze changes the qualification protocol and requires a new freeze/version rather than silent mutation.
