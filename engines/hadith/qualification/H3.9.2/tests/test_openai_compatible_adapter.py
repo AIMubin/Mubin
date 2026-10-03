@@ -8,11 +8,15 @@ from unittest.mock import patch
 
 from adapters.openai_compatible import (
     RetrievalIndex,
+    MAX_RESPONSE_BYTES,
+    _NoRedirect,
+    _call_chat,
     _curator_row,
     _extract_message_content,
     _strip_json_fence,
     _supports_from_model,
     _system_prompt,
+    _validate_base_url,
     _verifier_row,
 )
 from benchmark_campaign.core import dump_jsonl
@@ -88,6 +92,58 @@ class OpenAICompatibleAdapterTests(unittest.TestCase):
             self.assertEqual([x["source_id"] for x in evidence], ["s1", "s2"])
             self.assertIn("سمع", evidence[1]["excerpt"])
             self.assertTrue(evidence[1]["locator"].startswith("gitblob:" + "b" * 40))
+
+    def test_base_url_rejects_credentials_query_and_non_https(self):
+        for value in (
+            "http://example.test/v1",
+            "https://user:pass@example.test/v1",
+            "https://example.test/v1?token=secret",
+            "https://example.test/v1#fragment",
+        ):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    _validate_base_url(value)
+        self.assertEqual(
+            _validate_base_url("https://example.test/openai/v1/"),
+            "https://example.test/openai/v1",
+        )
+
+    def test_redirect_handler_is_fail_closed(self):
+        handler = _NoRedirect()
+        self.assertIsNone(
+            handler.redirect_request(None, None, 302, "Found", {}, "https://other.test/")
+        )
+
+    def test_model_response_size_is_capped(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def read(self, size):
+                return b"x" * (MAX_RESPONSE_BYTES + 1)
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return FakeResponse()
+
+        with patch(
+            "adapters.openai_compatible.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            with self.assertRaisesRegex(ValueError, "response exceeds size limit"):
+                _call_chat(
+                    "https://example.test/v1",
+                    "secret",
+                    "bearer",
+                    "model-x",
+                    "system",
+                    "user",
+                    10,
+                    0.0,
+                    128,
+                    "off",
+                )
 
     def test_support_mapping_requires_verbatim_retrieved_evidence(self):
         evidence = [{

@@ -497,6 +497,36 @@ def _validate_response_identity(response: dict[str, Any], task: dict[str, Any], 
     for field in ("model_family", "model_ref"):
         if not isinstance(response.get(field), str) or not response[field].strip():
             raise ValueError(f"{role} response requires {field}: {task['task_id']}")
+    binding = response.get("execution_binding")
+    if not isinstance(binding, dict):
+        raise ValueError(f"{role} response requires execution_binding: {task['task_id']}")
+    for field in ("config_sha256", "raw_response_sha256", "adapter_command_sha256"):
+        value = binding.get(field)
+        if not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{64}", value) is None:
+            raise ValueError(f"{role} execution binding {field} invalid: {task['task_id']}")
+    if binding.get("protocol_version") != 1 or not isinstance(binding.get("batch_id"), str):
+        raise ValueError(f"{role} execution binding metadata invalid: {task['task_id']}")
+    artifacts = binding.get("adapter_artifacts")
+    if not isinstance(artifacts, list) or not artifacts:
+        raise ValueError(f"{role} execution binding adapter artifacts missing: {task['task_id']}")
+    for artifact in artifacts:
+        if (
+            not isinstance(artifact, dict)
+            or not isinstance(artifact.get("path"), str)
+            or not artifact["path"].strip()
+            or not isinstance(artifact.get("sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", artifact["sha256"]) is None
+            or not isinstance(artifact.get("size_bytes"), int)
+            or artifact["size_bytes"] < 1
+        ):
+            raise ValueError(f"{role} execution binding adapter artifact invalid: {task['task_id']}")
+    raw = dict(response)
+    raw.pop("task_fingerprint", None)
+    raw.pop("model_family", None)
+    raw.pop("model_ref", None)
+    raw.pop("execution_binding", None)
+    if binding.get("raw_response_sha256") != sha256_bytes(canonical_json_bytes(raw)):
+        raise ValueError(f"{role} raw response hash mismatch: {task['task_id']}")
 
 
 _FACTORY_LOCATOR_RE = re.compile(r"^gitblob:([a-f0-9]{40})#char=(\d+):(\d+)$")

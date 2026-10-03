@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from benchmark_campaign.core import dump_jsonl, load_json, load_jsonl, write_json
+from benchmark_campaign.core import canonical_json_bytes, dump_jsonl, load_json, load_jsonl, sha256_bytes, write_json
 from benchmark_campaign.factory import (
     build_factory_plan,
     build_factory_tasks,
@@ -300,12 +300,16 @@ class FactoryTests(unittest.TestCase):
 
     def _responses(self, task: dict, excerpt: str, verifier_family: str = "family-b",
                    verifier_gold: str = "yes"):
-        def binding(seed: str):
-            return {
+        def stamp(raw: dict, family: str, model_ref: str, seed: str):
+            row = dict(raw)
+            row["task_fingerprint"] = task["task_fingerprint"]
+            row["model_family"] = family
+            row["model_ref"] = model_ref
+            row["execution_binding"] = {
                 "protocol_version": 1,
                 "config_sha256": seed * 64,
                 "batch_id": seed * 24,
-                "raw_response_sha256": seed * 64,
+                "raw_response_sha256": sha256_bytes(canonical_json_bytes(raw)),
                 "adapter_command_sha256": seed * 64,
                 "adapter_artifacts": [{
                     "path": "adapters/test.py",
@@ -313,21 +317,14 @@ class FactoryTests(unittest.TestCase):
                     "size_bytes": 123,
                 }],
             }
-        curator = {
+            return row
+        curator = stamp({
             "task_id": task["task_id"],
-            "task_fingerprint": task["task_fingerprint"],
-            "model_family": "family-a",
-            "model_ref": "a@1",
-            "execution_binding": binding("a"),
             "status": "candidate",
             "candidate": self._candidate(task, excerpt),
-        }
-        verifier = {
+        }, "family-a", "a@1", "a")
+        verifier = stamp({
             "task_id": task["task_id"],
-            "task_fingerprint": task["task_fingerprint"],
-            "model_family": verifier_family,
-            "model_ref": "b@1",
-            "execution_binding": binding("b"),
             "status": "candidate",
             "answer": {
                 "gold": {"label": verifier_gold},
@@ -338,7 +335,7 @@ class FactoryTests(unittest.TestCase):
                     "support_text": "سمع من شيخه",
                 }],
             },
-        }
+        }, verifier_family, "b@1", "b")
         return curator, verifier
 
     def _reconcile(self, root: Path, task: dict, cache: Path, curator: dict, verifier: dict):
@@ -355,6 +352,17 @@ class FactoryTests(unittest.TestCase):
             root, tasks, cr, vr, cache, reviewed, adjudication, ledger, False
         )
         return report, reviewed, adjudication, ledger
+
+    def test_reconcile_rejects_tampered_raw_response_binding(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(task, excerpt)
+            curator["candidate"]["payload"]["input"]["question"] = "tampered"
+            with self.assertRaisesRegex(ValueError, "raw response hash mismatch"):
+                self._reconcile(root, task, cache, curator, verifier)
 
     def test_independent_exact_agreement_promotes_source_attributed_case(self):
         with tempfile.TemporaryDirectory() as d:

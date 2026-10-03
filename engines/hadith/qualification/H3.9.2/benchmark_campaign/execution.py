@@ -93,6 +93,10 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
         raise ValueError("adapter.artifacts must be a non-empty list of file paths")
     if len(artifacts) != len(set(artifacts)):
         raise ValueError("adapter.artifacts contains duplicates")
+    for raw in artifacts:
+        p = Path(raw)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError("adapter.artifacts must be campaign-root-relative paths without parent traversal")
 
     batch_size = cfg.get("batch_size", 8)
     timeout_seconds = cfg.get("timeout_seconds", 900)
@@ -122,13 +126,20 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
 
 def _adapter_artifact_bindings(root: Path, cfg: dict[str, Any]) -> list[dict[str, Any]]:
     bindings: list[dict[str, Any]] = []
+    root_resolved = root.resolve()
     for raw in cfg["adapter"]["artifacts"]:
         p = Path(raw)
-        resolved = p if p.is_absolute() else (root / p)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError(f"adapter artifact path must stay inside campaign root: {raw}")
+        resolved = (root_resolved / p).resolve()
+        try:
+            resolved.relative_to(root_resolved)
+        except ValueError as exc:
+            raise ValueError(f"adapter artifact resolves outside campaign root: {raw}") from exc
         if not resolved.exists() or not resolved.is_file():
             raise ValueError(f"adapter artifact does not exist or is not a file: {raw}")
         bindings.append({
-            "path": raw,
+            "path": p.as_posix(),
             "sha256": sha256_file(resolved),
             "size_bytes": resolved.stat().st_size,
         })
@@ -331,7 +342,9 @@ def _write_jsonl_atomic(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def _validate_existing_responses(rows: list[dict[str, Any]], tasks: dict[str, dict[str, Any]],
-                                 cfg: dict[str, Any], config_sha256: str) -> None:
+                                 cfg: dict[str, Any], config_sha256: str,
+                                 adapter_command_sha256: str,
+                                 adapter_artifacts: list[dict[str, Any]]) -> None:
     seen: set[str] = set()
     for row in rows:
         tid = str(row.get("task_id", ""))
@@ -349,11 +362,11 @@ def _validate_existing_responses(rows: list[dict[str, Any]], tasks: dict[str, di
             raise ValueError(f"existing response execution binding mismatch: {tid}")
         if binding.get("protocol_version") != 1 or not isinstance(binding.get("batch_id"), str):
             raise ValueError(f"existing response execution metadata invalid: {tid}")
-        if not isinstance(binding.get("adapter_command_sha256"), str) or _SHA256_RE.fullmatch(binding["adapter_command_sha256"]) is None:
-            raise ValueError(f"existing response adapter command binding missing: {tid}")
+        if binding.get("adapter_command_sha256") != adapter_command_sha256:
+            raise ValueError(f"existing response adapter command binding mismatch: {tid}")
         artifacts = binding.get("adapter_artifacts")
-        if not isinstance(artifacts, list) or not artifacts:
-            raise ValueError(f"existing response adapter artifact binding missing: {tid}")
+        if canonical_json_bytes(artifacts) != canonical_json_bytes(adapter_artifacts):
+            raise ValueError(f"existing response adapter artifact binding mismatch: {tid}")
         raw = dict(row)
         raw.pop("task_fingerprint", None)
         raw.pop("model_family", None)
@@ -439,7 +452,11 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
     if existing and not resume:
         raise ValueError("output already contains responses; use resume to continue")
     task_map = {str(t["task_id"]): t for t in tasks}
-    _validate_existing_responses(existing, task_map, cfg, config_sha)
+    _validate_existing_responses(
+        existing, task_map, cfg, config_sha,
+        identity["adapter_command_sha256"],
+        identity["adapter_artifacts"],
+    )
     completed = {str(r["task_id"]) for r in existing}
     pending = [t for t in tasks if str(t["task_id"]) not in completed]
 

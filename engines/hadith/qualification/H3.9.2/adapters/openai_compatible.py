@@ -11,6 +11,7 @@ import ssl
 import unicodedata
 import urllib.error
 import urllib.request
+import urllib.parse
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,23 @@ STOPWORDS = {
     "هو", "هي", "هذا", "هذه", "ذلك", "كان", "كانت", "ثم", "وقد", "وهو", "وهي", "كما",
     "the", "and", "for", "with", "from", "that", "this", "was", "were",
 }
+MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _validate_base_url(base_url: str) -> str:
+    parts = urllib.parse.urlsplit(base_url)
+    if parts.scheme != "https" or not parts.hostname:
+        raise ValueError("base URL must be an absolute HTTPS URL")
+    if parts.username or parts.password:
+        raise ValueError("base URL must not contain embedded credentials")
+    if parts.query or parts.fragment:
+        raise ValueError("base URL must not contain query or fragment components")
+    return base_url.rstrip("/")
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     rows = []
@@ -188,7 +206,8 @@ def _extract_message_content(response: dict[str, Any]) -> str:
 def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
                system_prompt: str, user_prompt: str, timeout: int,
                temperature: float, max_tokens: int, json_mode: str) -> dict[str, Any]:
-    url = base_url.rstrip("/") + "/chat/completions"
+    base_url = _validate_base_url(base_url)
+    url = base_url + "/chat/completions"
     payload: dict[str, Any] = {
         "model": model,
         "messages": [
@@ -213,9 +232,15 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
         headers=headers,
         method="POST",
     )
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPSHandler(context=ssl.create_default_context()),
+        _NoRedirect(),
+    )
     try:
-        with urllib.request.urlopen(req, timeout=timeout, context=ssl.create_default_context()) as resp:
-            body = resp.read()
+        with opener.open(req, timeout=timeout) as resp:
+            body = resp.read(MAX_RESPONSE_BYTES + 1)
+            if len(body) > MAX_RESPONSE_BYTES:
+                raise ValueError("model endpoint response exceeds size limit")
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"model endpoint returned HTTP {exc.code}") from None
     except urllib.error.URLError:
@@ -453,8 +478,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if not args.base_url.startswith("https://"):
-        raise SystemExit("base URL must use https")
+    try:
+        _validate_base_url(args.base_url)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
     role = os.environ.get("MUBIN_AGENT_ROLE")
     if role not in {"curator", "verifier"}:
         raise SystemExit("MUBIN_AGENT_ROLE must be curator or verifier")
