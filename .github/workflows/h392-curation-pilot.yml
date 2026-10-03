@@ -39,6 +39,14 @@ on:
           - "off"
           - json_object
         default: "off"
+      curator_max_tokens:
+        description: Maximum Curator completion tokens
+        required: true
+        default: "4096"
+      verifier_max_tokens:
+        description: Maximum Verifier completion tokens
+        required: true
+        default: "4096"
 
 permissions:
   contents: read
@@ -61,6 +69,8 @@ jobs:
       VERIFIER_AUTH_STYLE: ${{ inputs.verifier_auth_style }}
       CURATOR_JSON_MODE: ${{ inputs.curator_json_mode }}
       VERIFIER_JSON_MODE: ${{ inputs.verifier_json_mode }}
+      CURATOR_MAX_TOKENS: ${{ inputs.curator_max_tokens }}
+      VERIFIER_MAX_TOKENS: ${{ inputs.verifier_max_tokens }}
 
     steps:
       - name: Checkout Mubin
@@ -117,6 +127,10 @@ jobs:
               raise SystemExit("TASK_LIMIT must be in [1, 64]")
           if offset + limit > 896:
               raise SystemExit("TASK_OFFSET + TASK_LIMIT exceeds the 896 non-holdout tasks")
+          for name in ("CURATOR_MAX_TOKENS", "VERIFIER_MAX_TOKENS"):
+              value = int(os.environ[name])
+              if value < 256 or value > 8192:
+                  raise SystemExit(f"{name} must be in [256, 8192]")
           PY
 
       - name: Build isolated ephemeral workspace
@@ -199,7 +213,7 @@ jobs:
           run = Path(os.environ["RUN_DIR"])
           adapter = "adapters/chat_completions.py"
 
-          def config(role, family, model, base_url, auth_style, json_mode):
+          def config(role, family, model, base_url, auth_style, json_mode, max_tokens):
               return {
                   "schema_version": 1,
                   "role": role,
@@ -215,6 +229,7 @@ jobs:
                           "--base-url", base_url,
                           "--auth-style", auth_style,
                           "--json-mode", json_mode,
+                          "--max-tokens", str(max_tokens),
                           "--max-evidence-sources", "12",
                           "--max-excerpt-chars", "1800",
                       ],
@@ -233,6 +248,7 @@ jobs:
               os.environ["CURATOR_ENDPOINT"],
               os.environ["CURATOR_AUTH_STYLE"],
               os.environ["CURATOR_JSON_MODE"],
+              int(os.environ["CURATOR_MAX_TOKENS"]),
           )
           verifier = config(
               "verifier",
@@ -241,6 +257,7 @@ jobs:
               os.environ["VERIFIER_ENDPOINT"],
               os.environ["VERIFIER_AUTH_STYLE"],
               os.environ["VERIFIER_JSON_MODE"],
+              int(os.environ["VERIFIER_MAX_TOKENS"]),
           )
           for name, value in (("curator-config.json", curator), ("verifier-config.json", verifier)):
               (run / name).write_text(
