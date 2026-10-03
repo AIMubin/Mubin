@@ -51,6 +51,14 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("adapters/chat_completions.py", self.workflow)
         self.assertIn("MUBIN_MODEL_API_KEY", self.workflow)
 
+    def test_completion_budget_is_explicit_and_bounded(self):
+        dispatch = self.workflow.split("permissions:", 1)[0]
+        self.assertIn("curator_max_tokens:", dispatch)
+        self.assertIn("verifier_max_tokens:", dispatch)
+        self.assertIn('default: "4096"', dispatch)
+        self.assertIn('"--max-tokens", str(max_tokens)', self.workflow)
+        self.assertIn('if value < 256 or value > 8192:', self.workflow)
+
     def test_provider_keys_are_step_scoped_not_job_scoped(self):
         job_env = self.workflow.split("    env:\n", 1)[1].split("\n\n    steps:", 1)[0]
         self.assertNotIn("H392_CURATOR_API_KEY", job_env)
