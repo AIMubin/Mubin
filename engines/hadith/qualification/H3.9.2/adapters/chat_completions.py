@@ -43,6 +43,14 @@ def _emit_diagnostic(code: str) -> None:
     print(f"{_DIAGNOSTIC_PREFIX}{code}", file=sys.stderr)
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant: {value}")
+
+
+def _strict_json_loads(value: str) -> Any:
+    return json.loads(value, parse_constant=_reject_json_constant)
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -272,8 +280,8 @@ def _parse_model_json_object(text: str) -> tuple[dict[str, Any], str]:
         raise AdapterDiagnosticError("model_output_invalid_json")
 
     try:
-        direct = json.loads(value)
-    except json.JSONDecodeError:
+        direct = _strict_json_loads(value)
+    except (json.JSONDecodeError, ValueError):
         direct = None
     else:
         if not isinstance(direct, dict):
@@ -283,8 +291,8 @@ def _parse_model_json_object(text: str) -> tuple[dict[str, Any], str]:
     fenced = _single_fenced_json_payload(value)
     if fenced is not None:
         try:
-            parsed = json.loads(fenced)
-        except json.JSONDecodeError:
+            parsed = _strict_json_loads(fenced)
+        except (json.JSONDecodeError, ValueError):
             raise AdapterDiagnosticError("model_output_invalid_json") from None
         if not isinstance(parsed, dict):
             raise AdapterDiagnosticError("model_output_not_object")
@@ -292,9 +300,9 @@ def _parse_model_json_object(text: str) -> tuple[dict[str, Any], str]:
 
     spans, balanced = _top_level_object_spans(value)
     if not balanced:
-        raise AdapterDiagnosticError("model_output_invalid_json")
+        raise AdapterDiagnosticError("model_output_unbalanced_json")
     if len(spans) == 0:
-        raise AdapterDiagnosticError("model_output_invalid_json")
+        raise AdapterDiagnosticError("model_output_no_json_object")
     if len(spans) != 1:
         raise AdapterDiagnosticError("model_output_ambiguous_json")
 
@@ -306,18 +314,40 @@ def _parse_model_json_object(text: str) -> tuple[dict[str, Any], str]:
 
     candidate = value[start:end]
     try:
-        parsed = json.loads(candidate)
-    except json.JSONDecodeError:
+        parsed = _strict_json_loads(candidate)
+    except (json.JSONDecodeError, ValueError):
         raise AdapterDiagnosticError("model_output_invalid_json") from None
     if not isinstance(parsed, dict):
         raise AdapterDiagnosticError("model_output_not_object")
     return parsed, "single_embedded_json"
 
-def _extract_message_content(response: dict[str, Any]) -> str:
+def _first_choice(response: dict[str, Any]) -> dict[str, Any]:
     choices = response.get("choices")
-    if not isinstance(choices, list) or not choices:
+    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
         raise ValueError("model response has no choices")
-    message = choices[0].get("message") if isinstance(choices[0], dict) else None
+    return choices[0]
+
+
+def _extract_finish_reason(response: dict[str, Any]) -> str | None:
+    choice = _first_choice(response)
+    value = choice.get("finish_reason")
+    if value is None:
+        return None
+    return str(value).strip().casefold() or None
+
+
+def _has_reasoning_content(response: dict[str, Any]) -> bool:
+    choice = _first_choice(response)
+    message = choice.get("message")
+    if not isinstance(message, dict):
+        return False
+    value = message.get("reasoning_content")
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _extract_message_content(response: dict[str, Any]) -> str:
+    choice = _first_choice(response)
+    message = choice.get("message")
     content = message.get("content") if isinstance(message, dict) else None
     if isinstance(content, str):
         return content
@@ -641,9 +671,27 @@ def main() -> int:
         )
         try:
             text = _extract_message_content(response)
+            finish_reason = _extract_finish_reason(response)
+            reasoning_only = _has_reasoning_content(response) and not text.strip()
         except ValueError:
             raise AdapterDiagnosticError("response_shape_invalid") from None
-        model_obj, _parse_mode = _parse_model_json_object(text)
+        if not text.strip():
+            if reasoning_only:
+                raise AdapterDiagnosticError("model_output_reasoning_only")
+            raise AdapterDiagnosticError("model_output_empty")
+        try:
+            model_obj, _parse_mode = _parse_model_json_object(text)
+        except AdapterDiagnosticError as exc:
+            if (
+                exc.code in {
+                    "model_output_invalid_json",
+                    "model_output_unbalanced_json",
+                    "model_output_no_json_object",
+                }
+                and finish_reason in {"length", "max_tokens"}
+            ):
+                raise AdapterDiagnosticError("model_output_truncated") from None
+            raise
         try:
             row = (
                 _curator_row(task, model_obj, evidence)
