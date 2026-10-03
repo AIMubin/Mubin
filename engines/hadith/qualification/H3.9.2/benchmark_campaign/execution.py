@@ -522,11 +522,52 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
             batch_id = rejection.get("batch_id")
             if not isinstance(batch_id, str) or re.fullmatch(r"[a-f0-9]{24}", batch_id) is None:
                 raise ValueError(f"execution manifest rejection batch_id invalid: {tid}")
+            expected_batch_id = sha256_bytes(canonical_json_bytes({
+                "role": role,
+                "config_sha256": config_sha,
+                "task_ids": [tid],
+                "task_fingerprints": [task_map[tid]["task_fingerprint"]],
+            }))[:24]
+            if batch_id != expected_batch_id:
+                raise ValueError(f"execution manifest rejection batch binding mismatch: {tid}")
             request_sha = rejection.get("request_sha256")
             if not isinstance(request_sha, str) or _SHA256_RE.fullmatch(request_sha) is None:
                 raise ValueError(f"execution manifest rejection request hash invalid: {tid}")
+            expected_request_sha = sha256_bytes(
+                canonical_json_bytes([task_map[tid]])
+            )
+            if request_sha != expected_request_sha:
+                raise ValueError(f"execution manifest rejection request binding mismatch: {tid}")
+            attempts_allowed = rejection.get("attempts_allowed")
+            attempts_used = rejection.get("attempts_used")
+            if attempts_allowed != cfg["max_attempts"]:
+                raise ValueError(f"execution manifest rejection attempt policy mismatch: {tid}")
+            if (
+                not isinstance(attempts_used, int)
+                or attempts_used < 1
+                or attempts_used > attempts_allowed
+            ):
+                raise ValueError(f"execution manifest rejection attempts invalid: {tid}")
             seen_rejections.add(tid)
             rejections.append(rejection)
+
+        rejected_batches = {
+            str(batch.get("batch_id")): batch
+            for batch in batches
+            if isinstance(batch, dict) and batch.get("outcome") == "rejected"
+        }
+        for rejection in rejections:
+            batch = rejected_batches.get(str(rejection["batch_id"]))
+            if (
+                batch is None
+                or batch.get("error_code") != rejection["error_code"]
+                or batch.get("request_sha256") != rejection["request_sha256"]
+                or batch.get("attempts_allowed") != rejection["attempts_allowed"]
+                or batch.get("attempts_used") != rejection["attempts_used"]
+            ):
+                raise ValueError(
+                    f"execution manifest rejection batch record mismatch: {rejection['task_id']}"
+                )
 
     rejected_ids = {str(r["task_id"]) for r in rejections}
     pending = [
