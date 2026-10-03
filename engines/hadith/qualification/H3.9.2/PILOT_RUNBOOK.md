@@ -20,20 +20,21 @@ The manual workflow is:
 
 `.github/workflows/h392-curation-pilot.yml`
 
-Configure these GitHub repository or organization **Variables**:
+Configure all runtime identity and endpoint data as GitHub **Secrets** so no service or model identity appears in repository files or workflow-dispatch metadata:
 
-- `H392_CURATOR_BASE_URL`
-- `H392_VERIFIER_BASE_URL`
-
-Configure these GitHub **Secrets**:
-
+- `H392_CURATOR_ENDPOINT`
+- `H392_VERIFIER_ENDPOINT`
+- `H392_CURATOR_MODEL_FAMILY`
+- `H392_CURATOR_MODEL_REF`
+- `H392_VERIFIER_MODEL_FAMILY`
+- `H392_VERIFIER_MODEL_REF`
 - `H392_CURATOR_API_KEY`
 - `H392_VERIFIER_API_KEY`
 - `H392_CURATION_ARTIFACT_KEY`
 
 The artifact passphrase must contain at least 20 characters. Do not place API keys, bearer tokens, passwords, request headers, or the artifact passphrase in committed JSON/YAML configuration.
 
-The GitHub connector used during development cannot read or create repository Secrets, so secret presence must be configured and confirmed through repository administration before the first dispatch.
+The GitHub connector used during development cannot read or create repository Secrets, so secret presence must be configured and confirmed through repository administration before the first dispatch. Do not retain endpoint values in repository Variables once the protected Secret-based workflow is in use.
 
 ## Model independence
 
@@ -50,16 +51,9 @@ Start with:
 - `task_offset = 0`
 - `task_limit = 8`
 
-Provide:
+At dispatch time provide only the task offset/limit plus generic authentication and JSON-mode choices. Endpoint and model identity are loaded from protected Secrets and are not workflow inputs.
 
-- exact Curator model-family identifier;
-- exact Curator model/deployment reference;
-- exact Verifier model-family identifier;
-- exact Verifier model/deployment reference;
-- authentication style for each endpoint;
-- JSON response mode only when supported by that endpoint.
-
-The workflow validates that the two model-family identifiers differ before either model is invoked.
+The workflow validates internally that the two protected model-family identifiers differ before either model is invoked.
 
 ## What the workflow does
 

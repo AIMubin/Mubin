@@ -11,18 +11,6 @@ on:
         description: Number of tasks in this encrypted run chunk (1-64)
         required: true
         default: "8"
-      curator_model_family:
-        description: Curator model-family independence identifier
-        required: true
-      curator_model_ref:
-        description: Exact Curator model/deployment identifier sent to the endpoint
-        required: true
-      verifier_model_family:
-        description: Verifier model-family independence identifier
-        required: true
-      verifier_model_ref:
-        description: Exact Verifier model/deployment identifier sent to the endpoint
-        required: true
       curator_auth_style:
         description: Curator authentication header style
         type: choice
@@ -67,14 +55,8 @@ jobs:
       INDEX_DIR: /tmp/h392-curation/index
       RUN_DIR: /tmp/h392-curation/run
       REDACTED_DIR: /tmp/h392-curation/redacted
-      CURATOR_BASE_URL: ${{ vars.H392_CURATOR_BASE_URL }}
-      VERIFIER_BASE_URL: ${{ vars.H392_VERIFIER_BASE_URL }}
       TASK_OFFSET: ${{ inputs.task_offset }}
       TASK_LIMIT: ${{ inputs.task_limit }}
-      CURATOR_MODEL_FAMILY: ${{ inputs.curator_model_family }}
-      CURATOR_MODEL_REF: ${{ inputs.curator_model_ref }}
-      VERIFIER_MODEL_FAMILY: ${{ inputs.verifier_model_family }}
-      VERIFIER_MODEL_REF: ${{ inputs.verifier_model_ref }}
       CURATOR_AUTH_STYLE: ${{ inputs.curator_auth_style }}
       VERIFIER_AUTH_STYLE: ${{ inputs.verifier_auth_style }}
       CURATOR_JSON_MODE: ${{ inputs.curator_json_mode }}
@@ -98,18 +80,24 @@ jobs:
 
       - name: Fail closed if runtime credentials or endpoints are absent
         env:
+          CURATOR_ENDPOINT: ${{ secrets.H392_CURATOR_ENDPOINT }}
+          VERIFIER_ENDPOINT: ${{ secrets.H392_VERIFIER_ENDPOINT }}
+          CURATOR_MODEL_FAMILY: ${{ secrets.H392_CURATOR_MODEL_FAMILY }}
+          CURATOR_MODEL_REF: ${{ secrets.H392_CURATOR_MODEL_REF }}
+          VERIFIER_MODEL_FAMILY: ${{ secrets.H392_VERIFIER_MODEL_FAMILY }}
+          VERIFIER_MODEL_REF: ${{ secrets.H392_VERIFIER_MODEL_REF }}
           CURATOR_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
           VERIFIER_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
           ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
         run: |
           set -eu
-          test -n "$CURATOR_BASE_URL"
-          test -n "$VERIFIER_BASE_URL"
+          test -n "$CURATOR_ENDPOINT"
+          test -n "$VERIFIER_ENDPOINT"
           test -n "$CURATOR_API_KEY"
           test -n "$VERIFIER_API_KEY"
           test -n "$ARTIFACT_KEY"
-          case "$CURATOR_BASE_URL" in https://*) ;; *) echo "Curator base URL must be HTTPS" >&2; exit 1;; esac
-          case "$VERIFIER_BASE_URL" in https://*) ;; *) echo "Verifier base URL must be HTTPS" >&2; exit 1;; esac
+          case "$CURATOR_ENDPOINT" in https://*) ;; *) echo "Curator base URL must be HTTPS" >&2; exit 1;; esac
+          case "$VERIFIER_ENDPOINT" in https://*) ;; *) echo "Verifier base URL must be HTTPS" >&2; exit 1;; esac
           python - <<'PY'
           import os
           normalize = lambda s: " ".join(s.strip().casefold().split())
@@ -194,7 +182,14 @@ jobs:
           PY
           rm "$RUN_DIR/all-curator-tasks.jsonl"
 
-      - name: Create non-secret execution configs
+      - name: Create protected execution configs
+        env:
+          CURATOR_ENDPOINT: ${{ secrets.H392_CURATOR_ENDPOINT }}
+          VERIFIER_ENDPOINT: ${{ secrets.H392_VERIFIER_ENDPOINT }}
+          CURATOR_MODEL_FAMILY: ${{ secrets.H392_CURATOR_MODEL_FAMILY }}
+          CURATOR_MODEL_REF: ${{ secrets.H392_CURATOR_MODEL_REF }}
+          VERIFIER_MODEL_FAMILY: ${{ secrets.H392_VERIFIER_MODEL_FAMILY }}
+          VERIFIER_MODEL_REF: ${{ secrets.H392_VERIFIER_MODEL_REF }}
         run: |
           python - <<'PY'
           import json
@@ -202,7 +197,7 @@ jobs:
           from pathlib import Path
 
           run = Path(os.environ["RUN_DIR"])
-          adapter = "adapters/openai_compatible.py"
+          adapter = "adapters/chat_completions.py"
 
           def config(role, family, model, base_url, auth_style, json_mode):
               return {
@@ -223,7 +218,7 @@ jobs:
                           "--max-evidence-sources", "12",
                           "--max-excerpt-chars", "1800",
                       ],
-                      "env_allowlist": ["MUBIN_OPENAI_API_KEY"],
+                      "env_allowlist": ["MUBIN_MODEL_API_KEY"],
                       "artifacts": [adapter],
                   },
                   "batch_size": 4,
@@ -235,7 +230,7 @@ jobs:
               "curator",
               os.environ["CURATOR_MODEL_FAMILY"],
               os.environ["CURATOR_MODEL_REF"],
-              os.environ["CURATOR_BASE_URL"],
+              os.environ["CURATOR_ENDPOINT"],
               os.environ["CURATOR_AUTH_STYLE"],
               os.environ["CURATOR_JSON_MODE"],
           )
@@ -243,7 +238,7 @@ jobs:
               "verifier",
               os.environ["VERIFIER_MODEL_FAMILY"],
               os.environ["VERIFIER_MODEL_REF"],
-              os.environ["VERIFIER_BASE_URL"],
+              os.environ["VERIFIER_ENDPOINT"],
               os.environ["VERIFIER_AUTH_STYLE"],
               os.environ["VERIFIER_JSON_MODE"],
           )
@@ -256,7 +251,7 @@ jobs:
 
       - name: Run Curator AI-A
         env:
-          MUBIN_OPENAI_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
+          MUBIN_MODEL_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
         run: |
           python -m benchmark_campaign factory-run-agent \
             --role curator \
@@ -282,7 +277,7 @@ jobs:
       - name: Run independent Verifier AI-B
         if: steps.verifier_tasks.outputs.count != '0'
         env:
-          MUBIN_OPENAI_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
+          MUBIN_MODEL_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
         run: |
           python -m benchmark_campaign factory-run-agent \
             --role verifier \
@@ -340,24 +335,18 @@ jobs:
               "github_run_id": os.environ.get("GITHUB_RUN_ID"),
               **chunk,
               "curator": {
-                  "model_family": curator["model_family"],
-                  "model_ref": curator["model_ref"],
                   "config_sha256": curator["config_sha256"],
                   "adapter_artifacts": curator["adapter_artifacts"],
                   "completed_task_count": curator["completed_task_count"],
                   "output_sha256": curator["output_sha256"],
               },
               "verifier": ({
-                  "model_family": verifier["model_family"],
-                  "model_ref": verifier["model_ref"],
                   "config_sha256": verifier["config_sha256"],
                   "adapter_artifacts": verifier["adapter_artifacts"],
                   "completed_task_count": verifier["completed_task_count"],
                   "output_sha256": verifier["output_sha256"],
                   "independent_curator_manifest_sha256": verifier["independent_curator_manifest_sha256"],
               } if verifier is not None else {
-                  "model_family": os.environ["VERIFIER_MODEL_FAMILY"],
-                  "model_ref": os.environ["VERIFIER_MODEL_REF"],
                   "completed_task_count": 0,
                   "not_run_reason": "no_curator_candidates",
               }),

@@ -60,7 +60,7 @@ class CampaignTests(unittest.TestCase):
             "benchmark_campaign/factory.py",
             "benchmark_campaign/execution.py",
             "AGENT_EXECUTION.md",
-            "adapters/openai_compatible.py",
+            "adapters/chat_completions.py",
         ]:
             dst = self.root / rel
             dst.parent.mkdir(parents=True, exist_ok=True)

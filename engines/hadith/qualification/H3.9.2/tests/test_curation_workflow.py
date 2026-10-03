@@ -36,6 +36,21 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn(escaped, self.workflow)
         self.assertIn(expected, self.workflow)
 
+    def test_model_identity_is_not_exposed_as_dispatch_input(self):
+        dispatch = self.workflow.split("permissions:", 1)[0]
+        self.assertNotIn("model_family", dispatch)
+        self.assertNotIn("model_ref", dispatch)
+
+    def test_redacted_summary_omits_model_identity(self):
+        summary = self.workflow.split("- name: Build redacted run summary", 1)[1]
+        summary = summary.split("- name: Encrypt all source-bearing run evidence", 1)[0]
+        self.assertNotIn('"model_family"', summary)
+        self.assertNotIn('"model_ref"', summary)
+
+    def test_neutral_adapter_and_runtime_key_names(self):
+        self.assertIn("adapters/chat_completions.py", self.workflow)
+        self.assertIn("MUBIN_MODEL_API_KEY", self.workflow)
+
     def test_provider_keys_are_step_scoped_not_job_scoped(self):
         job_env = self.workflow.split("    env:\n", 1)[1].split("\n\n    steps:", 1)[0]
         self.assertNotIn("H392_CURATOR_API_KEY", job_env)

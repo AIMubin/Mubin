@@ -1,6 +1,6 @@
 # H3.9.2 reference model adapter
 
-`openai_compatible.py` implements the standard H3.9.2 HTTP adapter for endpoints exposing an OpenAI-compatible `/chat/completions` API.
+`chat_completions.py` implements the standard H3.9.2 HTTP adapter for endpoints exposing an chat-completions-compatible `/chat/completions` API.
 
 The adapter is intentionally narrower than a general agent. It has no tools and no authority to create source facts. It retrieves bounded evidence from the hash-bound H3.9.2 source index, presents those excerpts to the model as untrusted data, and accepts citations only through generated evidence IDs. Every support string must occur verbatim in the retrieved excerpt before the adapter emits a response.
 

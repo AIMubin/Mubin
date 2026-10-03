@@ -460,14 +460,14 @@ def _user_prompt(role: str, task: dict[str, Any], evidence: list[dict[str, Any]]
     }, ensure_ascii=False, sort_keys=True)
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Mubin H3.9.2 OpenAI-compatible model adapter")
+    p = argparse.ArgumentParser(description="Mubin H3.9.2 chat-completions-compatible model adapter")
     p.add_argument("--input", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--index", type=Path, required=True)
     p.add_argument("--contract", type=Path, required=True)
     p.add_argument("--base-url", required=True)
     p.add_argument("--auth-style", choices=["bearer", "api-key"], default="bearer")
-    p.add_argument("--api-key-env", default="MUBIN_OPENAI_API_KEY")
+    p.add_argument("--api-key-env", default="MUBIN_MODEL_API_KEY")
     p.add_argument("--json-mode", choices=["off", "json_object"], default="off")
     p.add_argument("--timeout", type=int, default=180)
     p.add_argument("--temperature", type=float, default=0.0)

@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from adapters.openai_compatible import (
+from adapters.chat_completions import (
     RetrievalIndex,
     MAX_RESPONSE_BYTES,
     _NoRedirect,
@@ -22,7 +22,7 @@ from adapters.openai_compatible import (
 from benchmark_campaign.core import dump_jsonl
 
 
-class OpenAICompatibleAdapterTests(unittest.TestCase):
+class ChatCompletionsAdapterTests(unittest.TestCase):
     def _index(self, root: Path) -> RetrievalIndex:
         index = root / "index"
         index.mkdir()
@@ -104,8 +104,8 @@ class OpenAICompatibleAdapterTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     _validate_base_url(value)
         self.assertEqual(
-            _validate_base_url("https://example.test/openai/v1/"),
-            "https://example.test/openai/v1",
+            _validate_base_url("https://example.test/api/v1/"),
+            "https://example.test/api/v1",
         )
 
     def test_redirect_handler_is_fail_closed(self):
@@ -128,7 +128,7 @@ class OpenAICompatibleAdapterTests(unittest.TestCase):
                 return FakeResponse()
 
         with patch(
-            "adapters.openai_compatible.urllib.request.build_opener",
+            "adapters.chat_completions.urllib.request.build_opener",
             return_value=FakeOpener(),
         ):
             with self.assertRaisesRegex(ValueError, "response exceeds size limit"):
