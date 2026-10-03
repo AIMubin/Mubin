@@ -66,7 +66,7 @@ The executor separates **obtaining model output** from **admitting output into t
 
 `task_failure_policy=fail_fast` is the default strict execution mode. Any adapter/model failure aborts the run.
 
-`task_failure_policy=record_rejection` is the collection mode used by the non-holdout pilot. It requires `batch_size=1`, so one malformed model answer cannot invalidate unrelated tasks. Bounded `adapter:model_output_*` and `adapter:contract_*` failures are recorded as task-local rejections in the execution manifest and execution continues. Authentication failures, connection/provider failures, endpoint-shape failures, adapter protocol errors, source/index integrity failures, and executor failures remain fatal.
+`task_failure_policy=record_rejection` is the collection mode used by the non-holdout pilot. It requires `batch_size=1`, so one malformed model answer cannot invalidate unrelated tasks. Bounded `adapter:model_output_*` and `adapter:contract_*` failures are recorded as task-local rejections in the execution manifest and execution continues. Authentication failures, connection/provider failures, endpoint-shape failures, adapter protocol errors, source/index integrity failures, and executor failures remain fatal. Holdout execution is always `fail_fast`; collection-mode rejection recording is prohibited there.
 
 The manifest distinguishes `attempted_task_count`, `completed_task_count` (valid adapter responses, including `no_candidate`), `rejected_task_count`, `pending_task_count`, and aggregate `rejection_counts`. Rejected tasks never become Curator/Verifier responses and therefore cannot enter reconciliation or promotion as valid candidates.
 
