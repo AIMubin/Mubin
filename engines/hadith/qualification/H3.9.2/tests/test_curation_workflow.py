@@ -30,6 +30,23 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn(".aesgcm", self.workflow)
         self.assertNotIn("aes-256-cbc", self.workflow)
 
+    def test_reconcile_uses_current_cli_flags(self):
+        self.assertIn("--adjudication-out", self.workflow)
+        self.assertIn("--ledger-out", self.workflow)
+        self.assertNotIn("--adjudication \"", self.workflow)
+        self.assertNotIn("--ledger \"", self.workflow)
+
+    def test_zero_candidate_path_still_uses_factory_reconcile(self):
+        self.assertIn(
+            "Materialize empty Verifier response set when Curator found no candidates",
+            self.workflow,
+        )
+        reconcile = self.workflow.split(
+            "- name: Reconcile source evidence and policy gates", 1
+        )[1]
+        self.assertNotIn("if: steps.verifier_tasks.outputs.count != '0'", reconcile.split("run:", 1)[0])
+        self.assertIn("factory-reconcile", reconcile)
+
     def test_plaintext_source_bearing_outputs_are_not_uploaded(self):
         upload = self.workflow.split(
             "- name: Upload encrypted curation bundle and redacted summary", 1

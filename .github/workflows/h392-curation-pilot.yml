@@ -294,8 +294,11 @@ jobs:
             --independent-from-manifest "$RUN_DIR/curator-run.json" \
             > "$REDACTED_DIR/verifier-execution-report.json"
 
+      - name: Materialize empty Verifier response set when Curator found no candidates
+        if: steps.verifier_tasks.outputs.count == '0'
+        run: : > "$RUN_DIR/verifier-responses.jsonl"
+
       - name: Reconcile source evidence and policy gates
-        if: steps.verifier_tasks.outputs.count != '0'
         run: |
           mkdir -p "$RUN_DIR/reviewed"
           python -m benchmark_campaign factory-reconcile \
@@ -305,38 +308,9 @@ jobs:
             --verifier-responses "$RUN_DIR/verifier-responses.jsonl" \
             --source-cache-dir "$CACHE_DIR" \
             --reviewed-dir "$RUN_DIR/reviewed" \
-            --adjudication "$RUN_DIR/adjudication.jsonl" \
-            --ledger "$RUN_DIR/CURATION_LEDGER.jsonl" \
+            --adjudication-out "$RUN_DIR/adjudication.jsonl" \
+            --ledger-out "$RUN_DIR/CURATION_LEDGER.jsonl" \
             > "$REDACTED_DIR/reconcile-report.json"
-
-      - name: Record zero-candidate reconciliation result
-        if: steps.verifier_tasks.outputs.count == '0'
-        run: |
-          mkdir -p "$RUN_DIR/reviewed"
-          : > "$RUN_DIR/verifier-responses.jsonl"
-          : > "$RUN_DIR/adjudication.jsonl"
-          : > "$RUN_DIR/CURATION_LEDGER.jsonl"
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          curator = [
-              json.loads(line) for line in (Path(os.environ["RUN_DIR"]) / "curator-responses.jsonl").read_text(encoding="utf-8").splitlines()
-              if line.strip()
-          ]
-          report = {
-              "task_count": len(curator),
-              "promoted_count": 0,
-              "adjudication_count": 0,
-              "skipped_count": len(curator),
-              "ledger_count": 0,
-              "promoted_by_benchmark": {},
-              "reason": "no_curator_candidates",
-          }
-          (Path(os.environ["REDACTED_DIR"]) / "reconcile-report.json").write_text(
-              json.dumps(report, indent=2) + "\n", encoding="utf-8"
-          )
-          PY
 
       - name: Build redacted run summary
         run: |
