@@ -26,6 +26,22 @@ _RESERVED_ADAPTER_FIELDS = {
     "task_fingerprint", "verifier_task_fingerprint", "model_family", "model_ref",
     "execution_binding",
 }
+_ADAPTER_DIAGNOSTIC_RE = re.compile(rb"(?:^|\n)MUBIN_DIAGNOSTIC:([a-z0-9_:-]{1,80})(?:\r?\n|$)")
+_MAX_DIAGNOSTIC_SCAN_BYTES = 8192
+
+
+def _extract_adapter_diagnostic(path: Path) -> str | None:
+    if not path.exists() or not path.is_file():
+        return None
+    size = path.stat().st_size
+    with path.open("rb") as fh:
+        if size > _MAX_DIAGNOSTIC_SCAN_BYTES:
+            fh.seek(size - _MAX_DIAGNOSTIC_SCAN_BYTES)
+        data = fh.read(_MAX_DIAGNOSTIC_SCAN_BYTES)
+    matches = list(_ADAPTER_DIAGNOSTIC_RE.finditer(data))
+    if not matches:
+        return None
+    return matches[-1].group(1).decode("ascii")
 
 
 def _normalized_family(value: str) -> str:
@@ -501,18 +517,25 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                 }
                 command = _render_command(cfg["adapter"]["command"], mapping)
                 env = _adapter_env(cfg, role, index_dir, contract, input_path, raw_output)
+                diagnostic_path = tmp / "adapter-stderr.log"
                 try:
-                    proc = subprocess.run(
-                        command,
-                        cwd=str(root),
-                        env=env,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=False,
-                        timeout=cfg["timeout_seconds"],
-                    )
+                    with diagnostic_path.open("wb") as diagnostic_stream:
+                        proc = subprocess.run(
+                            command,
+                            cwd=str(root),
+                            env=env,
+                            stdout=subprocess.DEVNULL,
+                            stderr=diagnostic_stream,
+                            check=False,
+                            timeout=cfg["timeout_seconds"],
+                        )
                     if proc.returncode != 0:
-                        last_error_code = f"nonzero_exit:{proc.returncode}"
+                        diagnostic = _extract_adapter_diagnostic(diagnostic_path)
+                        last_error_code = (
+                            f"adapter:{diagnostic}"
+                            if diagnostic is not None
+                            else f"nonzero_exit:{proc.returncode}"
+                        )
                         continue
                     if not raw_output.exists():
                         last_error_code = "missing_output"

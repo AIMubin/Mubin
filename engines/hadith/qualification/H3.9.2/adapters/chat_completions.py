@@ -8,6 +8,7 @@ import math
 import os
 import re
 import ssl
+import sys
 import unicodedata
 import urllib.error
 import urllib.request
@@ -24,6 +25,22 @@ STOPWORDS = {
     "the", "and", "for", "with", "from", "that", "this", "was", "were",
 }
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+_DIAGNOSTIC_PREFIX = "MUBIN_DIAGNOSTIC:"
+_DIAGNOSTIC_CODE_RE = re.compile(r"^[a-z0-9_:-]{1,80}$")
+
+
+class AdapterDiagnosticError(RuntimeError):
+    def __init__(self, code: str):
+        if _DIAGNOSTIC_CODE_RE.fullmatch(code) is None:
+            raise ValueError("invalid adapter diagnostic code")
+        super().__init__(code)
+        self.code = code
+
+
+def _emit_diagnostic(code: str) -> None:
+    if _DIAGNOSTIC_CODE_RE.fullmatch(code) is None:
+        code = "adapter_internal_error"
+    print(f"{_DIAGNOSTIC_PREFIX}{code}", file=sys.stderr)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -240,14 +257,19 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
         with opener.open(req, timeout=timeout) as resp:
             body = resp.read(MAX_RESPONSE_BYTES + 1)
             if len(body) > MAX_RESPONSE_BYTES:
-                raise ValueError("model endpoint response exceeds size limit")
+                raise AdapterDiagnosticError("response_too_large")
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"model endpoint returned HTTP {exc.code}") from None
+        raise AdapterDiagnosticError(f"http_{exc.code}") from None
     except urllib.error.URLError:
-        raise RuntimeError("model endpoint connection failed") from None
-    parsed = json.loads(body.decode("utf-8"))
+        raise AdapterDiagnosticError("connection_failed") from None
+    except TimeoutError:
+        raise AdapterDiagnosticError("endpoint_timeout") from None
+    try:
+        parsed = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise AdapterDiagnosticError("endpoint_invalid_json") from None
     if not isinstance(parsed, dict):
-        raise ValueError("model endpoint returned a non-object JSON response")
+        raise AdapterDiagnosticError("endpoint_invalid_json")
     return parsed
 
 def _supports_from_model(value: Any, evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -506,17 +528,41 @@ def main() -> int:
             timeout=max(1, args.timeout), temperature=args.temperature,
             max_tokens=max(128, args.max_tokens), json_mode=args.json_mode,
         )
-        text = _strip_json_fence(_extract_message_content(response))
-        model_obj = json.loads(text)
+        try:
+            text = _strip_json_fence(_extract_message_content(response))
+        except ValueError:
+            raise AdapterDiagnosticError("response_shape_invalid") from None
+        try:
+            model_obj = json.loads(text)
+        except json.JSONDecodeError:
+            raise AdapterDiagnosticError("model_output_invalid_json") from None
         if not isinstance(model_obj, dict):
-            raise ValueError("model content must decode to one JSON object")
-        output.append(
-            _curator_row(task, model_obj, evidence)
-            if role == "curator"
-            else _verifier_row(task, model_obj, evidence)
-        )
+            raise AdapterDiagnosticError("model_output_invalid_json")
+        try:
+            row = (
+                _curator_row(task, model_obj, evidence)
+                if role == "curator"
+                else _verifier_row(task, model_obj, evidence)
+            )
+        except ValueError:
+            raise AdapterDiagnosticError("contract_validation_error") from None
+        output.append(row)
     _dump_jsonl(args.output, output)
     return 0
 
+def _safe_main() -> int:
+    try:
+        return main()
+    except AdapterDiagnosticError as exc:
+        _emit_diagnostic(exc.code)
+        return 2
+    except (ValueError, json.JSONDecodeError):
+        _emit_diagnostic("adapter_validation_error")
+        return 2
+    except Exception:
+        _emit_diagnostic("adapter_internal_error")
+        return 2
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(_safe_main())

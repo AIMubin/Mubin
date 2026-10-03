@@ -58,6 +58,11 @@ with open(input_path, encoding="utf-8") as fh:
             row["model_family"] = "forged-family"
         rows.append(row)
 
+if mode == "diagnostic":
+    print("arbitrary stderr content that must not leak", file=sys.stderr)
+    print("MUBIN_DIAGNOSTIC:http_401", file=sys.stderr)
+    raise SystemExit(1)
+
 with open(output_path, "w", encoding="utf-8", newline="\n") as fh:
     for row in rows:
         fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
@@ -271,6 +276,22 @@ class AgentExecutionTests(unittest.TestCase):
             })
             with self.assertRaisesRegex(ValueError, "campaign-root-relative"):
                 load_agent_execution_config(cfg, "curator")
+
+    def test_safe_adapter_diagnostic_is_exposed_without_arbitrary_stderr(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            config = self._config(root, adapter, "curator", "family-a", "diagnostic")
+            with self.assertRaises(RuntimeError) as ctx:
+                run_agent_execution(
+                    root, "curator", tasks, index, config,
+                    root / "factory-work" / "responses.jsonl",
+                    root / "factory-work" / "run.json",
+                )
+            message = str(ctx.exception)
+            self.assertIn("adapter:http_401", message)
+            self.assertNotIn("arbitrary stderr content", message)
 
     def test_adapter_cannot_spoof_model_identity(self):
         with tempfile.TemporaryDirectory() as d:

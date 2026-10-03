@@ -72,7 +72,9 @@ factory-build-tasks
 The execution layer validates transport/provenance integrity. It does not elevate AI output into authority; promotion remains governed by Factory source verification, risk policy, and adjudication.
 
 
-Adapter stdout and stderr are discarded by the executor rather than persisted, reducing accidental leakage of source excerpts or credentials through provider logs. Batch failure reports expose only sanitized error classes/return codes, not command arguments.
+Adapter stdout is discarded. Stderr is written only to an ephemeral per-attempt file and deleted with the temporary execution directory. The executor ignores arbitrary stderr content and recognizes only a strict `MUBIN_DIAGNOSTIC:<code>` marker matching `[a-z0-9_:-]{1,80}`; everything else is discarded. Batch failure reports therefore expose only sanitized diagnostic codes or return codes, never command arguments, endpoint values, model identity, source text, response bodies, or credentials.
+
+The reference adapter emits bounded diagnostic categories such as `http_<status>`, `connection_failed`, `endpoint_timeout`, `endpoint_invalid_json`, `response_shape_invalid`, `model_output_invalid_json`, and `contract_validation_error`.
 
 
 The execution implementation and this protocol document are part of the H3.9.2 freeze surface. Changing either after benchmark freeze changes the qualification protocol and requires a new freeze/version rather than silent mutation.

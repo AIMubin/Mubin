@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adapters.chat_completions import (
+    AdapterDiagnosticError,
     RetrievalIndex,
     MAX_RESPONSE_BYTES,
     _NoRedirect,
@@ -144,6 +145,58 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                     128,
                     "off",
                 )
+
+    def test_http_status_is_reduced_to_safe_diagnostic_code(self):
+        import urllib.error
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener"
+        ) as build:
+            opener = build.return_value
+            opener.open.side_effect = urllib.error.HTTPError(
+                "https://example.test/v1/chat/completions",
+                401,
+                "details not exposed",
+                {},
+                None,
+            )
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
+                _call_chat(
+                    "https://example.test/v1",
+                    "secret",
+                    "bearer",
+                    "model-x",
+                    "system",
+                    "user",
+                    10,
+                    0.0,
+                    128,
+                    "off",
+                )
+            self.assertEqual(ctx.exception.code, "http_401")
+            self.assertNotIn("details not exposed", str(ctx.exception))
+
+    def test_connection_failure_is_reduced_to_safe_diagnostic_code(self):
+        import urllib.error
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener"
+        ) as build:
+            opener = build.return_value
+            opener.open.side_effect = urllib.error.URLError("sensitive transport detail")
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
+                _call_chat(
+                    "https://example.test/v1",
+                    "secret",
+                    "bearer",
+                    "model-x",
+                    "system",
+                    "user",
+                    10,
+                    0.0,
+                    128,
+                    "off",
+                )
+            self.assertEqual(ctx.exception.code, "connection_failed")
+            self.assertNotIn("sensitive transport detail", str(ctx.exception))
 
     def test_support_mapping_requires_verbatim_retrieved_evidence(self):
         evidence = [{
