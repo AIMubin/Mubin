@@ -77,14 +77,18 @@ class RetrievalIndex:
             str(row["segment_id"]): toks for row, toks in zip(self.rows, self.token_sets)
         }
 
-    def score(self, row: dict[str, Any], query_tokens: set[str]) -> float:
+    def score(self, row: dict[str, Any], query_tokens: set[str],
+              priority_tokens: set[str]) -> float:
         if not query_tokens:
             return 0.0
         toks = self.row_token_map.get(str(row["segment_id"]), set())
         overlap = query_tokens & toks
         if not overlap:
             return 0.0
-        numerator = sum(self.idf.get(tok, 1.0) for tok in overlap)
+        numerator = sum(
+            self.idf.get(tok, 1.0) * (3.0 if tok in priority_tokens else 1.0)
+            for tok in overlap
+        )
         return numerator / math.sqrt(max(1, len(toks)))
 
     def evidence_for_task(self, task: dict[str, Any], max_sources: int, max_excerpt_chars: int) -> list[dict[str, Any]]:
@@ -94,7 +98,11 @@ class RetrievalIndex:
         query_parts = [str(anchor.get("text", ""))]
         if "candidate_input" in task:
             query_parts.append(json.dumps(task["candidate_input"], ensure_ascii=False, sort_keys=True))
-        query_tokens = set(_tokens("\n".join(query_parts)))
+        retrieval_terms = task.get("retrieval_terms", [])
+        if not isinstance(retrieval_terms, list):
+            raise ValueError("task retrieval_terms must be a list")
+        priority_tokens = set(_tokens(" ".join(str(x) for x in retrieval_terms)))
+        query_tokens = set(_tokens("\n".join(query_parts))) | priority_tokens
         allowed = [str(x) for x in task.get("allowed_source_pool", [])]
         if not allowed:
             raise ValueError("task allowed_source_pool missing")
@@ -111,7 +119,7 @@ class RetrievalIndex:
             if not candidates:
                 continue
             ranked = sorted(
-                ((self.score(row, query_tokens), str(row["segment_id"]), row) for row in candidates),
+                ((self.score(row, query_tokens, priority_tokens), str(row["segment_id"]), row) for row in candidates),
                 key=lambda x: (-x[0], x[1]),
             )
             if ranked and ranked[0][0] > 0:

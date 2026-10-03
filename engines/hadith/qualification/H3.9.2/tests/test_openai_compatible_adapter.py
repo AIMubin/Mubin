@@ -65,6 +65,7 @@ class OpenAICompatibleAdapterTests(unittest.TestCase):
             "risk_tier": 1,
             "task_type": "classification",
             "allowed_labels": ["yes", "no"],
+            "retrieval_terms": ["سمع من"],
             "anchor_source_id": "s1",
             "allowed_source_pool": ["s1", "s2"],
             "anchor_segment": {
