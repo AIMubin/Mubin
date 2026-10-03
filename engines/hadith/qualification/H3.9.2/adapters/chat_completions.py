@@ -739,7 +739,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--auth-style", choices=["bearer", "api-key"], default="bearer")
     p.add_argument("--api-key-env", default="MUBIN_MODEL_API_KEY")
     p.add_argument("--json-mode", choices=["off", "json_object"], default="off")
-    p.add_argument("--timeout", type=int, default=180)
+    p.add_argument("--timeout", type=int, default=600)
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument(
         "--completion-budget",
