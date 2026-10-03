@@ -718,9 +718,12 @@ def main() -> int:
         try:
             finish_reason = _extract_finish_reason(response)
             has_reasoning = _has_reasoning_content(response)
+        except ValueError:
+            raise AdapterDiagnosticError("response_shape_invalid") from None
+        try:
             text = _extract_message_content(response)
         except ValueError:
-            if 'has_reasoning' in locals() and has_reasoning:
+            if has_reasoning:
                 raise AdapterDiagnosticError("model_output_reasoning_only") from None
             raise AdapterDiagnosticError("response_shape_invalid") from None
         if not text.strip():
