@@ -34,6 +34,9 @@ with open(input_path, encoding="utf-8") as fh:
         if not line.strip():
             continue
         task = json.loads(line)
+        if mode == "contract-first" and task["task_id"].endswith(":0001"):
+            print("MUBIN_DIAGNOSTIC:contract_gold_invalid", file=sys.stderr)
+            raise SystemExit(1)
         if role == "curator":
             row = {
                 "task_id": task["task_id"],
@@ -149,7 +152,24 @@ class AgentExecutionTests(unittest.TestCase):
         adapter.write_text(ADAPTER, encoding="utf-8")
         return cache, index, tasks, adapter
 
-    def _config(self, root: Path, adapter: Path, role: str, family: str, mode: str = "ok"):
+    def _expand_to_two_non_holdout_tasks(self, root: Path, index: Path) -> Path:
+        quotas_path = root / "config" / "curation-quotas.json"
+        quotas = load_json(quotas_path)
+        quotas["total_target"] = 3
+        quotas["benchmarks"][0]["non_holdout"]["anchor_quotas"][0]["target_cases"] = 2
+        write_json(quotas_path, quotas)
+        plan = root / "factory-work" / "plan-two.json"
+        build_factory_plan(root, plan)
+        tasks = root / "factory-work" / "tasks-two.jsonl"
+        build_factory_tasks(root, plan, index, tasks, "non_holdout", False)
+        self.assertEqual(len(load_jsonl(tasks)), 2)
+        return tasks
+
+    def _config(
+        self, root: Path, adapter: Path, role: str, family: str,
+        mode: str = "ok", task_failure_policy: str = "fail_fast",
+        batch_size: int = 1,
+    ):
         path = root / f"{role}-{family}.json"
         write_json(path, {
             "schema_version": 1,
@@ -167,9 +187,10 @@ class AgentExecutionTests(unittest.TestCase):
                 "env_allowlist": [],
                 "artifacts": [adapter.relative_to(root).as_posix()],
             },
-            "batch_size": 1,
+            "batch_size": batch_size,
             "timeout_seconds": 30,
             "max_attempts": 1,
+            "task_failure_policy": task_failure_policy,
         })
         return path
 
@@ -292,6 +313,95 @@ class AgentExecutionTests(unittest.TestCase):
             message = str(ctx.exception)
             self.assertIn("adapter:http_401", message)
             self.assertNotIn("arbitrary stderr content", message)
+
+    def test_collection_mode_requires_one_task_batches(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, _, _, adapter = self._fixture(root)
+            config = self._config(
+                root, adapter, "curator", "family-a",
+                task_failure_policy="record_rejection", batch_size=2,
+            )
+            with self.assertRaisesRegex(ValueError, "requires batch_size=1"):
+                load_agent_execution_config(config, "curator")
+
+    def test_collection_mode_records_contract_rejection_and_continues(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, _, adapter = self._fixture(root)
+            tasks = self._expand_to_two_non_holdout_tasks(root, index)
+            config = self._config(
+                root, adapter, "curator", "family-a", "contract-first",
+                task_failure_policy="record_rejection",
+            )
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            report = run_agent_execution(
+                root, "curator", tasks, index, config, out, manifest
+            )
+            self.assertEqual(report["attempted_task_count"], 2)
+            self.assertEqual(report["completed_task_count"], 1)
+            self.assertEqual(report["rejected_task_count"], 1)
+            self.assertEqual(report["pending_task_count"], 0)
+            self.assertEqual(
+                report["rejection_counts"],
+                {"adapter:contract_gold_invalid": 1},
+            )
+            rows = load_jsonl(out)
+            self.assertEqual(len(rows), 1)
+            self.assertTrue(rows[0]["task_id"].endswith(":0002"))
+            self.assertEqual(
+                report["rejections"][0]["error_code"],
+                "adapter:contract_gold_invalid",
+            )
+
+            resumed = run_agent_execution(
+                root, "curator", tasks, index, config, out, manifest, resume=True
+            )
+            self.assertEqual(resumed["attempted_task_count"], 2)
+            self.assertEqual(resumed["rejected_task_count"], 1)
+            self.assertEqual(len(load_jsonl(out)), 1)
+
+    def test_collection_mode_rejects_tampered_rejection_binding_on_resume(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, _, adapter = self._fixture(root)
+            tasks = self._expand_to_two_non_holdout_tasks(root, index)
+            config = self._config(
+                root, adapter, "curator", "family-a", "contract-first",
+                task_failure_policy="record_rejection",
+            )
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            run_agent_execution(root, "curator", tasks, index, config, out, manifest)
+
+            data = load_json(manifest)
+            data["rejections"][0]["request_sha256"] = "0" * 64
+            write_json(manifest, data)
+            with self.assertRaisesRegex(ValueError, "request binding mismatch"):
+                run_agent_execution(
+                    root, "curator", tasks, index, config, out, manifest, resume=True
+                )
+
+    def test_collection_mode_does_not_swallow_infrastructure_failure(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            config = self._config(
+                root, adapter, "curator", "family-a", "diagnostic",
+                task_failure_policy="record_rejection",
+            )
+            with self.assertRaises(RuntimeError) as ctx:
+                run_agent_execution(
+                    root, "curator", tasks, index, config,
+                    root / "factory-work" / "responses.jsonl",
+                    root / "factory-work" / "run.json",
+                )
+            self.assertIn("adapter:http_401", str(ctx.exception))
 
     def test_adapter_cannot_spoof_model_identity(self):
         with tempfile.TemporaryDirectory() as d:

@@ -47,26 +47,29 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn('"model_family"', summary)
         self.assertNotIn('"model_ref"', summary)
 
+    def test_full_execution_manifests_are_not_written_to_redacted_directory(self):
+        self.assertNotIn("curator-execution-report.json", self.workflow)
+        self.assertNotIn("verifier-execution-report.json", self.workflow)
+        self.assertGreaterEqual(self.workflow.count("> /dev/null"), 3)
+
     def test_neutral_adapter_and_runtime_key_names(self):
         self.assertIn("adapters/chat_completions.py", self.workflow)
         self.assertIn("MUBIN_MODEL_API_KEY", self.workflow)
 
-    def test_completion_budget_supports_auto_without_artificial_upper_cap(self):
+    def test_pilot_does_not_expose_inference_tuning_knobs(self):
         dispatch = self.workflow.split("permissions:", 1)[0]
-        self.assertIn("curator_completion_budget:", dispatch)
-        self.assertIn("verifier_completion_budget:", dispatch)
-        self.assertGreaterEqual(dispatch.count('default: "auto"'), 2)
-        self.assertIn('"--completion-budget", completion_budget', self.workflow)
-        self.assertIn('"--completion-budget-field", completion_budget_field', self.workflow)
-        self.assertNotIn("value > 8192", self.workflow)
-        self.assertIn('must be \'auto\' or a positive integer', self.workflow)
+        self.assertNotIn("completion_budget", dispatch)
+        self.assertNotIn("reasoning_effort", dispatch)
+        self.assertNotIn('"--completion-budget"', self.workflow)
+        self.assertNotIn('"--completion-budget-field"', self.workflow)
+        self.assertNotIn('"--reasoning-effort"', self.workflow)
 
-    def test_reasoning_control_is_provider_default_unless_opted_in(self):
-        dispatch = self.workflow.split("permissions:", 1)[0]
-        self.assertIn("curator_reasoning_effort:", dispatch)
-        self.assertIn("verifier_reasoning_effort:", dispatch)
-        self.assertGreaterEqual(dispatch.count("default: provider_default"), 2)
-        self.assertIn('"--reasoning-effort", reasoning_effort', self.workflow)
+    def test_pilot_uses_one_task_collection_mode_with_generous_request_timeout(self):
+        self.assertIn('"--timeout", "600"', self.workflow)
+        self.assertIn('"batch_size": 1', self.workflow)
+        self.assertIn('"max_attempts": 1', self.workflow)
+        self.assertIn('"task_failure_policy": "record_rejection"', self.workflow)
+        self.assertIn('"timeout_seconds": 660', self.workflow)
 
     def test_provider_keys_are_step_scoped_not_job_scoped(self):
         job_env = self.workflow.split("    env:\n", 1)[1].split("\n\n    steps:", 1)[0]
@@ -115,6 +118,14 @@ class CurationWorkflowTests(unittest.TestCase):
         )[1]
         self.assertNotIn("if: steps.verifier_tasks.outputs.count != '0'", reconcile.split("run:", 1)[0])
         self.assertIn("factory-reconcile", reconcile)
+
+    def test_redacted_summary_reports_collection_outcomes(self):
+        summary = self.workflow.split("- name: Build redacted run summary", 1)[1]
+        summary = summary.split("- name: Encrypt all source-bearing run evidence", 1)[0]
+        self.assertIn('"attempted_task_count"', summary)
+        self.assertIn('"rejected_task_count"', summary)
+        self.assertIn('"rejection_counts"', summary)
+        self.assertIn('"response_counts"', summary)
 
     def test_plaintext_source_bearing_outputs_are_not_uploaded(self):
         upload = self.workflow.split(

@@ -50,14 +50,8 @@ Start with:
 
 - `task_offset = 0`
 - `task_limit = 8`
-- `curator_completion_budget = auto`
-- `verifier_completion_budget = auto`
-- `curator_reasoning_effort = provider_default`
-- `verifier_reasoning_effort = provider_default`
 
-With `completion_budget = auto`, Mubin does not send `max_tokens` or `max_completion_tokens`. This prevents the pilot harness from imposing an arbitrary completion ceiling on reasoning-heavy models. If an explicit budget is later required, provide any positive integer and select the endpoint-supported field (`max_tokens` or `max_completion_tokens`); Mubin does not impose its own upper bound.
-
-Reasoning control is opt-in. `provider_default` sends no reasoning parameter. Select `low`, `medium`, or `high` only when the endpoint supports the common `reasoning_effort` capability. Mubin never reads reasoning text as benchmark output.
+The pilot intentionally exposes no completion-budget or reasoning-effort controls. The reference adapter uses its provider-native defaults: it sends no `max_tokens`/`max_completion_tokens` field and no `reasoning_effort` field. Each task is sent as one independent model request with a 600-second HTTP timeout.
 
 Endpoint and model identity remain loaded from protected Secrets and are not workflow inputs. The workflow validates internally that the two protected model-family identifiers differ before either model is invoked.
 
@@ -72,13 +66,15 @@ For every dispatch, the runner:
 5. rebuilds the frozen 1,280-slot Factory plan;
 6. regenerates the 896 non-holdout Curator tasks;
 7. selects the requested deterministic task chunk;
-8. runs Curator AI-A;
-9. prepares structurally blind Verifier tasks;
-10. runs Verifier AI-B when Curator candidates exist;
-11. routes every task through the real Factory reconciliation path;
-12. records promoted/adjudication/skipped outcomes in the curation ledger;
-13. encrypts all source-bearing run material with authenticated AES-256-GCM;
-14. uploads only the encrypted source-bearing bundle plus redacted metadata.
+8. runs Curator AI-A as one task per request;
+9. records malformed/model-contract outputs as task-local rejections instead of aborting the remaining chunk;
+10. prepares structurally blind Verifier tasks only from valid Curator candidates;
+11. runs Verifier AI-B with the same one-task collection policy;
+12. routes valid responses through the real Factory reconciliation path;
+13. records promoted/adjudication/skipped outcomes in the curation ledger;
+14. emits redacted attempted/completed/rejected counts and rejection categories;
+15. encrypts all source-bearing run material with authenticated AES-256-GCM;
+16. uploads only the encrypted source-bearing bundle plus redacted metadata.
 
 The workflow never requests the holdout partition.
 
@@ -118,22 +114,23 @@ An 8-task pilot is operationally acceptable only when all of the following are t
 
 - pinned source acquisition and re-verification succeed;
 - the source index rebuild succeeds;
-- exactly 8 requested tasks are selected;
+- exactly 8 requested tasks are selected and attempted;
 - no holdout source enters task scope;
 - Curator responses are execution-bound to model/config/adapter hashes;
+- task-local model/contract failures are recorded as bounded rejection categories and do not masquerade as valid responses;
 - Verifier execution is bound to the Curator manifest but remains answer-blind;
-- every cited support string is verbatim in retrieved evidence;
+- every cited support string in an accepted response is verbatim in retrieved evidence;
 - reconciliation completes without integrity exceptions;
-- every task ends as promoted, adjudication-required, or explicitly skipped;
+- every selected task is accounted for by an accepted response or a recorded task-local rejection, and reconciliation classifies all accepted Curator paths as promoted, adjudication-required, or skipped;
 - no source-bearing plaintext file appears in the uploaded artifact;
 - AES-GCM decryption succeeds with the correct passphrase and fails if the ciphertext is tampered;
 - no qualification or H4 gate changes as a side effect of the pilot.
 
 A high adjudication rate is not itself a pilot failure. It is evidence about task difficulty, retrieval quality, or model suitability.
 
-If a pilot fails with `model_output_reasoning_only`, first rerun the same deterministic task chunk with `completion_budget = auto`. If that still produces reasoning-only output, test an endpoint-supported lower reasoning effort before changing the benchmark prompt, retrieval policy, or output parser. Do not copy or transform private reasoning into the required JSON answer.
+Model-output and contract failures such as `model_output_invalid_json`, `model_output_reasoning_only`, `contract_gold_invalid`, `contract_support_not_verbatim`, or `contract_verbatim_not_supported` are task-local collection outcomes. They are counted in the execution manifest and redacted summary, and the pilot continues with the next task. Do not copy private reasoning into the answer, repair malformed JSON, coerce labels, or loosen source-verbatim/evidence/provenance constraints merely to improve the pass rate.
 
-If the model reaches valid JSON but violates the Curator/Verifier contract, the adapter reports a bounded `contract_*` diagnostic such as `contract_gold_invalid`, `contract_support_not_verbatim`, or `contract_verbatim_not_supported`. Keep the same deterministic task chunk and inference policy while diagnosing that class. Do not loosen source-verbatim, allowed-label, evidence-ID, or provenance constraints merely to make the pilot pass.
+Infrastructure and execution-integrity failures remain fatal: authentication errors, connection/provider failures, endpoint response-shape failures, source/index binding failures, partition violations, adapter protocol failures, and executor failures stop the workflow. A request exceeding the adapter's 600-second timeout is treated as an endpoint/infrastructure failure rather than silently converted into a benchmark rejection.
 
 ## Expansion sequence
 

@@ -12,4 +12,8 @@ Supported authentication headers are Bearer and `api-key`. JSON response mode is
 
 The model-facing output is deliberately smaller than a complete benchmark record. The adapter constructs deterministic fields such as benchmark ID, case ID, anchor source, `synthetic=false`, and annotation state. The model proposes only answer-bearing content and evidence selection; Factory reconciliation independently verifies locators, source bytes, model-family independence, policy gates, and exact gold agreement.
 
+The reference adapter follows provider-native inference behavior by default: it omits completion-token caps and reasoning controls unless an execution config explicitly supplies them. Its default HTTP request timeout is 600 seconds.
+
+For the manual non-holdout pilot, the executor uses one task per request and `task_failure_policy=record_rejection`. Model-output and role-contract failures are recorded as task-local collection outcomes, while authentication, provider/connection, source-integrity, adapter-protocol, and executor failures still stop the run. This keeps candidate acquisition simple without weakening the benchmark admission gate.
+
 The manual `H3.9.2 curation pilot` workflow runs only the non-holdout partition. Source-bearing outputs are stored only inside an authenticated AES-256-GCM encrypted artifact; the upload directory otherwise contains redacted hashes and counts.

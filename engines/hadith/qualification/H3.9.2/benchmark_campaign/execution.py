@@ -48,6 +48,15 @@ def _normalized_family(value: str) -> str:
     return " ".join(value.strip().casefold().split())
 
 
+def _collectable_task_failure(error_code: str | None) -> bool:
+    if not isinstance(error_code, str):
+        return False
+    return (
+        error_code.startswith("adapter:contract_")
+        or error_code.startswith("adapter:model_output_")
+    )
+
+
 def _require_nonempty_string(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
@@ -60,7 +69,7 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
         raise ValueError("agent execution config must be an object")
     allowed_top = {
         "schema_version", "role", "model_family", "model_ref", "adapter",
-        "batch_size", "timeout_seconds", "max_attempts",
+        "batch_size", "timeout_seconds", "max_attempts", "task_failure_policy",
     }
     unknown = set(cfg) - allowed_top
     if unknown:
@@ -117,12 +126,17 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
     batch_size = cfg.get("batch_size", 8)
     timeout_seconds = cfg.get("timeout_seconds", 900)
     max_attempts = cfg.get("max_attempts", 2)
+    task_failure_policy = cfg.get("task_failure_policy", "fail_fast")
     if not isinstance(batch_size, int) or not 1 <= batch_size <= 128:
         raise ValueError("batch_size must be an integer in [1, 128]")
     if not isinstance(timeout_seconds, int) or not 1 <= timeout_seconds <= 7200:
         raise ValueError("timeout_seconds must be an integer in [1, 7200]")
     if not isinstance(max_attempts, int) or not 1 <= max_attempts <= 3:
         raise ValueError("max_attempts must be an integer in [1, 3]")
+    if task_failure_policy not in {"fail_fast", "record_rejection"}:
+        raise ValueError("task_failure_policy must be fail_fast or record_rejection")
+    if task_failure_policy == "record_rejection" and batch_size != 1:
+        raise ValueError("record_rejection requires batch_size=1 so failures are task-local")
 
     return {
         "schema_version": 1,
@@ -137,6 +151,7 @@ def load_agent_execution_config(path: Path, expected_role: str | None = None) ->
         "batch_size": batch_size,
         "timeout_seconds": timeout_seconds,
         "max_attempts": max_attempts,
+        "task_failure_policy": task_failure_policy,
     }
 
 
@@ -174,6 +189,7 @@ def _config_binding(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         "batch_size": cfg["batch_size"],
         "timeout_seconds": cfg["timeout_seconds"],
         "max_attempts": cfg["max_attempts"],
+        "task_failure_policy": cfg["task_failure_policy"],
     }
 
 
@@ -425,6 +441,8 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
     actual_partition = _task_partition(tasks)
     if actual_partition != partition:
         raise ValueError(f"task partition {actual_partition} does not match requested {partition}")
+    if partition == "holdout" and cfg["task_failure_policy"] != "fail_fast":
+        raise ValueError("holdout execution requires task_failure_policy=fail_fast")
     if partition == "holdout":
         for path in (tasks_path, index_dir, output_path, manifest_path):
             enforce_partition_boundary(root, "holdout", path, custodian_mode)
@@ -474,9 +492,9 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
         identity["adapter_artifacts"],
     )
     completed = {str(r["task_id"]) for r in existing}
-    pending = [t for t in tasks if str(t["task_id"]) not in completed]
 
     batches: list[dict[str, Any]] = []
+    rejections: list[dict[str, Any]] = []
     if manifest_path.exists():
         if not resume:
             raise ValueError("execution manifest already exists; use resume to continue")
@@ -484,7 +502,110 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
         for key, value in identity.items():
             if previous.get(key) != value:
                 raise ValueError(f"execution manifest identity mismatch: {key}")
-        batches = list(previous.get("batches", []))
+        raw_batches = previous.get("batches", [])
+        if not isinstance(raw_batches, list):
+            raise ValueError("execution manifest batches must be a list")
+        batches = list(raw_batches)
+        raw_rejections = previous.get("rejections", [])
+        if not isinstance(raw_rejections, list):
+            raise ValueError("execution manifest rejections must be a list")
+        seen_rejections: set[str] = set()
+        for rejection in raw_rejections:
+            if not isinstance(rejection, dict):
+                raise ValueError("execution manifest rejection must be an object")
+            tid = str(rejection.get("task_id", ""))
+            if tid not in task_map:
+                raise ValueError(f"execution manifest rejection references unknown task: {tid}")
+            if tid in completed or tid in seen_rejections:
+                raise ValueError(f"execution manifest rejection duplicates completed/rejected task: {tid}")
+            if rejection.get("task_fingerprint") != task_map[tid].get("task_fingerprint"):
+                raise ValueError(f"execution manifest rejection fingerprint mismatch: {tid}")
+            if not _collectable_task_failure(rejection.get("error_code")):
+                raise ValueError(f"execution manifest rejection has non-collectable failure: {tid}")
+            batch_id = rejection.get("batch_id")
+            if not isinstance(batch_id, str) or re.fullmatch(r"[a-f0-9]{24}", batch_id) is None:
+                raise ValueError(f"execution manifest rejection batch_id invalid: {tid}")
+            expected_batch_id = sha256_bytes(canonical_json_bytes({
+                "role": role,
+                "config_sha256": config_sha,
+                "task_ids": [tid],
+                "task_fingerprints": [task_map[tid]["task_fingerprint"]],
+            }))[:24]
+            if batch_id != expected_batch_id:
+                raise ValueError(f"execution manifest rejection batch binding mismatch: {tid}")
+            request_sha = rejection.get("request_sha256")
+            if not isinstance(request_sha, str) or _SHA256_RE.fullmatch(request_sha) is None:
+                raise ValueError(f"execution manifest rejection request hash invalid: {tid}")
+            expected_request_sha = sha256_bytes(
+                canonical_json_bytes([task_map[tid]])
+            )
+            if request_sha != expected_request_sha:
+                raise ValueError(f"execution manifest rejection request binding mismatch: {tid}")
+            attempts_allowed = rejection.get("attempts_allowed")
+            attempts_used = rejection.get("attempts_used")
+            if attempts_allowed != cfg["max_attempts"]:
+                raise ValueError(f"execution manifest rejection attempt policy mismatch: {tid}")
+            if (
+                not isinstance(attempts_used, int)
+                or attempts_used < 1
+                or attempts_used > attempts_allowed
+            ):
+                raise ValueError(f"execution manifest rejection attempts invalid: {tid}")
+            seen_rejections.add(tid)
+            rejections.append(rejection)
+
+        for rejection in rejections:
+            matching_batches = [
+                batch for batch in batches
+                if (
+                    isinstance(batch, dict)
+                    and batch.get("outcome") == "rejected"
+                    and batch.get("batch_id") == rejection["batch_id"]
+                )
+            ]
+            if len(matching_batches) != 1:
+                raise ValueError(
+                    f"execution manifest rejection batch record mismatch: {rejection['task_id']}"
+                )
+            batch = matching_batches[0]
+            if (
+                batch.get("error_code") != rejection["error_code"]
+                or batch.get("request_sha256") != rejection["request_sha256"]
+                or batch.get("attempts_allowed") != rejection["attempts_allowed"]
+                or batch.get("attempts_used") != rejection["attempts_used"]
+            ):
+                raise ValueError(
+                    f"execution manifest rejection batch record mismatch: {rejection['task_id']}"
+                )
+
+    rejected_ids = {str(r["task_id"]) for r in rejections}
+    pending = [
+        t for t in tasks
+        if str(t["task_id"]) not in completed
+        and str(t["task_id"]) not in rejected_ids
+    ]
+
+    if cfg["task_failure_policy"] == "record_rejection" and not output_path.exists():
+        _write_jsonl_atomic(output_path, existing)
+
+    def persist_manifest() -> None:
+        rejection_counts: dict[str, int] = {}
+        for rejection in rejections:
+            code = str(rejection["error_code"])
+            rejection_counts[code] = rejection_counts.get(code, 0) + 1
+        attempted = len(existing) + len(rejections)
+        write_json(manifest_path, {
+            **identity,
+            "task_count": len(tasks),
+            "attempted_task_count": attempted,
+            "completed_task_count": len(existing),
+            "rejected_task_count": len(rejections),
+            "pending_task_count": len(tasks) - attempted,
+            "rejection_counts": dict(sorted(rejection_counts.items())),
+            "output_sha256": sha256_file(output_path) if output_path.exists() else None,
+            "batches": batches,
+            "rejections": rejections,
+        })
 
     batch_size = cfg["batch_size"]
     for offset in range(0, len(pending), batch_size):
@@ -554,7 +675,35 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                     break
                 except subprocess.TimeoutExpired:
                     last_error_code = "timeout"
+
         if stamped is None:
+            if (
+                cfg["task_failure_policy"] == "record_rejection"
+                and len(batch) == 1
+                and _collectable_task_failure(last_error_code)
+            ):
+                rejection = {
+                    "task_id": task_ids[0],
+                    "task_fingerprint": batch[0]["task_fingerprint"],
+                    "batch_id": batch_id,
+                    "error_code": last_error_code,
+                    "request_sha256": request_sha,
+                    "attempts_allowed": cfg["max_attempts"],
+                    "attempts_used": attempt_used,
+                }
+                rejections.append(rejection)
+                batches.append({
+                    "batch_id": batch_id,
+                    "task_count": 1,
+                    "task_ids_sha256": sha256_bytes(canonical_json_bytes(task_ids)),
+                    "request_sha256": request_sha,
+                    "outcome": "rejected",
+                    "error_code": last_error_code,
+                    "attempts_allowed": cfg["max_attempts"],
+                    "attempts_used": attempt_used,
+                })
+                persist_manifest()
+                continue
             raise RuntimeError(
                 f"adapter batch failed after {cfg['max_attempts']} attempts: {batch_id}: {last_error_code or 'unknown_error'}"
             )
@@ -567,26 +716,13 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
             "task_ids_sha256": sha256_bytes(canonical_json_bytes(task_ids)),
             "request_sha256": request_sha,
             "responses_sha256": sha256_bytes(canonical_json_bytes(stamped)),
+            "outcome": "accepted",
             "attempts_allowed": cfg["max_attempts"],
             "attempts_used": attempt_used,
         })
-        write_json(manifest_path, {
-            **identity,
-            "task_count": len(tasks),
-            "completed_task_count": len(existing),
-            "pending_task_count": len(tasks) - len(existing),
-            "output_sha256": sha256_file(output_path),
-            "batches": batches,
-        })
+        persist_manifest()
 
     if not manifest_path.exists():
-        write_json(manifest_path, {
-            **identity,
-            "task_count": len(tasks),
-            "completed_task_count": len(existing),
-            "pending_task_count": len(tasks) - len(existing),
-            "output_sha256": sha256_file(output_path) if output_path.exists() else None,
-            "batches": batches,
-        })
+        persist_manifest()
 
     return load_json(manifest_path)
