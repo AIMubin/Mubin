@@ -324,6 +324,18 @@ jobs:
           def load(path):
               return json.loads(path.read_text(encoding="utf-8"))
 
+          def response_counts(path):
+              counts = {"candidate": 0, "no_candidate": 0}
+              if not path.exists():
+                  return counts
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  if not line.strip():
+                      continue
+                  status = json.loads(line).get("status")
+                  if status in counts:
+                      counts[status] += 1
+              return counts
+
           curator = load(run / "curator-run.json")
           verifier_path = run / "verifier-run.json"
           verifier = load(verifier_path) if verifier_path.exists() else None
@@ -339,17 +351,32 @@ jobs:
               "curator": {
                   "config_sha256": curator["config_sha256"],
                   "adapter_artifacts": curator["adapter_artifacts"],
+                  "attempted_task_count": curator["attempted_task_count"],
                   "completed_task_count": curator["completed_task_count"],
+                  "rejected_task_count": curator["rejected_task_count"],
+                  "pending_task_count": curator["pending_task_count"],
+                  "rejection_counts": curator["rejection_counts"],
+                  "response_counts": response_counts(run / "curator-responses.jsonl"),
                   "output_sha256": curator["output_sha256"],
               },
               "verifier": ({
                   "config_sha256": verifier["config_sha256"],
                   "adapter_artifacts": verifier["adapter_artifacts"],
+                  "attempted_task_count": verifier["attempted_task_count"],
                   "completed_task_count": verifier["completed_task_count"],
+                  "rejected_task_count": verifier["rejected_task_count"],
+                  "pending_task_count": verifier["pending_task_count"],
+                  "rejection_counts": verifier["rejection_counts"],
+                  "response_counts": response_counts(run / "verifier-responses.jsonl"),
                   "output_sha256": verifier["output_sha256"],
                   "independent_curator_manifest_sha256": verifier["independent_curator_manifest_sha256"],
               } if verifier is not None else {
+                  "attempted_task_count": 0,
                   "completed_task_count": 0,
+                  "rejected_task_count": 0,
+                  "pending_task_count": 0,
+                  "rejection_counts": {},
+                  "response_counts": {"candidate": 0, "no_candidate": 0},
                   "not_run_reason": "no_curator_candidates",
               }),
               "reconciliation": reconcile,
