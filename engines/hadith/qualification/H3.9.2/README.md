@@ -18,7 +18,7 @@ Total reviewed qualification target: **1,280 cases**.
 
 R4 adds an executable, provider-neutral Benchmark Factory for source-grounded AI curation. It expands the frozen quotas into exactly 1,280 slots, builds tasks from Git-blob-verified source segments, separates Curator AI-A from blind Verifier AI-B, and routes disagreements or risk-tier 3 judgments to adjudication.
 
-The full operational contract is in [FACTORY.md](FACTORY.md). AI agreement is never authority by itself: automatic promotion is limited to source-attributed cases with literal human-authored support and independent evidence verification.
+The full operational contract is in [FACTORY.md](FACTORY.md). The first live Curator/Verifier execution is documented in [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md). AI agreement is never authority by itself: automatic promotion is limited to source-attributed cases with literal human-authored support and independent evidence verification.
 
 The default acquisition/index/task path is `non_holdout`. Any holdout-bearing operation requires explicit custodian mode and output outside the repository checkout, so H4 development can proceed without consuming the preregistered final-holdout source partition.
 
