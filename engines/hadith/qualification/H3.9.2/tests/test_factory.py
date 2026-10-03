@@ -338,6 +338,16 @@ class FactoryTests(unittest.TestCase):
         }, verifier_family, "b@1", "b")
         return curator, verifier
 
+    def _refresh_raw_response_hash(self, response: dict) -> None:
+        raw = dict(response)
+        raw.pop("task_fingerprint", None)
+        raw.pop("model_family", None)
+        raw.pop("model_ref", None)
+        raw.pop("execution_binding", None)
+        response["execution_binding"]["raw_response_sha256"] = sha256_bytes(
+            canonical_json_bytes(raw)
+        )
+
     def _reconcile(self, root: Path, task: dict, cache: Path, curator: dict, verifier: dict):
         tasks = root / "factory-work" / "tasks-reconcile.jsonl"
         cr = root / "factory-work" / "curator-reconcile.jsonl"
@@ -409,6 +419,7 @@ class FactoryTests(unittest.TestCase):
             curator["candidate"]["source_refs"][0]["locator"] = (
                 f"gitblob:{blob}#char=1:{len(excerpt) + 1}"
             )
+            self._refresh_raw_response_hash(curator)
             report, _, adjudication, _ = self._reconcile(
                 root, task, cache, curator, verifier
             )
@@ -591,6 +602,8 @@ class FactoryTests(unittest.TestCase):
             curator, verifier = self._responses(task, excerpt)
             curator["candidate"]["payload"]["gold"] = {"label": "outside"}
             verifier["answer"]["gold"] = {"label": "outside"}
+            self._refresh_raw_response_hash(curator)
+            self._refresh_raw_response_hash(verifier)
             report, _, adjudication, _ = self._reconcile(root, task, cache, curator, verifier)
             self.assertEqual(report["promoted_count"], 0)
             self.assertTrue(
