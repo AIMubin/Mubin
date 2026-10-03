@@ -398,6 +398,7 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         cases = [
             (None, "contract_supports_missing"),
             ([42], "contract_support_item_invalid"),
+            ([{"evidence_id": 1, "support_text": "x"}], "contract_evidence_id_invalid"),
             ([{"evidence_id": "EXFIL", "support_text": "x"}], "contract_evidence_id_invalid"),
             ([{"evidence_id": "E01", "support_text": ""}], "contract_support_text_missing"),
         ]
@@ -407,6 +408,41 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                     _supports_from_model(value, evidence)
                 self.assertEqual(ctx.exception.code, code)
                 self.assertNotIn("EXFIL", ctx.exception.code)
+
+    def test_no_candidate_reason_is_required_not_repaired(self):
+        task = self._task()
+        with self.assertRaises(ModelContractError) as ctx:
+            _curator_row(task, {"status": "no_candidate"}, [])
+        self.assertEqual(ctx.exception.code, "contract_reason_missing")
+
+        verifier_task = self._task()
+        verifier_task["candidate_input"] = {"question": "q"}
+        with self.assertRaises(ModelContractError) as ctx:
+            _verifier_row(verifier_task, {"status": "no_candidate", "reason": ""}, [])
+        self.assertEqual(ctx.exception.code, "contract_reason_missing")
+
+    def test_multilabel_gold_rejects_type_coercion(self):
+        task = self._task()
+        task["task_type"] = "multilabel"
+        task["allowed_labels"] = ["1", "yes"]
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:20",
+            "excerpt": "قال الإمام سمع من شيخه",
+        }]
+        obj = {
+            "status": "candidate",
+            "family_id": "family-x",
+            "input": {"question": "q"},
+            "gold": {"labels": [1]},
+            "mode": "direct_extract",
+            "verbatim_answer": "سمع من شيخه",
+            "supports": [{"evidence_id": "E01", "support_text": "سمع من شيخه"}],
+        }
+        with self.assertRaises(ModelContractError) as ctx:
+            _curator_row(task, obj, evidence)
+        self.assertEqual(ctx.exception.code, "contract_gold_invalid")
 
     def test_curator_contract_diagnostics_identify_semantic_failure_class(self):
         task = self._task()
