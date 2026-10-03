@@ -300,6 +300,7 @@ def _validate_raw_adapter_rows(rows: list[dict[str, Any]], batch: list[dict[str,
 
 def _stamp_rows(raw_rows: list[dict[str, Any]], batch: list[dict[str, Any]],
                 cfg: dict[str, Any], config_sha256: str, batch_id: str,
+                adapter_command_sha256: str,
                 adapter_artifacts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     tasks = {str(t["task_id"]): t for t in batch}
     stamped: list[dict[str, Any]] = []
@@ -315,6 +316,7 @@ def _stamp_rows(raw_rows: list[dict[str, Any]], batch: list[dict[str, Any]],
             "config_sha256": config_sha256,
             "batch_id": batch_id,
             "raw_response_sha256": sha256_bytes(canonical_json_bytes(raw)),
+            "adapter_command_sha256": adapter_command_sha256,
             "adapter_artifacts": adapter_artifacts,
         }
         stamped.append(row)
@@ -347,6 +349,8 @@ def _validate_existing_responses(rows: list[dict[str, Any]], tasks: dict[str, di
             raise ValueError(f"existing response execution binding mismatch: {tid}")
         if binding.get("protocol_version") != 1 or not isinstance(binding.get("batch_id"), str):
             raise ValueError(f"existing response execution metadata invalid: {tid}")
+        if not isinstance(binding.get("adapter_command_sha256"), str) or _SHA256_RE.fullmatch(binding["adapter_command_sha256"]) is None:
+            raise ValueError(f"existing response adapter command binding missing: {tid}")
         artifacts = binding.get("adapter_artifacts")
         if not isinstance(artifacts, list) or not artifacts:
             raise ValueError(f"existing response adapter artifact binding missing: {tid}")
@@ -504,6 +508,7 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                         continue
                     stamped = _stamp_rows(
                         checked, batch, cfg, config_sha, batch_id,
+                        identity["adapter_command_sha256"],
                         identity["adapter_artifacts"],
                     )
                     break

@@ -768,6 +768,8 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             "verifier_model_ref": verifier["model_ref"],
             "curator_response_sha256": curator_response_sha256,
             "verifier_response_sha256": verifier_response_sha256,
+            "curator_execution_binding": curator.get("execution_binding"),
+            "verifier_execution_binding": verifier.get("execution_binding"),
             "verifier_supports": verifier_supports,
             "agreement": "exact_gold_match",
             "task_fingerprint": task["task_fingerprint"],
