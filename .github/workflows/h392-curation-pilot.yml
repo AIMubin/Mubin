@@ -262,7 +262,7 @@ jobs:
             --config "$RUN_DIR/curator-config.json" \
             --out "$RUN_DIR/curator-responses.jsonl" \
             --manifest "$RUN_DIR/curator-run.json" \
-            > "$REDACTED_DIR/curator-execution-report.json"
+            > /dev/null
 
       - name: Prepare structurally blind Verifier tasks
         id: verifier_tasks
@@ -289,7 +289,7 @@ jobs:
             --out "$RUN_DIR/verifier-responses.jsonl" \
             --manifest "$RUN_DIR/verifier-run.json" \
             --independent-from-manifest "$RUN_DIR/curator-run.json" \
-            > "$REDACTED_DIR/verifier-execution-report.json"
+            > /dev/null
 
       - name: Materialize empty Verifier response set when Curator found no candidates
         if: steps.verifier_tasks.outputs.count == '0'
