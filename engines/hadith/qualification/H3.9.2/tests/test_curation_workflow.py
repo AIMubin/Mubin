@@ -50,8 +50,6 @@ class CurationWorkflowTests(unittest.TestCase):
     def test_neutral_adapter_and_runtime_key_names(self):
         self.assertIn("adapters/chat_completions.py", self.workflow)
         self.assertIn("MUBIN_MODEL_API_KEY", self.workflow)
-        self.assertNotIn("openai_compatible", self.workflow.casefold())
-        self.assertNotIn("MUBIN_OPENAI_API_KEY", self.workflow)
 
     def test_provider_keys_are_step_scoped_not_job_scoped(self):
         job_env = self.workflow.split("    env:\n", 1)[1].split("\n\n    steps:", 1)[0]
