@@ -296,7 +296,8 @@ jobs:
 
       - name: Materialize empty Verifier response set when Curator found no candidates
         if: steps.verifier_tasks.outputs.count == '0'
-        run: : > "$RUN_DIR/verifier-responses.jsonl"
+        run: |
+          : > "$RUN_DIR/verifier-responses.jsonl"
 
       - name: Reconcile source evidence and policy gates
         run: |

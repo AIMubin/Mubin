@@ -30,6 +30,9 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn(".aesgcm", self.workflow)
         self.assertNotIn("aes-256-cbc", self.workflow)
 
+    def test_run_steps_do_not_use_invalid_inline_colon_redirection(self):
+        self.assertNotIn("run: : >", self.workflow)
+
     def test_reconcile_uses_current_cli_flags(self):
         self.assertIn("--adjudication-out", self.workflow)
         self.assertIn("--ledger-out", self.workflow)
