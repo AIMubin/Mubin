@@ -39,14 +39,46 @@ on:
           - "off"
           - json_object
         default: "off"
-      curator_max_tokens:
-        description: Maximum Curator completion tokens
+      curator_completion_budget:
+        description: Curator completion budget; auto omits an explicit token cap
         required: true
-        default: "4096"
-      verifier_max_tokens:
-        description: Maximum Verifier completion tokens
+        default: "auto"
+      verifier_completion_budget:
+        description: Verifier completion budget; auto omits an explicit token cap
         required: true
-        default: "4096"
+        default: "auto"
+      curator_completion_budget_field:
+        description: Curator endpoint token-budget field when an explicit budget is used
+        type: choice
+        options:
+          - max_tokens
+          - max_completion_tokens
+        default: max_tokens
+      verifier_completion_budget_field:
+        description: Verifier endpoint token-budget field when an explicit budget is used
+        type: choice
+        options:
+          - max_tokens
+          - max_completion_tokens
+        default: max_tokens
+      curator_reasoning_effort:
+        description: Curator reasoning control; provider_default sends no reasoning parameter
+        type: choice
+        options:
+          - provider_default
+          - low
+          - medium
+          - high
+        default: provider_default
+      verifier_reasoning_effort:
+        description: Verifier reasoning control; provider_default sends no reasoning parameter
+        type: choice
+        options:
+          - provider_default
+          - low
+          - medium
+          - high
+        default: provider_default
 
 permissions:
   contents: read
@@ -69,8 +101,12 @@ jobs:
       VERIFIER_AUTH_STYLE: ${{ inputs.verifier_auth_style }}
       CURATOR_JSON_MODE: ${{ inputs.curator_json_mode }}
       VERIFIER_JSON_MODE: ${{ inputs.verifier_json_mode }}
-      CURATOR_MAX_TOKENS: ${{ inputs.curator_max_tokens }}
-      VERIFIER_MAX_TOKENS: ${{ inputs.verifier_max_tokens }}
+      CURATOR_COMPLETION_BUDGET: ${{ inputs.curator_completion_budget }}
+      VERIFIER_COMPLETION_BUDGET: ${{ inputs.verifier_completion_budget }}
+      CURATOR_COMPLETION_BUDGET_FIELD: ${{ inputs.curator_completion_budget_field }}
+      VERIFIER_COMPLETION_BUDGET_FIELD: ${{ inputs.verifier_completion_budget_field }}
+      CURATOR_REASONING_EFFORT: ${{ inputs.curator_reasoning_effort }}
+      VERIFIER_REASONING_EFFORT: ${{ inputs.verifier_reasoning_effort }}
 
     steps:
       - name: Checkout Mubin
@@ -127,10 +163,12 @@ jobs:
               raise SystemExit("TASK_LIMIT must be in [1, 64]")
           if offset + limit > 896:
               raise SystemExit("TASK_OFFSET + TASK_LIMIT exceeds the 896 non-holdout tasks")
-          for name in ("CURATOR_MAX_TOKENS", "VERIFIER_MAX_TOKENS"):
-              value = int(os.environ[name])
-              if value < 256 or value > 8192:
-                  raise SystemExit(f"{name} must be in [256, 8192]")
+          for name in ("CURATOR_COMPLETION_BUDGET", "VERIFIER_COMPLETION_BUDGET"):
+              value = os.environ[name].strip().casefold()
+              if value == "auto":
+                  continue
+              if not value.isdigit() or int(value) < 1:
+                  raise SystemExit(f"{name} must be 'auto' or a positive integer")
           PY
 
       - name: Build isolated ephemeral workspace
@@ -213,7 +251,10 @@ jobs:
           run = Path(os.environ["RUN_DIR"])
           adapter = "adapters/chat_completions.py"
 
-          def config(role, family, model, base_url, auth_style, json_mode, max_tokens):
+          def config(
+              role, family, model, base_url, auth_style, json_mode,
+              completion_budget, completion_budget_field, reasoning_effort,
+          ):
               return {
                   "schema_version": 1,
                   "role": role,
@@ -229,7 +270,9 @@ jobs:
                           "--base-url", base_url,
                           "--auth-style", auth_style,
                           "--json-mode", json_mode,
-                          "--max-tokens", str(max_tokens),
+                          "--completion-budget", completion_budget,
+                          "--completion-budget-field", completion_budget_field,
+                          "--reasoning-effort", reasoning_effort,
                           "--max-evidence-sources", "12",
                           "--max-excerpt-chars", "1800",
                       ],
@@ -248,7 +291,9 @@ jobs:
               os.environ["CURATOR_ENDPOINT"],
               os.environ["CURATOR_AUTH_STYLE"],
               os.environ["CURATOR_JSON_MODE"],
-              int(os.environ["CURATOR_MAX_TOKENS"]),
+              os.environ["CURATOR_COMPLETION_BUDGET"],
+              os.environ["CURATOR_COMPLETION_BUDGET_FIELD"],
+              os.environ["CURATOR_REASONING_EFFORT"],
           )
           verifier = config(
               "verifier",
@@ -257,7 +302,9 @@ jobs:
               os.environ["VERIFIER_ENDPOINT"],
               os.environ["VERIFIER_AUTH_STYLE"],
               os.environ["VERIFIER_JSON_MODE"],
-              int(os.environ["VERIFIER_MAX_TOKENS"]),
+              os.environ["VERIFIER_COMPLETION_BUDGET"],
+              os.environ["VERIFIER_COMPLETION_BUDGET_FIELD"],
+              os.environ["VERIFIER_REASONING_EFFORT"],
           )
           for name, value in (("curator-config.json", curator), ("verifier-config.json", verifier)):
               (run / name).write_text(
