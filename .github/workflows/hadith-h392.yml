@@ -28,5 +28,5 @@ jobs:
           cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements.txt
-      - run: python -m compileall -q benchmark_campaign tests
+      - run: python -m compileall -q benchmark_campaign adapters tests
       - run: python -m unittest discover -s tests -v

@@ -535,7 +535,7 @@ SECURITY AND EPISTEMIC RULES:
 - Never invent Quran text, hadith text, isnad, narrator facts, quotations, grades, rulings, or scholarly attributions.
 - If literal evidence is insufficient, return status=no_candidate.
 - Output exactly one JSON object and no markdown, commentary, or chain-of-thought.
-- Prefer the first non-whitespace character to be { and the last non-whitespace character to be }.
+- Prefer the first non-whitespace character to be {{ and the last non-whitespace character to be }}.
 - Cite evidence only by the provided evidence_id and copy support_text verbatim from its excerpt.
 
 ROLE CONTRACT:
