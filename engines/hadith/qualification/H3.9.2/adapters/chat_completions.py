@@ -360,6 +360,15 @@ def _extract_message_content(response: dict[str, Any]) -> str:
             return "".join(parts)
     raise ValueError("model response contains no textual message content")
 
+
+def _empty_output_diagnostic(finish_reason: str | None, has_reasoning: bool) -> str:
+    if finish_reason in {"length", "max_tokens"}:
+        return "model_output_truncated"
+    if has_reasoning:
+        return "model_output_reasoning_only"
+    return "model_output_empty"
+
+
 def _parse_completion_budget(value: str) -> int | None:
     normalized = value.strip().casefold()
     if normalized == "auto":
@@ -723,13 +732,15 @@ def main() -> int:
         try:
             text = _extract_message_content(response)
         except ValueError:
-            if has_reasoning:
-                raise AdapterDiagnosticError("model_output_reasoning_only") from None
+            if has_reasoning or finish_reason in {"length", "max_tokens"}:
+                raise AdapterDiagnosticError(
+                    _empty_output_diagnostic(finish_reason, has_reasoning)
+                ) from None
             raise AdapterDiagnosticError("response_shape_invalid") from None
         if not text.strip():
-            if has_reasoning:
-                raise AdapterDiagnosticError("model_output_reasoning_only")
-            raise AdapterDiagnosticError("model_output_empty")
+            raise AdapterDiagnosticError(
+                _empty_output_diagnostic(finish_reason, has_reasoning)
+            )
         try:
             model_obj, _parse_mode = _parse_model_json_object(text)
         except AdapterDiagnosticError as exc:
