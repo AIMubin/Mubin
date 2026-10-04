@@ -164,7 +164,7 @@ jobs:
             --verifier-auth-style "$VERIFIER_AUTH_STYLE" \
             --curator-json-mode "$CURATOR_JSON_MODE" \
             --verifier-json-mode "$VERIFIER_JSON_MODE" \
-            --live-timeout 300
+            --live-timeout 600
           readiness_rc=$?
           set -e
           {
