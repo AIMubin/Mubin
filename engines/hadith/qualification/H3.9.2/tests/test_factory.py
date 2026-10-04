@@ -431,13 +431,16 @@ class FactoryTests(unittest.TestCase):
             canonical_json_bytes(raw)
         )
 
-    def _reconcile(self, root: Path, task: dict, cache: Path, curator: dict, verifier: dict):
+    def _reconcile(
+        self, root: Path, task: dict, cache: Path,
+        curator: dict, verifier: dict | None,
+    ):
         tasks = root / "factory-work" / "tasks-reconcile.jsonl"
         cr = root / "factory-work" / "curator-reconcile.jsonl"
         vr = root / "factory-work" / "verifier-reconcile.jsonl"
         dump_jsonl(tasks, [task])
         dump_jsonl(cr, [curator])
-        dump_jsonl(vr, [verifier])
+        dump_jsonl(vr, [verifier] if verifier is not None else [])
         reviewed = root / "staging"
         adjudication = root / "factory-work" / "adjudication.jsonl"
         ledger = root / "factory-work" / "CURATION_LEDGER.jsonl"
@@ -538,6 +541,31 @@ class FactoryTests(unittest.TestCase):
             self.assertEqual(report["promoted_count"], 0)
             self.assertEqual(report["adjudication_count"], 1)
             self.assertFalse((reviewed / "b1" / "reviewed.jsonl").exists())
+            self.assertEqual(
+                load_jsonl(adjudication)[0]["reason"],
+                "curator_requested_adjudication",
+            )
+            self.assertEqual(
+                report["adjudication_reason_counts"],
+                {"curator_requested_adjudication": 1},
+            )
+
+    def test_curator_requested_adjudication_precedes_missing_verifier(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, _ = self._responses(task, excerpt)
+            curator["candidate"]["answer_provenance"]["mode"] = "adjudication_required"
+            curator["candidate"]["answer_provenance"].pop("verbatim_answer", None)
+            self._refresh_raw_response_hash(curator)
+
+            report, _, adjudication, _ = self._reconcile(
+                root, task, cache, curator, None
+            )
+            self.assertEqual(report["promoted_count"], 0)
+            self.assertEqual(report["adjudication_count"], 1)
             self.assertEqual(
                 load_jsonl(adjudication)[0]["reason"],
                 "curator_requested_adjudication",
@@ -832,6 +860,9 @@ class FactoryTests(unittest.TestCase):
             cache, _, task = self._build_one_task(root, risk_tier=3, auto_promotion=False)
             excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
             curator, verifier = self._responses(task, excerpt)
+            curator["candidate"]["answer_provenance"]["mode"] = "adjudication_required"
+            curator["candidate"]["answer_provenance"].pop("verbatim_answer", None)
+            self._refresh_raw_response_hash(curator)
             report, _, adjudication, _ = self._reconcile(root, task, cache, curator, verifier)
             self.assertEqual(report["promoted_count"], 0)
             self.assertEqual(
