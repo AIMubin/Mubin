@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import math
 import os
@@ -438,10 +439,16 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
                 raise AdapterDiagnosticError("response_too_large")
     except urllib.error.HTTPError as exc:
         raise AdapterDiagnosticError(f"http_{exc.code}") from None
-    except urllib.error.URLError:
-        raise AdapterDiagnosticError("connection_failed") from None
     except TimeoutError:
         raise AdapterDiagnosticError("endpoint_timeout") from None
+    except urllib.error.URLError:
+        raise AdapterDiagnosticError("connection_failed") from None
+    except (ConnectionError, ssl.SSLError, http.client.HTTPException, OSError):
+        # urllib may surface read-stage disconnects outside URLError (for
+        # example IncompleteRead/RemoteDisconnected/ConnectionResetError).
+        # Reduce them to one content-safe transport diagnostic rather than
+        # leaking provider/socket details or misclassifying them as code bugs.
+        raise AdapterDiagnosticError("connection_failed") from None
     try:
         parsed = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
@@ -586,7 +593,10 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
 
     risk_tier = int(task.get("risk_tier", 0))
     mode = model_obj.get("mode")
-    if mode not in {"direct_extract", "adjudication_required"}:
+    if (
+        not isinstance(mode, str)
+        or mode not in {"direct_extract", "adjudication_required"}
+    ):
         raise ModelContractError(
             "contract_mode_invalid",
             "Curator mode must be direct_extract or adjudication_required",
