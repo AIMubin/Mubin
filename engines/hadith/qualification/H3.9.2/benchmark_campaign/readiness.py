@@ -314,25 +314,49 @@ def _required_env(name: str) -> str:
     return value
 
 
-def run_readiness(
+def _offline_report(root: Path) -> dict[str, Any]:
+    offline = _offline_suite(root)
+    return {
+        "schema_version": 1,
+        "campaign_id": "H3.9.2",
+        "kind": "offline_readiness_gate",
+        "github_sha": os.environ.get("GITHUB_SHA"),
+        "offline_protocol": offline,
+        "passed": bool(offline["passed"]),
+    }
+
+
+def _load_bound_offline_report(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("offline readiness report must be an object")
+    if value.get("kind") != "offline_readiness_gate" or value.get("passed") is not True:
+        raise ValueError("offline readiness gate has not passed")
+    current_sha = os.environ.get("GITHUB_SHA")
+    recorded_sha = value.get("github_sha")
+    if current_sha and recorded_sha and current_sha != recorded_sha:
+        raise ValueError("offline readiness report is bound to a different GitHub SHA")
+    return value
+
+
+def run_live_readiness(
     root: Path,
+    offline_report: dict[str, Any],
     curator_auth_style: str,
     verifier_auth_style: str,
     curator_json_mode: str,
     verifier_json_mode: str,
     live_timeout: int,
 ) -> dict[str, Any]:
-    offline = _offline_suite(root)
     report: dict[str, Any] = {
         "schema_version": 1,
         "campaign_id": "H3.9.2",
         "kind": "comprehensive_readiness_gate",
-        "offline_protocol": offline,
+        "github_sha": os.environ.get("GITHUB_SHA"),
+        "offline_protocol": offline_report["offline_protocol"],
         "live_canaries": [],
         "ready": False,
     }
-    if not offline["passed"]:
-        return report
 
     curator_endpoint = _required_env("MUBIN_READINESS_CURATOR_ENDPOINT")
     curator_model = _required_env("MUBIN_READINESS_CURATOR_MODEL_REF")
@@ -377,6 +401,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("--root", type=Path, default=Path("."))
     p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--offline-only", action="store_true")
+    p.add_argument("--offline-report", type=Path)
     p.add_argument("--curator-auth-style", choices=["bearer", "api-key"], default="bearer")
     p.add_argument("--verifier-auth-style", choices=["bearer", "api-key"], default="bearer")
     p.add_argument("--curator-json-mode", choices=["off", "json_object"], default="off")
@@ -392,35 +418,70 @@ def main(argv: list[str] | None = None) -> int:
     if args.live_timeout < 1 or args.live_timeout > 600:
         raise SystemExit("--live-timeout must be in [1, 600]")
 
+    if args.offline_only and args.offline_report is not None:
+        raise SystemExit("--offline-only and --offline-report are mutually exclusive")
+
     try:
-        report = run_readiness(
-            root,
-            args.curator_auth_style,
-            args.verifier_auth_style,
-            args.curator_json_mode,
-            args.verifier_json_mode,
-            args.live_timeout,
-        )
-    except ValueError as exc:
+        if args.offline_only:
+            report = _offline_report(root)
+            success = bool(report["passed"])
+        else:
+            if args.offline_report is None:
+                offline = _offline_report(root)
+                if not offline["passed"]:
+                    report = {
+                        "schema_version": 1,
+                        "campaign_id": "H3.9.2",
+                        "kind": "comprehensive_readiness_gate",
+                        "github_sha": os.environ.get("GITHUB_SHA"),
+                        "offline_protocol": offline["offline_protocol"],
+                        "live_canaries": [],
+                        "ready": False,
+                    }
+                    success = False
+                else:
+                    report = run_live_readiness(
+                        root, offline,
+                        args.curator_auth_style,
+                        args.verifier_auth_style,
+                        args.curator_json_mode,
+                        args.verifier_json_mode,
+                        args.live_timeout,
+                    )
+                    success = bool(report["ready"])
+            else:
+                offline_path = (
+                    args.offline_report
+                    if args.offline_report.is_absolute()
+                    else root / args.offline_report
+                )
+                offline = _load_bound_offline_report(offline_path)
+                report = run_live_readiness(
+                    root, offline,
+                    args.curator_auth_style,
+                    args.verifier_auth_style,
+                    args.curator_json_mode,
+                    args.verifier_json_mode,
+                    args.live_timeout,
+                )
+                success = bool(report["ready"])
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
         report = {
             "schema_version": 1,
             "campaign_id": "H3.9.2",
             "kind": "comprehensive_readiness_gate",
+            "github_sha": os.environ.get("GITHUB_SHA"),
             "offline_protocol": {"passed": False},
             "live_canaries": [],
             "ready": False,
             "diagnostic": "readiness_configuration_invalid",
         }
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        print(json.dumps(report, indent=2, sort_keys=True))
-        print(str(exc), file=sys.stderr)
-        return 2
+        success = False
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, sort_keys=True))
-    return 0 if report["ready"] else 2
+    return 0 if success else 2
 
 
 if __name__ == "__main__":
