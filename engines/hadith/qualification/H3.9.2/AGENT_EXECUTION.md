@@ -132,7 +132,7 @@ offline compile + all tests
 
 The execution layer validates transport/provenance integrity. It does not elevate AI output into authority; promotion remains governed by Factory source verification, risk policy, and adjudication.
 
-Factory agreement follows the preregistered evaluation semantics. Classification gold remains exact-JSON agreement. Multilabel gold compares the `labels` collection as a mathematical set, because holdout evaluation is set-based; label ordering therefore cannot create a false Curator/Verifier disagreement. Any future non-`labels` fields in a multilabel gold object remain exact/canonical and must still agree.
+Factory agreement follows the preregistered evaluation semantics. Classification gold remains exact-JSON agreement. Multilabel gold compares the `labels` collection as a mathematical set, because holdout evaluation is set-based; label ordering therefore cannot create a false Curator/Verifier disagreement. Any future non-`labels` fields in a multilabel gold object remain exact/canonical and must still agree. The persisted `factory_verification.agreement="exact_gold_match"` means exact agreement under the benchmark's task semantics; for multilabel tasks this is exact set equality, not array-order equality.
 
 `adjudication_required` is a Curator routing disposition, not a final benchmark-record provenance mode. For auto-promotable risk tiers, reconciliation routes such candidates directly to adjudication with the bounded reason `curator_requested_adjudication` before final record sealing. Risk-tier policy gates remain authoritative for non-auto-promotable tasks.
 
