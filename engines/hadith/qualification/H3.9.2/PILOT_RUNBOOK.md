@@ -55,26 +55,44 @@ The pilot intentionally exposes no completion-budget or reasoning-effort control
 
 Endpoint and model identity remain loaded from protected Secrets and are not workflow inputs. The workflow validates internally that the two protected model-family identifiers differ before either model is invoked.
 
+## Comprehensive readiness gate
+
+A manual dispatch is now a **single gated operation**. Do not run a separate sequence of speculative pilot reruns to discover basic protocol or transport defects. The workflow also refuses non-`main` or stale reruns whose checked-out SHA is no longer the current `main`, preventing validation of superseded protocol code.
+
+Before the real non-holdout chunk is touched, the same workflow automatically runs:
+
+1. the complete compile + unit/integration suite with **no provider secrets in scope**;
+2. live Curator canaries using the production adapter, streaming transport, selected auth/JSON mode, twelve bounded synthetic evidence sources, and both classification and multilabel contracts;
+3. live Verifier canaries in parallel using the same production transport surface and both classification and multilabel contracts.
+
+The four live role-by-task-type canaries use synthetic readiness evidence only, but deliberately reuse real benchmark IDs and preregistered label vocabularies so exact production label shapes are exercised. Their request timeout is the same 600 seconds used by the real pilot. They do not read holdout data, do not become benchmark records, and do not assert scholarly authority. Their only purpose is to prove that the current code, contracts, endpoint capabilities, streaming parser, JSON handling, and model response discipline can complete a simple evidence-bound request before expensive real curation begins.
+
+The readiness report contains only redacted role/task type, pass status, attempts used, duration, and bounded diagnostic codes. It contains no endpoint, model identity, API key, source-bearing benchmark text, or model reasoning. A `no_candidate` canary is a readiness failure because the synthetic evidence is intentionally sufficient and the gate must exercise the candidate path.
+
+Only when `ready=true` does the workflow continue automatically into pinned source acquisition, the frozen 896-task reconstruction, the selected real chunk, independent verification, reconciliation, encryption, and artifact upload. Thus one workflow dispatch covers readiness **and** the real pilot end to end.
+
 ## What the workflow does
 
 For every dispatch, the runner:
 
-1. checks out Mubin;
-2. acquires only the pinned `non_holdout` source partition;
-3. re-verifies every source against its Git blob SHA;
-4. rebuilds the source index;
-5. rebuilds the frozen 1,280-slot Factory plan;
-6. regenerates the 896 non-holdout Curator tasks;
-7. selects the requested deterministic task chunk;
-8. runs Curator AI-A as one task per request;
-9. records malformed/model-contract outputs as task-local rejections instead of aborting the remaining chunk;
-10. prepares structurally blind Verifier tasks only from valid Curator candidates;
-11. runs Verifier AI-B with the same one-task collection policy;
-12. routes valid responses through the real Factory reconciliation path;
-13. records promoted/adjudication/skipped outcomes in the curation ledger;
-14. emits redacted attempted/completed/rejected counts and rejection categories;
-15. encrypts all source-bearing run material with authenticated AES-256-GCM;
-16. uploads only the encrypted source-bearing bundle plus redacted metadata.
+1. checks out Mubin and validates required protected runtime configuration;
+2. runs the complete offline compile/unit/integration suite without provider secrets;
+3. runs the four live role-by-task-type readiness canaries;
+4. acquires only the pinned `non_holdout` source partition after readiness passes;
+5. re-verifies every source against its Git blob SHA;
+6. rebuilds the source index;
+7. rebuilds the frozen 1,280-slot Factory plan;
+8. regenerates the 896 non-holdout Curator tasks;
+9. selects the requested deterministic task chunk;
+10. runs Curator AI-A as one task per request;
+11. records malformed/model-contract outputs as task-local rejections instead of aborting the remaining chunk;
+12. prepares structurally blind Verifier tasks only from valid Curator candidates;
+13. runs Verifier AI-B with the same one-task collection policy;
+14. routes valid responses through the real Factory reconciliation path;
+15. records promoted/adjudication/skipped outcomes in the curation ledger;
+16. emits the redacted readiness, attempted/completed/rejected, and reconciliation summary;
+17. encrypts all source-bearing run material with authenticated AES-256-GCM;
+18. uploads only the encrypted source-bearing bundle plus redacted metadata.
 
 The workflow never requests the holdout partition.
 

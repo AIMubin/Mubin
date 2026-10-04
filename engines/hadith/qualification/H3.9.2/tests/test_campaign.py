@@ -59,6 +59,7 @@ class CampaignTests(unittest.TestCase):
             "benchmark_campaign/source_cache.py",
             "benchmark_campaign/factory.py",
             "benchmark_campaign/execution.py",
+            "benchmark_campaign/readiness.py",
             "AGENT_EXECUTION.md",
             "adapters/chat_completions.py",
         ]:

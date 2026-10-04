@@ -12,6 +12,9 @@ class CurationWorkflowTests(unittest.TestCase):
         cls.workflow = (repo_root / ".github" / "workflows" / "h392-curation-pilot.yml").read_text(
             encoding="utf-8"
         )
+        cls.integrity_workflow = (
+            repo_root / ".github" / "workflows" / "hadith-h392.yml"
+        ).read_text(encoding="utf-8")
 
     def test_secret_bearing_workflow_pins_third_party_actions_to_commits(self):
         self.assertIn(
@@ -35,6 +38,30 @@ class CurationWorkflowTests(unittest.TestCase):
         expected = "$" + "{{ secrets.H392_CURATOR_API_KEY }}"
         self.assertNotIn(escaped, self.workflow)
         self.assertIn(expected, self.workflow)
+
+    def test_workflow_refuses_stale_or_non_main_dispatch(self):
+        guard = self.workflow.split("- name: Refuse stale or non-main dispatch", 1)[1]
+        guard = guard.split("- name: Set up Python", 1)[0]
+        self.assertIn('GITHUB_REF_NAME:-', guard)
+        self.assertIn('git ls-remote origin refs/heads/main', guard)
+        self.assertIn('git rev-parse HEAD', guard)
+        self.assertIn('Refusing stale workflow execution', guard)
+
+    def test_integrity_ci_covers_pilot_workflow_changes(self):
+        self.assertIn(
+            '".github/workflows/h392-curation-pilot.yml"',
+            self.integrity_workflow,
+        )
+
+    def test_readiness_rechecks_main_before_real_source_acquisition(self):
+        live = self.workflow.index("- name: Run live Curator and Verifier readiness canaries")
+        recheck = self.workflow.index("- name: Reconfirm main after readiness")
+        acquire = self.workflow.index("- name: Acquire and re-verify pinned non-holdout sources")
+        self.assertLess(live, recheck)
+        self.assertLess(recheck, acquire)
+        section = self.workflow[recheck:acquire]
+        self.assertIn("git ls-remote origin refs/heads/main", section)
+        self.assertIn("Main advanced during readiness", section)
 
     def test_model_identity_is_not_exposed_as_dispatch_input(self):
         dispatch = self.workflow.split("permissions:", 1)[0]
@@ -77,6 +104,42 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn("H392_CURATOR_API_KEY", job_env)
         self.assertNotIn("H392_VERIFIER_API_KEY", job_env)
         self.assertNotIn("H392_CURATION_ARTIFACT_KEY", job_env)
+        self.assertNotIn("MUBIN_READINESS_CURATOR_API_KEY", job_env)
+        self.assertNotIn("MUBIN_READINESS_VERIFIER_API_KEY", job_env)
+
+    def test_single_dispatch_runs_offline_and_live_readiness_before_real_pilot(self):
+        offline = self.workflow.index("- name: Run offline readiness suite")
+        live = self.workflow.index("- name: Run live Curator and Verifier readiness canaries")
+        acquire = self.workflow.index("- name: Acquire and re-verify pinned non-holdout sources")
+        curator = self.workflow.index("- name: Run Curator AI-A")
+        self.assertLess(offline, live)
+        self.assertLess(live, acquire)
+        self.assertLess(acquire, curator)
+        self.assertIn("python -m benchmark_campaign.readiness", self.workflow)
+        self.assertIn("--offline-only", self.workflow)
+        self.assertIn("--offline-report", self.workflow)
+        self.assertIn("--live-timeout 600", self.workflow)
+
+    def test_offline_readiness_phase_has_no_provider_secrets(self):
+        section = self.workflow.split("- name: Run offline readiness suite", 1)[1]
+        section = section.split(
+            "- name: Run live Curator and Verifier readiness canaries", 1
+        )[0]
+        self.assertNotIn("H392_CURATOR_API_KEY", section)
+        self.assertNotIn("H392_VERIFIER_API_KEY", section)
+        self.assertNotIn("H392_CURATION_ARTIFACT_KEY", section)
+
+    def test_live_readiness_phase_uses_step_scoped_provider_secrets_only(self):
+        section = self.workflow.split(
+            "- name: Run live Curator and Verifier readiness canaries", 1
+        )[1]
+        section = section.split(
+            "- name: Acquire and re-verify pinned non-holdout sources", 1
+        )[0]
+        self.assertIn("MUBIN_READINESS_CURATOR_API_KEY", section)
+        self.assertIn("MUBIN_READINESS_VERIFIER_API_KEY", section)
+        self.assertNotIn("H392_CURATION_ARTIFACT_KEY", section)
+        self.assertNotIn("MODEL_FAMILY", section)
 
     def test_secret_bearing_workflow_pins_action_commits(self):
         self.assertIn(
@@ -129,6 +192,8 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn('"response_counts"', summary)
         self.assertIn('"verifier_preparation"', summary)
         self.assertIn("verifier-task-report.json", summary)
+        self.assertIn('"readiness"', summary)
+        self.assertIn("READINESS_GATE.json", summary)
 
     def test_plaintext_source_bearing_outputs_are_not_uploaded(self):
         upload = self.workflow.split(
