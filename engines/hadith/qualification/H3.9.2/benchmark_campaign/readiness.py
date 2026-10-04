@@ -15,6 +15,8 @@ import time
 import unittest
 from typing import Any
 
+from .execution import _SAFE_BASE_ENV
+
 _DIAGNOSTIC_PREFIX = "MUBIN_DIAGNOSTIC:"
 _DIAGNOSTIC_RE = re.compile(r"^MUBIN_DIAGNOSTIC:([a-z0-9_:-]{1,80})$")
 _CANARY_SOURCE_COUNT = 12
@@ -112,7 +114,7 @@ def _build_canary_fixture(base: Path, role: str, task_type: str) -> tuple[Path, 
         segments.append({
             "segment_id": f"readiness-segment-{i:02d}",
             "source_id": source_id,
-            "source_blob_sha": hashlib.sha1(source_id.encode("utf-8")).hexdigest(),
+            "source_blob_sha": hashlib.sha256(source_id.encode("utf-8")).hexdigest()[:40],
             "char_start": 0,
             "char_end": len(text),
             "text": text,
@@ -259,10 +261,7 @@ def _run_live_canary(
         env = {
             key: value
             for key, value in os.environ.items()
-            if key in {
-                "PATH", "PYTHONPATH", "HOME", "LANG", "LC_ALL", "SSL_CERT_FILE",
-                "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE",
-            }
+            if key in _SAFE_BASE_ENV
         }
         env.update({
             "MUBIN_AGENT_ROLE": role,
@@ -334,8 +333,8 @@ def _load_bound_offline_report(path: Path) -> dict[str, Any]:
         raise ValueError("offline readiness gate has not passed")
     current_sha = os.environ.get("GITHUB_SHA")
     recorded_sha = value.get("github_sha")
-    if current_sha and recorded_sha and current_sha != recorded_sha:
-        raise ValueError("offline readiness report is bound to a different GitHub SHA")
+    if current_sha and recorded_sha != current_sha:
+        raise ValueError("offline readiness report is not bound to the current GitHub SHA")
     return value
 
 
