@@ -17,7 +17,7 @@ You must be structurally blind to Curator AI-A's proposed gold and support field
 
 Return `task_id`, `status=candidate`, and `answer` containing `gold` plus one or more source supports. Each support must include `source_id`, exact `locator`, verbatim `excerpt`, and literal `support_text` inside the excerpt. Under the provider-neutral execution layer, the executor binds the original task fingerprint, model identity, and execution hashes centrally; manual integrations must provide the full envelope themselves.
 
-For unsupported cases return `status=no_candidate` with a reason.
+For unsupported cases return `status=no_candidate` with a reason. Multiple literal supports may cite the same canonical source/evidence window; each `support_text` must independently be a verbatim substring.
 
 ## Promotion rule
 

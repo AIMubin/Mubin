@@ -468,6 +468,35 @@ class FactoryTests(unittest.TestCase):
             self.assertEqual(ledger_rows[0]["outcome"], "promoted")
             self.assertNotIn('"label": "yes"', ledger.read_text(encoding="utf-8"))
 
+    def test_same_source_multiple_supports_can_promote(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(task, excerpt)
+            curator["candidate"]["answer_provenance"]["supports"].append({
+                "source_id": "s1",
+                "support_text": "قال الإمام",
+            })
+            verifier["answer"]["supports"].append({
+                "source_id": "s1",
+                "locator": self._factory_locator(task, excerpt),
+                "excerpt": excerpt,
+                "support_text": "قال الإمام",
+            })
+            self._refresh_raw_response_hash(curator)
+            self._refresh_raw_response_hash(verifier)
+            report, reviewed, adjudication, _ = self._reconcile(
+                root, task, cache, curator, verifier
+            )
+            self.assertEqual(report["promoted_count"], 1)
+            self.assertEqual(load_jsonl(adjudication), [])
+            row = load_jsonl(reviewed / "b1" / "reviewed.jsonl")[0]
+            self.assertEqual(len(row["source_refs"]), 1)
+            self.assertEqual(len(row["answer_provenance"]["supports"]), 2)
+            self.assertEqual(len(row["factory_verification"]["verifier_supports"]), 2)
+
     def test_invalid_curator_locator_routes_to_adjudication(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
@@ -651,6 +680,10 @@ class FactoryTests(unittest.TestCase):
         self.assertEqual(
             _gold_contract_error({"labels": ["a", "c"]}, multi),
             "multilabel_label_outside_contract",
+        )
+        self.assertEqual(
+            _gold_contract_error({"labels": [1]}, multi),
+            "multilabel_labels_must_be_strings",
         )
 
     def test_out_of_contract_gold_routes_to_adjudication(self):

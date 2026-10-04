@@ -2,7 +2,7 @@
 
 `chat_completions.py` implements the standard H3.9.2 HTTP adapter for endpoints exposing an chat-completions-compatible `/chat/completions` API.
 
-The adapter is intentionally narrower than a general agent. It has no tools and no authority to create source facts. It retrieves bounded evidence from the hash-bound H3.9.2 source index, presents those excerpts to the model as untrusted data, and accepts citations only through generated evidence IDs. Every support string must occur verbatim in the retrieved excerpt before the adapter emits a response.
+The adapter is intentionally narrower than a general agent. It has no tools and no authority to create source facts. It retrieves bounded evidence from the hash-bound H3.9.2 source index, presents those excerpts to the model as untrusted data, and accepts citations only through generated evidence IDs. Every support string must occur verbatim in the retrieved excerpt before the adapter emits a response. A response may cite more than one literal support span from the same evidence/source; the adapter preserves those supports while constructing a single canonical source reference for that source.
 
 The Factory task carries preregistered `retrieval_terms` from `factory-policy.json`. These terms receive higher retrieval weight than generic lexical overlap, while the anchor source is always included.
 
