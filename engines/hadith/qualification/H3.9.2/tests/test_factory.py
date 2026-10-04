@@ -129,6 +129,29 @@ class FactoryTests(unittest.TestCase):
             self.assertEqual({r["source_id"] for r in rows}, {"s1"})
             self.assertTrue(all(r["locator"].startswith("gitblob:") for r in rows))
 
+    def _build_one_multilabel_task(self, root: Path):
+        cache, _ = self._fixture(root)
+        spec_path = root / "config" / "benchmark-spec.json"
+        spec = load_json(spec_path)
+        spec["benchmarks"][0]["evaluation"] = {
+            "task_type": "multilabel",
+            "labels": ["a", "b"],
+        }
+        write_json(spec_path, spec)
+        index = root / "factory-work" / "index"
+        build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+        plan = root / "factory-work" / "plan.json"
+        build_factory_plan(root, plan)
+        tasks = root / "factory-work" / "tasks.jsonl"
+        report = build_factory_tasks(
+            root, plan, index, tasks, "non_holdout", False
+        )
+        self.assertEqual(report["task_count"], 1)
+        task = load_jsonl(tasks)[0]
+        self.assertEqual(task["task_type"], "multilabel")
+        self.assertEqual(task["allowed_labels"], ["a", "b"])
+        return cache, tasks, task
+
     def _build_one_task(self, root: Path, risk_tier: int = 1, auto_promotion: bool = True):
         cache, _ = self._fixture(root)
         policy_path = root / "config" / "factory-policy.json"
@@ -472,6 +495,53 @@ class FactoryTests(unittest.TestCase):
             ledger_rows = load_jsonl(ledger)
             self.assertEqual(ledger_rows[0]["outcome"], "promoted")
             self.assertNotIn('"label": "yes"', ledger.read_text(encoding="utf-8"))
+
+    def test_multilabel_label_order_does_not_create_false_disagreement(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_multilabel_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(task, excerpt)
+            curator["candidate"]["payload"]["gold"] = {"labels": ["a", "b"]}
+            verifier["answer"]["gold"] = {"labels": ["b", "a"]}
+            self._refresh_raw_response_hash(curator)
+            self._refresh_raw_response_hash(verifier)
+
+            report, reviewed, adjudication, _ = self._reconcile(
+                root, task, cache, curator, verifier
+            )
+            self.assertEqual(report["promoted_count"], 1)
+            self.assertEqual(report["adjudication_count"], 0)
+            self.assertEqual(load_jsonl(adjudication), [])
+            row = load_jsonl(reviewed / "b1" / "reviewed.jsonl")[0]
+            self.assertEqual(row["payload"]["gold"], {"labels": ["a", "b"]})
+
+    def test_curator_requested_adjudication_never_reaches_final_seal(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _, task = self._build_one_task(root)
+            excerpt = "قال الإمام سمع من شيخه وهذا نص ثابت"
+            curator, verifier = self._responses(task, excerpt)
+            curator["candidate"]["answer_provenance"]["mode"] = "adjudication_required"
+            curator["candidate"]["answer_provenance"].pop("verbatim_answer", None)
+            self._refresh_raw_response_hash(curator)
+
+            report, reviewed, adjudication, _ = self._reconcile(
+                root, task, cache, curator, verifier
+            )
+            self.assertEqual(report["promoted_count"], 0)
+            self.assertEqual(report["adjudication_count"], 1)
+            self.assertFalse((reviewed / "b1" / "reviewed.jsonl").exists())
+            self.assertEqual(
+                load_jsonl(adjudication)[0]["reason"],
+                "curator_requested_adjudication",
+            )
+            self.assertEqual(
+                report["adjudication_reason_counts"],
+                {"curator_requested_adjudication": 1},
+            )
 
     def test_same_source_multiple_supports_can_promote(self):
         with tempfile.TemporaryDirectory() as d:
