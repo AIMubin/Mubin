@@ -215,6 +215,7 @@ jobs:
                           "--base-url", base_url,
                           "--auth-style", auth_style,
                           "--json-mode", json_mode,
+                          "--stream",
                           "--timeout", "600",
                           "--max-evidence-sources", "12",
                           "--max-excerpt-chars", "1800",
