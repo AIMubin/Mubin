@@ -416,6 +416,65 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         self.assertEqual(_extract_message_content(parsed), "{}")
         self.assertEqual(response.calls, 4)
 
+    def test_streaming_transport_partial_json_at_eof_is_connection_failure(self):
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter([
+                    b'data: {"choices":[{"delta":{"content":"partial"',
+                ])
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                return next(self.lines, b"")
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
+                _call_chat(
+                    "https://example.test/v1", "secret", "bearer", "model-x",
+                    "system", "user", 10, 0.0, None, "max_tokens", None,
+                    "json_object", stream=True,
+                )
+        self.assertEqual(ctx.exception.code, "connection_failed")
+
+    def test_streaming_transport_malformed_completed_event_is_endpoint_invalid_json(self):
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter([
+                    b'data: {"choices": not-json}\n',
+                    b'\n',
+                ])
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                return next(self.lines, b"")
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
+                _call_chat(
+                    "https://example.test/v1", "secret", "bearer", "model-x",
+                    "system", "user", 10, 0.0, None, "max_tokens", None,
+                    "json_object", stream=True,
+                )
+        self.assertEqual(ctx.exception.code, "endpoint_invalid_json")
+
     def test_streaming_transport_treats_unfinished_eof_as_connection_failure(self):
         class FakeResponse:
             def __init__(self):
