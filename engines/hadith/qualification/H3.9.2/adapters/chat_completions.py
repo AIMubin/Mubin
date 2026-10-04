@@ -441,7 +441,9 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
         raise AdapterDiagnosticError(f"http_{exc.code}") from None
     except TimeoutError:
         raise AdapterDiagnosticError("endpoint_timeout") from None
-    except urllib.error.URLError:
+    except urllib.error.URLError as exc:
+        if isinstance(exc.reason, TimeoutError):
+            raise AdapterDiagnosticError("endpoint_timeout") from None
         raise AdapterDiagnosticError("connection_failed") from None
     except (ConnectionError, ssl.SSLError, http.client.HTTPException, OSError):
         # urllib may surface read-stage disconnects outside URLError (for
