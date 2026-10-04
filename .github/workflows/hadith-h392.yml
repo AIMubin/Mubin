@@ -12,6 +12,7 @@ on:
     paths:
       - "engines/hadith/qualification/H3.9.2/**"
       - ".github/workflows/h392-curation-pilot.yml"
+      - ".github/workflows/h392-curation-campaign.yml"
 
 permissions:
   contents: read
