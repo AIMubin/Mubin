@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from benchmark_campaign.readiness import (
     _adapter_command,
     _build_canary_fixture,
     _diagnostic_from_stderr,
+    _load_bound_offline_report,
     _validate_canary_output,
 )
 
@@ -131,6 +134,35 @@ class ReadinessGateTests(unittest.TestCase):
             "connection_failed",
         )
         self.assertIsNone(_diagnostic_from_stderr("arbitrary only"))
+
+    def test_offline_report_must_match_current_github_sha(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "offline.json"
+            path.write_text(
+                json.dumps({
+                    "schema_version": 1,
+                    "campaign_id": "H3.9.2",
+                    "kind": "offline_readiness_gate",
+                    "github_sha": "a" * 40,
+                    "offline_protocol": {"passed": True},
+                    "passed": True,
+                }) + "\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False):
+                loaded = _load_bound_offline_report(path)
+            self.assertTrue(loaded["passed"])
+
+            with patch.dict(os.environ, {"GITHUB_SHA": "b" * 40}, clear=False):
+                with self.assertRaisesRegex(ValueError, "current GitHub SHA"):
+                    _load_bound_offline_report(path)
+
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["github_sha"] = None
+            path.write_text(json.dumps(data) + "\n", encoding="utf-8")
+            with patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False):
+                with self.assertRaisesRegex(ValueError, "current GitHub SHA"):
+                    _load_bound_offline_report(path)
 
     def test_canary_command_matches_production_streaming_surface(self):
         root = Path("/campaign")
