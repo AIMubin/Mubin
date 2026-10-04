@@ -245,6 +245,7 @@ jobs:
 
     steps:
       - name: Download redacted shard artifacts
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: h392-curation-chunk-*
@@ -316,20 +317,29 @@ jobs:
                   outcomes_by_benchmark[bid].update(counts)
 
           ranges.sort()
-          expected_ranges = []
+          observed_ranges = []
+          coverage_errors = []
           cursor = requested_offset
           end = requested_offset + requested_count
           for start, stop in ranges:
-              if start != cursor or stop <= start or stop > end:
-                  raise SystemExit("campaign shard coverage is incomplete or overlapping")
-              expected_ranges.append({"start": start, "end": stop})
-              cursor = stop
+              observed_ranges.append({"start": start, "end": stop})
+              if start != cursor:
+                  coverage_errors.append("gap_or_overlap")
+              if stop <= start or stop > end:
+                  coverage_errors.append("range_outside_request")
+              cursor = max(cursor, stop)
 
-          coverage_complete = (
-              len(summaries) == expected_shards
-              and cursor == end
-              and totals["selected_tasks"] == requested_count
-          )
+          if github_sha is not None and github_sha != os.environ.get("GITHUB_SHA"):
+              coverage_errors.append("github_sha_mismatch")
+          if len(summaries) != expected_shards:
+              coverage_errors.append("shard_count_mismatch")
+          if cursor != end:
+              coverage_errors.append("range_end_mismatch")
+          if totals["selected_tasks"] != requested_count:
+              coverage_errors.append("task_count_mismatch")
+
+          coverage_errors = sorted(set(coverage_errors))
+          coverage_complete = not coverage_errors
 
           report = {
               "schema_version": 1,
@@ -342,7 +352,8 @@ jobs:
               "completed_shards": len(summaries),
               "shard_job_result": os.environ["SHARD_RESULT"],
               "coverage_complete": coverage_complete,
-              "ranges": expected_ranges,
+              "ranges": observed_ranges,
+              "coverage_errors": coverage_errors,
               "totals": dict(sorted(totals.items())),
               "curator_rejection_counts": dict(sorted(curator_rejections.items())),
               "verifier_rejection_counts": dict(sorted(verifier_rejections.items())),
