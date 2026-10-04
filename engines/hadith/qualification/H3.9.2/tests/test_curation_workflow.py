@@ -118,7 +118,7 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("python -m benchmark_campaign.readiness", self.workflow)
         self.assertIn("--offline-only", self.workflow)
         self.assertIn("--offline-report", self.workflow)
-        self.assertIn("--live-timeout 300", self.workflow)
+        self.assertIn("--live-timeout 600", self.workflow)
 
     def test_offline_readiness_phase_has_no_provider_secrets(self):
         section = self.workflow.split("- name: Run offline readiness suite", 1)[1]
