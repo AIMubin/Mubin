@@ -13,6 +13,7 @@ from benchmark_campaign.readiness import (
     _diagnostic_from_stderr,
     _load_bound_offline_report,
     _validate_canary_output,
+    run_live_readiness,
 )
 
 
@@ -163,6 +164,68 @@ class ReadinessGateTests(unittest.TestCase):
             with patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False):
                 with self.assertRaisesRegex(ValueError, "current GitHub SHA"):
                     _load_bound_offline_report(path)
+
+    def test_live_readiness_runs_full_matrix_without_exposing_provider_identity(self):
+        offline = {
+            "offline_protocol": {
+                "compile": "pass",
+                "tests": "pass",
+                "tests_run": 1,
+                "failures": 0,
+                "errors": 0,
+                "skipped": 0,
+                "passed": True,
+            }
+        }
+        env = {
+            "MUBIN_READINESS_CURATOR_ENDPOINT": "https://curator.secret.example/v1",
+            "MUBIN_READINESS_CURATOR_MODEL_REF": "curator-secret-model",
+            "MUBIN_READINESS_CURATOR_API_KEY": "curator-secret-key",
+            "MUBIN_READINESS_VERIFIER_ENDPOINT": "https://verifier.secret.example/v1",
+            "MUBIN_READINESS_VERIFIER_MODEL_REF": "verifier-secret-model",
+            "MUBIN_READINESS_VERIFIER_API_KEY": "verifier-secret-key",
+        }
+
+        def fake_canary(
+            root, role, task_type, endpoint, model_ref, api_key,
+            auth_style, json_mode, live_timeout,
+        ):
+            return {
+                "role": role,
+                "task_type": task_type,
+                "passed": True,
+                "diagnostic": None,
+                "duration_ms": 1,
+            }
+
+        with patch.dict(os.environ, env, clear=False), patch(
+            "benchmark_campaign.readiness._run_live_canary",
+            side_effect=fake_canary,
+        ) as run:
+            report = run_live_readiness(
+                Path("/campaign"),
+                offline,
+                "bearer",
+                "bearer",
+                "json_object",
+                "json_object",
+                300,
+            )
+
+        self.assertTrue(report["ready"])
+        self.assertEqual(run.call_count, 4)
+        self.assertEqual(
+            {(x["role"], x["task_type"]) for x in report["live_canaries"]},
+            {
+                ("curator", "classification"),
+                ("curator", "multilabel"),
+                ("verifier", "classification"),
+                ("verifier", "multilabel"),
+            },
+        )
+        serialized = json.dumps(report)
+        for secret in env.values():
+            self.assertNotIn(secret, serialized)
 
     def test_canary_command_matches_production_streaming_surface(self):
         root = Path("/campaign")
