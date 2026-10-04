@@ -67,7 +67,7 @@ class CurationWorkflowTests(unittest.TestCase):
     def test_pilot_uses_one_task_collection_mode_with_generous_request_timeout(self):
         self.assertIn('"--timeout", "600"', self.workflow)
         self.assertIn('"batch_size": 1', self.workflow)
-        self.assertIn('"max_attempts": 1', self.workflow)
+        self.assertIn('"max_attempts": 2', self.workflow)
         self.assertIn('"task_failure_policy": "record_rejection"', self.workflow)
         self.assertIn('"timeout_seconds": 660', self.workflow)
 
