@@ -19,6 +19,7 @@ The task contains no gold answer. Work only from `allowed_source_pool`. `anchor_
 9. `anchor_source_id` and `benchmark_id` must match the task exactly.
 10. `source_refs` must include every canonical source used to produce the answer.
 11. For Factory-generated cases, each locator must be the exact deterministic form `gitblob:<pinned-blob-sha>#char=<start>:<end>` and the character slice must equal the quoted excerpt byte-for-text after UTF-8 decoding.
+12. Multiple literal supports may come from the same canonical source/evidence window when they substantiate distinct parts of the answer. Each `support_text` must independently be a verbatim substring; repeated source identity is not itself an error.
 
 ## Response envelope
 
