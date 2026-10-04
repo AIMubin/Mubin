@@ -411,16 +411,18 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
     saw_event = False
     saw_done = False
 
-    def process_event() -> None:
+    def process_event() -> bool:
         nonlocal finish_reason, has_reasoning, saw_event, saw_done
         if not data_lines:
-            return
+            return False
         data = "\n".join(data_lines)
         data_lines.clear()
+        if not data.strip():
+            return False
         saw_event = True
         if data.strip() == "[DONE]":
             saw_done = True
-            return
+            return True
         try:
             chunk = json.loads(data)
         except (UnicodeDecodeError, json.JSONDecodeError):
@@ -429,7 +431,7 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
             raise AdapterDiagnosticError("endpoint_invalid_json")
         choices = chunk.get("choices")
         if choices == []:
-            return
+            return False
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
             raise AdapterDiagnosticError("response_shape_invalid")
         choice = choices[0]
@@ -440,7 +442,7 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
         if delta is None and isinstance(choice.get("message"), dict):
             delta = choice["message"]
         if delta is None:
-            return
+            return False
         if not isinstance(delta, dict):
             raise AdapterDiagnosticError("response_shape_invalid")
         raw_content = delta.get("content")
@@ -455,6 +457,7 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
                 raise AdapterDiagnosticError("response_shape_invalid")
             if raw_reasoning.strip():
                 has_reasoning = True
+        return False
 
     while True:
         line = resp.readline(MAX_RESPONSE_BYTES + 1)
@@ -469,7 +472,8 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
         except UnicodeDecodeError:
             raise AdapterDiagnosticError("endpoint_invalid_json") from None
         if decoded == "":
-            process_event()
+            if process_event():
+                break
             continue
         if decoded.startswith(":"):
             continue
