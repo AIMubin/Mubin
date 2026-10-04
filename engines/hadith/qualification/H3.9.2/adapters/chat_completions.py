@@ -864,6 +864,9 @@ def _user_prompt(role: str, task: dict[str, Any], evidence: list[dict[str, Any]]
             "The input field is only the end-user benchmark question/input. Do not copy task metadata "
             "such as task_id, benchmark_id, risk_tier, task_type, allowed_labels, or anchor_source_id into input. "
             "Use the exact gold shape required by task_type and only exact strings from task.allowed_labels. "
+            "Return family_id, input, gold, mode, verbatim_answer when required, and supports at the TOP LEVEL "
+            "of this model completion. Do not nest them under candidate; the adapter constructs that envelope "
+            "only after validating your completion. "
             "Multiple support_text spans may cite the same evidence/source when each span is a literal substring."
         )
     else:
@@ -876,15 +879,26 @@ def _user_prompt(role: str, task: dict[str, Any], evidence: list[dict[str, Any]]
         instruction = (
             "Determine the answer independently. You have not been given Curator AI-A's gold or supports. "
             "Do not infer them. Use only the evidence below. "
-            "Use the exact gold shape required by task_type: classification uses gold.label; "
-            "multilabel uses a non-empty gold.labels array. Use only exact strings from task.allowed_labels. "
+            "Use the exact gold OBJECT required by task_type: classification must use "
+            "gold={\"label\": \"<one allowed label>\"}; multilabel must use "
+            "gold={\"labels\": [\"<one or more allowed labels>\"]}. "
+            "Return gold and supports at the TOP LEVEL of this model completion. "
+            "Do not return gold as a bare string or array, and do not nest gold/supports under answer; "
+            "the adapter constructs the answer envelope only after validating your completion. "
+            "Use only exact strings from task.allowed_labels. "
             "Multiple support_text spans may cite the same evidence/source when each span is a literal substring."
         )
+    serialization = {
+        "model_completion": "one top-level JSON object",
+        "adapter_wraps_after_validation": True,
+        "do_not_nest_under": "candidate" if role == "curator" else "answer",
+    }
     return json.dumps({
         "instruction": instruction,
         "task": public_task,
         "evidence": evidence,
         "required_output": output_contract,
+        "serialization": serialization,
     }, ensure_ascii=False, sort_keys=True)
 
 def parse_args() -> argparse.Namespace:
