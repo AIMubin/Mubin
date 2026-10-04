@@ -293,6 +293,8 @@ def _run_live_canary(
                 diagnostic = _validate_canary_output(role, task_type, output_path)
         except subprocess.TimeoutExpired:
             diagnostic = "canary_timeout"
+        except Exception:
+            diagnostic = "canary_internal_error"
 
     duration_ms = int((time.monotonic() - started) * 1000)
     passed = diagnostic is None and returncode == 0
