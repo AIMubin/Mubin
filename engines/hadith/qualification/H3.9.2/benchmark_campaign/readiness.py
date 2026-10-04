@@ -302,26 +302,37 @@ def _run_live_canary(
         )
         diagnostic: str | None = None
         returncode: int | None = None
-        try:
-            proc = subprocess.run(
-                command,
-                cwd=str(root),
-                env=env,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False,
-                timeout=live_timeout + 30,
-            )
-            returncode = proc.returncode
-            if proc.returncode != 0:
-                diagnostic = _diagnostic_from_stderr(proc.stderr) or "canary_nonzero_exit"
-            else:
+        attempts_used = 0
+        for attempt in range(1, 3):
+            attempts_used = attempt
+            try:
+                proc = subprocess.run(
+                    command,
+                    cwd=str(root),
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False,
+                    timeout=live_timeout + 30,
+                )
+                returncode = proc.returncode
+                if proc.returncode != 0:
+                    diagnostic = (
+                        _diagnostic_from_stderr(proc.stderr)
+                        or "canary_nonzero_exit"
+                    )
+                    if diagnostic == "connection_failed" and attempt == 1:
+                        continue
+                    break
                 diagnostic = _validate_canary_output(role, task_type, output_path)
-        except subprocess.TimeoutExpired:
-            diagnostic = "canary_timeout"
-        except Exception:
-            diagnostic = "canary_internal_error"
+                break
+            except subprocess.TimeoutExpired:
+                diagnostic = "canary_timeout"
+                break
+            except Exception:
+                diagnostic = "canary_internal_error"
+                break
 
     duration_ms = int((time.monotonic() - started) * 1000)
     passed = diagnostic is None and returncode == 0
@@ -330,6 +341,7 @@ def _run_live_canary(
         "task_type": task_type,
         "passed": passed,
         "diagnostic": diagnostic,
+        "attempts_used": attempts_used,
         "duration_ms": duration_ms,
     }
 
