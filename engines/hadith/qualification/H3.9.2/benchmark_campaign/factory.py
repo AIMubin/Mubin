@@ -727,8 +727,8 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         _validate_response_identity(curator, task, "curator")
         candidate = curator.get("candidate")
         if not isinstance(candidate, dict):
-            adjudication.append({"task_id": tid, "reason": "malformed_curator_candidate"})
-            log(tid, "adjudication", curator=curator, reason="malformed_curator_candidate")
+            adjudication.append({"task_id": tid, "reason": "malformed_candidate_or_verifier_answer"})
+            log(tid, "adjudication", curator=curator, reason="malformed_candidate_or_verifier_answer")
             continue
 
         provenance = candidate.get("answer_provenance")
@@ -761,8 +761,8 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
 
         answer = verifier.get("answer")
         if not isinstance(answer, dict):
-            adjudication.append({"task_id": tid, "reason": "malformed_verifier_answer"})
-            log(tid, "adjudication", curator, verifier, "malformed_verifier_answer")
+            adjudication.append({"task_id": tid, "reason": "malformed_candidate_or_verifier_answer"})
+            log(tid, "adjudication", curator, verifier, "malformed_candidate_or_verifier_answer")
             continue
         try:
             _verify_factory_candidate_refs(
