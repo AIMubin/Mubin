@@ -457,7 +457,7 @@ class AgentExecutionTests(unittest.TestCase):
             _, index, tasks, adapter = self._fixture(root)
             config = self._config(
                 root, adapter, "curator", "family-a", "diagnostic",
-                task_failure_policy="record_rejection",
+                task_failure_policy="record_rejection", max_attempts=2,
             )
             with self.assertRaises(RuntimeError) as ctx:
                 run_agent_execution(
@@ -466,6 +466,7 @@ class AgentExecutionTests(unittest.TestCase):
                     root / "factory-work" / "run.json",
                 )
             self.assertIn("adapter:http_401", str(ctx.exception))
+            self.assertIn("after 1 attempts", str(ctx.exception))
 
     def test_adapter_cannot_spoof_model_identity(self):
         with tempfile.TemporaryDirectory() as d:
