@@ -462,7 +462,16 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
     while True:
         line = resp.readline(MAX_RESPONSE_BYTES + 1)
         if not line:
-            process_event()
+            try:
+                process_event()
+            except AdapterDiagnosticError as exc:
+                if (
+                    exc.code in {"endpoint_invalid_json", "response_shape_invalid"}
+                    and not saw_done
+                    and finish_reason is None
+                ):
+                    raise AdapterDiagnosticError("connection_failed") from None
+                raise
             break
         total_bytes += len(line)
         if total_bytes > MAX_RESPONSE_BYTES:
