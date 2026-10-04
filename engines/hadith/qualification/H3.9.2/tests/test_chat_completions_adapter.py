@@ -17,6 +17,7 @@ from adapters.chat_completions import (
     _empty_output_diagnostic,
     _extract_finish_reason,
     _extract_message_content,
+    _gold_contract_code,
     _has_reasoning_content,
     _parse_completion_budget,
     _parse_model_json_object,
@@ -426,6 +427,20 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                 self.assertEqual(ctx.exception.code, code)
                 self.assertNotIn("EXFIL", ctx.exception.code)
 
+    def test_multiple_literal_supports_from_same_source_are_allowed(self):
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:40",
+            "excerpt": "قال الإمام سمع من شيخه وهذا نص ثابت",
+        }]
+        supports = _supports_from_model([
+            {"evidence_id": "E01", "support_text": "قال الإمام"},
+            {"evidence_id": "E01", "support_text": "سمع من شيخه"},
+        ], evidence)
+        self.assertEqual(len(supports), 2)
+        self.assertEqual({x["source_id"] for x in supports}, {"s1"})
+
     def test_no_candidate_reason_is_required_not_repaired(self):
         task = self._task()
         with self.assertRaises(ModelContractError) as ctx:
@@ -459,7 +474,7 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         }
         with self.assertRaises(ModelContractError) as ctx:
             _curator_row(task, obj, evidence)
-        self.assertEqual(ctx.exception.code, "contract_gold_invalid")
+        self.assertEqual(ctx.exception.code, "contract_gold_label_type_invalid")
 
     def test_curator_contract_diagnostics_identify_semantic_failure_class(self):
         task = self._task()
@@ -480,7 +495,7 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         }
         mutations = [
             ({"status": "unexpected"}, "contract_status_invalid"),
-            ({"gold": {"label": "other"}}, "contract_gold_invalid"),
+            ({"gold": {"label": "other"}}, "contract_gold_label_outside_contract"),
             ({"family_id": ""}, "contract_family_id_missing"),
             ({"family_id": " family-x "}, "contract_family_id_invalid"),
             ({"input": None}, "contract_input_missing"),
@@ -495,6 +510,71 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                 with self.assertRaises(ModelContractError) as ctx:
                     _curator_row(task, obj, evidence)
                 self.assertEqual(ctx.exception.code, code)
+
+    def test_gold_diagnostics_distinguish_shape_type_duplicates_and_vocabulary(self):
+        classification = {
+            "task_type": "classification",
+            "allowed_labels": ["yes", "no"],
+        }
+        self.assertEqual(
+            _gold_contract_code([], classification),
+            "contract_gold_not_object",
+        )
+        self.assertEqual(
+            _gold_contract_code({"label": 1}, classification),
+            "contract_gold_label_type_invalid",
+        )
+        self.assertEqual(
+            _gold_contract_code({"label": "maybe"}, classification),
+            "contract_gold_label_outside_contract",
+        )
+
+        multilabel = {
+            "task_type": "multilabel",
+            "allowed_labels": ["a", "b"],
+        }
+        self.assertEqual(
+            _gold_contract_code({"label": "a"}, multilabel),
+            "contract_gold_labels_missing",
+        )
+        self.assertEqual(
+            _gold_contract_code({"labels": [1]}, multilabel),
+            "contract_gold_label_type_invalid",
+        )
+        self.assertEqual(
+            _gold_contract_code({"labels": ["a", "a"]}, multilabel),
+            "contract_gold_labels_duplicate",
+        )
+        self.assertEqual(
+            _gold_contract_code({"labels": ["c"]}, multilabel),
+            "contract_gold_label_outside_contract",
+        )
+
+    def test_curator_row_keeps_unique_source_refs_with_multiple_same_source_supports(self):
+        task = self._task()
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:40",
+            "excerpt": "قال الإمام سمع من شيخه وهذا نص ثابت",
+        }]
+        row = _curator_row(task, {
+            "status": "candidate",
+            "family_id": "family-x",
+            "input": {"question": "هل ثبت السماع؟"},
+            "gold": {"label": "yes"},
+            "mode": "direct_extract",
+            "verbatim_answer": "سمع من شيخه",
+            "supports": [
+                {"evidence_id": "E01", "support_text": "قال الإمام"},
+                {"evidence_id": "E01", "support_text": "سمع من شيخه"},
+            ],
+        }, evidence)
+        self.assertEqual(len(row["candidate"]["source_refs"]), 1)
+        self.assertEqual(
+            len(row["candidate"]["answer_provenance"]["supports"]),
+            2,
+        )
 
     def test_curator_adapter_constructs_deterministic_record_fields(self):
         task = self._task()
@@ -549,6 +629,16 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         self.assertIn("end-user benchmark question/input", prompt)
         self.assertIn("allowed_labels", prompt)
         self.assertIn("Do not copy task metadata", prompt)
+        self.assertIn("Multiple support_text spans may cite the same evidence/source", prompt)
+
+    def test_verifier_prompt_states_exact_multilabel_gold_shape(self):
+        task = self._task()
+        task["task_type"] = "multilabel"
+        task["allowed_labels"] = ["a", "b"]
+        task["candidate_input"] = {"question": "q"}
+        prompt = _user_prompt("verifier", task, [])
+        self.assertIn("multilabel uses a non-empty gold.labels array", prompt)
+        self.assertIn("exact strings from task.allowed_labels", prompt)
 
     def test_json_fence_and_content_extraction_are_tolerant(self):
         fence = chr(96) * 3
