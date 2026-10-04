@@ -80,15 +80,15 @@ def _offline_suite(root: Path) -> dict[str, Any]:
 def _canary_evidence_text(task_type: str, source_index: int) -> str:
     if task_type == "classification":
         fact = (
-            "MUBIN_READINESS_CANARY factual evidence. "
-            "The readiness classification is supported. "
-            "The literal label supported is explicitly present. "
+            "MUBIN_READINESS_CANARY synthetic source evidence. "
+            "النص يصرح أن الراوي ألف سمع من الراوي باء سماعاً مباشراً. "
+            "ويصف المصدر هذه العلاقة صراحة بالوسم heard_from. "
         )
     elif task_type == "multilabel":
         fact = (
-            "MUBIN_READINESS_CANARY factual evidence. "
-            "Both alpha and beta are explicitly present and supported. "
-            "The literal labels alpha and beta both apply. "
+            "MUBIN_READINESS_CANARY synthetic source evidence. "
+            "النص يصرح أن الراوي ألف لم يلق الراوي باء وأن الإسناد غير متصل. "
+            "ويصف المصدر الحالة صراحة بالوسمين non_encounter و continuity_negative. "
         )
     else:
         raise ValueError("unsupported canary task type")
@@ -121,14 +121,34 @@ def _build_canary_fixture(base: Path, role: str, task_type: str) -> tuple[Path, 
         })
     _write_jsonl(index_dir / "segments.jsonl", segments)
 
-    labels = (
-        ["supported", "unsupported"]
-        if task_type == "classification"
-        else ["alpha", "beta"]
-    )
+    if task_type == "classification":
+        benchmark_id = "transmission-language"
+        labels = [
+            "heard_from",
+            "heard_by_inverse",
+            "did_not_hear",
+            "did_not_meet",
+            "hearing_not_known",
+            "hearing_uncertain",
+            "partial_hearing",
+            "met",
+        ]
+    else:
+        benchmark_id = "external-critical-commentary"
+        labels = [
+            "continuity_negative",
+            "non_encounter",
+            "route_form",
+            "route_preference",
+            "route_not_preserved",
+            "raisedness_negative",
+            "narrator_error",
+            "narrator_weakening",
+            "route_isolation",
+        ]
     task: dict[str, Any] = {
         "task_id": f"readiness:{role}:{task_type}",
-        "benchmark_id": "readiness-canary",
+        "benchmark_id": benchmark_id,
         "partition": "non_holdout",
         "visibility": "development_safe",
         "risk_tier": 1,
@@ -198,7 +218,7 @@ def _validate_canary_output(role: str, task_type: str, output_path: Path) -> str
         return "canary_support_missing"
 
     if task_type == "classification":
-        if gold != {"label": "supported"}:
+        if gold != {"label": "heard_from"}:
             return "canary_semantic_mismatch"
     else:
         if not isinstance(gold, dict):
@@ -207,7 +227,7 @@ def _validate_canary_output(role: str, task_type: str, output_path: Path) -> str
         if (
             not isinstance(labels, list)
             or len(labels) != len(set(labels))
-            or set(labels) != {"alpha", "beta"}
+            or set(labels) != {"non_encounter", "continuity_negative"}
         ):
             return "canary_semantic_mismatch"
     return None
