@@ -12,6 +12,9 @@ class CurationWorkflowTests(unittest.TestCase):
         cls.workflow = (repo_root / ".github" / "workflows" / "h392-curation-pilot.yml").read_text(
             encoding="utf-8"
         )
+        cls.integrity_workflow = (
+            repo_root / ".github" / "workflows" / "hadith-h392.yml"
+        ).read_text(encoding="utf-8")
 
     def test_secret_bearing_workflow_pins_third_party_actions_to_commits(self):
         self.assertIn(
@@ -43,6 +46,22 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn('git ls-remote origin refs/heads/main', guard)
         self.assertIn('git rev-parse HEAD', guard)
         self.assertIn('Refusing stale workflow execution', guard)
+
+    def test_integrity_ci_covers_pilot_workflow_changes(self):
+        self.assertIn(
+            '".github/workflows/h392-curation-pilot.yml"',
+            self.integrity_workflow,
+        )
+
+    def test_readiness_rechecks_main_before_real_source_acquisition(self):
+        live = self.workflow.index("- name: Run live Curator and Verifier readiness canaries")
+        recheck = self.workflow.index("- name: Reconfirm main after readiness")
+        acquire = self.workflow.index("- name: Acquire and re-verify pinned non-holdout sources")
+        self.assertLess(live, recheck)
+        self.assertLess(recheck, acquire)
+        section = self.workflow[recheck:acquire]
+        self.assertIn("git ls-remote origin refs/heads/main", section)
+        self.assertIn("Main advanced during readiness", section)
 
     def test_model_identity_is_not_exposed_as_dispatch_input(self):
         dispatch = self.workflow.split("permissions:", 1)[0]
