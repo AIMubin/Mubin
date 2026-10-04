@@ -132,7 +132,11 @@ offline compile + all tests
 
 The execution layer validates transport/provenance integrity. It does not elevate AI output into authority; promotion remains governed by Factory source verification, risk policy, and adjudication.
 
-Reconciliation emits only **aggregate** redacted adjudication telemetry: total reason counts, reason counts by benchmark, and promoted/adjudication/skipped outcome counts by benchmark. These aggregates contain no task IDs, source text, source locators, model output, gold payloads, or adjudication detail strings. Source-bearing adjudication rows and the curation ledger remain inside the encrypted bundle.
+Factory agreement follows the preregistered evaluation semantics. Classification gold remains exact-JSON agreement. Multilabel gold compares the `labels` collection as a mathematical set, because holdout evaluation is set-based; label ordering therefore cannot create a false Curator/Verifier disagreement. Any future non-`labels` fields in a multilabel gold object remain exact/canonical and must still agree.
+
+`adjudication_required` is a Curator routing disposition, not a final benchmark-record provenance mode. For auto-promotable risk tiers, reconciliation routes such candidates directly to adjudication with the bounded reason `curator_requested_adjudication` before final record sealing. Risk-tier policy gates remain authoritative for non-auto-promotable tasks.
+
+Reconciliation emits only **aggregate** redacted adjudication telemetry: total reason counts, reason counts by benchmark, promoted/adjudication/skipped outcome counts by benchmark, collection rejection counts, verifier-preparation blindness rejection counts, and candidate/no-candidate response totals. These aggregates contain no task IDs, source text, source locators, model output, gold payloads, or adjudication detail strings. Source-bearing adjudication rows and the curation ledger remain inside the encrypted bundle.
 
 
 Adapter stdout is discarded. Stderr is written only to an ephemeral per-attempt file and deleted with the temporary execution directory. The executor ignores arbitrary stderr content and recognizes only a strict `MUBIN_DIAGNOSTIC:<code>` marker matching `[a-z0-9_:-]{1,80}`; everything else is discarded. Batch failure reports therefore expose only sanitized diagnostic codes or return codes, never command arguments, endpoint values, model identity, source text, response bodies, or credentials.
