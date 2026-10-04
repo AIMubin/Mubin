@@ -6,11 +6,11 @@ on:
       task_offset:
         description: Zero-based first non-holdout task for this campaign batch
         required: true
-        default: "8"
+        default: "0"
       task_count:
-        description: Total tasks in this campaign batch (1-32)
+        description: Total tasks in this campaign batch (1-40)
         required: true
-        default: "32"
+        default: "40"
       shard_size:
         description: Tasks per parallel shard (1-8)
         required: true
@@ -131,8 +131,8 @@ jobs:
           shard_size = int(os.environ["SHARD_SIZE"])
           if offset < 0 or offset >= 896:
               raise SystemExit("task_offset must be in [0, 895]")
-          if count < 1 or count > 32:
-              raise SystemExit("task_count must be in [1, 32] for the first campaign stage")
+          if count < 1 or count > 40:
+              raise SystemExit("task_count must be in [1, 40] for the reviewed campaign stage")
           if shard_size < 1 or shard_size > 8:
               raise SystemExit("shard_size must be in [1, 8]")
           if offset + count > 896:
@@ -268,6 +268,9 @@ jobs:
 
           curator_rejections = Counter()
           verifier_rejections = Counter()
+          verifier_preparation_rejections = Counter()
+          curator_response_counts = Counter()
+          verifier_response_counts = Counter()
           adjudication_reasons = Counter()
           adjudication_reasons_by_benchmark = defaultdict(Counter)
           outcomes_by_benchmark = defaultdict(Counter)
@@ -295,12 +298,22 @@ jobs:
               ranges.append((offset, offset + count))
 
               curator = row["curator"]
+              verifier_preparation = row["verifier_preparation"]
               verifier = row["verifier"]
               reconciliation = row["reconciliation"]
               totals["selected_tasks"] += count
               totals["curator_attempted"] += int(curator["attempted_task_count"])
               totals["curator_completed"] += int(curator["completed_task_count"])
               totals["curator_rejected"] += int(curator["rejected_task_count"])
+              totals["verifier_preparation_input_candidates"] += int(
+                  verifier_preparation["input_candidates"]
+              )
+              totals["verifier_preparation_tasks"] += int(
+                  verifier_preparation["verifier_tasks"]
+              )
+              totals["verifier_preparation_rejected"] += int(
+                  verifier_preparation["rejected_candidates"]
+              )
               totals["verifier_attempted"] += int(verifier["attempted_task_count"])
               totals["verifier_completed"] += int(verifier["completed_task_count"])
               totals["verifier_rejected"] += int(verifier["rejected_task_count"])
@@ -309,7 +322,12 @@ jobs:
               totals["skipped"] += int(reconciliation["skipped_count"])
 
               curator_rejections.update(curator.get("rejection_counts", {}))
+              verifier_preparation_rejections.update(
+                  verifier_preparation.get("rejection_counts", {})
+              )
               verifier_rejections.update(verifier.get("rejection_counts", {}))
+              curator_response_counts.update(curator.get("response_counts", {}))
+              verifier_response_counts.update(verifier.get("response_counts", {}))
               adjudication_reasons.update(
                   reconciliation.get("adjudication_reason_counts", {})
               )
@@ -365,7 +383,12 @@ jobs:
               "coverage_errors": coverage_errors,
               "totals": dict(sorted(totals.items())),
               "curator_rejection_counts": dict(sorted(curator_rejections.items())),
+              "curator_response_counts": dict(sorted(curator_response_counts.items())),
+              "verifier_preparation_rejection_counts": dict(
+                  sorted(verifier_preparation_rejections.items())
+              ),
               "verifier_rejection_counts": dict(sorted(verifier_rejections.items())),
+              "verifier_response_counts": dict(sorted(verifier_response_counts.items())),
               "adjudication_reason_counts": dict(sorted(adjudication_reasons.items())),
               "adjudication_reason_counts_by_benchmark": {
                   bid: dict(sorted(counts.items()))

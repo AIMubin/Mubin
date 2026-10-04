@@ -152,20 +152,26 @@ Infrastructure and execution-integrity failures remain fatal: authentication err
 
 ## Campaign execution sequence
 
-The 8-task pilot has now demonstrated an end-to-end successful readiness, Curator, blind Verifier, reconciliation, encryption, and artifact path. Do not repeat the same 8-task pilot merely to reconfirm infrastructure.
+The 8-task pilot and the first 32-task campaign demonstrated an end-to-end operational path, but the 32-task results exposed a protocol-level semantic defect before further scaling: the reconciliation layer compared multilabel arrays order-sensitively even though final evaluation treats them as sets. The same review also confirmed that provisional `adjudication_required` candidates could reach final sealing and be reported under the generic `curator_candidate_failed_qualification_contract` reason.
 
-The next stage uses `.github/workflows/h392-curation-campaign.yml`:
+Freeze schema 22 corrects both issues without changing model prompts, evidence rules, label vocabularies, or holdout policy:
 
-1. dispatch one **32-task** non-holdout campaign batch;
-2. default to four deterministic 8-task shards with `max-parallel=4`;
+- multilabel Curator/Verifier agreement is set-semantic for `labels`, matching the preregistered evaluator;
+- `adjudication_required` routes explicitly to adjudication before sealing;
+- campaign telemetry includes verifier-preparation blindness rejections and response-status totals.
+
+Because reconciliation semantics changed, the earlier non-holdout chunks are diagnostic evidence, not the canonical v22 campaign population. The next stage uses `.github/workflows/h392-curation-campaign.yml` to rerun the reviewed surface under one coherent freeze:
+
+1. dispatch one **40-task** non-holdout campaign batch covering offsets `0..39`;
+2. use deterministic 8-task shards with `max-parallel=4`;
 3. run the complete offline + live readiness gate **once** for the whole batch;
 4. bind every shard to that exact readiness Git SHA before it may skip its local gate;
 5. keep each shard independently encrypted and redacted;
 6. aggregate only `CURATION_RUN_SUMMARY.json` from completed shards into a campaign summary;
-7. review Curator/Verifier rejection counts, promoted/adjudication/skipped yield, aggregate adjudication reasons, benchmark outcome mix, and complete shard coverage;
-8. only after the 32-task campaign is reviewed should the campaign bound be deliberately expanded toward larger batches.
+7. review Curator/Verifier rejection counts, verifier-preparation blindness rejects, candidate/no-candidate totals, promoted/adjudication/skipped yield, adjudication reasons, benchmark outcome mix, and complete shard coverage;
+8. expand beyond 40 tasks only after the v22 rerun confirms that false order-only disagreement is gone and no new protocol defect appears.
 
-The first campaign-stage workflow deliberately caps `task_count <= 32` and `shard_size <= 8`. This is a governance brake, not a technical limit: it prevents one successful pilot from immediately launching hundreds of expensive model calls before campaign yield and adjudication structure are reviewed.
+The reviewed-stage workflow caps `task_count <= 40` and `shard_size <= 8`. This remains a governance brake rather than a technical limit.
 
 Never tune prompts or model behavior against the sealed final holdout.
 

@@ -106,8 +106,8 @@ class CurationWorkflowTests(unittest.TestCase):
             self.campaign_workflow,
         )
 
-    def test_campaign_first_stage_is_bounded_to_32_tasks_and_eight_per_shard(self):
-        self.assertIn("count < 1 or count > 32", self.campaign_workflow)
+    def test_campaign_reviewed_stage_is_bounded_to_40_tasks_and_eight_per_shard(self):
+        self.assertIn("count < 1 or count > 40", self.campaign_workflow)
         self.assertIn("shard_size < 1 or shard_size > 8", self.campaign_workflow)
         self.assertIn("task_offset + task_count exceeds 896", self.campaign_workflow)
         self.assertIn("expected_shards", self.campaign_workflow)
@@ -126,6 +126,9 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("coverage_complete", aggregate)
         self.assertIn("coverage_errors", aggregate)
         self.assertIn("cross_shard_sha_mismatch", aggregate)
+        self.assertIn("verifier_preparation_rejection_counts", aggregate)
+        self.assertIn("curator_response_counts", aggregate)
+        self.assertIn("verifier_response_counts", aggregate)
         self.assertIn("continue-on-error: true", self.campaign_workflow)
 
     def test_campaign_secret_bearing_actions_are_commit_pinned(self):
