@@ -18,10 +18,14 @@ from benchmark_campaign.readiness import (
 
 
 class ReadinessGateTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.root = Path(__file__).resolve().parents[1]
+
     def test_curator_canary_fixture_is_full_evidence_surface_without_holdout(self):
         with tempfile.TemporaryDirectory() as d:
             index_dir, task_path, task = _build_canary_fixture(
-                Path(d), "curator", "classification"
+                self.root, Path(d), "curator", "classification"
             )
             rows = [
                 json.loads(line)
@@ -43,7 +47,7 @@ class ReadinessGateTests(unittest.TestCase):
     def test_verifier_canary_fixture_exercises_multilabel_contract(self):
         with tempfile.TemporaryDirectory() as d:
             _, _, task = _build_canary_fixture(
-                Path(d), "verifier", "multilabel"
+                self.root, Path(d), "verifier", "multilabel"
             )
             self.assertEqual(task["task_type"], "multilabel")
             self.assertEqual(task["benchmark_id"], "external-critical-commentary")
