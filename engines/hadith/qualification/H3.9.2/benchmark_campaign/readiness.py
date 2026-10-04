@@ -366,39 +366,31 @@ def run_live_readiness(
     verifier_model = _required_env("MUBIN_READINESS_VERIFIER_MODEL_REF")
     verifier_key = _required_env("MUBIN_READINESS_VERIFIER_API_KEY")
 
-    jobs = [
+    role_jobs = [
         (
-            "curator", "classification", curator_endpoint, curator_model, curator_key,
+            "curator", curator_endpoint, curator_model, curator_key,
             curator_auth_style, curator_json_mode,
         ),
         (
-            "curator", "multilabel", curator_endpoint, curator_model, curator_key,
-            curator_auth_style, curator_json_mode,
-        ),
-        (
-            "verifier", "classification", verifier_endpoint, verifier_model, verifier_key,
-            verifier_auth_style, verifier_json_mode,
-        ),
-        (
-            "verifier", "multilabel", verifier_endpoint, verifier_model, verifier_key,
+            "verifier", verifier_endpoint, verifier_model, verifier_key,
             verifier_auth_style, verifier_json_mode,
         ),
     ]
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        futures = [
-            pool.submit(
-                _run_live_canary,
+
+    def run_role_matrix(job: tuple[str, str, str, str, str, str]) -> list[dict[str, Any]]:
+        role, endpoint, model_ref, api_key, auth_style, json_mode = job
+        return [
+            _run_live_canary(
                 root, role, task_type, endpoint, model_ref, api_key,
                 auth_style, json_mode, live_timeout,
             )
-            for (
-                role, task_type, endpoint, model_ref, api_key,
-                auth_style, json_mode,
-            ) in jobs
+            for task_type in ("classification", "multilabel")
         ]
-        live = [future.result() for future in futures]
 
-    live.sort(key=lambda x: x["role"])
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        matrices = list(pool.map(run_role_matrix, role_jobs))
+    live = [item for matrix in matrices for item in matrix]
+    live.sort(key=lambda x: (x["role"], x["task_type"]))
     report["live_canaries"] = live
     report["ready"] = all(item["passed"] for item in live)
     return report
