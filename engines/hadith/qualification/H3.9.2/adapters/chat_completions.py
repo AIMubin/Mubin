@@ -390,11 +390,117 @@ def _parse_completion_budget(value: str) -> int | None:
     return budget
 
 
+def _stream_text(value: Any) -> str | None:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = [
+            item["text"] for item in value
+            if isinstance(item, dict) and isinstance(item.get("text"), str)
+        ]
+        return "".join(parts) if parts else None
+    return None
+
+
+def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
+    total_bytes = 0
+    data_lines: list[str] = []
+    content_parts: list[str] = []
+    finish_reason: str | None = None
+    has_reasoning = False
+    saw_event = False
+    saw_done = False
+
+    def process_event() -> None:
+        nonlocal finish_reason, has_reasoning, saw_event, saw_done
+        if not data_lines:
+            return
+        data = "\n".join(data_lines)
+        data_lines.clear()
+        saw_event = True
+        if data.strip() == "[DONE]":
+            saw_done = True
+            return
+        try:
+            chunk = json.loads(data)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise AdapterDiagnosticError("endpoint_invalid_json") from None
+        if not isinstance(chunk, dict):
+            raise AdapterDiagnosticError("endpoint_invalid_json")
+        choices = chunk.get("choices")
+        if choices == []:
+            return
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            raise AdapterDiagnosticError("response_shape_invalid")
+        choice = choices[0]
+        raw_finish = choice.get("finish_reason")
+        if raw_finish is not None:
+            finish_reason = str(raw_finish).strip().casefold() or None
+        delta = choice.get("delta")
+        if delta is None and isinstance(choice.get("message"), dict):
+            delta = choice["message"]
+        if delta is None:
+            return
+        if not isinstance(delta, dict):
+            raise AdapterDiagnosticError("response_shape_invalid")
+        raw_content = delta.get("content")
+        if raw_content is not None:
+            text = _stream_text(raw_content)
+            if text is None:
+                raise AdapterDiagnosticError("response_shape_invalid")
+            content_parts.append(text)
+        raw_reasoning = delta.get("reasoning_content")
+        if raw_reasoning is not None:
+            if not isinstance(raw_reasoning, str):
+                raise AdapterDiagnosticError("response_shape_invalid")
+            if raw_reasoning.strip():
+                has_reasoning = True
+
+    while True:
+        line = resp.readline(MAX_RESPONSE_BYTES + 1)
+        if not line:
+            process_event()
+            break
+        total_bytes += len(line)
+        if total_bytes > MAX_RESPONSE_BYTES:
+            raise AdapterDiagnosticError("response_too_large")
+        try:
+            decoded = line.decode("utf-8").rstrip("\r\n")
+        except UnicodeDecodeError:
+            raise AdapterDiagnosticError("endpoint_invalid_json") from None
+        if decoded == "":
+            process_event()
+            continue
+        if decoded.startswith(":"):
+            continue
+        if decoded.startswith("data:"):
+            data_lines.append(decoded[5:].lstrip())
+            continue
+        if decoded.startswith(("event:", "id:", "retry:")):
+            continue
+        raise AdapterDiagnosticError("response_shape_invalid")
+
+    if not saw_event:
+        raise AdapterDiagnosticError("response_shape_invalid")
+    if not saw_done and finish_reason is None:
+        raise AdapterDiagnosticError("connection_failed")
+
+    return {
+        "choices": [{
+            "finish_reason": finish_reason,
+            "message": {
+                "content": "".join(content_parts),
+                "reasoning_content": "__present__" if has_reasoning else "",
+            },
+        }]
+    }
+
+
 def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
                system_prompt: str, user_prompt: str, timeout: int,
                temperature: float, completion_budget: int | None,
                completion_budget_field: str, reasoning_effort: str | None,
-               json_mode: str) -> dict[str, Any]:
+               json_mode: str, stream: bool = False) -> dict[str, Any]:
     base_url = _validate_base_url(base_url)
     url = base_url + "/chat/completions"
     payload: dict[str, Any] = {
@@ -415,7 +521,12 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
         payload["reasoning_effort"] = reasoning_effort
     if json_mode == "json_object":
         payload["response_format"] = {"type": "json_object"}
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    if stream:
+        payload["stream"] = True
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream" if stream else "application/json",
+    }
     if auth_style == "bearer":
         headers["Authorization"] = f"Bearer {api_key}"
     elif auth_style == "api-key":
@@ -434,6 +545,8 @@ def _call_chat(base_url: str, api_key: str, auth_style: str, model: str,
     )
     try:
         with opener.open(req, timeout=timeout) as resp:
+            if stream:
+                return _read_streamed_chat_response(resp)
             body = resp.read(MAX_RESPONSE_BYTES + 1)
             if len(body) > MAX_RESPONSE_BYTES:
                 raise AdapterDiagnosticError("response_too_large")
@@ -762,6 +875,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--auth-style", choices=["bearer", "api-key"], default="bearer")
     p.add_argument("--api-key-env", default="MUBIN_MODEL_API_KEY")
     p.add_argument("--json-mode", choices=["off", "json_object"], default="off")
+    p.add_argument(
+        "--stream",
+        action="store_true",
+        help="request SSE streaming and reconstruct only the final textual answer",
+    )
     p.add_argument("--timeout", type=int, default=600)
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument(
@@ -823,6 +941,7 @@ def main() -> int:
             completion_budget_field=args.completion_budget_field,
             reasoning_effort=reasoning_effort,
             json_mode=args.json_mode,
+            stream=args.stream,
         )
         try:
             finish_reason = _extract_finish_reason(response)
