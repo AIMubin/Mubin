@@ -78,11 +78,12 @@ The reference adapter defaults to ordinary provider-native inference behavior:
 
 - `--completion-budget auto` is the default and omits both `max_tokens` and `max_completion_tokens`;
 - `--reasoning-effort provider_default` is the default and sends no reasoning-control field;
-- the default HTTP request timeout is 600 seconds.
+- the default HTTP request timeout is 600 seconds;
+- buffered JSON is the adapter default, while the reviewed non-holdout pilot explicitly uses `--stream` to request standard chat-completions SSE transport.
 
 The pilot deliberately does not expose completion-budget or reasoning-effort controls. Provider-native behavior is used unless a separate, reviewed execution config has a reproducibility reason to set them explicitly. Unsupported provider capabilities must fail at the endpoint boundary rather than being silently translated or retried with a different request shape.
 
-All explicit inference values remain part of the command/config binding and therefore of execution provenance.
+All explicit inference values remain part of the command/config binding and therefore of execution provenance. Streaming is a transport policy, not an inference-tuning control: it does not alter the prompt, evidence, completion budget, reasoning setting, or admission rules. The stream parser requires structured SSE events, caps total response bytes, reconstructs only textual `delta.content`, never stores reasoning text, and treats an EOF without either `[DONE]` or a finish reason as a connection failure.
 
 ## Flow
 
