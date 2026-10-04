@@ -517,6 +517,29 @@ def _gold_contract_error(gold: Any, task: dict[str, Any]) -> str | None:
     return "unsupported_task_type"
 
 
+def _gold_agrees(curator_gold: dict[str, Any], verifier_gold: dict[str, Any],
+                 task: dict[str, Any]) -> bool:
+    """Compare gold using the preregistered task semantics.
+
+    Multilabel evaluation is set-based, so label ordering is not semantic.
+    Any non-label fields remain exact/canonical to avoid silently weakening
+    future extensions to the gold contract.
+    """
+    if task.get("task_type") != "multilabel":
+        return canonical_json_bytes(curator_gold) == canonical_json_bytes(verifier_gold)
+
+    curator_labels = curator_gold.get("labels")
+    verifier_labels = verifier_gold.get("labels")
+    if not isinstance(curator_labels, list) or not isinstance(verifier_labels, list):
+        return False
+    if set(curator_labels) != set(verifier_labels):
+        return False
+
+    curator_extra = {k: v for k, v in curator_gold.items() if k != "labels"}
+    verifier_extra = {k: v for k, v in verifier_gold.items() if k != "labels"}
+    return canonical_json_bytes(curator_extra) == canonical_json_bytes(verifier_extra)
+
+
 def _validate_response_identity(response: dict[str, Any], task: dict[str, Any], role: str) -> None:
     if response.get("task_fingerprint") != task.get("task_fingerprint"):
         raise ValueError(f"{role} task fingerprint mismatch: {task['task_id']}")
@@ -753,7 +776,7 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             adjudication.append({"task_id": tid, "reason": reason})
             log(tid, "adjudication", curator, verifier, reason)
             continue
-        if canonical_json_bytes(payload["gold"]) != canonical_json_bytes(answer.get("gold")):
+        if not _gold_agrees(payload["gold"], answer["gold"], task):
             adjudication.append({
                 "task_id": tid,
                 "reason": "gold_disagreement",
@@ -780,6 +803,18 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
                 "verifier_model_family": verifier["model_family"],
             })
             log(tid, "adjudication", curator, verifier, "policy_requires_human_or_authority_gate")
+            continue
+
+        provenance = candidate.get("answer_provenance")
+        if (
+            isinstance(provenance, dict)
+            and provenance.get("mode") == "adjudication_required"
+        ):
+            adjudication.append({
+                "task_id": tid,
+                "reason": "curator_requested_adjudication",
+            })
+            log(tid, "adjudication", curator, verifier, "curator_requested_adjudication")
             continue
 
         if candidate.get("gold_status") != "source_attributed":
