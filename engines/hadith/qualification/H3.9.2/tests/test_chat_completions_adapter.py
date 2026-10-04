@@ -378,6 +378,44 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
             json.dumps(response, ensure_ascii=False),
         )
 
+    def test_streaming_transport_stops_reading_immediately_after_done_event(self):
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter([
+                    b'data: {"choices":[{"delta":{"content":"{}"}}]}\n',
+                    b'\n',
+                    b'data: [DONE]\n',
+                    b'\n',
+                ])
+                self.calls = 0
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                self.calls += 1
+                if self.calls > 4:
+                    raise AssertionError("stream parser read past DONE")
+                return next(self.lines, b"")
+
+        response = FakeResponse()
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return response
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            parsed = _call_chat(
+                "https://example.test/v1", "secret", "bearer", "model-x",
+                "system", "user", 10, 0.0, None, "max_tokens", None,
+                "off", stream=True,
+            )
+        self.assertEqual(_extract_message_content(parsed), "{}")
+        self.assertEqual(response.calls, 4)
+
     def test_streaming_transport_treats_unfinished_eof_as_connection_failure(self):
         class FakeResponse:
             def __init__(self):
