@@ -66,6 +66,21 @@ jobs:
       - name: Checkout Mubin
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Refuse stale or non-main dispatch
+        run: |
+          set -eu
+          if [ "${GITHUB_REF_NAME:-}" != "main" ]; then
+            echo "This readiness/pilot workflow must be dispatched from main." >&2
+            exit 1
+          fi
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Refusing stale workflow execution; dispatch a fresh run from current main." >&2
+            exit 1
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
