@@ -214,6 +214,33 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
             self.assertEqual(ctx.exception.code, "connection_failed")
             self.assertNotIn("sensitive transport detail", str(ctx.exception))
 
+    def test_wrapped_timeout_is_reduced_to_endpoint_timeout(self):
+        import urllib.error
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener"
+        ) as build:
+            opener = build.return_value
+            opener.open.side_effect = urllib.error.URLError(
+                TimeoutError("sensitive timeout detail")
+            )
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
+                _call_chat(
+                    "https://example.test/v1",
+                    "secret",
+                    "bearer",
+                    "model-x",
+                    "system",
+                    "user",
+                    10,
+                    0.0,
+                    128,
+                    "max_tokens",
+                    None,
+                    "off",
+                )
+            self.assertEqual(ctx.exception.code, "endpoint_timeout")
+            self.assertNotIn("sensitive timeout detail", str(ctx.exception))
+
     def test_read_stage_disconnect_is_reduced_to_connection_failed(self):
         import http.client
 
