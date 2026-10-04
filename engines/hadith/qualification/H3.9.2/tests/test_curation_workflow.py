@@ -77,6 +77,42 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn("H392_CURATOR_API_KEY", job_env)
         self.assertNotIn("H392_VERIFIER_API_KEY", job_env)
         self.assertNotIn("H392_CURATION_ARTIFACT_KEY", job_env)
+        self.assertNotIn("MUBIN_READINESS_CURATOR_API_KEY", job_env)
+        self.assertNotIn("MUBIN_READINESS_VERIFIER_API_KEY", job_env)
+
+    def test_single_dispatch_runs_offline_and_live_readiness_before_real_pilot(self):
+        offline = self.workflow.index("- name: Run offline readiness suite")
+        live = self.workflow.index("- name: Run live Curator and Verifier readiness canaries")
+        acquire = self.workflow.index("- name: Acquire and re-verify pinned non-holdout sources")
+        curator = self.workflow.index("- name: Run Curator AI-A")
+        self.assertLess(offline, live)
+        self.assertLess(live, acquire)
+        self.assertLess(acquire, curator)
+        self.assertIn("python -m benchmark_campaign.readiness", self.workflow)
+        self.assertIn("--offline-only", self.workflow)
+        self.assertIn("--offline-report", self.workflow)
+        self.assertIn("--live-timeout 300", self.workflow)
+
+    def test_offline_readiness_phase_has_no_provider_secrets(self):
+        section = self.workflow.split("- name: Run offline readiness suite", 1)[1]
+        section = section.split(
+            "- name: Run live Curator and Verifier readiness canaries", 1
+        )[0]
+        self.assertNotIn("H392_CURATOR_API_KEY", section)
+        self.assertNotIn("H392_VERIFIER_API_KEY", section)
+        self.assertNotIn("H392_CURATION_ARTIFACT_KEY", section)
+
+    def test_live_readiness_phase_uses_step_scoped_provider_secrets_only(self):
+        section = self.workflow.split(
+            "- name: Run live Curator and Verifier readiness canaries", 1
+        )[1]
+        section = section.split(
+            "- name: Acquire and re-verify pinned non-holdout sources", 1
+        )[0]
+        self.assertIn("MUBIN_READINESS_CURATOR_API_KEY", section)
+        self.assertIn("MUBIN_READINESS_VERIFIER_API_KEY", section)
+        self.assertNotIn("H392_CURATION_ARTIFACT_KEY", section)
+        self.assertNotIn("MODEL_FAMILY", section)
 
     def test_secret_bearing_workflow_pins_action_commits(self):
         self.assertIn(
@@ -129,6 +165,8 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn('"response_counts"', summary)
         self.assertIn('"verifier_preparation"', summary)
         self.assertIn("verifier-task-report.json", summary)
+        self.assertIn('"readiness"', summary)
+        self.assertIn("READINESS_GATE.json", summary)
 
     def test_plaintext_source_bearing_outputs_are_not_uploaded(self):
         upload = self.workflow.split(
