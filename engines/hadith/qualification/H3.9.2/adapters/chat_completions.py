@@ -457,7 +457,7 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
                 raise AdapterDiagnosticError("response_shape_invalid")
             if raw_reasoning.strip():
                 has_reasoning = True
-        return False
+        return finish_reason is not None
 
     while True:
         line = resp.readline(MAX_RESPONSE_BYTES + 1)
