@@ -403,20 +403,23 @@ def _stream_text(value: Any) -> str | None:
 
 
 def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
-    total_bytes = 0
     data_lines: list[str] = []
+    event_bytes = 0
     content_parts: list[str] = []
+    content_bytes = 0
     finish_reason: str | None = None
     has_reasoning = False
     saw_event = False
     saw_done = False
 
     def process_event() -> bool:
-        nonlocal finish_reason, has_reasoning, saw_event, saw_done
+        nonlocal event_bytes, content_bytes, finish_reason, has_reasoning, saw_event, saw_done
         if not data_lines:
+            event_bytes = 0
             return False
         data = "\n".join(data_lines)
         data_lines.clear()
+        event_bytes = 0
         if not data.strip():
             return False
         saw_event = True
@@ -450,6 +453,9 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
             text = _stream_text(raw_content)
             if text is None:
                 raise AdapterDiagnosticError("response_shape_invalid")
+            content_bytes += len(text.encode("utf-8"))
+            if content_bytes > MAX_RESPONSE_BYTES:
+                raise AdapterDiagnosticError("response_too_large")
             content_parts.append(text)
         raw_reasoning = delta.get("reasoning_content")
         if raw_reasoning is not None:
@@ -473,8 +479,7 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
                     raise AdapterDiagnosticError("connection_failed") from None
                 raise
             break
-        total_bytes += len(line)
-        if total_bytes > MAX_RESPONSE_BYTES:
+        if len(line) > MAX_RESPONSE_BYTES:
             raise AdapterDiagnosticError("response_too_large")
         try:
             decoded = line.decode("utf-8").rstrip("\r\n")
@@ -487,7 +492,11 @@ def _read_streamed_chat_response(resp: Any) -> dict[str, Any]:
         if decoded.startswith(":"):
             continue
         if decoded.startswith("data:"):
-            data_lines.append(decoded[5:].lstrip())
+            payload_line = decoded[5:].lstrip()
+            event_bytes += len(payload_line.encode("utf-8"))
+            if event_bytes > MAX_RESPONSE_BYTES:
+                raise AdapterDiagnosticError("response_too_large")
+            data_lines.append(payload_line)
             continue
         if decoded.startswith(("event:", "id:", "retry:")):
             continue

@@ -83,7 +83,7 @@ The reference adapter defaults to ordinary provider-native inference behavior:
 
 The pilot deliberately does not expose completion-budget or reasoning-effort controls. Provider-native behavior is used unless a separate, reviewed execution config has a reproducibility reason to set them explicitly. Unsupported provider capabilities must fail at the endpoint boundary rather than being silently translated or retried with a different request shape.
 
-All explicit inference values remain part of the command/config binding and therefore of execution provenance. Streaming is a transport policy, not an inference-tuning control: it does not alter the prompt, evidence, completion budget, reasoning setting, or admission rules. The stream parser requires structured SSE events, caps total response bytes, reconstructs only textual `delta.content`, never stores reasoning text, and treats an EOF without either `[DONE]` or a finish reason as a connection failure.
+All explicit inference values remain part of the command/config binding and therefore of execution provenance. Streaming is a transport policy, not an inference-tuning control: it does not alter the prompt, evidence, completion budget, reasoning setting, or admission rules. The stream parser requires structured SSE events, caps each individual event and the retained final `delta.content`, reconstructs only textual answer content, never stores reasoning text, and treats an EOF without either `[DONE]` or a finish reason as a connection failure. Discarded reasoning chunks are not accumulated against the final-answer byte cap; run duration remains bounded by the adapter/executor timeouts.
 
 ## Flow
 

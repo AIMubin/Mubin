@@ -378,6 +378,87 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
             json.dumps(response, ensure_ascii=False),
         )
 
+    def test_streaming_transport_does_not_charge_discarded_reasoning_against_final_cap(self):
+        reasoning = "r" * 120
+        lines = []
+        for _ in range(5):
+            event = json.dumps({
+                "choices": [{"delta": {"reasoning_content": reasoning}}]
+            }).encode("utf-8")
+            lines.extend([b"data: " + event + b"\n", b"\n"])
+        final = json.dumps({
+            "choices": [{
+                "delta": {"content": "{}"},
+                "finish_reason": "stop",
+            }]
+        }).encode("utf-8")
+        lines.extend([b"data: " + final + b"\n", b"\n"])
+
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter(lines)
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                return next(self.lines, b"")
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.MAX_RESPONSE_BYTES", 256
+        ), patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            response = _call_chat(
+                "https://example.test/v1", "secret", "bearer", "model-x",
+                "system", "user", 10, 0.0, None, "max_tokens", None,
+                "off", stream=True,
+            )
+        self.assertEqual(_extract_message_content(response), "{}")
+        self.assertTrue(_has_reasoning_content(response))
+
+    def test_streaming_transport_caps_retained_final_content(self):
+        content = "x" * 80
+        lines = []
+        for _ in range(4):
+            event = json.dumps({
+                "choices": [{"delta": {"content": content}}]
+            }).encode("utf-8")
+            lines.extend([b"data: " + event + b"\n", b"\n"])
+
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter(lines)
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                return next(self.lines, b"")
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.MAX_RESPONSE_BYTES", 256
+        ), patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
+                _call_chat(
+                    "https://example.test/v1", "secret", "bearer", "model-x",
+                    "system", "user", 10, 0.0, None, "max_tokens", None,
+                    "off", stream=True,
+                )
+        self.assertEqual(ctx.exception.code, "response_too_large")
+
     def test_streaming_transport_stops_reading_immediately_after_done_event(self):
         class FakeResponse:
             def __init__(self):
