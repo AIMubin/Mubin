@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +13,7 @@ from benchmark_campaign.readiness import (
     _build_canary_fixture,
     _diagnostic_from_stderr,
     _load_bound_offline_report,
+    _run_live_canary,
     _validate_canary_output,
     run_live_readiness,
 )
@@ -173,6 +175,58 @@ class ReadinessGateTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "current GitHub SHA"):
                     _load_bound_offline_report(path)
 
+    def test_live_canary_retries_only_one_connection_failure(self):
+        with patch(
+            "benchmark_campaign.readiness.subprocess.run",
+            side_effect=[
+                SimpleNamespace(
+                    returncode=2,
+                    stderr="MUBIN_DIAGNOSTIC:connection_failed\n",
+                ),
+                SimpleNamespace(returncode=0, stderr=""),
+            ],
+        ) as run, patch(
+            "benchmark_campaign.readiness._validate_canary_output",
+            return_value=None,
+        ):
+            result = _run_live_canary(
+                self.root,
+                "curator",
+                "classification",
+                "https://secret.example/v1",
+                "secret-model",
+                "secret-key",
+                "bearer",
+                "json_object",
+                300,
+            )
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["attempts_used"], 2)
+        self.assertEqual(run.call_count, 2)
+
+        with patch(
+            "benchmark_campaign.readiness.subprocess.run",
+            return_value=SimpleNamespace(
+                returncode=2,
+                stderr="MUBIN_DIAGNOSTIC:http_401\n",
+            ),
+        ) as run:
+            result = _run_live_canary(
+                self.root,
+                "curator",
+                "classification",
+                "https://secret.example/v1",
+                "secret-model",
+                "secret-key",
+                "bearer",
+                "json_object",
+                300,
+            )
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["diagnostic"], "http_401")
+        self.assertEqual(result["attempts_used"], 1)
+        self.assertEqual(run.call_count, 1)
+
     def test_live_readiness_runs_full_matrix_without_exposing_provider_identity(self):
         offline = {
             "offline_protocol": {
@@ -203,6 +257,7 @@ class ReadinessGateTests(unittest.TestCase):
                 "task_type": task_type,
                 "passed": True,
                 "diagnostic": None,
+                "attempts_used": 1,
                 "duration_ms": 1,
             }
 
