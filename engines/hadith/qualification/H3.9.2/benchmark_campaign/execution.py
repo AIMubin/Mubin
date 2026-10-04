@@ -718,7 +718,7 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                 persist_manifest()
                 continue
             raise RuntimeError(
-                f"adapter batch failed after {cfg['max_attempts']} attempts: {batch_id}: {last_error_code or 'unknown_error'}"
+                f"adapter batch failed after {attempt_used} attempts: {batch_id}: {last_error_code or 'unknown_error'}"
             )
 
         existing.extend(stamped)
