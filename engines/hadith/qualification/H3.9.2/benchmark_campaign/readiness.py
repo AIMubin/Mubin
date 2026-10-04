@@ -97,7 +97,28 @@ def _canary_evidence_text(task_type: str, source_index: int) -> str:
     return repeated[:1700]
 
 
-def _build_canary_fixture(base: Path, role: str, task_type: str) -> tuple[Path, Path, dict[str, Any]]:
+def _benchmark_labels(root: Path, benchmark_id: str, task_type: str) -> list[str]:
+    spec = json.loads((root / "config" / "benchmark-spec.json").read_text(encoding="utf-8"))
+    for benchmark in spec.get("benchmarks", []):
+        if benchmark.get("id") != benchmark_id:
+            continue
+        evaluation = benchmark.get("evaluation")
+        if not isinstance(evaluation, dict) or evaluation.get("task_type") != task_type:
+            raise ValueError("readiness benchmark task type differs from benchmark spec")
+        labels = evaluation.get("labels")
+        if (
+            not isinstance(labels, list)
+            or not labels
+            or not all(isinstance(label, str) and label for label in labels)
+        ):
+            raise ValueError("readiness benchmark label contract is invalid")
+        return list(labels)
+    raise ValueError("readiness benchmark is missing from benchmark spec")
+
+
+def _build_canary_fixture(
+    root: Path, base: Path, role: str, task_type: str
+) -> tuple[Path, Path, dict[str, Any]]:
     if role not in {"curator", "verifier"}:
         raise ValueError("unsupported canary role")
     if task_type not in {"classification", "multilabel"}:
@@ -123,29 +144,14 @@ def _build_canary_fixture(base: Path, role: str, task_type: str) -> tuple[Path, 
 
     if task_type == "classification":
         benchmark_id = "transmission-language"
-        labels = [
-            "heard_from",
-            "heard_by_inverse",
-            "did_not_hear",
-            "did_not_meet",
-            "hearing_not_known",
-            "hearing_uncertain",
-            "partial_hearing",
-            "met",
-        ]
+        labels = _benchmark_labels(root, benchmark_id, task_type)
+        if "heard_from" not in labels:
+            raise ValueError("classification readiness target label missing from benchmark spec")
     else:
         benchmark_id = "external-critical-commentary"
-        labels = [
-            "continuity_negative",
-            "non_encounter",
-            "route_form",
-            "route_preference",
-            "route_not_preserved",
-            "raisedness_negative",
-            "narrator_error",
-            "narrator_weakening",
-            "route_isolation",
-        ]
+        labels = _benchmark_labels(root, benchmark_id, task_type)
+        if not {"non_encounter", "continuity_negative"}.issubset(set(labels)):
+            raise ValueError("multilabel readiness target labels missing from benchmark spec")
     task: dict[str, Any] = {
         "task_id": f"readiness:{role}:{task_type}",
         "benchmark_id": benchmark_id,
@@ -278,7 +284,7 @@ def _run_live_canary(
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix=f"mubin-h392-readiness-{role}-") as td:
         base = Path(td)
-        index_dir, task_path, _task = _build_canary_fixture(base, role, task_type)
+        index_dir, task_path, _task = _build_canary_fixture(root, base, role, task_type)
         output_path = base / "output.jsonl"
         env = {
             key: value
