@@ -175,6 +175,17 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$readiness_rc"
 
+      - name: Reconfirm main after readiness
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Main advanced during readiness; dispatch a fresh run before real curation." >&2
+            exit 1
+          fi
+
       - name: Acquire and re-verify pinned non-holdout sources
         run: |
           python -m benchmark_campaign acquire-sources \
