@@ -453,16 +453,22 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
                     b'data: {"choices":[{"delta":{"content":"{}"},"finish_reason":"stop"}]}\n',
                     b'\n',
                 ])
+                self.calls = 0
             def __enter__(self):
                 return self
             def __exit__(self, exc_type, exc, tb):
                 return False
             def readline(self, size):
+                self.calls += 1
+                if self.calls > 2:
+                    raise AssertionError("stream parser read past finish_reason")
                 return next(self.lines, b"")
+
+        response_obj = FakeResponse()
 
         class FakeOpener:
             def open(self, req, timeout):
-                return FakeResponse()
+                return response_obj
 
         with patch(
             "adapters.chat_completions.urllib.request.build_opener",
@@ -475,6 +481,7 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
             )
         self.assertEqual(_extract_message_content(response), "{}")
         self.assertEqual(_extract_finish_reason(response), "stop")
+        self.assertEqual(response_obj.calls, 2)
 
     def test_completion_budget_parser_accepts_auto_or_unbounded_positive_integer(self):
         self.assertIsNone(_parse_completion_budget("auto"))
