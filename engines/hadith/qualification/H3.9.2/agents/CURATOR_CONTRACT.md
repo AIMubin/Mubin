@@ -41,7 +41,7 @@ For a candidate:
 }
 ```
 
-For a multilabel task, `gold` is `{"labels": ["<one or more allowed labels>"]}`; label order is not semantically meaningful. For `adjudication_required`, omit `verbatim_answer` unless the adapter prompt explicitly requires it. `adjudication_required` is a Factory routing disposition only: it must never be interpreted as a final benchmark-record `answer_provenance.mode` eligible for promotion.
+For a multilabel task, `gold` is `{"labels": ["<one or more allowed labels>"]}`. For `adjudication_required`, omit `verbatim_answer` unless the adapter prompt explicitly requires it.
 
 For no qualifying case:
 
