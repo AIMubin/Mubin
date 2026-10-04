@@ -57,6 +57,10 @@ def _collectable_task_failure(error_code: str | None) -> bool:
     )
 
 
+def _retryable_adapter_failure(error_code: str | None) -> bool:
+    return error_code == "adapter:connection_failed"
+
+
 def _require_nonempty_string(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
@@ -443,6 +447,8 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
         raise ValueError(f"task partition {actual_partition} does not match requested {partition}")
     if partition == "holdout" and cfg["task_failure_policy"] != "fail_fast":
         raise ValueError("holdout execution requires task_failure_policy=fail_fast")
+    if partition == "holdout" and cfg["max_attempts"] != 1:
+        raise ValueError("holdout execution requires max_attempts=1 for one-shot evaluation")
     if partition == "holdout":
         for path in (tasks_path, index_dir, output_path, manifest_path):
             enforce_partition_boundary(root, "holdout", path, custodian_mode)
@@ -657,16 +663,18 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                             if diagnostic is not None
                             else f"nonzero_exit:{proc.returncode}"
                         )
-                        continue
+                        if _retryable_adapter_failure(last_error_code):
+                            continue
+                        break
                     if not raw_output.exists():
                         last_error_code = "missing_output"
-                        continue
+                        break
                     try:
                         raw_rows = load_jsonl(raw_output)
                         checked = _validate_raw_adapter_rows(raw_rows, batch, role)
                     except ValueError as exc:
                         last_error_code = f"invalid_output:{exc}"
-                        continue
+                        break
                     stamped = _stamp_rows(
                         checked, batch, cfg, config_sha, batch_id,
                         identity["adapter_command_sha256"],
@@ -675,6 +683,7 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
                     break
                 except subprocess.TimeoutExpired:
                     last_error_code = "timeout"
+                    break
 
         if stamped is None:
             if (
