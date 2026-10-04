@@ -269,6 +269,7 @@ jobs:
           curator_rejections = Counter()
           verifier_rejections = Counter()
           adjudication_reasons = Counter()
+          adjudication_reasons_by_benchmark = defaultdict(Counter)
           outcomes_by_benchmark = defaultdict(Counter)
           promoted_by_benchmark = Counter()
           ranges = []
@@ -310,6 +311,10 @@ jobs:
               adjudication_reasons.update(
                   reconciliation.get("adjudication_reason_counts", {})
               )
+              for bid, counts in reconciliation.get(
+                  "adjudication_reason_counts_by_benchmark", {}
+              ).items():
+                  adjudication_reasons_by_benchmark[bid].update(counts)
               promoted_by_benchmark.update(
                   reconciliation.get("promoted_by_benchmark", {})
               )
@@ -358,6 +363,10 @@ jobs:
               "curator_rejection_counts": dict(sorted(curator_rejections.items())),
               "verifier_rejection_counts": dict(sorted(verifier_rejections.items())),
               "adjudication_reason_counts": dict(sorted(adjudication_reasons.items())),
+              "adjudication_reason_counts_by_benchmark": {
+                  bid: dict(sorted(counts.items()))
+                  for bid, counts in sorted(adjudication_reasons_by_benchmark.items())
+              },
               "promoted_by_benchmark": dict(sorted(promoted_by_benchmark.items())),
               "outcome_by_benchmark": {
                   bid: dict(sorted(counts.items()))
