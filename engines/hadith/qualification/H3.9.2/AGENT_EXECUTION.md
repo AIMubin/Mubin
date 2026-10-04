@@ -85,10 +85,21 @@ The pilot deliberately does not expose completion-budget or reasoning-effort con
 
 All explicit inference values remain part of the command/config binding and therefore of execution provenance. Streaming is a transport policy, not an inference-tuning control: it does not alter the prompt, evidence, completion budget, reasoning setting, or admission rules. The stream parser requires structured SSE events, caps each individual event and the retained final `delta.content`, reconstructs only textual answer content, never stores reasoning text, and treats an EOF without either `[DONE]` or a finish reason as a connection failure. Discarded reasoning chunks are not accumulated against the final-answer byte cap; run duration remains bounded by the adapter/executor timeouts.
 
+## Readiness gate
+
+The manual non-holdout workflow is self-gating. Before real Factory tasks are executed it runs the full offline compile/test suite without provider secrets, then two live synthetic canaries against the configured Curator and Verifier endpoints. The canaries use the same adapter, SSE transport, auth style, JSON mode, contract files, twelve-source evidence ceiling, and provider-native inference defaults as the production pilot.
+
+Curator readiness exercises a classification candidate path; Verifier readiness exercises a multilabel candidate path. Both must return evidence-bound candidates with the expected trivial synthetic gold. `no_candidate`, transport/protocol errors, malformed output, contract failures, or semantic mismatch fail readiness and prevent the real pilot from starting.
+
+The offline report is bound to the current GitHub SHA before the secret-bearing live phase accepts it. Readiness reports are redacted and never contain endpoint/model identity, credentials, reasoning text, or benchmark source text. Synthetic canary outputs are ephemeral and are not benchmark inputs, reviewed records, or qualification evidence.
+
 ## Flow
 
 ```text
-factory-build-tasks
+offline compile + all tests
+  -> live Curator + Verifier canaries
+  -> acquire/verify non-holdout sources
+  -> factory-build-tasks
   -> factory-run-agent --role curator
   -> factory-prepare-verifier
   -> factory-run-agent --role verifier --independent-from-manifest <curator-run.json>
