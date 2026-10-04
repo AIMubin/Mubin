@@ -61,6 +61,13 @@ def _retryable_adapter_failure(error_code: str | None) -> bool:
     return error_code == "adapter:connection_failed"
 
 
+def _validate_partition_execution_policy(partition: str, cfg: dict[str, Any]) -> None:
+    if partition == "holdout" and cfg["task_failure_policy"] != "fail_fast":
+        raise ValueError("holdout execution requires task_failure_policy=fail_fast")
+    if partition == "holdout" and cfg["max_attempts"] != 1:
+        raise ValueError("holdout execution requires max_attempts=1 for one-shot evaluation")
+
+
 def _require_nonempty_string(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
@@ -445,10 +452,7 @@ def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path
     actual_partition = _task_partition(tasks)
     if actual_partition != partition:
         raise ValueError(f"task partition {actual_partition} does not match requested {partition}")
-    if partition == "holdout" and cfg["task_failure_policy"] != "fail_fast":
-        raise ValueError("holdout execution requires task_failure_policy=fail_fast")
-    if partition == "holdout" and cfg["max_attempts"] != 1:
-        raise ValueError("holdout execution requires max_attempts=1 for one-shot evaluation")
+    _validate_partition_execution_policy(partition, cfg)
     if partition == "holdout":
         for path in (tasks_path, index_dir, output_path, manifest_path):
             enforce_partition_boundary(root, "holdout", path, custodian_mode)
