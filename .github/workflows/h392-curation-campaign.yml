@@ -50,7 +50,7 @@ permissions:
 jobs:
   readiness-and-plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       expected_shards: ${{ steps.plan.outputs.expected_shards }}
@@ -286,7 +286,9 @@ jobs:
               if github_sha is None:
                   github_sha = sha
               elif sha != github_sha:
-                  raise SystemExit("shard summaries span multiple GitHub SHAs")
+                  # Keep aggregating redacted evidence, then fail closed via
+                  # coverage_errors after the report has been written.
+                  github_sha = "__mixed__"
 
               offset = int(row["task_offset"])
               count = int(row["selected_task_count"])
@@ -334,7 +336,9 @@ jobs:
                   coverage_errors.append("range_outside_request")
               cursor = max(cursor, stop)
 
-          if github_sha is not None and github_sha != os.environ.get("GITHUB_SHA"):
+          if github_sha == "__mixed__":
+              coverage_errors.append("cross_shard_sha_mismatch")
+          elif github_sha is not None and github_sha != os.environ.get("GITHUB_SHA"):
               coverage_errors.append("github_sha_mismatch")
           if len(summaries) != expected_shards:
               coverage_errors.append("shard_count_mismatch")
