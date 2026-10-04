@@ -87,9 +87,9 @@ All explicit inference values remain part of the command/config binding and ther
 
 ## Readiness gate
 
-The manual non-holdout workflow is self-gating. Before real Factory tasks are executed it runs the full offline compile/test suite without provider secrets, then two live synthetic canaries against the configured Curator and Verifier endpoints. The canaries use the same adapter, SSE transport, auth style, JSON mode, contract files, twelve-source evidence ceiling, and provider-native inference defaults as the production pilot.
+The manual non-holdout workflow is self-gating. Before real Factory tasks are executed it runs the full offline compile/test suite without provider secrets, then four live synthetic canaries covering the Curator/Verifier × classification/multilabel matrix against the configured endpoints. The canaries use the same adapter, SSE transport, auth style, JSON mode, contract files, twelve-source evidence ceiling, and provider-native inference defaults as the production pilot.
 
-Curator readiness exercises a classification candidate path; Verifier readiness exercises a multilabel candidate path. Both must return evidence-bound candidates with the expected trivial synthetic gold. `no_candidate`, transport/protocol errors, malformed output, contract failures, or semantic mismatch fail readiness and prevent the real pilot from starting.
+Each role must complete both classification and multilabel candidate paths. All four canaries must return evidence-bound candidates with the expected trivial synthetic gold. `no_candidate`, transport/protocol errors, malformed output, contract failures, or semantic mismatch fail readiness and prevent the real pilot from starting.
 
 The offline report is bound to the current GitHub SHA before the secret-bearing live phase accepts it. Readiness reports are redacted and never contain endpoint/model identity, credentials, reasoning text, or benchmark source text. Synthetic canary outputs are ephemeral and are not benchmark inputs, reviewed records, or qualification evidence.
 
@@ -97,7 +97,7 @@ The offline report is bound to the current GitHub SHA before the secret-bearing 
 
 ```text
 offline compile + all tests
-  -> live Curator + Verifier canaries
+  -> live Curator/Verifier × classification/multilabel canary matrix
   -> acquire/verify non-holdout sources
   -> factory-build-tasks
   -> factory-run-agent --role curator
