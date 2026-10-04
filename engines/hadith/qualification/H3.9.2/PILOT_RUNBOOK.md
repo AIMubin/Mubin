@@ -150,14 +150,22 @@ Model-output and contract failures such as `model_output_invalid_json`, `model_o
 
 Infrastructure and execution-integrity failures remain fatal: authentication errors, persistent connection/provider failures, endpoint response-shape failures, source/index binding failures, partition violations, adapter protocol failures, and executor failures stop the workflow. The manual pilot uses streamed chat-completions transport so long-running responses can emit SSE chunks during generation; the adapter retains only final answer text and a presence marker for reasoning, never the reasoning text itself. Stream accounting limits retained final answer/event size, not the cumulative bytes of discarded reasoning chunks, so a reasoning-heavy compatible endpoint is not rejected merely for streaming more internal reasoning data. The non-holdout pilot retries one content-safe `connection_failed` transport failure once, because a dropped HTTP body or socket reset is not evidence about benchmark quality. No model-output/contract failure is retried. A request exceeding the adapter's 600-second timeout remains fatal and is not retried. Final holdout execution remains strictly one-shot with `max_attempts=1`.
 
-## Expansion sequence
+## Campaign execution sequence
 
-Only after reviewing the 8-task pilot:
+The 8-task pilot has now demonstrated an end-to-end successful readiness, Curator, blind Verifier, reconciliation, encryption, and artifact path. Do not repeat the same 8-task pilot merely to reconfirm infrastructure.
 
-1. run a 32-task chunk;
-2. review retrieval quality, no-candidate rate, agreement rate, adjudication reasons, and source coverage;
-3. run one or more 64-task chunks;
-4. scale across the remaining non-holdout tasks only after the execution path is stable.
+The next stage uses `.github/workflows/h392-curation-campaign.yml`:
+
+1. dispatch one **32-task** non-holdout campaign batch;
+2. default to four deterministic 8-task shards with `max-parallel=4`;
+3. run the complete offline + live readiness gate **once** for the whole batch;
+4. bind every shard to that exact readiness Git SHA before it may skip its local gate;
+5. keep each shard independently encrypted and redacted;
+6. aggregate only `CURATION_RUN_SUMMARY.json` from completed shards into a campaign summary;
+7. review Curator/Verifier rejection counts, promoted/adjudication/skipped yield, aggregate adjudication reasons, benchmark outcome mix, and complete shard coverage;
+8. only after the 32-task campaign is reviewed should the campaign bound be deliberately expanded toward larger batches.
+
+The first campaign-stage workflow deliberately caps `task_count <= 32` and `shard_size <= 8`. This is a governance brake, not a technical limit: it prevents one successful pilot from immediately launching hundreds of expensive model calls before campaign yield and adjudication structure are reviewed.
 
 Never tune prompts or model behavior against the sealed final holdout.
 
