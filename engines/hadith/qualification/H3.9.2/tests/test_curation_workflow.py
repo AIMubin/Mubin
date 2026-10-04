@@ -87,6 +87,7 @@ class CurationWorkflowTests(unittest.TestCase):
     def test_campaign_runs_one_central_readiness_then_parallel_sha_bound_shards(self):
         self.assertIn("name: H3.9.2 campaign batch", self.campaign_workflow)
         self.assertIn("readiness-and-plan:", self.campaign_workflow)
+        self.assertIn("timeout-minutes: 60", self.campaign_workflow)
         self.assertEqual(
             self.campaign_workflow.count(
                 "Run live Curator and Verifier readiness canaries once"
@@ -124,6 +125,7 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("outcome_by_benchmark", aggregate)
         self.assertIn("coverage_complete", aggregate)
         self.assertIn("coverage_errors", aggregate)
+        self.assertIn("cross_shard_sha_mismatch", aggregate)
         self.assertIn("continue-on-error: true", self.campaign_workflow)
 
     def test_campaign_secret_bearing_actions_are_commit_pinned(self):
