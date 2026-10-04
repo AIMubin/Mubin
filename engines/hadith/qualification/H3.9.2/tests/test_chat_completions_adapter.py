@@ -1131,9 +1131,20 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         task["task_type"] = "multilabel"
         task["allowed_labels"] = ["a", "b"]
         task["candidate_input"] = {"question": "q"}
-        prompt = _user_prompt("verifier", task, [])
-        self.assertIn("multilabel uses a non-empty gold.labels array", prompt)
-        self.assertIn("exact strings from task.allowed_labels", prompt)
+        prompt = json.loads(_user_prompt("verifier", task, []))
+        self.assertEqual(
+            prompt["required_output"]["gold"],
+            {"labels": ["<one or more allowed labels>"]},
+        )
+        self.assertIn("multilabel must use gold=", prompt["instruction"])
+        self.assertIn(
+            "exact strings from task.allowed_labels",
+            prompt["instruction"],
+        )
+        self.assertEqual(
+            prompt["serialization"]["do_not_nest_under"],
+            "answer",
+        )
 
     def test_json_fence_and_content_extraction_are_tolerant(self):
         fence = chr(96) * 3
