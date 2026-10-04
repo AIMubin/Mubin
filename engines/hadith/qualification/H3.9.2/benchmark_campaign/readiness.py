@@ -172,6 +172,8 @@ def _validate_canary_output(role: str, task_type: str, output_path: Path) -> str
         return "canary_output_invalid"
 
     row = rows[0]
+    if row.get("task_id") != f"readiness:{role}:{task_type}":
+        return "canary_output_invalid"
     if row.get("status") != "candidate":
         return "canary_no_candidate"
 
@@ -370,11 +372,19 @@ def run_live_readiness(
             curator_auth_style, curator_json_mode,
         ),
         (
+            "curator", "multilabel", curator_endpoint, curator_model, curator_key,
+            curator_auth_style, curator_json_mode,
+        ),
+        (
+            "verifier", "classification", verifier_endpoint, verifier_model, verifier_key,
+            verifier_auth_style, verifier_json_mode,
+        ),
+        (
             "verifier", "multilabel", verifier_endpoint, verifier_model, verifier_key,
             verifier_auth_style, verifier_json_mode,
         ),
     ]
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         futures = [
             pool.submit(
                 _run_live_canary,
