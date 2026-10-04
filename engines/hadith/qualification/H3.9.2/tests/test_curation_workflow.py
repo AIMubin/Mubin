@@ -64,7 +64,8 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn('"--completion-budget-field"', self.workflow)
         self.assertNotIn('"--reasoning-effort"', self.workflow)
 
-    def test_pilot_uses_one_task_collection_mode_with_generous_request_timeout(self):
+    def test_pilot_uses_streaming_one_task_collection_mode_with_generous_request_timeout(self):
+        self.assertIn('"--stream"', self.workflow)
         self.assertIn('"--timeout", "600"', self.workflow)
         self.assertIn('"batch_size": 1', self.workflow)
         self.assertIn('"max_attempts": 2', self.workflow)
