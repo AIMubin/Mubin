@@ -652,6 +652,10 @@ class FactoryTests(unittest.TestCase):
             _gold_contract_error({"labels": ["a", "c"]}, multi),
             "multilabel_label_outside_contract",
         )
+        self.assertEqual(
+            _gold_contract_error({"labels": [1]}, multi),
+            "multilabel_labels_must_be_strings",
+        )
 
     def test_out_of_contract_gold_routes_to_adjudication(self):
         with tempfile.TemporaryDirectory() as d:
