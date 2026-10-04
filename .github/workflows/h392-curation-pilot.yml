@@ -93,6 +93,10 @@ jobs:
           set -eu
           test -n "$CURATOR_ENDPOINT"
           test -n "$VERIFIER_ENDPOINT"
+          test -n "$CURATOR_MODEL_FAMILY"
+          test -n "$VERIFIER_MODEL_FAMILY"
+          test -n "$CURATOR_MODEL_REF"
+          test -n "$VERIFIER_MODEL_REF"
           test -n "$CURATOR_API_KEY"
           test -n "$VERIFIER_API_KEY"
           test -n "$ARTIFACT_KEY"
@@ -121,6 +125,36 @@ jobs:
 
       - name: Build isolated ephemeral workspace
         run: mkdir -p "$CACHE_DIR" "$INDEX_DIR" "$RUN_DIR" "$REDACTED_DIR"
+
+      - name: Run offline readiness suite
+        run: |
+          python -m benchmark_campaign.readiness \
+            --offline-only \
+            --out "$REDACTED_DIR/OFFLINE_READINESS.json"
+
+      - name: Run live Curator and Verifier readiness canaries
+        env:
+          MUBIN_READINESS_CURATOR_ENDPOINT: ${{ secrets.H392_CURATOR_ENDPOINT }}
+          MUBIN_READINESS_CURATOR_MODEL_REF: ${{ secrets.H392_CURATOR_MODEL_REF }}
+          MUBIN_READINESS_CURATOR_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
+          MUBIN_READINESS_VERIFIER_ENDPOINT: ${{ secrets.H392_VERIFIER_ENDPOINT }}
+          MUBIN_READINESS_VERIFIER_MODEL_REF: ${{ secrets.H392_VERIFIER_MODEL_REF }}
+          MUBIN_READINESS_VERIFIER_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
+        run: |
+          python -m benchmark_campaign.readiness \
+            --offline-report "$REDACTED_DIR/OFFLINE_READINESS.json" \
+            --out "$REDACTED_DIR/READINESS_GATE.json" \
+            --curator-auth-style "$CURATOR_AUTH_STYLE" \
+            --verifier-auth-style "$VERIFIER_AUTH_STYLE" \
+            --curator-json-mode "$CURATOR_JSON_MODE" \
+            --verifier-json-mode "$VERIFIER_JSON_MODE" \
+            --live-timeout 300
+          {
+            echo '### H3.9.2 comprehensive readiness gate'
+            echo '```json'
+            cat "$REDACTED_DIR/READINESS_GATE.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Acquire and re-verify pinned non-holdout sources
         run: |
@@ -342,6 +376,7 @@ jobs:
           verifier = load(verifier_path) if verifier_path.exists() else None
           verifier_preparation = load(redacted / "verifier-task-report.json")
           reconcile = load(redacted / "reconcile-report.json")
+          readiness = load(redacted / "READINESS_GATE.json")
           chunk = load(redacted / "chunk.json")
           summary = {
               "schema_version": 1,
@@ -350,6 +385,7 @@ jobs:
               "github_sha": os.environ.get("GITHUB_SHA"),
               "github_run_id": os.environ.get("GITHUB_RUN_ID"),
               **chunk,
+              "readiness": readiness,
               "curator": {
                   "config_sha256": curator["config_sha256"],
                   "adapter_artifacts": curator["adapter_artifacts"],
