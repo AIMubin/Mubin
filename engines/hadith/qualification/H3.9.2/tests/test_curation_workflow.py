@@ -36,6 +36,14 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn(escaped, self.workflow)
         self.assertIn(expected, self.workflow)
 
+    def test_workflow_refuses_stale_or_non_main_dispatch(self):
+        guard = self.workflow.split("- name: Refuse stale or non-main dispatch", 1)[1]
+        guard = guard.split("- name: Set up Python", 1)[0]
+        self.assertIn('GITHUB_REF_NAME:-', guard)
+        self.assertIn('git ls-remote origin refs/heads/main', guard)
+        self.assertIn('git rev-parse HEAD', guard)
+        self.assertIn('Refusing stale workflow execution', guard)
+
     def test_model_identity_is_not_exposed_as_dispatch_input(self):
         dispatch = self.workflow.split("permissions:", 1)[0]
         self.assertNotIn("model_family", dispatch)
