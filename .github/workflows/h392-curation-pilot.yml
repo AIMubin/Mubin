@@ -1,4 +1,4 @@
-name: H3.9.2 curation pilot
+name: H3.9.2 readiness + curation pilot
 
 on:
   workflow_dispatch:
