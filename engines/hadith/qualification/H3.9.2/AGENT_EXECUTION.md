@@ -132,6 +132,8 @@ offline compile + all tests
 
 The execution layer validates transport/provenance integrity. It does not elevate AI output into authority; promotion remains governed by Factory source verification, risk policy, and adjudication.
 
+Reconciliation emits only **aggregate** redacted adjudication telemetry: total reason counts, reason counts by benchmark, and promoted/adjudication/skipped outcome counts by benchmark. These aggregates contain no task IDs, source text, source locators, model output, gold payloads, or adjudication detail strings. Source-bearing adjudication rows and the curation ledger remain inside the encrypted bundle.
+
 
 Adapter stdout is discarded. Stderr is written only to an ephemeral per-attempt file and deleted with the temporary execution directory. The executor ignores arbitrary stderr content and recognizes only a strict `MUBIN_DIAGNOSTIC:<code>` marker matching `[a-z0-9_:-]{1,80}`; everything else is discarded. Batch failure reports therefore expose only sanitized diagnostic codes or return codes, never command arguments, endpoint values, model identity, source text, response bodies, or credentials.
 
