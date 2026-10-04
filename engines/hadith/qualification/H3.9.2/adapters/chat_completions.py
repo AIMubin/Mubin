@@ -458,7 +458,6 @@ def _supports_from_model(value: Any, evidence: list[dict[str, Any]]) -> list[dic
         )
     by_id = {str(x["evidence_id"]): x for x in evidence}
     supports = []
-    seen_sources: set[str] = set()
     for item in value:
         if not isinstance(item, dict):
             raise ModelContractError(
@@ -489,12 +488,6 @@ def _supports_from_model(value: Any, evidence: list[dict[str, Any]]) -> list[dic
                 "support_text must be verbatim inside the selected evidence excerpt",
             )
         sid = str(source["source_id"])
-        if sid in seen_sources:
-            raise ModelContractError(
-                "contract_support_source_duplicate",
-                "at most one evidence window per source may be cited",
-            )
-        seen_sources.add(sid)
         supports.append({
             "source_id": sid,
             "locator": source["locator"],
@@ -503,21 +496,30 @@ def _supports_from_model(value: Any, evidence: list[dict[str, Any]]) -> list[dic
         })
     return supports
 
-def _valid_gold(gold: Any, task: dict[str, Any]) -> bool:
+def _gold_contract_code(gold: Any, task: dict[str, Any]) -> str | None:
     if not isinstance(gold, dict):
-        return False
+        return "contract_gold_not_object"
     allowed = {str(x) for x in task.get("allowed_labels", [])}
-    if task.get("task_type") == "classification":
-        return isinstance(gold.get("label"), str) and gold["label"] in allowed
-    if task.get("task_type") == "multilabel":
+    task_type = task.get("task_type")
+    if task_type == "classification":
+        label = gold.get("label")
+        if not isinstance(label, str):
+            return "contract_gold_label_type_invalid"
+        if label not in allowed:
+            return "contract_gold_label_outside_contract"
+        return None
+    if task_type == "multilabel":
         labels = gold.get("labels")
-        return (
-            isinstance(labels, list) and bool(labels)
-            and all(isinstance(label, str) for label in labels)
-            and len(labels) == len(set(labels))
-            and set(labels).issubset(allowed)
-        )
-    return False
+        if not isinstance(labels, list) or not labels:
+            return "contract_gold_labels_missing"
+        if not all(isinstance(label, str) for label in labels):
+            return "contract_gold_label_type_invalid"
+        if len(labels) != len(set(labels)):
+            return "contract_gold_labels_duplicate"
+        if not set(labels).issubset(allowed):
+            return "contract_gold_label_outside_contract"
+        return None
+    return "contract_gold_task_type_invalid"
 
 def _case_id(task_id: str) -> str:
     return "h392-" + hashlib.sha256(task_id.encode("utf-8")).hexdigest()[:24]
@@ -542,9 +544,10 @@ def _curator_row(task: dict[str, Any], model_obj: dict[str, Any],
             "Curator model output status must be candidate or no_candidate",
         )
     gold = model_obj.get("gold")
-    if not _valid_gold(gold, task):
+    gold_error = _gold_contract_code(gold, task)
+    if gold_error is not None:
         raise ModelContractError(
-            "contract_gold_invalid",
+            gold_error,
             "Curator gold violates task label contract",
         )
     family_id = model_obj.get("family_id")
@@ -654,9 +657,10 @@ def _verifier_row(task: dict[str, Any], model_obj: dict[str, Any],
             "Verifier model output status must be candidate or no_candidate",
         )
     gold = model_obj.get("gold")
-    if not _valid_gold(gold, task):
+    gold_error = _gold_contract_code(gold, task)
+    if gold_error is not None:
         raise ModelContractError(
-            "contract_gold_invalid",
+            gold_error,
             "Verifier gold violates task label contract",
         )
     supports = _supports_from_model(model_obj.get("supports"), evidence)
@@ -711,7 +715,9 @@ def _user_prompt(role: str, task: dict[str, Any], evidence: list[dict[str, Any]]
             "If interpretation is required, use adjudication_required. For risk tier 3, "
             "adjudication_required is expected for judgment-heavy identity claims. "
             "The input field is only the end-user benchmark question/input. Do not copy task metadata "
-            "such as task_id, benchmark_id, risk_tier, task_type, allowed_labels, or anchor_source_id into input."
+            "such as task_id, benchmark_id, risk_tier, task_type, allowed_labels, or anchor_source_id into input. "
+            "Use the exact gold shape required by task_type and only exact strings from task.allowed_labels. "
+            "Multiple support_text spans may cite the same evidence/source when each span is a literal substring."
         )
     else:
         output_contract = {
@@ -722,7 +728,10 @@ def _user_prompt(role: str, task: dict[str, Any], evidence: list[dict[str, Any]]
         }
         instruction = (
             "Determine the answer independently. You have not been given Curator AI-A's gold or supports. "
-            "Do not infer them. Use only the evidence below."
+            "Do not infer them. Use only the evidence below. "
+            "Use the exact gold shape required by task_type: classification uses gold.label; "
+            "multilabel uses a non-empty gold.labels array. Use only exact strings from task.allowed_labels. "
+            "Multiple support_text spans may cite the same evidence/source when each span is a literal substring."
         )
     return json.dumps({
         "instruction": instruction,
