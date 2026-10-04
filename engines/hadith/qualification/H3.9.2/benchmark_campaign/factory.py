@@ -723,12 +723,32 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             skipped += 1
             log(tid, "skipped", curator=curator, reason="no_curator_candidate")
             continue
+
+        _validate_response_identity(curator, task, "curator")
+        candidate = curator.get("candidate")
+        if not isinstance(candidate, dict):
+            adjudication.append({"task_id": tid, "reason": "malformed_curator_candidate"})
+            log(tid, "adjudication", curator=curator, reason="malformed_curator_candidate")
+            continue
+
+        provenance = candidate.get("answer_provenance")
+        if (
+            task.get("auto_promotion") is True
+            and isinstance(provenance, dict)
+            and provenance.get("mode") == "adjudication_required"
+        ):
+            adjudication.append({
+                "task_id": tid,
+                "reason": "curator_requested_adjudication",
+            })
+            log(tid, "adjudication", curator=curator, reason="curator_requested_adjudication")
+            continue
+
         verifier = verifiers.get(tid)
         if verifier is None:
             adjudication.append({"task_id": tid, "reason": "missing_verifier_response"})
             log(tid, "adjudication", curator=curator, reason="missing_verifier_response")
             continue
-        _validate_response_identity(curator, task, "curator")
         _validate_response_identity(verifier, task, "verifier")
         if _canonical_model_family(curator["model_family"]) == _canonical_model_family(verifier["model_family"]):
             adjudication.append({"task_id": tid, "reason": "model_family_not_independent"})
@@ -739,11 +759,10 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             log(tid, "adjudication", curator, verifier, "verifier_no_candidate")
             continue
 
-        candidate = curator.get("candidate")
         answer = verifier.get("answer")
-        if not isinstance(candidate, dict) or not isinstance(answer, dict):
-            adjudication.append({"task_id": tid, "reason": "malformed_candidate_or_verifier_answer"})
-            log(tid, "adjudication", curator, verifier, "malformed_candidate_or_verifier_answer")
+        if not isinstance(answer, dict):
+            adjudication.append({"task_id": tid, "reason": "malformed_verifier_answer"})
+            log(tid, "adjudication", curator, verifier, "malformed_verifier_answer")
             continue
         try:
             _verify_factory_candidate_refs(
@@ -803,18 +822,6 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
                 "verifier_model_family": verifier["model_family"],
             })
             log(tid, "adjudication", curator, verifier, "policy_requires_human_or_authority_gate")
-            continue
-
-        provenance = candidate.get("answer_provenance")
-        if (
-            isinstance(provenance, dict)
-            and provenance.get("mode") == "adjudication_required"
-        ):
-            adjudication.append({
-                "task_id": tid,
-                "reason": "curator_requested_adjudication",
-            })
-            log(tid, "adjudication", curator, verifier, "curator_requested_adjudication")
             continue
 
         if candidate.get("gold_status") != "source_attributed":
