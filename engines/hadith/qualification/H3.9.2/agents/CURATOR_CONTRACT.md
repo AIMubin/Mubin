@@ -23,11 +23,37 @@ The task contains no gold answer. Work only from `allowed_source_pool`. `anchor_
 
 ## Response envelope
 
-Return one JSON object per task. When using the provider-neutral execution layer, the adapter returns only `task_id`, `status`, and the role payload (`candidate` or `reason`); the executor binds `task_fingerprint`, stable `model_family`, specific `model_ref`, and execution hashes centrally. Manual integrations that bypass the executor must provide the full envelope themselves.
+The **model completion consumed by the reference adapter** is intentionally smaller than the executor envelope. Return exactly one JSON object with these top-level fields:
 
-The candidate should use `gold_status=source_attributed`, `synthetic=false`, source refs with exact locators and verbatim excerpts, `answer_provenance` with literal supports, and a payload containing `input` and proposed `gold`.
+For a candidate:
 
-For no qualifying case, return `status=no_candidate` with a concise reason.
+```json
+{
+  "status": "candidate",
+  "family_id": "stable evidence-derived family identifier",
+  "input": {},
+  "gold": {"label": "<one allowed label>"},
+  "mode": "direct_extract",
+  "verbatim_answer": "literal answer text",
+  "supports": [
+    {"evidence_id": "E01", "support_text": "verbatim substring"}
+  ]
+}
+```
+
+For a multilabel task, `gold` is `{"labels": ["<one or more allowed labels>"]}`. For `adjudication_required`, omit `verbatim_answer` unless the adapter prompt explicitly requires it.
+
+For no qualifying case:
+
+```json
+{"status": "no_candidate", "reason": "concise evidence-bound reason"}
+```
+
+Do **not** nest the model-completion fields under `candidate`, and do not add `task_id`, source refs, execution hashes, or model identity to the model completion. The reference adapter validates the model completion, constructs the canonical Curator `candidate` object with source refs and provenance, and returns only `task_id`, `status`, and the role payload (`candidate` or `reason`) to the executor. The executor then binds `task_fingerprint`, stable `model_family`, specific `model_ref`, and execution hashes centrally.
+
+The canonical candidate emitted by the adapter uses `gold_status=source_attributed`, `synthetic=false`, exact source refs and verbatim excerpts, `answer_provenance` with literal supports, and a payload containing `input` and proposed `gold`.
+
+Manual integrations that bypass the reference adapter/executor must provide the full canonical envelope themselves.
 
 ## Prohibited behavior
 
