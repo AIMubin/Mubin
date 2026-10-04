@@ -34,7 +34,9 @@ class ReadinessGateTests(unittest.TestCase):
             self.assertEqual(len(task["allowed_source_pool"]), 12)
             self.assertEqual(task["partition"], "non_holdout")
             self.assertEqual(task["task_type"], "classification")
-            self.assertEqual(task["allowed_labels"], ["supported", "unsupported"])
+            self.assertEqual(task["benchmark_id"], "transmission-language")
+            self.assertIn("heard_from", task["allowed_labels"])
+            self.assertIn("did_not_meet", task["allowed_labels"])
             self.assertNotIn("candidate_input", task)
             self.assertTrue(task_path.exists())
 
@@ -44,7 +46,9 @@ class ReadinessGateTests(unittest.TestCase):
                 Path(d), "verifier", "multilabel"
             )
             self.assertEqual(task["task_type"], "multilabel")
-            self.assertEqual(task["allowed_labels"], ["alpha", "beta"])
+            self.assertEqual(task["benchmark_id"], "external-critical-commentary")
+            self.assertIn("continuity_negative", task["allowed_labels"])
+            self.assertIn("non_encounter", task["allowed_labels"])
             self.assertIsInstance(task["candidate_input"], dict)
 
     def test_curator_canary_output_requires_expected_candidate_gold(self):
@@ -56,13 +60,13 @@ class ReadinessGateTests(unittest.TestCase):
                 "candidate": {
                     "payload": {
                         "input": {"question": "q"},
-                        "gold": {"label": "supported"},
+                        "gold": {"label": "heard_from"},
                     },
                     "answer_provenance": {
                         "supports": [
                             {
                                 "source_id": "readiness-source-01",
-                                "support_text": "supported",
+                                "support_text": "heard_from",
                             }
                         ]
                     },
@@ -73,7 +77,7 @@ class ReadinessGateTests(unittest.TestCase):
                 _validate_canary_output("curator", "classification", path)
             )
 
-            good["candidate"]["payload"]["gold"] = {"label": "unsupported"}
+            good["candidate"]["payload"]["gold"] = {"label": "did_not_meet"}
             path.write_text(json.dumps(good) + "\n", encoding="utf-8")
             self.assertEqual(
                 _validate_canary_output("curator", "classification", path),
@@ -87,11 +91,11 @@ class ReadinessGateTests(unittest.TestCase):
                 "task_id": "readiness:verifier:multilabel",
                 "status": "candidate",
                 "answer": {
-                    "gold": {"labels": ["beta", "alpha"]},
+                    "gold": {"labels": ["non_encounter", "continuity_negative"]},
                     "supports": [
                         {
                             "source_id": "readiness-source-01",
-                            "support_text": "alpha and beta",
+                            "support_text": "non_encounter continuity_negative",
                         }
                     ],
                 },
@@ -101,7 +105,7 @@ class ReadinessGateTests(unittest.TestCase):
                 _validate_canary_output("verifier", "multilabel", path)
             )
 
-            row["answer"]["gold"] = {"labels": ["alpha"]}
+            row["answer"]["gold"] = {"labels": ["non_encounter"]}
             path.write_text(json.dumps(row) + "\n", encoding="utf-8")
             self.assertEqual(
                 _validate_canary_output("verifier", "multilabel", path),
