@@ -326,6 +326,117 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         self.assertEqual(args.timeout, 600)
         self.assertEqual(args.completion_budget, "auto")
         self.assertEqual(args.reasoning_effort, "provider_default")
+        self.assertFalse(args.stream)
+
+    def test_streaming_transport_reconstructs_final_content_without_reasoning_text(self):
+        captured = {}
+
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter([
+                    b'data: {"choices":[{"delta":{"reasoning_content":"private reasoning"}}]}\n',
+                    b'\n',
+                    b'data: {"choices":[{"delta":{"content":"{\\"status\\":\\"no_"}}]}\n',
+                    b'\n',
+                    b'data: {"choices":[{"delta":{"content":"candidate\\",\\"reason\\":\\"x\\"}"},"finish_reason":"stop"}]}\n',
+                    b'\n',
+                    b'data: [DONE]\n',
+                    b'\n',
+                ])
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                return next(self.lines, b"")
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                captured["payload"] = json.loads(req.data.decode("utf-8"))
+                captured["accept"] = req.headers.get("Accept")
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            response = _call_chat(
+                "https://example.test/v1", "secret", "bearer", "model-x",
+                "system", "user", 10, 0.0, None, "max_tokens", None,
+                "json_object", stream=True,
+            )
+        self.assertTrue(captured["payload"]["stream"])
+        self.assertEqual(captured["accept"], "text/event-stream")
+        self.assertEqual(
+            _extract_message_content(response),
+            '{"status":"no_candidate","reason":"x"}',
+        )
+        self.assertEqual(_extract_finish_reason(response), "stop")
+        self.assertTrue(_has_reasoning_content(response))
+        self.assertNotIn(
+            "private reasoning",
+            json.dumps(response, ensure_ascii=False),
+        )
+
+    def test_streaming_transport_treats_unfinished_eof_as_connection_failure(self):
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter([
+                    b'data: {"choices":[{"delta":{"content":"{\\"status\\":"}}]}\n',
+                    b'\n',
+                ])
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                return next(self.lines, b"")
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            with self.assertRaises(AdapterDiagnosticError) as ctx:
+                _call_chat(
+                    "https://example.test/v1", "secret", "bearer", "model-x",
+                    "system", "user", 10, 0.0, None, "max_tokens", None,
+                    "json_object", stream=True,
+                )
+        self.assertEqual(ctx.exception.code, "connection_failed")
+
+    def test_streaming_transport_accepts_finish_reason_without_done_sentinel(self):
+        class FakeResponse:
+            def __init__(self):
+                self.lines = iter([
+                    b'data: {"choices":[{"delta":{"content":"{}"},"finish_reason":"stop"}]}\n',
+                    b'\n',
+                ])
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+            def readline(self, size):
+                return next(self.lines, b"")
+
+        class FakeOpener:
+            def open(self, req, timeout):
+                return FakeResponse()
+
+        with patch(
+            "adapters.chat_completions.urllib.request.build_opener",
+            return_value=FakeOpener(),
+        ):
+            response = _call_chat(
+                "https://example.test/v1", "secret", "bearer", "model-x",
+                "system", "user", 10, 0.0, None, "max_tokens", None,
+                "off", stream=True,
+            )
+        self.assertEqual(_extract_message_content(response), "{}")
+        self.assertEqual(_extract_finish_reason(response), "stop")
 
     def test_completion_budget_parser_accepts_auto_or_unbounded_positive_integer(self):
         self.assertIsNone(_parse_completion_budget("auto"))
