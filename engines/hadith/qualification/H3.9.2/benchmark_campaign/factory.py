@@ -507,10 +507,11 @@ def _gold_contract_error(gold: Any, task: dict[str, Any]) -> str | None:
         labels = gold.get("labels")
         if not isinstance(labels, list) or not labels:
             return "multilabel_labels_must_be_nonempty_list"
-        normalized = [str(x) for x in labels]
-        if len(normalized) != len(set(normalized)):
+        if not all(isinstance(label, str) for label in labels):
+            return "multilabel_labels_must_be_strings"
+        if len(labels) != len(set(labels)):
             return "multilabel_labels_must_be_unique"
-        if not set(normalized).issubset(allowed):
+        if not set(labels).issubset(allowed):
             return "multilabel_label_outside_contract"
         return None
     return "unsupported_task_type"
