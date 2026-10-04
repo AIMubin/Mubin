@@ -75,22 +75,24 @@ Only when `ready=true` does the workflow continue automatically into pinned sour
 
 For every dispatch, the runner:
 
-1. checks out Mubin;
-2. acquires only the pinned `non_holdout` source partition;
-3. re-verifies every source against its Git blob SHA;
-4. rebuilds the source index;
-5. rebuilds the frozen 1,280-slot Factory plan;
-6. regenerates the 896 non-holdout Curator tasks;
-7. selects the requested deterministic task chunk;
-8. runs Curator AI-A as one task per request;
-9. records malformed/model-contract outputs as task-local rejections instead of aborting the remaining chunk;
-10. prepares structurally blind Verifier tasks only from valid Curator candidates;
-11. runs Verifier AI-B with the same one-task collection policy;
-12. routes valid responses through the real Factory reconciliation path;
-13. records promoted/adjudication/skipped outcomes in the curation ledger;
-14. emits redacted attempted/completed/rejected counts and rejection categories;
-15. encrypts all source-bearing run material with authenticated AES-256-GCM;
-16. uploads only the encrypted source-bearing bundle plus redacted metadata.
+1. checks out Mubin and validates required protected runtime configuration;
+2. runs the complete offline compile/unit/integration suite without provider secrets;
+3. runs the four live role-by-task-type readiness canaries;
+4. acquires only the pinned `non_holdout` source partition after readiness passes;
+5. re-verifies every source against its Git blob SHA;
+6. rebuilds the source index;
+7. rebuilds the frozen 1,280-slot Factory plan;
+8. regenerates the 896 non-holdout Curator tasks;
+9. selects the requested deterministic task chunk;
+10. runs Curator AI-A as one task per request;
+11. records malformed/model-contract outputs as task-local rejections instead of aborting the remaining chunk;
+12. prepares structurally blind Verifier tasks only from valid Curator candidates;
+13. runs Verifier AI-B with the same one-task collection policy;
+14. routes valid responses through the real Factory reconciliation path;
+15. records promoted/adjudication/skipped outcomes in the curation ledger;
+16. emits the redacted readiness, attempted/completed/rejected, and reconciliation summary;
+17. encrypts all source-bearing run material with authenticated AES-256-GCM;
+18. uploads only the encrypted source-bearing bundle plus redacted metadata.
 
 The workflow never requests the holdout partition.
 
