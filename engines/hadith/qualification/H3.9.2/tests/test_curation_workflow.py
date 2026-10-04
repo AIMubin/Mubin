@@ -120,8 +120,11 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertNotIn("verifier-responses.jsonl", aggregate)
         self.assertNotIn("adjudication.jsonl", aggregate)
         self.assertIn("adjudication_reason_counts", aggregate)
+        self.assertIn("adjudication_reason_counts_by_benchmark", aggregate)
         self.assertIn("outcome_by_benchmark", aggregate)
         self.assertIn("coverage_complete", aggregate)
+        self.assertIn("coverage_errors", aggregate)
+        self.assertIn("continue-on-error: true", self.campaign_workflow)
 
     def test_campaign_secret_bearing_actions_are_commit_pinned(self):
         self.assertIn(
