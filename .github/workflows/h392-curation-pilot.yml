@@ -141,6 +141,7 @@ jobs:
           MUBIN_READINESS_VERIFIER_MODEL_REF: ${{ secrets.H392_VERIFIER_MODEL_REF }}
           MUBIN_READINESS_VERIFIER_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
         run: |
+          set +e
           python -m benchmark_campaign.readiness \
             --offline-report "$REDACTED_DIR/OFFLINE_READINESS.json" \
             --out "$REDACTED_DIR/READINESS_GATE.json" \
@@ -149,12 +150,15 @@ jobs:
             --curator-json-mode "$CURATOR_JSON_MODE" \
             --verifier-json-mode "$VERIFIER_JSON_MODE" \
             --live-timeout 300
+          readiness_rc=$?
+          set -e
           {
             echo '### H3.9.2 comprehensive readiness gate'
             echo '```json'
             cat "$REDACTED_DIR/READINESS_GATE.json"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$readiness_rc"
 
       - name: Acquire and re-verify pinned non-holdout sources
         run: |
