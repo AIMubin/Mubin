@@ -1,0 +1,160 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+from benchmark_campaign.readiness import (
+    _adapter_command,
+    _build_canary_fixture,
+    _diagnostic_from_stderr,
+    _validate_canary_output,
+)
+
+
+class ReadinessGateTests(unittest.TestCase):
+    def test_curator_canary_fixture_is_full_evidence_surface_without_holdout(self):
+        with tempfile.TemporaryDirectory() as d:
+            index_dir, task_path, task = _build_canary_fixture(
+                Path(d), "curator", "classification"
+            )
+            rows = [
+                json.loads(line)
+                for line in (index_dir / "segments.jsonl").read_text(
+                    encoding="utf-8"
+                ).splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(len(rows), 12)
+            self.assertEqual(len(task["allowed_source_pool"]), 12)
+            self.assertEqual(task["partition"], "non_holdout")
+            self.assertEqual(task["task_type"], "classification")
+            self.assertEqual(task["allowed_labels"], ["supported", "unsupported"])
+            self.assertNotIn("candidate_input", task)
+            self.assertTrue(task_path.exists())
+
+    def test_verifier_canary_fixture_exercises_multilabel_contract(self):
+        with tempfile.TemporaryDirectory() as d:
+            _, _, task = _build_canary_fixture(
+                Path(d), "verifier", "multilabel"
+            )
+            self.assertEqual(task["task_type"], "multilabel")
+            self.assertEqual(task["allowed_labels"], ["alpha", "beta"])
+            self.assertIsInstance(task["candidate_input"], dict)
+
+    def test_curator_canary_output_requires_expected_candidate_gold(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "out.jsonl"
+            good = {
+                "task_id": "readiness:curator:classification",
+                "status": "candidate",
+                "candidate": {
+                    "payload": {
+                        "input": {"question": "q"},
+                        "gold": {"label": "supported"},
+                    },
+                    "answer_provenance": {
+                        "supports": [
+                            {
+                                "source_id": "readiness-source-01",
+                                "support_text": "supported",
+                            }
+                        ]
+                    },
+                },
+            }
+            path.write_text(json.dumps(good) + "\n", encoding="utf-8")
+            self.assertIsNone(
+                _validate_canary_output("curator", "classification", path)
+            )
+
+            good["candidate"]["payload"]["gold"] = {"label": "unsupported"}
+            path.write_text(json.dumps(good) + "\n", encoding="utf-8")
+            self.assertEqual(
+                _validate_canary_output("curator", "classification", path),
+                "canary_semantic_mismatch",
+            )
+
+    def test_verifier_multilabel_canary_is_order_insensitive_but_exact(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "out.jsonl"
+            row = {
+                "task_id": "readiness:verifier:multilabel",
+                "status": "candidate",
+                "answer": {
+                    "gold": {"labels": ["beta", "alpha"]},
+                    "supports": [
+                        {
+                            "source_id": "readiness-source-01",
+                            "support_text": "alpha and beta",
+                        }
+                    ],
+                },
+            }
+            path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+            self.assertIsNone(
+                _validate_canary_output("verifier", "multilabel", path)
+            )
+
+            row["answer"]["gold"] = {"labels": ["alpha"]}
+            path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+            self.assertEqual(
+                _validate_canary_output("verifier", "multilabel", path),
+                "canary_semantic_mismatch",
+            )
+
+    def test_no_candidate_is_not_enough_for_live_readiness(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "out.jsonl"
+            path.write_text(
+                json.dumps({
+                    "task_id": "readiness:curator:classification",
+                    "status": "no_candidate",
+                    "reason": "insufficient",
+                }) + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                _validate_canary_output("curator", "classification", path),
+                "canary_no_candidate",
+            )
+
+    def test_diagnostic_extraction_ignores_arbitrary_stderr(self):
+        stderr = (
+            "provider detail that must not be promoted\n"
+            "MUBIN_DIAGNOSTIC:connection_failed\n"
+            "more arbitrary text\n"
+        )
+        self.assertEqual(
+            _diagnostic_from_stderr(stderr),
+            "connection_failed",
+        )
+        self.assertIsNone(_diagnostic_from_stderr("arbitrary only"))
+
+    def test_canary_command_matches_production_streaming_surface(self):
+        root = Path("/campaign")
+        cmd = _adapter_command(
+            root,
+            "curator",
+            "https://example.test/v1",
+            "bearer",
+            "json_object",
+            Path("/tmp/task.jsonl"),
+            Path("/tmp/out.jsonl"),
+            Path("/tmp/index"),
+            300,
+        )
+        self.assertIn("--stream", cmd)
+        self.assertIn("--json-mode", cmd)
+        self.assertIn("json_object", cmd)
+        self.assertIn("--max-evidence-sources", cmd)
+        self.assertIn("12", cmd)
+        self.assertIn("--max-excerpt-chars", cmd)
+        self.assertIn("1800", cmd)
+        self.assertNotIn("--completion-budget", cmd)
+        self.assertNotIn("--reasoning-effort", cmd)
+
+
+if __name__ == "__main__":
+    unittest.main()
