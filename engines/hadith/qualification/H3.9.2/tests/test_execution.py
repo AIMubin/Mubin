@@ -7,7 +7,12 @@ import unittest
 from pathlib import Path
 
 from benchmark_campaign.core import dump_jsonl, load_json, load_jsonl, sha256_file, write_json
-from benchmark_campaign.execution import (_validate_raw_adapter_rows, load_agent_execution_config, run_agent_execution)
+from benchmark_campaign.execution import (
+    _validate_partition_execution_policy,
+    _validate_raw_adapter_rows,
+    load_agent_execution_config,
+    run_agent_execution,
+)
 from benchmark_campaign.factory import (
     build_factory_plan,
     build_factory_tasks,
@@ -321,6 +326,18 @@ class AgentExecutionTests(unittest.TestCase):
             message = str(ctx.exception)
             self.assertIn("adapter:http_401", message)
             self.assertNotIn("arbitrary stderr content", message)
+
+    def test_holdout_execution_is_strictly_one_shot(self):
+        cfg = {
+            "task_failure_policy": "fail_fast",
+            "max_attempts": 2,
+        }
+        with self.assertRaisesRegex(ValueError, "max_attempts=1"):
+            _validate_partition_execution_policy("holdout", cfg)
+        _validate_partition_execution_policy(
+            "non_holdout",
+            {"task_failure_policy": "record_rejection", "max_attempts": 2},
+        )
 
     def test_collection_mode_requires_one_task_batches(self):
         with tempfile.TemporaryDirectory() as d:
