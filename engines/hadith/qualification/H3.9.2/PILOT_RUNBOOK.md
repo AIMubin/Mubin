@@ -57,7 +57,7 @@ Endpoint and model identity remain loaded from protected Secrets and are not wor
 
 ## Comprehensive readiness gate
 
-A manual dispatch is now a **single gated operation**. Do not run a separate sequence of speculative pilot reruns to discover basic protocol or transport defects.
+A manual dispatch is now a **single gated operation**. Do not run a separate sequence of speculative pilot reruns to discover basic protocol or transport defects. The workflow also refuses non-`main` or stale reruns whose checked-out SHA is no longer the current `main`, preventing validation of superseded protocol code.
 
 Before the real non-holdout chunk is touched, the same workflow automatically runs:
 
