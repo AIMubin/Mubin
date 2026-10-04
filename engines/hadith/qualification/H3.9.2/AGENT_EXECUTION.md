@@ -87,7 +87,7 @@ All explicit inference values remain part of the command/config binding and ther
 
 ## Readiness gate
 
-The manual non-holdout workflow is self-gating. Before real Factory tasks are executed it runs the full offline compile/test suite without provider secrets, then four live synthetic canaries covering the Curator/Verifier × classification/multilabel matrix against the configured endpoints. The canaries use the same adapter, SSE transport, auth style, JSON mode, contract files, twelve-source evidence ceiling, and provider-native inference defaults as the production pilot.
+The manual non-holdout workflow is self-gating. Before real Factory tasks are executed it runs the full offline compile/test suite without provider secrets, then four live synthetic canaries covering the Curator/Verifier × classification/multilabel matrix against the configured endpoints. The canaries use the same adapter, SSE transport, auth style, JSON mode, contract files, twelve-source evidence ceiling, provider-native inference defaults, real benchmark IDs, and preregistered production label vocabularies as the production pilot.
 
 Each role must complete both classification and multilabel candidate paths. All four canaries must return evidence-bound candidates with the expected trivial synthetic gold. `no_candidate`, transport/protocol errors, malformed output, contract failures, or semantic mismatch fail readiness and prevent the real pilot from starting.
 
