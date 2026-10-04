@@ -62,10 +62,10 @@ A manual dispatch is now a **single gated operation**. Do not run a separate seq
 Before the real non-holdout chunk is touched, the same workflow automatically runs:
 
 1. the complete compile + unit/integration suite with **no provider secrets in scope**;
-2. a live Curator canary using the production adapter, streaming transport, selected auth/JSON mode, twelve bounded synthetic evidence sources, and the classification contract;
-3. a live Verifier canary in parallel using the same production transport surface and the multilabel contract.
+2. live Curator canaries using the production adapter, streaming transport, selected auth/JSON mode, twelve bounded synthetic evidence sources, and both classification and multilabel contracts;
+3. live Verifier canaries in parallel using the same production transport surface and both classification and multilabel contracts.
 
-The two live canaries use synthetic readiness evidence only. They do not read holdout data, do not become benchmark records, and do not assert scholarly authority. Their only purpose is to prove that the current code, contracts, endpoint capabilities, streaming parser, JSON handling, and model response discipline can complete a simple evidence-bound request before expensive real curation begins.
+The four live role-by-task-type canaries use synthetic readiness evidence only. They do not read holdout data, do not become benchmark records, and do not assert scholarly authority. Their only purpose is to prove that the current code, contracts, endpoint capabilities, streaming parser, JSON handling, and model response discipline can complete a simple evidence-bound request before expensive real curation begins.
 
 The readiness report contains only redacted status, task type, duration, and bounded diagnostic codes. It contains no endpoint, model identity, API key, source-bearing benchmark text, or model reasoning. A `no_candidate` canary is a readiness failure because the synthetic evidence is intentionally sufficient and the gate must exercise the candidate path.
 
