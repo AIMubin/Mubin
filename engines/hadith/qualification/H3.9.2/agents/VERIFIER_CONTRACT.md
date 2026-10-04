@@ -15,9 +15,41 @@ You must be structurally blind to Curator AI-A's proposed gold and support field
 
 ## Candidate response
 
-Return `task_id`, `status=candidate`, and `answer` containing `gold` plus one or more source supports. Each support must include `source_id`, exact `locator`, verbatim `excerpt`, and literal `support_text` inside the excerpt. Under the provider-neutral execution layer, the executor binds the original task fingerprint, model identity, and execution hashes centrally; manual integrations must provide the full envelope themselves.
+The **model completion consumed by the reference adapter** must be one JSON object with `gold` and `supports` at the top level.
 
-For unsupported cases return `status=no_candidate` with a reason. Multiple literal supports may cite the same canonical source/evidence window; each `support_text` must independently be a verbatim substring.
+For a classification candidate:
+
+```json
+{
+  "status": "candidate",
+  "gold": {"label": "<one allowed label>"},
+  "supports": [
+    {"evidence_id": "E01", "support_text": "verbatim substring"}
+  ]
+}
+```
+
+For a multilabel candidate:
+
+```json
+{
+  "status": "candidate",
+  "gold": {"labels": ["<one or more allowed labels>"]},
+  "supports": [
+    {"evidence_id": "E01", "support_text": "verbatim substring"}
+  ]
+}
+```
+
+For unsupported evidence:
+
+```json
+{"status": "no_candidate", "reason": "concise evidence-bound reason"}
+```
+
+Do **not** nest `gold` or `supports` under `answer` in the model completion, and do not add `task_id`, source refs, execution hashes, or model identity. The reference adapter validates the completion, resolves each `evidence_id` into exact source metadata, and then constructs the canonical executor-facing envelope `{"task_id": ..., "status": "candidate", "answer": {"gold": ..., "supports": [...]}}`. The executor binds the original task fingerprint, model identity, and execution hashes centrally.
+
+Manual integrations that bypass the reference adapter/executor must provide the full canonical envelope themselves. Multiple literal supports may cite the same canonical source/evidence window; each `support_text` must independently be a verbatim substring.
 
 ## Promotion rule
 
