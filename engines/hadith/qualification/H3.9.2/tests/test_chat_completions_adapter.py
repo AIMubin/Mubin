@@ -328,6 +328,105 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         self.assertEqual(args.reasoning_effort, "provider_default")
         self.assertFalse(args.stream)
 
+    def test_model_prompt_separates_raw_completion_from_executor_envelope(self):
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:20",
+            "excerpt": "قال الإمام سمع من شيخه",
+        }]
+
+        curator_prompt = json.loads(_user_prompt("curator", self._task(), evidence))
+        self.assertEqual(
+            curator_prompt["required_output"]["gold"],
+            {"label": "<one allowed label>"},
+        )
+        self.assertEqual(
+            curator_prompt["serialization"]["do_not_nest_under"],
+            "candidate",
+        )
+        self.assertTrue(
+            curator_prompt["serialization"]["adapter_wraps_after_validation"]
+        )
+        self.assertIn("TOP LEVEL", curator_prompt["instruction"])
+        self.assertIn("Do not nest them under candidate", curator_prompt["instruction"])
+
+        verifier_task = self._task()
+        verifier_task["candidate_input"] = {"question": "هل ثبت السماع؟"}
+        verifier_prompt = json.loads(
+            _user_prompt("verifier", verifier_task, evidence)
+        )
+        self.assertEqual(
+            verifier_prompt["required_output"]["gold"],
+            {"label": "<one allowed label>"},
+        )
+        self.assertEqual(
+            verifier_prompt["serialization"]["do_not_nest_under"],
+            "answer",
+        )
+        self.assertTrue(
+            verifier_prompt["serialization"]["adapter_wraps_after_validation"]
+        )
+        self.assertIn("TOP LEVEL", verifier_prompt["instruction"])
+        self.assertIn(
+            "Do not return gold as a bare string or array",
+            verifier_prompt["instruction"],
+        )
+        self.assertIn(
+            "do not nest gold/supports under answer",
+            verifier_prompt["instruction"],
+        )
+
+    def test_role_contracts_make_model_completion_envelope_explicit(self):
+        project = Path(__file__).resolve().parents[1]
+        curator_contract = (
+            project / "agents" / "CURATOR_CONTRACT.md"
+        ).read_text(encoding="utf-8")
+        verifier_contract = (
+            project / "agents" / "VERIFIER_CONTRACT.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "model completion consumed by the reference adapter",
+            curator_contract.casefold(),
+        )
+        self.assertIn(
+            "do **not** nest the model-completion fields under `candidate`",
+            curator_contract.casefold(),
+        )
+        self.assertIn(
+            "model completion consumed by the reference adapter",
+            verifier_contract.casefold(),
+        )
+        self.assertIn(
+            "do **not** nest `gold` or `supports` under `answer`",
+            verifier_contract.casefold(),
+        )
+
+        verifier_system = _system_prompt("verifier", verifier_contract)
+        self.assertIn(
+            "Do **not** nest `gold` or `supports` under `answer`",
+            verifier_system,
+        )
+
+    def test_verifier_gold_scalar_is_rejected_not_repaired(self):
+        task = self._task()
+        task["candidate_input"] = {"question": "هل ثبت السماع؟"}
+        evidence = [{
+            "evidence_id": "E01",
+            "source_id": "s1",
+            "locator": "gitblob:" + "a" * 40 + "#char=0:20",
+            "excerpt": "قال الإمام سمع من شيخه",
+        }]
+        obj = {
+            "status": "candidate",
+            "gold": "yes",
+            "supports": [{"evidence_id": "E01", "support_text": "سمع من شيخه"}],
+        }
+        with self.assertRaises(ModelContractError) as ctx:
+            _verifier_row(task, obj, evidence)
+        self.assertEqual(ctx.exception.code, "contract_gold_not_object")
+
     def test_streaming_transport_reconstructs_final_content_without_reasoning_text(self):
         captured = {}
 
@@ -1032,9 +1131,20 @@ class ChatCompletionsAdapterTests(unittest.TestCase):
         task["task_type"] = "multilabel"
         task["allowed_labels"] = ["a", "b"]
         task["candidate_input"] = {"question": "q"}
-        prompt = _user_prompt("verifier", task, [])
-        self.assertIn("multilabel uses a non-empty gold.labels array", prompt)
-        self.assertIn("exact strings from task.allowed_labels", prompt)
+        prompt = json.loads(_user_prompt("verifier", task, []))
+        self.assertEqual(
+            prompt["required_output"]["gold"],
+            {"labels": ["<one or more allowed labels>"]},
+        )
+        self.assertIn("multilabel must use gold=", prompt["instruction"])
+        self.assertIn(
+            "exact strings from task.allowed_labels",
+            prompt["instruction"],
+        )
+        self.assertEqual(
+            prompt["serialization"]["do_not_nest_under"],
+            "answer",
+        )
 
     def test_json_fence_and_content_extraction_are_tolerant(self):
         fence = chr(96) * 3
