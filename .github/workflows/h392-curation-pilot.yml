@@ -39,6 +39,53 @@ on:
           - "off"
           - json_object
         default: "off"
+  workflow_call:
+    inputs:
+      task_offset:
+        required: true
+        type: string
+      task_limit:
+        required: true
+        type: string
+      curator_auth_style:
+        required: true
+        type: string
+      verifier_auth_style:
+        required: true
+        type: string
+      curator_json_mode:
+        required: true
+        type: string
+      verifier_json_mode:
+        required: true
+        type: string
+      skip_readiness:
+        required: false
+        type: boolean
+        default: false
+      readiness_sha:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      H392_CURATOR_ENDPOINT:
+        required: true
+      H392_VERIFIER_ENDPOINT:
+        required: true
+      H392_CURATOR_MODEL_FAMILY:
+        required: true
+      H392_CURATOR_MODEL_REF:
+        required: true
+      H392_VERIFIER_MODEL_FAMILY:
+        required: true
+      H392_VERIFIER_MODEL_REF:
+        required: true
+      H392_CURATOR_API_KEY:
+        required: true
+      H392_VERIFIER_API_KEY:
+        required: true
+      H392_CURATION_ARTIFACT_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -142,12 +189,14 @@ jobs:
         run: mkdir -p "$CACHE_DIR" "$INDEX_DIR" "$RUN_DIR" "$REDACTED_DIR"
 
       - name: Run offline readiness suite
+        if: ${{ inputs.skip_readiness != true }}
         run: |
           python -m benchmark_campaign.readiness \
             --offline-only \
             --out "$REDACTED_DIR/OFFLINE_READINESS.json"
 
       - name: Run live Curator and Verifier readiness canaries
+        if: ${{ inputs.skip_readiness != true }}
         env:
           MUBIN_READINESS_CURATOR_ENDPOINT: ${{ secrets.H392_CURATOR_ENDPOINT }}
           MUBIN_READINESS_CURATOR_MODEL_REF: ${{ secrets.H392_CURATOR_MODEL_REF }}
@@ -175,14 +224,44 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$readiness_rc"
 
-      - name: Reconfirm main after readiness
+      - name: Validate delegated campaign readiness
+        if: ${{ inputs.skip_readiness == true }}
+        env:
+          READINESS_SHA: ${{ inputs.readiness_sha }}
+        run: |
+          set -eu
+          test -n "$READINESS_SHA"
+          if [ "$READINESS_SHA" != "$GITHUB_SHA" ]; then
+            echo "Delegated readiness SHA does not match this shard SHA." >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          out = Path(os.environ["REDACTED_DIR"]) / "READINESS_GATE.json"
+          report = {
+              "schema_version": 1,
+              "campaign_id": "H3.9.2",
+              "kind": "delegated_comprehensive_readiness_gate",
+              "github_sha": os.environ.get("GITHUB_SHA"),
+              "ready": True,
+              "delegated": True,
+          }
+          out.write_text(
+              json.dumps(report, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Reconfirm main before real curation
         run: |
           set -eu
           current="$(git rev-parse HEAD)"
           latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           test -n "$latest"
           if [ "$current" != "$latest" ]; then
-            echo "Main advanced during readiness; dispatch a fresh run before real curation." >&2
+            echo "Main advanced before real curation; dispatch a fresh run." >&2
             exit 1
           fi
 

@@ -1,0 +1,413 @@
+name: H3.9.2 campaign batch
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_offset:
+        description: Zero-based first non-holdout task for this campaign batch
+        required: true
+        default: "8"
+      task_count:
+        description: Total tasks in this campaign batch (1-32)
+        required: true
+        default: "32"
+      shard_size:
+        description: Tasks per parallel shard (1-8)
+        required: true
+        default: "8"
+      curator_auth_style:
+        description: Curator authentication header style
+        type: choice
+        options:
+          - bearer
+          - api-key
+        default: bearer
+      verifier_auth_style:
+        description: Verifier authentication header style
+        type: choice
+        options:
+          - bearer
+          - api-key
+        default: bearer
+      curator_json_mode:
+        description: Curator JSON response mode
+        type: choice
+        options:
+          - "off"
+          - json_object
+        default: "off"
+      verifier_json_mode:
+        description: Verifier JSON response mode
+        type: choice
+        options:
+          - "off"
+          - json_object
+        default: "off"
+
+permissions:
+  contents: read
+
+jobs:
+  readiness-and-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      expected_shards: ${{ steps.plan.outputs.expected_shards }}
+      readiness_sha: ${{ steps.receipt.outputs.readiness_sha }}
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+
+    steps:
+      - name: Checkout Mubin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Refuse stale or non-main dispatch
+        run: |
+          set -eu
+          if [ "${GITHUB_REF_NAME:-}" != "main" ]; then
+            echo "Campaign batches must be dispatched from main." >&2
+            exit 1
+          fi
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Refusing stale campaign execution; dispatch from current main." >&2
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+
+      - name: Install campaign dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate runtime configuration
+        env:
+          CURATOR_ENDPOINT: ${{ secrets.H392_CURATOR_ENDPOINT }}
+          VERIFIER_ENDPOINT: ${{ secrets.H392_VERIFIER_ENDPOINT }}
+          CURATOR_MODEL_FAMILY: ${{ secrets.H392_CURATOR_MODEL_FAMILY }}
+          CURATOR_MODEL_REF: ${{ secrets.H392_CURATOR_MODEL_REF }}
+          VERIFIER_MODEL_FAMILY: ${{ secrets.H392_VERIFIER_MODEL_FAMILY }}
+          VERIFIER_MODEL_REF: ${{ secrets.H392_VERIFIER_MODEL_REF }}
+          CURATOR_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
+          VERIFIER_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          for name in CURATOR_ENDPOINT VERIFIER_ENDPOINT CURATOR_MODEL_FAMILY CURATOR_MODEL_REF VERIFIER_MODEL_FAMILY VERIFIER_MODEL_REF CURATOR_API_KEY VERIFIER_API_KEY ARTIFACT_KEY; do
+            test -n "${!name}"
+          done
+          case "$CURATOR_ENDPOINT" in https://*) ;; *) echo "Curator base URL must be HTTPS" >&2; exit 1;; esac
+          case "$VERIFIER_ENDPOINT" in https://*) ;; *) echo "Verifier base URL must be HTTPS" >&2; exit 1;; esac
+          python - <<'PY'
+          import os
+          normalize = lambda s: " ".join(s.strip().casefold().split())
+          if normalize(os.environ["CURATOR_MODEL_FAMILY"]) == normalize(os.environ["VERIFIER_MODEL_FAMILY"]):
+              raise SystemExit("Curator and Verifier model families must differ")
+          PY
+
+      - name: Plan deterministic parallel shards
+        id: plan
+        env:
+          TASK_OFFSET: ${{ inputs.task_offset }}
+          TASK_COUNT: ${{ inputs.task_count }}
+          SHARD_SIZE: ${{ inputs.shard_size }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          offset = int(os.environ["TASK_OFFSET"])
+          count = int(os.environ["TASK_COUNT"])
+          shard_size = int(os.environ["SHARD_SIZE"])
+          if offset < 0 or offset >= 896:
+              raise SystemExit("task_offset must be in [0, 895]")
+          if count < 1 or count > 32:
+              raise SystemExit("task_count must be in [1, 32] for the first campaign stage")
+          if shard_size < 1 or shard_size > 8:
+              raise SystemExit("shard_size must be in [1, 8]")
+          if offset + count > 896:
+              raise SystemExit("task_offset + task_count exceeds 896 non-holdout tasks")
+
+          include = []
+          cursor = offset
+          remaining = count
+          while remaining:
+              size = min(shard_size, remaining)
+              include.append({
+                  "task_offset": str(cursor),
+                  "task_limit": str(size),
+              })
+              cursor += size
+              remaining -= size
+
+          matrix = json.dumps({"include": include}, separators=(",", ":"))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"matrix={matrix}\n")
+              fh.write(f"expected_shards={len(include)}\n")
+          PY
+
+      - name: Run offline readiness suite
+        run: |
+          mkdir -p /tmp/h392-campaign-readiness
+          python -m benchmark_campaign.readiness             --offline-only             --out /tmp/h392-campaign-readiness/OFFLINE_READINESS.json
+
+      - name: Run live Curator and Verifier readiness canaries once
+        env:
+          MUBIN_READINESS_CURATOR_ENDPOINT: ${{ secrets.H392_CURATOR_ENDPOINT }}
+          MUBIN_READINESS_CURATOR_MODEL_REF: ${{ secrets.H392_CURATOR_MODEL_REF }}
+          MUBIN_READINESS_CURATOR_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
+          MUBIN_READINESS_VERIFIER_ENDPOINT: ${{ secrets.H392_VERIFIER_ENDPOINT }}
+          MUBIN_READINESS_VERIFIER_MODEL_REF: ${{ secrets.H392_VERIFIER_MODEL_REF }}
+          MUBIN_READINESS_VERIFIER_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
+          CURATOR_AUTH_STYLE: ${{ inputs.curator_auth_style }}
+          VERIFIER_AUTH_STYLE: ${{ inputs.verifier_auth_style }}
+          CURATOR_JSON_MODE: ${{ inputs.curator_json_mode }}
+          VERIFIER_JSON_MODE: ${{ inputs.verifier_json_mode }}
+        run: |
+          set +e
+          python -m benchmark_campaign.readiness             --offline-report /tmp/h392-campaign-readiness/OFFLINE_READINESS.json             --out /tmp/h392-campaign-readiness/READINESS_GATE.json             --curator-auth-style "$CURATOR_AUTH_STYLE"             --verifier-auth-style "$VERIFIER_AUTH_STYLE"             --curator-json-mode "$CURATOR_JSON_MODE"             --verifier-json-mode "$VERIFIER_JSON_MODE"             --live-timeout 600
+          readiness_rc=$?
+          set -e
+          {
+            echo '### H3.9.2 campaign readiness'
+            echo '```json'
+            cat /tmp/h392-campaign-readiness/READINESS_GATE.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$readiness_rc"
+
+      - name: Reconfirm main after readiness
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Main advanced during campaign readiness; dispatch a fresh batch." >&2
+            exit 1
+          fi
+
+      - name: Bind readiness receipt
+        id: receipt
+        run: echo "readiness_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
+  shard:
+    needs: readiness-and-plan
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.readiness-and-plan.outputs.matrix) }}
+    uses: ./.github/workflows/h392-curation-pilot.yml
+    with:
+      task_offset: ${{ matrix.task_offset }}
+      task_limit: ${{ matrix.task_limit }}
+      curator_auth_style: ${{ inputs.curator_auth_style }}
+      verifier_auth_style: ${{ inputs.verifier_auth_style }}
+      curator_json_mode: ${{ inputs.curator_json_mode }}
+      verifier_json_mode: ${{ inputs.verifier_json_mode }}
+      skip_readiness: true
+      readiness_sha: ${{ needs.readiness-and-plan.outputs.readiness_sha }}
+    secrets:
+      H392_CURATOR_ENDPOINT: ${{ secrets.H392_CURATOR_ENDPOINT }}
+      H392_VERIFIER_ENDPOINT: ${{ secrets.H392_VERIFIER_ENDPOINT }}
+      H392_CURATOR_MODEL_FAMILY: ${{ secrets.H392_CURATOR_MODEL_FAMILY }}
+      H392_CURATOR_MODEL_REF: ${{ secrets.H392_CURATOR_MODEL_REF }}
+      H392_VERIFIER_MODEL_FAMILY: ${{ secrets.H392_VERIFIER_MODEL_FAMILY }}
+      H392_VERIFIER_MODEL_REF: ${{ secrets.H392_VERIFIER_MODEL_REF }}
+      H392_CURATOR_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
+      H392_VERIFIER_API_KEY: ${{ secrets.H392_VERIFIER_API_KEY }}
+      H392_CURATION_ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+
+  aggregate:
+    if: ${{ always() && needs.readiness-and-plan.result == 'success' }}
+    needs:
+      - readiness-and-plan
+      - shard
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    env:
+      EXPECTED_SHARDS: ${{ needs.readiness-and-plan.outputs.expected_shards }}
+      SHARD_RESULT: ${{ needs.shard.result }}
+      TASK_OFFSET: ${{ inputs.task_offset }}
+      TASK_COUNT: ${{ inputs.task_count }}
+
+    steps:
+      - name: Download redacted shard artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: h392-curation-chunk-*
+          path: /tmp/h392-campaign-artifacts
+          merge-multiple: false
+
+      - name: Aggregate campaign batch outcomes
+        run: |
+          python - <<'PY'
+          from collections import Counter, defaultdict
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("/tmp/h392-campaign-artifacts")
+          summaries = sorted(root.glob("**/CURATION_RUN_SUMMARY.json"))
+          expected_shards = int(os.environ["EXPECTED_SHARDS"])
+          requested_offset = int(os.environ["TASK_OFFSET"])
+          requested_count = int(os.environ["TASK_COUNT"])
+
+          curator_rejections = Counter()
+          verifier_rejections = Counter()
+          adjudication_reasons = Counter()
+          adjudication_reasons_by_benchmark = defaultdict(Counter)
+          outcomes_by_benchmark = defaultdict(Counter)
+          promoted_by_benchmark = Counter()
+          ranges = []
+          totals = Counter()
+
+          github_sha = None
+          for path in summaries:
+              row = json.loads(path.read_text(encoding="utf-8"))
+              if row.get("contains_source_text") is not False:
+                  raise SystemExit("shard summary is not redacted")
+              if row.get("contains_gold_payloads") is not False:
+                  raise SystemExit("shard summary exposes gold payloads")
+              sha = row.get("github_sha")
+              if github_sha is None:
+                  github_sha = sha
+              elif sha != github_sha:
+                  # Keep aggregating redacted evidence, then fail closed via
+                  # coverage_errors after the report has been written.
+                  github_sha = "__mixed__"
+
+              offset = int(row["task_offset"])
+              count = int(row["selected_task_count"])
+              ranges.append((offset, offset + count))
+
+              curator = row["curator"]
+              verifier = row["verifier"]
+              reconciliation = row["reconciliation"]
+              totals["selected_tasks"] += count
+              totals["curator_attempted"] += int(curator["attempted_task_count"])
+              totals["curator_completed"] += int(curator["completed_task_count"])
+              totals["curator_rejected"] += int(curator["rejected_task_count"])
+              totals["verifier_attempted"] += int(verifier["attempted_task_count"])
+              totals["verifier_completed"] += int(verifier["completed_task_count"])
+              totals["verifier_rejected"] += int(verifier["rejected_task_count"])
+              totals["promoted"] += int(reconciliation["promoted_count"])
+              totals["adjudication"] += int(reconciliation["adjudication_count"])
+              totals["skipped"] += int(reconciliation["skipped_count"])
+
+              curator_rejections.update(curator.get("rejection_counts", {}))
+              verifier_rejections.update(verifier.get("rejection_counts", {}))
+              adjudication_reasons.update(
+                  reconciliation.get("adjudication_reason_counts", {})
+              )
+              for bid, counts in reconciliation.get(
+                  "adjudication_reason_counts_by_benchmark", {}
+              ).items():
+                  adjudication_reasons_by_benchmark[bid].update(counts)
+              promoted_by_benchmark.update(
+                  reconciliation.get("promoted_by_benchmark", {})
+              )
+              for bid, counts in reconciliation.get("outcome_by_benchmark", {}).items():
+                  outcomes_by_benchmark[bid].update(counts)
+
+          ranges.sort()
+          observed_ranges = []
+          coverage_errors = []
+          cursor = requested_offset
+          end = requested_offset + requested_count
+          for start, stop in ranges:
+              observed_ranges.append({"start": start, "end": stop})
+              if start != cursor:
+                  coverage_errors.append("gap_or_overlap")
+              if stop <= start or stop > end:
+                  coverage_errors.append("range_outside_request")
+              cursor = max(cursor, stop)
+
+          if github_sha == "__mixed__":
+              coverage_errors.append("cross_shard_sha_mismatch")
+          elif github_sha is not None and github_sha != os.environ.get("GITHUB_SHA"):
+              coverage_errors.append("github_sha_mismatch")
+          if len(summaries) != expected_shards:
+              coverage_errors.append("shard_count_mismatch")
+          if cursor != end:
+              coverage_errors.append("range_end_mismatch")
+          if totals["selected_tasks"] != requested_count:
+              coverage_errors.append("task_count_mismatch")
+
+          coverage_errors = sorted(set(coverage_errors))
+          coverage_complete = not coverage_errors
+
+          report = {
+              "schema_version": 1,
+              "campaign_id": "H3.9.2",
+              "kind": "non_holdout_campaign_batch_summary",
+              "github_sha": github_sha,
+              "requested_task_offset": requested_offset,
+              "requested_task_count": requested_count,
+              "expected_shards": expected_shards,
+              "completed_shards": len(summaries),
+              "shard_job_result": os.environ["SHARD_RESULT"],
+              "coverage_complete": coverage_complete,
+              "ranges": observed_ranges,
+              "coverage_errors": coverage_errors,
+              "totals": dict(sorted(totals.items())),
+              "curator_rejection_counts": dict(sorted(curator_rejections.items())),
+              "verifier_rejection_counts": dict(sorted(verifier_rejections.items())),
+              "adjudication_reason_counts": dict(sorted(adjudication_reasons.items())),
+              "adjudication_reason_counts_by_benchmark": {
+                  bid: dict(sorted(counts.items()))
+                  for bid, counts in sorted(adjudication_reasons_by_benchmark.items())
+              },
+              "promoted_by_benchmark": dict(sorted(promoted_by_benchmark.items())),
+              "outcome_by_benchmark": {
+                  bid: dict(sorted(counts.items()))
+                  for bid, counts in sorted(outcomes_by_benchmark.items())
+              },
+              "contains_source_text": False,
+              "contains_gold_payloads": False,
+          }
+          out = Path("/tmp/h392-campaign-summary")
+          out.mkdir(parents=True, exist_ok=True)
+          (out / "CAMPAIGN_BATCH_SUMMARY.json").write_text(
+              json.dumps(report, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(report, indent=2, sort_keys=True))
+
+          if os.environ["SHARD_RESULT"] != "success" or not coverage_complete:
+              raise SystemExit("campaign batch did not complete all planned shards")
+          PY
+
+      - name: Publish campaign batch summary
+        if: ${{ always() }}
+        run: |
+          if [ -s /tmp/h392-campaign-summary/CAMPAIGN_BATCH_SUMMARY.json ]; then
+            {
+              echo '### H3.9.2 campaign batch summary'
+              echo '```json'
+              cat /tmp/h392-campaign-summary/CAMPAIGN_BATCH_SUMMARY.json
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload redacted campaign batch summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: h392-campaign-batch-summary
+          path: /tmp/h392-campaign-summary
+          if-no-files-found: warn
+          retention-days: 30

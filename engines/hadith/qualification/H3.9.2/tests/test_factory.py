@@ -446,6 +446,11 @@ class FactoryTests(unittest.TestCase):
             )
             self.assertEqual(report["promoted_count"], 1)
             self.assertEqual(report["adjudication_count"], 0)
+            self.assertEqual(report["adjudication_reason_counts"], {})
+            self.assertEqual(
+                report["outcome_by_benchmark"],
+                {"b1": {"promoted": 1}},
+            )
             rows = load_jsonl(reviewed / "b1" / "reviewed.jsonl")
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["factory_verification"]["agreement"], "exact_gold_match")
@@ -548,6 +553,18 @@ class FactoryTests(unittest.TestCase):
             report, _, adjudication, _ = self._reconcile(root, task, cache, curator, verifier)
             self.assertEqual(report["promoted_count"], 0)
             self.assertEqual(load_jsonl(adjudication)[0]["reason"], "model_family_not_independent")
+            self.assertEqual(
+                report["adjudication_reason_counts"],
+                {"model_family_not_independent": 1},
+            )
+            self.assertEqual(
+                report["adjudication_reason_counts_by_benchmark"],
+                {"b1": {"model_family_not_independent": 1}},
+            )
+            self.assertEqual(
+                report["outcome_by_benchmark"],
+                {"b1": {"adjudication": 1}},
+            )
 
     def test_gold_disagreement_routes_to_adjudication(self):
         with tempfile.TemporaryDirectory() as d:
@@ -559,6 +576,10 @@ class FactoryTests(unittest.TestCase):
             report, _, adjudication, _ = self._reconcile(root, task, cache, curator, verifier)
             self.assertEqual(report["promoted_count"], 0)
             self.assertEqual(load_jsonl(adjudication)[0]["reason"], "gold_disagreement")
+            self.assertEqual(
+                report["adjudication_reason_counts"],
+                {"gold_disagreement": 1},
+            )
 
     def test_holdout_source_index_rejects_internal_cache_even_with_external_output(self):
         with tempfile.TemporaryDirectory() as d:

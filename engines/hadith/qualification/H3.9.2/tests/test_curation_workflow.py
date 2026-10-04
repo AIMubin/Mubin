@@ -15,6 +15,9 @@ class CurationWorkflowTests(unittest.TestCase):
         cls.integrity_workflow = (
             repo_root / ".github" / "workflows" / "hadith-h392.yml"
         ).read_text(encoding="utf-8")
+        cls.campaign_workflow = (
+            repo_root / ".github" / "workflows" / "h392-curation-campaign.yml"
+        ).read_text(encoding="utf-8")
 
     def test_secret_bearing_workflow_pins_third_party_actions_to_commits(self):
         self.assertIn(
@@ -55,13 +58,99 @@ class CurationWorkflowTests(unittest.TestCase):
 
     def test_readiness_rechecks_main_before_real_source_acquisition(self):
         live = self.workflow.index("- name: Run live Curator and Verifier readiness canaries")
-        recheck = self.workflow.index("- name: Reconfirm main after readiness")
+        recheck = self.workflow.index("- name: Reconfirm main before real curation")
         acquire = self.workflow.index("- name: Acquire and re-verify pinned non-holdout sources")
         self.assertLess(live, recheck)
         self.assertLess(recheck, acquire)
         section = self.workflow[recheck:acquire]
         self.assertIn("git ls-remote origin refs/heads/main", section)
-        self.assertIn("Main advanced during readiness", section)
+        self.assertIn("Main advanced before real curation", section)
+
+    def test_pilot_is_reusable_but_manual_dispatch_cannot_skip_readiness(self):
+        dispatch = self.workflow.split("  workflow_call:", 1)[0]
+        self.assertNotIn("skip_readiness:", dispatch)
+        reusable = self.workflow.split("  workflow_call:", 1)[1].split(
+            "\npermissions:", 1
+        )[0]
+        self.assertIn("skip_readiness:", reusable)
+        self.assertIn("readiness_sha:", reusable)
+        self.assertIn("H392_CURATION_ARTIFACT_KEY:", reusable)
+
+        delegated = self.workflow.split(
+            "- name: Validate delegated campaign readiness", 1
+        )[1].split("- name: Reconfirm main before real curation", 1)[0]
+        self.assertIn('if: ${{ inputs.skip_readiness == true }}', delegated)
+        self.assertIn('READINESS_SHA: ${{ inputs.readiness_sha }}', delegated)
+        self.assertIn('READINESS_SHA" != "$GITHUB_SHA', delegated)
+        self.assertIn('"delegated": True', delegated)
+
+    def test_campaign_runs_one_central_readiness_then_parallel_sha_bound_shards(self):
+        self.assertIn("name: H3.9.2 campaign batch", self.campaign_workflow)
+        self.assertIn("readiness-and-plan:", self.campaign_workflow)
+        self.assertIn("timeout-minutes: 60", self.campaign_workflow)
+        self.assertEqual(
+            self.campaign_workflow.count(
+                "Run live Curator and Verifier readiness canaries once"
+            ),
+            1,
+        )
+        self.assertIn("max-parallel: 4", self.campaign_workflow)
+        self.assertIn("fail-fast: false", self.campaign_workflow)
+        self.assertIn(
+            "uses: ./.github/workflows/h392-curation-pilot.yml",
+            self.campaign_workflow,
+        )
+        self.assertIn("skip_readiness: true", self.campaign_workflow)
+        self.assertIn(
+            "readiness_sha: ${{ needs.readiness-and-plan.outputs.readiness_sha }}",
+            self.campaign_workflow,
+        )
+
+    def test_campaign_first_stage_is_bounded_to_32_tasks_and_eight_per_shard(self):
+        self.assertIn("count < 1 or count > 32", self.campaign_workflow)
+        self.assertIn("shard_size < 1 or shard_size > 8", self.campaign_workflow)
+        self.assertIn("task_offset + task_count exceeds 896", self.campaign_workflow)
+        self.assertIn("expected_shards", self.campaign_workflow)
+
+    def test_campaign_aggregate_uses_only_redacted_shard_summaries(self):
+        aggregate = self.campaign_workflow.split(
+            "- name: Aggregate campaign batch outcomes", 1
+        )[1].split("- name: Publish campaign batch summary", 1)[0]
+        self.assertIn("CURATION_RUN_SUMMARY.json", aggregate)
+        self.assertNotIn("curator-responses.jsonl", aggregate)
+        self.assertNotIn("verifier-responses.jsonl", aggregate)
+        self.assertNotIn("adjudication.jsonl", aggregate)
+        self.assertIn("adjudication_reason_counts", aggregate)
+        self.assertIn("adjudication_reason_counts_by_benchmark", aggregate)
+        self.assertIn("outcome_by_benchmark", aggregate)
+        self.assertIn("coverage_complete", aggregate)
+        self.assertIn("coverage_errors", aggregate)
+        self.assertIn("cross_shard_sha_mismatch", aggregate)
+        self.assertIn("continue-on-error: true", self.campaign_workflow)
+
+    def test_campaign_secret_bearing_actions_are_commit_pinned(self):
+        self.assertIn(
+            "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            self.campaign_workflow,
+        )
+        self.assertIn(
+            "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            self.campaign_workflow,
+        )
+        self.assertIn(
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+            self.campaign_workflow,
+        )
+        self.assertIn(
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            self.campaign_workflow,
+        )
+
+    def test_integrity_ci_covers_campaign_workflow_changes(self):
+        self.assertIn(
+            '".github/workflows/h392-curation-campaign.yml"',
+            self.integrity_workflow,
+        )
 
     def test_model_identity_is_not_exposed_as_dispatch_input(self):
         dispatch = self.workflow.split("permissions:", 1)[0]
@@ -194,6 +283,7 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("verifier-task-report.json", summary)
         self.assertIn('"readiness"', summary)
         self.assertIn("READINESS_GATE.json", summary)
+        self.assertIn('"reconciliation"', summary)
 
     def test_plaintext_source_bearing_outputs_are_not_uploaded(self):
         upload = self.workflow.split(

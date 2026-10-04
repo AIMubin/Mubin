@@ -874,6 +874,28 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
 
     dump_jsonl(adjudication_path, adjudication)
     dump_jsonl(ledger_path, ledger)
+
+    adjudication_reason_counts = Counter(
+        str(row.get("reason"))
+        for row in adjudication
+        if isinstance(row.get("reason"), str) and row["reason"]
+    )
+    outcome_by_benchmark: dict[str, Counter[str]] = defaultdict(Counter)
+    adjudication_reason_counts_by_benchmark: dict[str, Counter[str]] = defaultdict(Counter)
+    for row in ledger:
+        bid = str(row.get("benchmark_id", ""))
+        outcome = str(row.get("outcome", ""))
+        if bid and outcome:
+            outcome_by_benchmark[bid][outcome] += 1
+        reason = row.get("reason")
+        if (
+            bid
+            and outcome == "adjudication"
+            and isinstance(reason, str)
+            and reason
+        ):
+            adjudication_reason_counts_by_benchmark[bid][reason] += 1
+
     return {
         "task_count": len(tasks),
         "promoted_count": len(promoted),
@@ -881,6 +903,15 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         "skipped_count": skipped,
         "ledger_count": len(ledger),
         "promoted_by_benchmark": dict(sorted(Counter(str(r["benchmark_id"]) for r in promoted).items())),
+        "adjudication_reason_counts": dict(sorted(adjudication_reason_counts.items())),
+        "adjudication_reason_counts_by_benchmark": {
+            bid: dict(sorted(counts.items()))
+            for bid, counts in sorted(adjudication_reason_counts_by_benchmark.items())
+        },
+        "outcome_by_benchmark": {
+            bid: dict(sorted(counts.items()))
+            for bid, counts in sorted(outcome_by_benchmark.items())
+        },
     }
 
 
