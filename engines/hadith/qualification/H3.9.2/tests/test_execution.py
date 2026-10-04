@@ -28,6 +28,14 @@ output_path = sys.argv[2]
 mode = sys.argv[3]
 role = os.environ["MUBIN_AGENT_ROLE"]
 
+if mode == "transient-once":
+    marker = os.path.join(os.getcwd(), ".transient-once")
+    if not os.path.exists(marker):
+        with open(marker, "w", encoding="utf-8") as fh:
+            fh.write("1")
+        print("MUBIN_DIAGNOSTIC:connection_failed", file=sys.stderr)
+        raise SystemExit(1)
+
 rows = []
 with open(input_path, encoding="utf-8") as fh:
     for line in fh:
@@ -168,7 +176,7 @@ class AgentExecutionTests(unittest.TestCase):
     def _config(
         self, root: Path, adapter: Path, role: str, family: str,
         mode: str = "ok", task_failure_policy: str = "fail_fast",
-        batch_size: int = 1,
+        batch_size: int = 1, max_attempts: int = 1,
     ):
         path = root / f"{role}-{family}.json"
         write_json(path, {
@@ -189,7 +197,7 @@ class AgentExecutionTests(unittest.TestCase):
             },
             "batch_size": batch_size,
             "timeout_seconds": 30,
-            "max_attempts": 1,
+            "max_attempts": max_attempts,
             "task_failure_policy": task_failure_policy,
         })
         return path
@@ -325,6 +333,45 @@ class AgentExecutionTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "requires batch_size=1"):
                 load_agent_execution_config(config, "curator")
+
+    def test_transient_connection_failure_is_retried_once_then_succeeds(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, tasks, adapter = self._fixture(root)
+            config = self._config(
+                root, adapter, "curator", "family-a", "transient-once",
+                task_failure_policy="record_rejection", max_attempts=2,
+            )
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            report = run_agent_execution(
+                root, "curator", tasks, index, config, out, manifest
+            )
+            self.assertEqual(report["completed_task_count"], 1)
+            self.assertEqual(report["rejected_task_count"], 0)
+            self.assertEqual(report["batches"][0]["attempts_used"], 2)
+            self.assertEqual(report["batches"][0]["attempts_allowed"], 2)
+
+    def test_collection_contract_failure_is_not_retried_even_when_two_attempts_allowed(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            _, index, _, adapter = self._fixture(root)
+            tasks = self._expand_to_two_non_holdout_tasks(root, index)
+            config = self._config(
+                root, adapter, "curator", "family-a", "contract-first",
+                task_failure_policy="record_rejection", max_attempts=2,
+            )
+            out = root / "factory-work" / "responses.jsonl"
+            manifest = root / "factory-work" / "run.json"
+            report = run_agent_execution(
+                root, "curator", tasks, index, config, out, manifest
+            )
+            self.assertEqual(report["rejected_task_count"], 1)
+            self.assertEqual(report["completed_task_count"], 1)
+            self.assertEqual(report["rejections"][0]["attempts_allowed"], 2)
+            self.assertEqual(report["rejections"][0]["attempts_used"], 1)
 
     def test_collection_mode_records_contract_rejection_and_continues(self):
         with tempfile.TemporaryDirectory() as d:
