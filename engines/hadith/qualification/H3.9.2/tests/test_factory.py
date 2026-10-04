@@ -516,6 +516,10 @@ class FactoryTests(unittest.TestCase):
             self.assertEqual(load_jsonl(adjudication), [])
             row = load_jsonl(reviewed / "b1" / "reviewed.jsonl")[0]
             self.assertEqual(row["payload"]["gold"], {"labels": ["a", "b"]})
+            self.assertEqual(
+                row["factory_verification"]["agreement"],
+                "exact_gold_match",
+            )
 
     def test_curator_requested_adjudication_never_reaches_final_seal(self):
         with tempfile.TemporaryDirectory() as d:
