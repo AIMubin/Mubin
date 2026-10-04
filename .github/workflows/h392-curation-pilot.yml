@@ -224,7 +224,7 @@ jobs:
                   },
                   "batch_size": 1,
                   "timeout_seconds": 660,
-                  "max_attempts": 1,
+                  "max_attempts": 2,
                   "task_failure_policy": "record_rejection",
               }
 
