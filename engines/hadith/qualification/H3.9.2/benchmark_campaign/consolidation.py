@@ -211,24 +211,38 @@ def _validate_ledger_response_binding(
     verifier_response: dict[str, Any] | None,
 ) -> None:
     expected_curator_sha = _response_sha256(curator_response)
-    expected_verifier_sha = _response_sha256(verifier_response)
     if entry.get("curator_response_sha256") != expected_curator_sha:
         raise ValueError(f"curation ledger Curator response hash mismatch: {task_id}")
-    if entry.get("verifier_response_sha256") != expected_verifier_sha:
-        raise ValueError(f"curation ledger Verifier response hash mismatch: {task_id}")
     expected_curator_family = (
         curator_response.get("model_family")
         if isinstance(curator_response, dict)
         else None
     )
+    if entry.get("curator_model_family") != expected_curator_family:
+        raise ValueError(f"curation ledger Curator model family mismatch: {task_id}")
+
+    # Reconciliation intentionally short-circuits before consulting Verifier
+    # evidence for some Curator-side outcomes (for example
+    # curator_requested_adjudication). A Verifier response may therefore exist
+    # in the shard while the ledger correctly records no Verifier binding.
+    stored_verifier_sha = entry.get("verifier_response_sha256")
+    stored_verifier_family = entry.get("verifier_model_family")
+    if stored_verifier_sha is None:
+        if stored_verifier_family is not None:
+            raise ValueError(f"curation ledger Verifier family exists without hash: {task_id}")
+        if entry.get("outcome") == "promoted":
+            raise ValueError(f"promoted ledger row lacks Verifier response binding: {task_id}")
+        return
+
+    expected_verifier_sha = _response_sha256(verifier_response)
+    if stored_verifier_sha != expected_verifier_sha:
+        raise ValueError(f"curation ledger Verifier response hash mismatch: {task_id}")
     expected_verifier_family = (
         verifier_response.get("model_family")
         if isinstance(verifier_response, dict)
         else None
     )
-    if entry.get("curator_model_family") != expected_curator_family:
-        raise ValueError(f"curation ledger Curator model family mismatch: {task_id}")
-    if entry.get("verifier_model_family") != expected_verifier_family:
+    if stored_verifier_family != expected_verifier_family:
         raise ValueError(f"curation ledger Verifier model family mismatch: {task_id}")
 
 
