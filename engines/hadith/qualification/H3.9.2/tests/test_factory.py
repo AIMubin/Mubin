@@ -31,6 +31,8 @@ class FactoryTests(unittest.TestCase):
             self.assertEqual(plan["reserve_slots_per_primary"], 1)
             self.assertEqual(plan["reserve_slot_count"], 1280)
             self.assertEqual(plan["slot_count"], 2560)
+            self.assertEqual(plan["primary_holdout_slots"], 384)
+            self.assertEqual(plan["primary_non_holdout_slots"], 896)
             self.assertEqual(plan["holdout_slots"], 384)
             self.assertEqual(plan["non_holdout_slots"], 896)
             self.assertEqual(plan["candidate_holdout_slots"], 768)
