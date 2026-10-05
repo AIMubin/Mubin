@@ -65,6 +65,24 @@ class ConsolidationWorkflowTests(unittest.TestCase):
             self.workflow,
         )
 
+    def test_promotions_are_regrounded_in_verified_source_cache(self):
+        self.assertIn(
+            "Acquire and verify pinned non-holdout sources for evidence grounding",
+            self.workflow,
+        )
+        self.assertIn(
+            'python -m benchmark_campaign verify-source-cache',
+            self.workflow,
+        )
+        self.assertIn(
+            '--source-cache-dir "$SOURCE_CACHE_DIR"',
+            self.workflow,
+        )
+        self.assertIn(
+            'rm -rf "$EVIDENCE_ROOT" "$CUMULATIVE_DIR" "$SOURCE_CACHE_DIR"',
+            self.workflow,
+        )
+
     def test_artifact_redirect_does_not_forward_github_token(self):
         self.assertIn("class NoRedirect", self.workflow)
         self.assertIn("artifact_download_location", self.workflow)
