@@ -170,6 +170,22 @@ class ConsolidationTests(unittest.TestCase):
                     if tid in verifier_task_ids
                     else {"label": "yes"}
                 )
+                answer_provenance = {
+                    "answer_origin": "human_authored_source",
+                    "extraction_method": "ai",
+                    "source_verified": True,
+                    "human_reviewed": False,
+                    "mode": (
+                        "adjudication_required"
+                        if _reason == "curator_requested_adjudication"
+                        else "direct_extract"
+                    ),
+                    "supports": [{
+                        "source_id": task["anchor_source_id"],
+                        "support_text": "anchor evidence",
+                    }],
+                    "verbatim_answer": "anchor evidence",
+                }
                 raw = {
                     "task_id": tid,
                     "status": "candidate",
@@ -184,18 +200,7 @@ class ConsolidationTests(unittest.TestCase):
                             "locator": "gitblob:" + "1" * 40 + "#char=0:15",
                             "excerpt": "anchor evidence",
                         }],
-                        "answer_provenance": {
-                            "answer_origin": "human_authored_source",
-                            "extraction_method": "ai",
-                            "source_verified": True,
-                            "human_reviewed": False,
-                            "mode": "direct_extract",
-                            "supports": [{
-                                "source_id": task["anchor_source_id"],
-                                "support_text": "anchor evidence",
-                            }],
-                            "verbatim_answer": "anchor evidence",
-                        },
+                        "answer_provenance": answer_provenance,
                         "payload": {
                             "input": candidate_input,
                             "gold": {"label": "yes"},
@@ -304,6 +309,12 @@ class ConsolidationTests(unittest.TestCase):
             case_id = f"case-{tid}" if outcome == "promoted" else None
             curator_response = curator_by_id.get(tid)
             verifier_response = verifier_by_id.get(tid)
+            verifier_used = (
+                None
+                if outcome == "adjudication"
+                and reason == "curator_requested_adjudication"
+                else verifier_response
+            )
             ledger.append({
                 "task_id": tid,
                 "task_fingerprint": task["task_fingerprint"],
@@ -317,16 +328,16 @@ class ConsolidationTests(unittest.TestCase):
                     if curator_response is not None else None
                 ),
                 "verifier_response_sha256": (
-                    sha256_bytes(canonical_json_bytes(verifier_response))
-                    if verifier_response is not None else None
+                    sha256_bytes(canonical_json_bytes(verifier_used))
+                    if verifier_used is not None else None
                 ),
                 "curator_model_family": (
                     curator_response.get("model_family")
                     if curator_response is not None else None
                 ),
                 "verifier_model_family": (
-                    verifier_response.get("model_family")
-                    if verifier_response is not None else None
+                    verifier_used.get("model_family")
+                    if verifier_used is not None else None
                 ),
             })
             if outcome == "adjudication":
@@ -613,6 +624,28 @@ class ConsolidationTests(unittest.TestCase):
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "exact blinded projection"):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_curator_requested_adjudication_preserves_short_circuit_ledger(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "curator-adjudication",
+            [task],
+            {"p0": ("adjudication", "curator_requested_adjudication")},
+            verifier_task_ids={"p0"},
+        )
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            validated = consolidation.validate_primary_run_evidence(
+                self.root, evidence
+            )
+        self.assertEqual(
+            validated["ledger_rows"][0]["canonical_reason"],
+            "curator_requested_adjudication",
+        )
+        ledger = load_jsonl(
+            evidence / "source-bearing" / "CURATION_LEDGER.jsonl"
+        )[0]
+        self.assertIsNone(ledger["verifier_response_sha256"])
+        self.assertIsNone(ledger["verifier_model_family"])
 
     def test_promoted_ledger_response_hash_tamper_fails_closed(self):
         task = _task("p0")
