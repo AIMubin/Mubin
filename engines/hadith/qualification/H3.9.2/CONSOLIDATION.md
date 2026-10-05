@@ -43,9 +43,10 @@ For every source run it:
 7. safely extracts the decrypted tar archive with path/link/device rejection;
 8. validates every task against the current frozen primary plan;
 9. rejects reserve tasks, duplicate tasks, incomplete execution manifests, summary/decrypted-evidence mismatches, and inconsistent reviewed/adjudication sets;
-10. creates one cumulative ledger and cumulative reviewed/adjudication material;
-11. derives a replacement-eligibility manifest bound to the cumulative ledger SHA-256;
-12. re-encrypts all source-bearing cumulative material and removes plaintext before upload.
+10. revalidates every promoted row against the bound Curator/Verifier response hashes and model families, exact gold agreement, source provenance, reviewed-record content fingerprint/support bindings, and the current frozen primary-slot binding;
+11. creates one cumulative ledger and cumulative reviewed/adjudication material;
+12. derives a replacement-eligibility manifest bound to the cumulative ledger SHA-256;
+13. re-encrypts all source-bearing cumulative material and removes plaintext before upload.
 
 Only a redacted cumulative summary and the AES-GCM encrypted cumulative bundle are uploaded.
 
