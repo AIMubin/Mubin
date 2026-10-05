@@ -10,6 +10,7 @@ from .factory import (
     _task_rows,
     _validate_response_identity,
     _validate_tasks_against_frozen_plan,
+    _verifier_task_from_curator,
     build_factory_plan,
 )
 from .freeze import FREEZE_SCHEMA_VERSION
@@ -36,8 +37,10 @@ def _load_origin(path: Path) -> dict[str, Any]:
     if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id < 1:
         raise ValueError(f"origin github_run_id invalid: {path}")
     run_attempt = row.get("github_run_attempt")
-    if not isinstance(run_attempt, int) or isinstance(run_attempt, bool) or run_attempt < 1:
-        raise ValueError(f"origin github_run_attempt invalid: {run_id}")
+    if run_attempt != 1:
+        raise ValueError(
+            f"origin github_run_attempt must be exactly 1 for canonical evidence: {run_id}"
+        )
     if row.get("conclusion") != "success":
         raise ValueError(f"origin workflow run is not successful: {run_id}")
     if row.get("head_branch") != "main":
@@ -104,15 +107,23 @@ def _response_map(path: Path, role: str) -> dict[str, dict[str, Any]]:
     return out
 
 
-def _verifier_task_ids(path: Path) -> set[str]:
+def _verifier_task_map(path: Path) -> dict[str, dict[str, Any]]:
     rows = load_jsonl(path)
-    ids: set[str] = set()
+    out: dict[str, dict[str, Any]] = {}
     for row in rows:
         tid = str(row.get("task_id", ""))
-        if not tid or tid in ids:
+        if not tid or tid in out:
             raise ValueError("verifier tasks contain invalid/duplicate task_id")
-        ids.add(tid)
-    return ids
+        stored = row.get("verifier_task_fingerprint")
+        if not isinstance(stored, str) or _SHA256_RE.fullmatch(stored) is None:
+            raise ValueError(f"verifier task fingerprint invalid: {tid}")
+        unsigned = dict(row)
+        unsigned.pop("verifier_task_fingerprint", None)
+        expected = sha256_bytes(canonical_json_bytes(unsigned))
+        if stored != expected:
+            raise ValueError(f"verifier task fingerprint mismatch: {tid}")
+        out[tid] = row
+    return out
 
 
 def _reviewed_by_task(reviewed_dir: Path) -> dict[str, dict[str, Any]]:
@@ -286,22 +297,36 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         if rejection.get("task_fingerprint") != task_map[tid].get("task_fingerprint"):
             raise ValueError(f"Curator rejection task fingerprint mismatch: {tid}")
 
-    verifier_task_ids = _verifier_task_ids(verifier_tasks_path)
+    verifier_tasks = _verifier_task_map(verifier_tasks_path)
+    verifier_task_ids = set(verifier_tasks)
     if not verifier_task_ids.issubset(task_map):
         raise ValueError("Verifier tasks escape selected Curator task set")
-    for tid in verifier_task_ids:
-        if curator_responses.get(tid, {}).get("status") != "candidate":
-            raise ValueError(f"Verifier task is not backed by a Curator candidate: {tid}")
+
+    expected_verifier_tasks: dict[str, dict[str, Any]] = {}
+    blindness_rejections = 0
+    curator_candidate_count = 0
+    for tid, response in curator_responses.items():
+        if response.get("status") != "candidate":
+            continue
+        curator_candidate_count += 1
+        expected_task, blind_error = _verifier_task_from_curator(task_map[tid], response)
+        if blind_error is not None:
+            blindness_rejections += 1
+            continue
+        if expected_task is None:
+            raise ValueError(f"Curator candidate did not project to Verifier task: {tid}")
+        expected_verifier_tasks[tid] = expected_task
+
+    if verifier_task_ids != set(expected_verifier_tasks):
+        raise ValueError("Verifier task set differs from exact blinded Curator projection")
+    for tid, actual in verifier_tasks.items():
+        expected = expected_verifier_tasks[tid]
+        if canonical_json_bytes(actual) != canonical_json_bytes(expected):
+            raise ValueError(f"Verifier task differs from exact blinded projection: {tid}")
+
     verifier_preparation = summary.get("verifier_preparation")
     if not isinstance(verifier_preparation, dict):
         raise ValueError("run summary verifier_preparation missing")
-    curator_candidate_count = sum(
-        1 for response in curator_responses.values()
-        if response.get("status") == "candidate"
-    )
-    blindness_rejections = curator_candidate_count - len(verifier_task_ids)
-    if blindness_rejections < 0:
-        raise ValueError("Verifier task count exceeds Curator candidate count")
     expected_preparation_rejections = (
         {"candidate_input_blindness": blindness_rejections}
         if blindness_rejections else {}
@@ -395,6 +420,8 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
 
     for tid, record in reviewed.items():
         task = task_map[tid]
+        if record.get("benchmark_id") != task.get("benchmark_id"):
+            raise ValueError(f"reviewed record benchmark mismatch: {tid}")
         if record.get("factory_slot_id") != task.get("slot_id"):
             raise ValueError(f"reviewed record slot binding mismatch: {tid}")
         if record.get("factory_task_fingerprint") != task.get("task_fingerprint"):
