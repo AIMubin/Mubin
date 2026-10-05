@@ -169,6 +169,50 @@ class FactoryTests(unittest.TestCase):
         self.assertEqual(actual_ids, expected_ids)
         self.assertTrue(all(":reserve:" not in x for x in actual_ids))
 
+    def test_enabling_reserve_capacity_does_not_change_primary_task_fingerprint(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "reserve_slots_per_primary": 0,
+                "rule": "no reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 2
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+
+            legacy_plan = root / "factory-work" / "legacy-plan.json"
+            legacy_tasks = root / "factory-work" / "legacy-tasks.jsonl"
+            build_factory_plan(root, legacy_plan)
+            build_factory_tasks(
+                root, legacy_plan, index, legacy_tasks, "non_holdout", False
+            )
+            legacy_primary = load_jsonl(legacy_tasks)[0]
+
+            quotas["candidate_reserve_policy"]["reserve_slots_per_primary"] = 1
+            quotas["candidate_reserve_policy"]["rule"] = "one reserve"
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            reserve_plan = root / "factory-work" / "reserve-plan.json"
+            reserve_tasks = root / "factory-work" / "reserve-tasks.jsonl"
+            build_factory_plan(root, reserve_plan)
+            build_factory_tasks(
+                root, reserve_plan, index, reserve_tasks, "non_holdout", False
+            )
+            reserve_primary = load_jsonl(reserve_tasks)[0]
+            self.assertEqual(reserve_primary, legacy_primary)
+            self.assertEqual(
+                reserve_primary["task_fingerprint"],
+                legacy_primary["task_fingerprint"],
+            )
+
     def test_reserve_task_carries_explicit_replacement_binding(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
