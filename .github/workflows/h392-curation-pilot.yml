@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       task_offset:
-        description: Zero-based offset inside the frozen non-holdout candidate task plan
+        description: Zero-based offset inside the frozen non-holdout primary task plan
         required: true
         default: "0"
       task_limit:
