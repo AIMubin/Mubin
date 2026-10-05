@@ -35,6 +35,9 @@ def _load_origin(path: Path) -> dict[str, Any]:
     run_id = row.get("github_run_id")
     if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id < 1:
         raise ValueError(f"origin github_run_id invalid: {path}")
+    run_attempt = row.get("github_run_attempt")
+    if not isinstance(run_attempt, int) or isinstance(run_attempt, bool) or run_attempt < 1:
+        raise ValueError(f"origin github_run_attempt invalid: {run_id}")
     if row.get("conclusion") != "success":
         raise ValueError(f"origin workflow run is not successful: {run_id}")
     if row.get("head_branch") != "main":
@@ -426,6 +429,7 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
             "case_id": entry.get("case_id"),
             "replacement_eligible": bool(eligible),
             "source_run_id": origin["github_run_id"],
+            "source_run_attempt": origin["github_run_attempt"],
             "source_sha": origin["head_sha"],
             "source_artifact_id": origin["artifact_id"],
             "source_artifact_sha256": origin["artifact_sha256"],
@@ -512,6 +516,7 @@ def consolidate_primary_evidence(
             raise ValueError(f"source run SHA differs across artifacts: {run_id}")
         input_artifacts.append({
             "github_run_id": run_id,
+            "github_run_attempt": origin["github_run_attempt"],
             "head_sha": origin["head_sha"],
             "artifact_id": artifact_id,
             "artifact_name": origin["artifact_name"],
