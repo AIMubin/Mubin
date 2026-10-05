@@ -18,6 +18,9 @@ class CurationWorkflowTests(unittest.TestCase):
         cls.campaign_workflow = (
             repo_root / ".github" / "workflows" / "h392-curation-campaign.yml"
         ).read_text(encoding="utf-8")
+        cls.acquisition_workflow = (
+            repo_root / ".github" / "workflows" / "h392-nonholdout-acquisition.yml"
+        ).read_text(encoding="utf-8")
 
     def test_secret_bearing_workflow_pins_third_party_actions_to_commits(self):
         self.assertIn(
@@ -109,10 +112,26 @@ class CurationWorkflowTests(unittest.TestCase):
     def test_campaign_reviewed_stage_is_bounded_to_64_tasks_and_eight_per_shard(self):
         self.assertIn("count < 1 or count > 64", self.campaign_workflow)
         self.assertIn("shard_size < 1 or shard_size > 8", self.campaign_workflow)
-        self.assertIn("task_offset + task_count exceeds 896", self.campaign_workflow)
+        self.assertIn("primary_non_holdout_slots", self.campaign_workflow)
+        self.assertNotIn('available = int(plan["candidate_non_holdout_slots"])', self.campaign_workflow)
+        self.assertIn("build_factory_plan", self.campaign_workflow)
+        self.assertNotIn("task_offset + task_count exceeds 896", self.campaign_workflow)
         self.assertIn("expected_shards", self.campaign_workflow)
-        self.assertIn('default: "40"', self.campaign_workflow)
+        self.assertIn('default: "104"', self.campaign_workflow)
         self.assertIn('default: "64"', self.campaign_workflow)
+
+    def test_pilot_bounds_follow_frozen_primary_plan_until_reserve_eligibility_exists(self):
+        bounds = self.workflow.split("- name: Validate chunk bounds", 1)[1]
+        bounds = bounds.split("- name: Build isolated ephemeral workspace", 1)[0]
+        self.assertIn("build_factory_plan", bounds)
+        self.assertIn("primary_non_holdout_slots", bounds)
+        self.assertNotIn('available = int(plan["candidate_non_holdout_slots"])', bounds)
+        self.assertNotIn("offset >= 896", bounds)
+        self.assertNotIn("exceeds the 896", bounds)
+        self.assertIn(
+            "frozen non-holdout primary plan",
+            bounds,
+        )
 
     def test_campaign_aggregate_uses_only_redacted_shard_summaries(self):
         aggregate = self.campaign_workflow.split(
@@ -132,6 +151,60 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("curator_response_counts", aggregate)
         self.assertIn("verifier_response_counts", aggregate)
         self.assertIn("continue-on-error: true", self.campaign_workflow)
+
+    def test_acquisition_ci_distinguishes_primary_quota_from_candidate_capacity(self):
+        self.assertIn(
+            'task_count != int(plan["candidate_non_holdout_slots"])',
+            self.acquisition_workflow,
+        )
+        self.assertIn('"primary_slot_count"', self.acquisition_workflow)
+        self.assertIn('"primary_non_holdout_slots"', self.acquisition_workflow)
+        self.assertIn('"primary_holdout_slots"', self.acquisition_workflow)
+        self.assertIn('"reserve_slot_count"', self.acquisition_workflow)
+        self.assertIn('"candidate_non_holdout_slots"', self.acquisition_workflow)
+        self.assertIn('"candidate_holdout_slots"', self.acquisition_workflow)
+        self.assertIn(
+            "reserve protocol changed the frozen non-holdout primary task prefix",
+            self.acquisition_workflow,
+        )
+        self.assertIn("expected_primary_ids", self.acquisition_workflow)
+        self.assertIn("expected_reserve_ids", self.acquisition_workflow)
+        self.assertIn("primary task prefix contains reserve metadata", self.acquisition_workflow)
+        self.assertNotIn(
+            'canonical_evidence["factory"]["curator_tasks_sha256"]',
+            self.acquisition_workflow,
+        )
+
+    def test_acquisition_checkout_and_evidence_bind_to_exact_source_revision(self):
+        self.assertIn("Checkout exact source revision", self.acquisition_workflow)
+        self.assertIn(
+            "github.event.pull_request.head.sha || github.sha",
+            self.acquisition_workflow,
+        )
+        self.assertIn("Verify checkout provenance", self.acquisition_workflow)
+        self.assertIn('actual="$(git rev-parse HEAD)"', self.acquisition_workflow)
+        self.assertIn(
+            '"runner_commit": subprocess.check_output(',
+            self.acquisition_workflow,
+        )
+        self.assertIn('"github_event_sha": os.environ.get("GITHUB_SHA")', self.acquisition_workflow)
+
+    def test_acquisition_actions_are_commit_pinned(self):
+        self.assertIn(
+            "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            self.acquisition_workflow,
+        )
+        self.assertIn(
+            "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            self.acquisition_workflow,
+        )
+        self.assertIn(
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            self.acquisition_workflow,
+        )
+        self.assertNotIn("actions/checkout@v", self.acquisition_workflow)
+        self.assertNotIn("actions/setup-python@v", self.acquisition_workflow)
+        self.assertNotIn("actions/upload-artifact@v", self.acquisition_workflow)
 
     def test_campaign_secret_bearing_actions_are_commit_pinned(self):
         self.assertIn(
@@ -154,6 +227,10 @@ class CurationWorkflowTests(unittest.TestCase):
     def test_integrity_ci_covers_campaign_workflow_changes(self):
         self.assertIn(
             '".github/workflows/h392-curation-campaign.yml"',
+            self.integrity_workflow,
+        )
+        self.assertIn(
+            '".github/workflows/h392-nonholdout-acquisition.yml"',
             self.integrity_workflow,
         )
 

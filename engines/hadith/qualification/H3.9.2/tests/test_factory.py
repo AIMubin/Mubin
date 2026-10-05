@@ -17,22 +17,62 @@ from benchmark_campaign.factory import (
     _gold_contract_error,
 )
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
-from benchmark_campaign.validate import (_validate_factory_slot_binding, _validate_factory_verification, _validate_factory_risk_policy)
+from benchmark_campaign.validate import (
+    _validate_factory_reserve_policy,
+    _validate_factory_slot_binding,
+    _validate_factory_verification,
+    _validate_factory_risk_policy,
+)
 
 
 class FactoryTests(unittest.TestCase):
-    def test_real_factory_plan_expands_exactly_1280_slots(self):
+    def test_real_factory_plan_preserves_1280_primary_slots_and_adds_reserves(self):
         project = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "plan.json"
             plan = build_factory_plan(project, out)
-            self.assertEqual(plan["slot_count"], 1280)
             self.assertEqual(plan["target_total"], 1280)
+            self.assertEqual(plan["primary_slot_count"], 1280)
+            self.assertEqual(plan["reserve_slots_per_primary"], 1)
+            self.assertEqual(plan["reserve_slot_count"], 1280)
+            self.assertEqual(plan["slot_count"], 2560)
+            self.assertEqual(plan["primary_holdout_slots"], 384)
+            self.assertEqual(plan["primary_non_holdout_slots"], 896)
             self.assertEqual(plan["holdout_slots"], 384)
             self.assertEqual(plan["non_holdout_slots"], 896)
-            risk3 = [s for s in plan["slots"] if s["risk_tier"] == 3]
+            self.assertEqual(plan["candidate_holdout_slots"], 768)
+            self.assertEqual(plan["candidate_non_holdout_slots"], 1792)
+
+            primary = plan["slots"][:1280]
+            self.assertTrue(all("candidate_slot_kind" not in x for x in primary))
+            non_holdout_primary = [
+                x for x in primary if x["partition"] == "non_holdout"
+            ]
+            self.assertEqual(len(non_holdout_primary), 896)
+            self.assertEqual(
+                non_holdout_primary[0]["slot_id"],
+                "external-critical-commentary:non_holdout:openiti:0279Tirmidhi.Sunan:0001",
+            )
+
+            reserves = plan["slots"][1280:]
+            self.assertTrue(reserves)
+            self.assertTrue(
+                all(x.get("candidate_slot_kind") == "reserve" for x in reserves)
+            )
+            self.assertTrue(
+                all(
+                    isinstance(x.get("replacement_for_slot_id"), str)
+                    and x["replacement_for_slot_id"]
+                    for x in reserves
+                )
+            )
+            self.assertTrue(
+                all(x.get("reserve_attempt") == 1 for x in reserves)
+            )
+
+            risk3 = [x for x in plan["slots"] if x["risk_tier"] == 3]
             self.assertTrue(risk3)
-            self.assertTrue(all(s["auto_promotion"] is False for s in risk3))
+            self.assertTrue(all(x["auto_promotion"] is False for x in risk3))
 
     def test_holdout_output_requires_custodian_and_external_path(self):
         with tempfile.TemporaryDirectory() as d:
@@ -114,6 +154,236 @@ class FactoryTests(unittest.TestCase):
             }],
         })
         return cache, text1
+
+    def test_real_primary_non_holdout_prefix_remains_legacy_offset_stable(self):
+        project = Path(__file__).resolve().parents[1]
+        plan = build_factory_plan(project)
+        quotas = load_json(project / "config" / "curation-quotas.json")
+        expected_ids = []
+        for q in quotas["benchmarks"]:
+            bid = q["benchmark_id"]
+            for anchor in q["non_holdout"]["anchor_quotas"]:
+                sid = anchor["anchor_source_id"]
+                for ordinal in range(1, int(anchor["target_cases"]) + 1):
+                    expected_ids.append(
+                        f"{bid}:non_holdout:{sid}:{ordinal:04d}"
+                    )
+        actual_ids = [
+            slot["slot_id"]
+            for slot in plan["slots"]
+            if slot["partition"] == "non_holdout"
+        ][:896]
+        self.assertEqual(actual_ids, expected_ids)
+        self.assertTrue(all(":reserve:" not in x for x in actual_ids))
+
+    def test_reserve_policy_requires_supported_version_and_prefix_preservation(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 2,
+                "reserve_slots_per_primary": 1,
+                "rule": "unsupported",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+            with self.assertRaisesRegex(
+                ValueError,
+                "unsupported candidate reserve policy version",
+            ):
+                build_factory_plan(root)
+
+            quotas["candidate_reserve_policy"]["policy_version"] = 1
+            quotas["candidate_reserve_policy"]["primary_slot_prefix_preserved"] = False
+            write_json(quotas_path, quotas)
+            with self.assertRaisesRegex(
+                ValueError,
+                "must preserve the primary slot prefix",
+            ):
+                build_factory_plan(root)
+
+    def test_enabling_reserve_capacity_does_not_change_primary_task_fingerprint(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
+                "reserve_slots_per_primary": 0,
+                "rule": "no reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 2
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+
+            legacy_plan = root / "factory-work" / "legacy-plan.json"
+            legacy_tasks = root / "factory-work" / "legacy-tasks.jsonl"
+            build_factory_plan(root, legacy_plan)
+            build_factory_tasks(
+                root, legacy_plan, index, legacy_tasks, "non_holdout", False
+            )
+            legacy_primary = load_jsonl(legacy_tasks)[0]
+
+            quotas["candidate_reserve_policy"]["reserve_slots_per_primary"] = 1
+            quotas["candidate_reserve_policy"]["rule"] = "one reserve"
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            reserve_plan = root / "factory-work" / "reserve-plan.json"
+            reserve_tasks = root / "factory-work" / "reserve-tasks.jsonl"
+            build_factory_plan(root, reserve_plan)
+            build_factory_tasks(
+                root, reserve_plan, index, reserve_tasks, "non_holdout", False
+            )
+            reserve_primary = load_jsonl(reserve_tasks)[0]
+            self.assertEqual(reserve_primary, legacy_primary)
+            self.assertEqual(
+                reserve_primary["task_fingerprint"],
+                legacy_primary["task_fingerprint"],
+            )
+
+    def test_reserve_task_carries_explicit_replacement_binding(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
+                "reserve_slots_per_primary": 1,
+                "rule": "test reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+            plan_path = root / "factory-work" / "plan.json"
+            plan = build_factory_plan(root, plan_path)
+            self.assertEqual(plan["primary_slot_count"], 2)
+            self.assertEqual(plan["reserve_slot_count"], 2)
+
+            tasks_path = root / "factory-work" / "tasks.jsonl"
+            report = build_factory_tasks(
+                root, plan_path, index, tasks_path, "non_holdout", False
+            )
+            self.assertEqual(report["task_count"], 2)
+            tasks = load_jsonl(tasks_path)
+            primary, reserve = tasks
+            self.assertNotIn("candidate_slot_kind", primary)
+            self.assertEqual(reserve["candidate_slot_kind"], "reserve")
+            self.assertEqual(reserve["replacement_for_slot_id"], primary["slot_id"])
+            self.assertEqual(reserve["reserve_attempt"], 1)
+            self.assertNotEqual(
+                reserve["anchor_segment"]["segment_id"],
+                primary["anchor_segment"]["segment_id"],
+            )
+
+    def test_reserve_slot_cannot_enter_qualification_records_in_schema_24(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
+                "reserve_slots_per_primary": 1,
+                "rule": "one reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+            plan = build_factory_plan(root)
+            primary = next(
+                x for x in plan["slots"]
+                if x["partition"] == "non_holdout"
+                and x.get("candidate_slot_kind") != "reserve"
+            )
+            reserve = next(
+                x for x in plan["slots"]
+                if x["partition"] == "non_holdout"
+                and x.get("candidate_slot_kind") == "reserve"
+            )
+
+            self.assertEqual(
+                _validate_factory_reserve_policy(
+                    root,
+                    {"case_id": "p", "factory_slot_id": primary["slot_id"]},
+                    "b1",
+                ),
+                [],
+            )
+            violations = _validate_factory_reserve_policy(
+                root,
+                {"case_id": "r", "factory_slot_id": reserve["slot_id"]},
+                "b1",
+            )
+            self.assertEqual(
+                [v.code for v in violations],
+                ["qualification.reserve_slot_not_eligible"],
+            )
+
+    def test_reserve_reconciliation_fails_closed_without_cumulative_eligibility(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
+                "reserve_slots_per_primary": 1,
+                "rule": "one reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+            plan_path = root / "factory-work" / "plan.json"
+            build_factory_plan(root, plan_path)
+            tasks_path = root / "factory-work" / "tasks.jsonl"
+            build_factory_tasks(
+                root, plan_path, index, tasks_path, "non_holdout", False
+            )
+            reserve = load_jsonl(tasks_path)[1]
+            self.assertEqual(reserve["candidate_slot_kind"], "reserve")
+
+            single_task = root / "factory-work" / "reserve-only.jsonl"
+            dump_jsonl(single_task, [reserve])
+            curator = root / "factory-work" / "curator.jsonl"
+            verifier = root / "factory-work" / "verifier.jsonl"
+            dump_jsonl(curator, [])
+            dump_jsonl(verifier, [])
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "reserve candidate reconciliation is disabled",
+            ):
+                reconcile_factory(
+                    root,
+                    single_task,
+                    curator,
+                    verifier,
+                    cache,
+                    root / "staging",
+                    root / "factory-work" / "adjudication.jsonl",
+                    root / "factory-work" / "ledger.jsonl",
+                    False,
+                )
 
     def test_source_index_verifies_pinned_bytes_and_builds_segments(self):
         with tempfile.TemporaryDirectory() as d:

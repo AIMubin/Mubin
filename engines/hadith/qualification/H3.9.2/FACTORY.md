@@ -9,7 +9,11 @@ Git-blob verified source cache
         ↓
 Deterministic source index
         ↓
-Frozen 1,280 quota slots
+Frozen exact record quotas
+(1,280 primary slots)
+        ↓
+Preregistered candidate plan
+(+1 reserve per primary)
         ↓
 Curator AI-A
         ↓
@@ -45,6 +49,10 @@ This does not make public source books secret. It prevents H4 development artifa
 | report-family-identity | 3 | no; adjudication required |
 
 Auto-promotion still requires literal source support, an exact `gitblob:<sha>#char=start:end` locator that resolves to the excerpt, a record-to-frozen-slot binding hash, and all H3.9.2 provenance checks. AI agreement alone never qualifies a case. The promoted record embeds Curator/Verifier model identities, response SHA-256 hashes, task fingerprint, risk tier, and independently verified support hashes; the validator rejects unreviewed AI `source_attributed` records that bypass this contract.
+
+Freeze schema 24 separates **record quota** from **candidate-discovery capacity**. The original 1,280 primary slots remain the exact record-quota surface and retain their IDs/order/task fingerprints. One reserve candidate slot is preregistered for each primary, giving 2,560 candidate slots total while leaving the record target at 1,280. Reserve tasks are linked by `replacement_for_slot_id` and must use a source window distinct from their linked primary.
+
+Reserve promotion is intentionally **disabled** in schema 24. The standard reviewed workflows remain bounded to the 896 non-holdout primary tasks, reconciliation fails closed if a reserve task is supplied, and campaign validation rejects records that carry reserve factory-slot IDs. A later protocol revision must bind reserve use to cumulative evidence that the linked primary is terminally replaceable; unresolved adjudication is not replacement eligibility.
 
 ## Non-holdout workflow
 
@@ -83,7 +91,7 @@ All subsequent holdout commands use `--custodian-holdout` and `/custodian/...` p
 
 ## File-based AI interface
 
-The factory intentionally uses JSONL contracts instead of embedding one model-provider SDK. Each task includes a hash-bound `retrieval_scope` for the complete allowed partition index; the anchor segment is only the starting point, so multi-source H3.8/H3.9 cases can retrieve corroborating material without crossing the frozen source boundary. The 1,280-slot plan is re-derived from frozen quotas/spec/policy whenever tasks are built, each task fingerprint is recomputed before use, and the source-index manifest hashes `segments.jsonl`; tampering with any of these surfaces fails closed. Curator and Verifier can be local or remote as long as each records a stable `model_family` and `model_ref` and obeys the contracts.
+The factory intentionally uses JSONL contracts instead of embedding one model-provider SDK. Each task includes a hash-bound `retrieval_scope` for the complete allowed partition index; the anchor segment is only the starting point, so multi-source H3.8/H3.9 cases can retrieve corroborating material without crossing the frozen source boundary. The exact 1,280-record quota plan and its preregistered reserve candidate suffix are re-derived from frozen quotas/spec/policy whenever tasks are built, each task fingerprint is recomputed before use, and the source-index manifest hashes `segments.jsonl`; tampering with any of these surfaces fails closed. Curator and Verifier can be local or remote as long as each records a stable `model_family` and `model_ref` and obeys the contracts.
 
 ## Curation ledger
 
@@ -97,7 +105,7 @@ On the non-holdout collection surface, a Curator candidate whose `payload.input`
 
 The full preregistered `allowed_labels` vocabulary is public task metadata, not a selected answer. An exact duplicate inside `payload.input` is therefore permitted; a subset or modified list is rejected.
 
-No disagreement is silently discarded or rewritten into agreement.
+No disagreement is silently discarded or rewritten into agreement. Reserve tasks are also fail-closed at reconciliation until an explicit cumulative replacement-eligibility binding is implemented.
 
 ## Orchestration trust boundary
 

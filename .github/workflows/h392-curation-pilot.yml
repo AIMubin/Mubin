@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       task_offset:
-        description: Zero-based offset inside the 896 non-holdout tasks
+        description: Zero-based offset inside the frozen non-holdout primary task plan
         required: true
         default: "0"
       task_limit:
@@ -175,14 +175,23 @@ jobs:
         run: |
           python - <<'PY'
           import os
+          from pathlib import Path
+          from benchmark_campaign.factory import build_factory_plan
+
+          plan = build_factory_plan(Path(".").resolve())
+          available = int(plan["primary_non_holdout_slots"])
           offset = int(os.environ["TASK_OFFSET"])
           limit = int(os.environ["TASK_LIMIT"])
-          if offset < 0 or offset >= 896:
-              raise SystemExit("TASK_OFFSET must be in [0, 895]")
+          if offset < 0 or offset >= available:
+              raise SystemExit(
+                  f"TASK_OFFSET must be in [0, {available - 1}]"
+              )
           if limit < 1 or limit > 64:
               raise SystemExit("TASK_LIMIT must be in [1, 64]")
-          if offset + limit > 896:
-              raise SystemExit("TASK_OFFSET + TASK_LIMIT exceeds the 896 non-holdout tasks")
+          if offset + limit > available:
+              raise SystemExit(
+                  "TASK_OFFSET + TASK_LIMIT exceeds the frozen non-holdout primary plan"
+              )
           PY
 
       - name: Build isolated ephemeral workspace
@@ -276,7 +285,7 @@ jobs:
             --cache-dir "$CACHE_DIR" \
             > "$REDACTED_DIR/verify-report.json"
 
-      - name: Build source index and frozen 896-task set
+      - name: Build source index and frozen candidate task set
         run: |
           python -m benchmark_campaign factory-index-sources \
             --partition non_holdout \

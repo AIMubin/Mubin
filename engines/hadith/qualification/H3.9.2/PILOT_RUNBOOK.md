@@ -175,14 +175,33 @@ Because reconciliation semantics changed, the earlier non-holdout chunks are dia
 
 The canonical freeze-23 40-task campaign completed successfully on offsets `0..39` with complete shard coverage: 15 promoted, 24 adjudication, and 1 skipped. Its adjudication profile was 14 `curator_requested_adjudication`, 6 `gold_disagreement`, 3 `missing_verifier_response`, and 1 `verifier_support_not_in_curator_provenance`. On the exact overlapping offsets `8..39`, `gold_disagreement` fell from 15 in the earlier order-sensitive campaign to 4 under set-semantic reconciliation. Because model completions are stochastic this is not a paired deterministic proof, but it confirms that the corrected protocol no longer exhibits the prior systematic disagreement pattern and exposes no new reconciliation defect.
 
-The next reviewed stage therefore continues the same frozen protocol over offsets `40..103`:
+The 64-task freeze-23 campaign over offsets `40..103` also completed successfully at the orchestration level: readiness passed on the first sample for all four canaries, all eight shards completed, and coverage was exact. The collection result, however, exposed a **capacity flaw in the frozen candidate plan**:
 
-1. dispatch one **64-task** non-holdout campaign batch with `task_offset=40`, `task_count=64`, and `shard_size=8`;
-2. retain `max-parallel=4` so endpoint concurrency is not increased beyond the already observed stable level;
-3. keep the same one-time readiness gate and SHA-bound delegated shards;
-4. review aggregate yield, task-local rejection rates, verifier-preparation rejects, and adjudication reasons before advancing beyond 64-task batches.
+- 64 selected tasks produced 7 promoted, 38 adjudication, and 19 skipped outcomes;
+- Curator rejected 18/64 tasks for strict `contract_support_not_verbatim`;
+- among the first 104 primary `external-critical-commentary` slots, the two freeze-23 campaigns together therefore produced 22 promoted, 62 adjudication, and 20 skipped outcomes;
+- that benchmark has exactly 210 non-holdout record slots. Even under the impossible best case where all 62 current adjudications eventually become reviewed records and every remaining 106 primary slot succeeds, the maximum reachable count would be `22 + 62 + 106 = 190`, below the required 210.
 
-The reviewed-stage workflow now caps `task_count <= 64` and `shard_size <= 8`. This remains a governance brake rather than a technical limit. This stage changes only campaign orchestration bounds; the frozen H3.9.2 qualification protocol remains freeze schema 23.
+Continuing primary execution without additional preregistered candidate capacity would therefore knowingly run a plan that cannot satisfy exact cardinality.
+
+This reserve-capacity decision is an explicit **non-holdout-driven protocol revision**: it was made after observing non-holdout collection yield, but before tuning, model lock, holdout curation, or final holdout evaluation. The exact record quotas, source partition, benchmark labels, evaluation thresholds, and holdout isolation are unchanged. The protocol version is advanced rather than silently mutating the earlier freeze surface.
+
+Freeze schema 24 separates **record quota** from **candidate-discovery capacity**. It preserves the complete original 1,280-slot primary plan unchanged and appends one reserve candidate slot per primary:
+
+- exact record target remains **1,280**;
+- primary slots remain **1,280**: 896 non-holdout + 384 holdout;
+- reserve slots add **1,280** preregistered candidate opportunities;
+- total candidate capacity becomes **2,560**: 1,792 non-holdout + 768 holdout;
+- primary non-holdout offsets `0..895` remain unchanged, including their task IDs, fingerprints, and source-window bindings;
+- each reserve is a separate deterministic task linked to its primary by `replacement_for_slot_id` and uses a different source window;
+- reserve processing never reclassifies an adjudication outcome and does not alter exact benchmark/source-anchor quotas;
+- holdout reserve candidates remain custodian-only and frozen before tuning; final holdout evaluation remains one-shot.
+
+The next reviewed **primary** campaign therefore continues at offsets `104..167` with `task_offset=104`, `task_count=64`, `shard_size=8`, and `max-parallel=4`. Reserve offsets are capacity for later completion; they are not a reason to skip unresolved adjudication or abandon primary collection.
+
+Freeze schema 24 deliberately does **not** activate reserve promotion yet. The reviewed workflows use `primary_non_holdout_slots` as their execution bound, and reconciliation rejects reserve tasks until a cumulative replacement-eligibility artifact exists. A pending adjudication is not an eligible replacement: only a later, evidence-bound consolidation step may establish that a linked primary slot is terminally unusable.
+
+Before final benchmark assembly, the independently encrypted shard outputs still need a cumulative consolidation step that accounts for promoted, adjudication, rejected, and reserve-derived cases under the exact frozen quotas. Reserve capacity removes the demonstrated hard one-opportunity-per-record ceiling; it does not guarantee sufficient yield and does not by itself perform consolidation.
 
 Never tune prompts or model behavior against the sealed final holdout.
 

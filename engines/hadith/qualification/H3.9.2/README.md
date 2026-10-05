@@ -1,4 +1,4 @@
-# Mubin H3.9.2 — Benchmark Expansion Campaign R4
+# Mubin H3.9.2 — Benchmark Expansion Campaign R5
 
 This package implements **only H3.9.2**, the qualification campaign between H3.9.1 and H4.0. It does not add H4 features or change the H3.5–H3.9 reasoning architecture.
 
@@ -14,9 +14,11 @@ This package implements **only H3.9.2**, the qualification campaign between H3.9
 
 Total reviewed qualification target: **1,280 cases**.
 
-## R4 benchmark factory
+## R5 benchmark factory
 
-R4 adds an executable, provider-neutral Benchmark Factory for source-grounded AI curation. It expands the frozen quotas into exactly 1,280 slots, builds tasks from Git-blob-verified source segments, separates Curator AI-A from blind Verifier AI-B, and routes disagreements or risk-tier 3 judgments to adjudication.
+R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 preserves the exact **1,280 reviewed-record target** and its original primary slot surface, then preregisters one deterministic reserve candidate opportunity per primary after the first 104 non-holdout primary tasks demonstrated that one candidate opportunity per required record could not reach exact cardinality.
+
+The candidate plan therefore contains **1,280 primary + 1,280 reserve = 2,560 candidate slots**, while benchmark cardinalities remain exactly 1,280 records. Primary IDs, ordering, task fingerprints, source partitions, labels, and thresholds are preserved. Reserve promotion is not active in freeze schema 24: the reviewed workflows remain primary-only and reconciliation rejects reserve tasks until cumulative replacement eligibility is explicitly bound. Pending adjudication is never treated as replaceable.
 
 The full operational contract is in [FACTORY.md](FACTORY.md). The first live Curator/Verifier execution is documented in [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md). AI agreement is never authority by itself: automatic promotion is limited to source-attributed cases with literal human-authored support and independent evidence verification.
 
@@ -52,7 +54,8 @@ Downloaded bytes are checked using the Git blob algorithm against pinned blob SH
 ```text
 partition-scoped source acquisition
 → Benchmark Factory source index
-→ 1,280 frozen quota slots
+→ 1,280 exact primary record-quota slots
+→ preregistered reserve candidate suffix (promotion gated)
 → Curator AI-A
 → blind independent Verifier AI-B
 → auto-promotion or adjudication

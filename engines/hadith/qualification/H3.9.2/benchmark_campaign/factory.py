@@ -92,6 +92,9 @@ def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) 
         "benchmark_id", "partition", "anchor_source_id", "task_type",
         "allowed_labels", "auto_promotion", "risk_tier", "visibility",
     )
+    reserve_fields = (
+        "candidate_slot_kind", "replacement_for_slot_id", "reserve_attempt",
+    )
     for task in rows:
         slot_id = str(task.get("slot_id", ""))
         expected = slots.get(slot_id)
@@ -100,6 +103,9 @@ def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) 
         if task.get("task_id") != slot_id:
             raise ValueError(f"factory task_id must equal frozen slot_id: {slot_id}")
         for field in policy_fields:
+            if task.get(field) != expected.get(field):
+                raise ValueError(f"factory task {field} differs from frozen slot: {slot_id}")
+        for field in reserve_fields:
             if task.get(field) != expected.get(field):
                 raise ValueError(f"factory task {field} differs from frozen slot: {slot_id}")
         bid = expected["benchmark_id"]
@@ -234,7 +240,57 @@ def build_factory_plan(root: Path, out_path: Path | None = None) -> dict[str, An
     spec = load_json(root / "config" / "benchmark-spec.json")
     bspec = {b["id"]: b for b in spec["benchmarks"]}
     policy = _policy(root)
+    reserve_policy = quotas.get("candidate_reserve_policy", {})
+    reserve_slots_per_primary = reserve_policy.get("reserve_slots_per_primary", 0)
+    if reserve_slots_per_primary and reserve_policy.get("policy_version") != 1:
+        raise ValueError("unsupported candidate reserve policy version")
+    if reserve_slots_per_primary and reserve_policy.get("primary_slot_prefix_preserved") is not True:
+        raise ValueError("reserve candidate policy must preserve the primary slot prefix")
+    if (
+        not isinstance(reserve_slots_per_primary, int)
+        or isinstance(reserve_slots_per_primary, bool)
+        or reserve_slots_per_primary < 0
+        or reserve_slots_per_primary > 4
+    ):
+        raise ValueError("reserve_slots_per_primary must be an integer in [0, 4]")
+
+    def make_slot(
+        bid: str,
+        bp: dict[str, Any],
+        sb: dict[str, Any],
+        partition_name: str,
+        sid: str,
+        ordinal: int,
+        *,
+        reserve_attempt: int | None = None,
+    ) -> dict[str, Any]:
+        primary_slot_id = f"{bid}:{partition_name}:{sid}:{ordinal:04d}"
+        slot = {
+            "slot_id": primary_slot_id,
+            "benchmark_id": bid,
+            "partition": partition_name,
+            "anchor_source_id": sid,
+            "ordinal": ordinal,
+            "task_type": sb["evaluation"]["task_type"],
+            "allowed_labels": sb["evaluation"]["labels"],
+            "auto_promotion": bp["auto_promotion"],
+            "risk_tier": bp["risk_tier"],
+            "visibility": "custodian_only" if partition_name == "holdout" else "development_safe",
+        }
+        if reserve_attempt is not None:
+            slot["slot_id"] = (
+                f"{primary_slot_id}:reserve:{reserve_attempt:02d}"
+            )
+            slot["candidate_slot_kind"] = "reserve"
+            slot["replacement_for_slot_id"] = primary_slot_id
+            slot["reserve_attempt"] = reserve_attempt
+        return slot
+
     slots: list[dict[str, Any]] = []
+
+    # Primary slots are generated first and remain byte-for-semantic identical to
+    # the original 1,280-slot plan. This preserves all pre-existing primary slot
+    # IDs, hashes, task offsets, and task fingerprints.
     for q in quotas["benchmarks"]:
         bid = q["benchmark_id"]
         bp = policy["benchmarks"][bid]
@@ -243,30 +299,70 @@ def build_factory_plan(root: Path, out_path: Path | None = None) -> dict[str, An
             for anchor in q[partition_key]["anchor_quotas"]:
                 sid = anchor["anchor_source_id"]
                 for ordinal in range(1, int(anchor["target_cases"]) + 1):
-                    slot_id = f"{bid}:{partition_name}:{sid}:{ordinal:04d}"
-                    slots.append({
-                        "slot_id": slot_id,
-                        "benchmark_id": bid,
-                        "partition": partition_name,
-                        "anchor_source_id": sid,
-                        "ordinal": ordinal,
-                        "task_type": sb["evaluation"]["task_type"],
-                        "allowed_labels": sb["evaluation"]["labels"],
-                        "auto_promotion": bp["auto_promotion"],
-                        "risk_tier": bp["risk_tier"],
-                        "visibility": "custodian_only" if partition_name == "holdout" else "development_safe",
-                    })
+                    slots.append(
+                        make_slot(bid, bp, sb, partition_name, sid, ordinal)
+                    )
+
+    primary_slot_count = len(slots)
+    primary_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "holdout"
+    )
+    primary_non_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "non_holdout"
+    )
+    if primary_slot_count != int(quotas["total_target"]):
+        raise ValueError("primary factory slot count does not match frozen curation target")
+
+    # Reserve slots are distinct source-window opportunities. They are appended
+    # after the complete primary prefix so offsets 0..895 on the non-holdout
+    # surface remain unchanged. Each reserve is explicitly linked to the primary
+    # slot it may replace; adjudication-required primary outcomes are not erased.
+    if reserve_slots_per_primary:
+        for q in quotas["benchmarks"]:
+            bid = q["benchmark_id"]
+            bp = policy["benchmarks"][bid]
+            sb = bspec[bid]
+            for partition_key, partition_name in (("non_holdout", "non_holdout"), ("holdout", "holdout")):
+                for anchor in q[partition_key]["anchor_quotas"]:
+                    sid = anchor["anchor_source_id"]
+                    for ordinal in range(1, int(anchor["target_cases"]) + 1):
+                        for reserve_attempt in range(1, reserve_slots_per_primary + 1):
+                            slots.append(
+                                make_slot(
+                                    bid, bp, sb, partition_name, sid, ordinal,
+                                    reserve_attempt=reserve_attempt,
+                                )
+                            )
+
+    candidate_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "holdout"
+    )
+    candidate_non_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "non_holdout"
+    )
     plan = {
         "campaign_id": spec["campaign_id"],
         "factory_version": 1,
         "slot_count": len(slots),
         "target_total": quotas["total_target"],
-        "holdout_slots": sum(1 for s in slots if s["partition"] == "holdout"),
-        "non_holdout_slots": sum(1 for s in slots if s["partition"] == "non_holdout"),
+        "primary_slot_count": primary_slot_count,
+        "reserve_slot_count": len(slots) - primary_slot_count,
+        "reserve_slots_per_primary": reserve_slots_per_primary,
+        "primary_holdout_slots": primary_holdout_slots,
+        "primary_non_holdout_slots": primary_non_holdout_slots,
+        # Legacy aliases remain for callers that predate candidate reserves.
+        "holdout_slots": primary_holdout_slots,
+        "non_holdout_slots": primary_non_holdout_slots,
+        "candidate_holdout_slots": candidate_holdout_slots,
+        "candidate_non_holdout_slots": candidate_non_holdout_slots,
         "slots": slots,
     }
-    if plan["slot_count"] != int(quotas["total_target"]):
-        raise ValueError("factory slot count does not match frozen curation target")
+    expected_candidate_total = int(quotas.get(
+        "total_candidate_slots",
+        int(quotas["total_target"]) * (1 + reserve_slots_per_primary),
+    ))
+    if plan["slot_count"] != expected_candidate_total:
+        raise ValueError("candidate factory slot count does not match frozen reserve policy")
     if out_path is not None:
         write_json(out_path, plan)
     return plan
@@ -304,6 +400,8 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
 
     tasks: list[dict[str, Any]] = []
     usage: Counter[str] = Counter()
+    primary_segment_by_slot: dict[str, str] = {}
+    reserve_segments_by_primary: dict[str, set[str]] = defaultdict(set)
     for slot in [s for s in plan["slots"] if s["partition"] == partition]:
         bid = slot["benchmark_id"]
         anchor = slot["anchor_source_id"]
@@ -315,8 +413,40 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
             candidates,
             key=lambda x: (-_segment_score(str(x["text"]), bp.get("candidate_keywords", [])), str(x["segment_id"])),
         )
-        seg = ranked[usage[anchor] % len(ranked)]
+        ranked_index = usage[anchor] % len(ranked)
+        if slot.get("candidate_slot_kind") == "reserve":
+            primary_slot_id = slot.get("replacement_for_slot_id")
+            if not isinstance(primary_slot_id, str) or not primary_slot_id:
+                raise ValueError("reserve slot requires replacement_for_slot_id")
+            primary_segment_id = primary_segment_by_slot.get(primary_slot_id)
+            if primary_segment_id is None:
+                raise ValueError(
+                    "reserve slot must follow its primary slot in the candidate plan"
+                )
+            forbidden_segment_ids = {
+                primary_segment_id,
+                *reserve_segments_by_primary[primary_slot_id],
+            }
+            checked = 0
+            while (
+                str(ranked[ranked_index]["segment_id"]) in forbidden_segment_ids
+                and checked < len(ranked)
+            ):
+                usage[anchor] += 1
+                ranked_index = usage[anchor] % len(ranked)
+                checked += 1
+            if str(ranked[ranked_index]["segment_id"]) in forbidden_segment_ids:
+                raise ValueError(
+                    f"source lacks a distinct reserve segment for frozen slot: {primary_slot_id}"
+                )
+        seg = ranked[ranked_index]
         usage[anchor] += 1
+        if slot.get("candidate_slot_kind") == "reserve":
+            reserve_segments_by_primary[str(slot["replacement_for_slot_id"])].add(
+                str(seg["segment_id"])
+            )
+        else:
+            primary_segment_by_slot[str(slot["slot_id"])] = str(seg["segment_id"])
         pool_key = "holdout_source_pool" if partition == "holdout" else "non_holdout_source_pool"
         other_key = "non_holdout_source_pool" if partition == "holdout" else "holdout_source_pool"
         bplan = cplan["benchmarks"][bid]
@@ -351,6 +481,11 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
                 "return_no_candidate_when_unsupported": True,
             },
         }
+        for field in (
+            "candidate_slot_kind", "replacement_for_slot_id", "reserve_attempt",
+        ):
+            if field in slot:
+                task[field] = slot[field]
         task["task_fingerprint"] = sha256_bytes(canonical_json_bytes(task))
         tasks.append(task)
     dump_jsonl(out_path, tasks)
@@ -682,6 +817,15 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
     if actual_partition != partition:
         raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
     _validate_tasks_against_frozen_plan(root, task_rows)
+    reserve_tasks = [
+        task for task in task_rows
+        if task.get("candidate_slot_kind") == "reserve"
+    ]
+    if reserve_tasks:
+        raise ValueError(
+            "reserve candidate reconciliation is disabled until cumulative "
+            "replacement eligibility is explicitly bound"
+        )
     tasks = {str(t["task_id"]): t for t in task_rows}
 
     curators = {str(r["task_id"]): r for r in load_jsonl(curator_responses_path)}
@@ -972,6 +1116,16 @@ def factory_status(plan_path: Path, curator_responses_path: Path | None = None,
     return {
         "target_total": plan["target_total"],
         "slot_count": plan["slot_count"],
+        "primary_slot_count": plan.get("primary_slot_count", plan["target_total"]),
+        "primary_non_holdout_slots": plan.get(
+            "primary_non_holdout_slots", plan.get("non_holdout_slots")
+        ),
+        "primary_holdout_slots": plan.get(
+            "primary_holdout_slots", plan.get("holdout_slots")
+        ),
+        "reserve_slot_count": plan.get("reserve_slot_count", 0),
+        "candidate_non_holdout_slots": plan.get("candidate_non_holdout_slots"),
+        "candidate_holdout_slots": plan.get("candidate_holdout_slots"),
         "curator_responses": len(curator),
         "verifier_responses": len(verifier),
         "reviewed_records": reviewed,

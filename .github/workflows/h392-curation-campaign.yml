@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       task_offset:
-        description: Zero-based first non-holdout task for this campaign batch
+        description: Zero-based first non-holdout primary task for this campaign batch
         required: true
-        default: "40"
+        default: "104"
       task_count:
         description: Total tasks in this campaign batch (1-64)
         required: true
@@ -125,18 +125,26 @@ jobs:
           python - <<'PY'
           import json
           import os
+          from pathlib import Path
+          from benchmark_campaign.factory import build_factory_plan
 
+          plan = build_factory_plan(Path(".").resolve())
+          available = int(plan["primary_non_holdout_slots"])
           offset = int(os.environ["TASK_OFFSET"])
           count = int(os.environ["TASK_COUNT"])
           shard_size = int(os.environ["SHARD_SIZE"])
-          if offset < 0 or offset >= 896:
-              raise SystemExit("task_offset must be in [0, 895]")
+          if offset < 0 or offset >= available:
+              raise SystemExit(
+                  f"task_offset must be in [0, {available - 1}]"
+              )
           if count < 1 or count > 64:
               raise SystemExit("task_count must be in [1, 64] for the reviewed campaign stage")
           if shard_size < 1 or shard_size > 8:
               raise SystemExit("shard_size must be in [1, 8]")
-          if offset + count > 896:
-              raise SystemExit("task_offset + task_count exceeds 896 non-holdout tasks")
+          if offset + count > available:
+              raise SystemExit(
+                  "task_offset + task_count exceeds the frozen non-holdout primary plan"
+              )
 
           include = []
           cursor = offset

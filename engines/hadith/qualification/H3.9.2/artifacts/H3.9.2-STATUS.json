@@ -1,6 +1,6 @@
 {
   "campaign_id": "H3.9.2",
-  "release": "3.9.2-r4",
+  "release": "3.9.2-r5",
   "scope": "Hadith Benchmark Expansion Campaign only",
   "ci_authoritative": true,
   "ci_workflow": ".github/workflows/hadith-h392.yml",
@@ -42,6 +42,34 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "The non-holdout source partition has been acquired and Git-blob verified on main CI, indexed into 24,212 deterministic segments, and expanded into 896 developer-safe Curator tasks. No source-grounded case has yet completed Curator/Verifier reconciliation, and no final holdout freeze or evaluation exists.",
-  "next_action": "Execute Curator AI-A over the 896 non-holdout tasks, prepare structurally blind tasks for an independent Verifier AI-B, reconcile source-attributed cases into the reviewed pool, and route disagreements/risk-tier-3 cases to adjudication. Populate holdout separately under the external custodian boundary."
+  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Freeze-23 campaign runs executed the first 104 primary external-critical-commentary tasks and produced 22 promoted, 62 adjudication, and 20 skipped/rejected outcomes inside encrypted workflow artifacts. Because 20 primary opportunities are already unusable, the exact 210 non-holdout target cannot be reached from the original 210 primary slots alone. Freeze schema 24 therefore preserves the original 1,280 primary-slot prefix and adds one deterministic reserve candidate per primary without changing record quotas, source partitions, labels, thresholds, or holdout isolation. No workflow outputs have yet been cumulatively consolidated into repository benchmark records.",
+  "next_action": "Verify the freeze-24 candidate plan in acquisition CI, continue primary non-holdout execution at offset 104 in 64-task batches, and build cumulative encrypted-artifact consolidation/adjudication accounting before final benchmark assembly. Reserve candidate offsets are completion capacity, not a substitute for unresolved adjudication.",
+  "freeze_schema_version": 24,
+  "factory_primary_slot_count": 1280,
+  "factory_reserve_slot_count": 1280,
+  "factory_candidate_slot_count": 2560,
+  "non_holdout_primary_task_count": 896,
+  "non_holdout_candidate_task_count": 1792,
+  "holdout_primary_task_count": 384,
+  "holdout_candidate_task_count": 768,
+  "curation_record_quotas_frozen": true,
+  "candidate_reserve_policy_versioned": true,
+  "candidate_reserve_policy_basis": "Added after non-holdout collection demonstrated primary-slot candidate shortage; no tuning/model lock/holdout curation/final holdout evaluation had begun.",
+  "non_holdout_execution_evidence": {
+    "protocol_freeze_schema": 23,
+    "primary_tasks_executed": 104,
+    "promoted_in_encrypted_shards": 22,
+    "adjudication_in_encrypted_shards": 62,
+    "skipped_or_rejected_from_reconciliation": 20,
+    "workflow_runs": [
+      37280971913,
+      37295517184
+    ],
+    "consolidated_into_repository": false
+  },
+  "reserve_reconciliation_enabled": false,
+  "reserve_reconciliation_reason": "Freeze schema 24 preregisters reserve candidate slots, but promotion remains fail-closed until cumulative replacement eligibility is implemented and bound.",
+  "candidate_reserve_policy_version": 1,
+  "candidate_reserve_capacity_guarantees_quota": false,
+  "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory."
 }

@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from benchmark_campaign.audit import build_pre_m4_audit
-from benchmark_campaign.core import dump_jsonl, load_json, write_json
+from benchmark_campaign.core import canonical_json_bytes, dump_jsonl, load_json, write_json
 from benchmark_campaign.curation import curate_reviewed_file
 from benchmark_campaign.evaluate import evaluate_holdout
 from benchmark_campaign.freeze import create_freeze_anchor, freeze_campaign, verify_freeze
@@ -541,6 +541,15 @@ class CampaignTests(unittest.TestCase):
         self.assertIn("holdout.gold_exposed", codes)
         self.assertIn("holdout.seal_binding", codes)
 
+    def test_real_frozen_curation_quotas_match_generated_queue_plan(self):
+        actual = load_json(self.project / "config" / "curation-quotas.json")
+        spec = load_json(self.project / "config" / "benchmark-spec.json")
+        expected = build_curation_queue_plan(self.project, spec)
+        self.assertEqual(
+            canonical_json_bytes(actual),
+            canonical_json_bytes(expected),
+        )
+
     def test_curation_queue_quotas_are_exact_and_partition_bounded(self):
         write_json(self.root / "config" / "curation-plan.json", {
             "campaign_id": "H3.9.2-test",
@@ -553,6 +562,16 @@ class CampaignTests(unittest.TestCase):
         })
         q = build_curation_queue_plan(self.root, self.spec)
         b = q["benchmarks"][0]
+        self.assertEqual(q["total_target"], 4)
+        self.assertEqual(q["total_candidate_slots"], 8)
+        self.assertEqual(q["candidate_reserve_policy"]["policy_version"], 1)
+        self.assertEqual(
+            q["candidate_reserve_policy"]["reserve_slots_per_primary"],
+            1,
+        )
+        self.assertTrue(
+            q["candidate_reserve_policy"]["primary_slot_prefix_preserved"]
+        )
         self.assertEqual(sum(x["target_cases"] for x in b["holdout"]["anchor_quotas"]), 1)
         self.assertEqual(sum(x["target_cases"] for x in b["non_holdout"]["anchor_quotas"]), 3)
         self.assertEqual({x["anchor_source_id"] for x in b["holdout"]["anchor_quotas"]}, {"s-ho"})
