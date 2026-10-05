@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from benchmark_campaign import consolidation
 from benchmark_campaign.core import canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file
+from benchmark_campaign.factory import _verifier_task_from_curator
 
 
 def _write_json(path: Path, obj) -> None:
@@ -28,7 +29,33 @@ def _task(slot_id: str, anchor: str = "s1") -> dict:
         "slot_id": slot_id,
         "benchmark_id": "b1",
         "partition": "non_holdout",
+        "visibility": "source_attributed",
+        "risk_tier": 1,
+        "auto_promotion": True,
         "anchor_source_id": anchor,
+        "allowed_source_pool": ["s1"],
+        "forbidden_source_pool": ["h1"],
+        "allowed_labels": ["yes", "no"],
+        "task_type": "classification",
+        "retrieval_terms": ["evidence"],
+        "retrieval_scope": {
+            "access_mode": "full_partition_index",
+            "partition": "non_holdout",
+            "source_ids": ["s1"],
+            "segments_sha256": "1" * 64,
+            "index_manifest_sha256": "2" * 64,
+        },
+        "anchor_segment": {
+            "source_id": anchor,
+            "text": "anchor evidence",
+            "locator": "test:anchor",
+        },
+        "instructions": {
+            "contract": "agents/CURATOR_CONTRACT.md",
+            "require_human_authored_support": True,
+            "no_ai_opinion_as_gold": True,
+            "return_no_candidate_when_unsupported": True,
+        },
     }
     row["task_fingerprint"] = sha256_bytes(canonical_json_bytes(row))
     return row
@@ -138,10 +165,20 @@ class ConsolidationTests(unittest.TestCase):
                     "reason": "unsupported",
                 }
             else:
+                candidate_input = (
+                    {"text": f"candidate-{tid}"}
+                    if tid in verifier_task_ids
+                    else {"label": "yes"}
+                )
                 raw = {
                     "task_id": tid,
                     "status": "candidate",
-                    "candidate": {},
+                    "candidate": {
+                        "payload": {
+                            "input": candidate_input,
+                            "gold": {"label": "yes"},
+                        }
+                    },
                 }
             curator_responses.append(_stamped(task, raw, "curator-family"))
         _write_jsonl(bundle / "curator-responses.jsonl", curator_responses)
@@ -168,10 +205,21 @@ class ConsolidationTests(unittest.TestCase):
             "rejections": curator_rejection_rows,
         })
 
-        _write_jsonl(
-            bundle / "verifier-tasks.jsonl",
-            [{"task_id": tid} for tid in sorted(verifier_task_ids)],
-        )
+        curator_response_by_id = {
+            str(row["task_id"]): row for row in curator_responses
+        }
+        verifier_tasks = []
+        for tid in sorted(verifier_task_ids):
+            task = next(task for task in tasks if task["task_id"] == tid)
+            verifier_task, blind_error = _verifier_task_from_curator(
+                task, curator_response_by_id[tid]
+            )
+            if blind_error is not None or verifier_task is None:
+                raise AssertionError(
+                    f"test fixture failed to project verifier task {tid}: {blind_error}"
+                )
+            verifier_tasks.append(verifier_task)
+        _write_jsonl(bundle / "verifier-tasks.jsonl", verifier_tasks)
         verifier_responses = [
             _stamped(
                 next(task for task in tasks if task["task_id"] == tid),
@@ -403,6 +451,57 @@ class ConsolidationTests(unittest.TestCase):
             ):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
+
+    def test_rehashed_verifier_task_projection_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "verifier-tamper",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        bundle = evidence / "source-bearing"
+        verifier_path = bundle / "verifier-tasks.jsonl"
+        rows = load_jsonl(verifier_path)
+        rows[0]["candidate_input"] = {"text": "substituted input"}
+        unsigned = dict(rows[0])
+        unsigned.pop("verifier_task_fingerprint", None)
+        rows[0]["verifier_task_fingerprint"] = sha256_bytes(
+            canonical_json_bytes(unsigned)
+        )
+        _write_jsonl(verifier_path, rows)
+
+        verifier_manifest_path = bundle / "verifier-run.json"
+        verifier_manifest = load_json(verifier_manifest_path)
+        verifier_manifest["tasks_sha256"] = sha256_file(verifier_path)
+        _write_json(verifier_manifest_path, verifier_manifest)
+
+        summary_path = evidence / "CURATION_RUN_SUMMARY.json"
+        summary = load_json(summary_path)
+        summary["verifier_preparation"]["tasks_sha256"] = sha256_file(verifier_path)
+        _write_json(summary_path, summary)
+
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "exact blinded projection"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_reviewed_record_benchmark_mismatch_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "reviewed-benchmark",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            evidence / "source-bearing" / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["benchmark_id"] = "wrong-benchmark"
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "reviewed record benchmark mismatch"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
 
     def test_multiple_artifacts_from_one_run_count_as_one_run(self):
         self._evidence(
