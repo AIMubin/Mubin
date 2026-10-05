@@ -270,6 +270,17 @@ def _adapter_command(
     ]
 
 
+def _retryable_readiness_diagnostic(diagnostic: str | None) -> bool:
+    if not isinstance(diagnostic, str):
+        return False
+    return (
+        diagnostic == "connection_failed"
+        or diagnostic.startswith("contract_")
+        or diagnostic.startswith("model_output_")
+        or diagnostic in {"canary_no_candidate", "canary_semantic_mismatch"}
+    )
+
+
 def _run_live_canary(
     root: Path,
     role: str,
@@ -303,8 +314,10 @@ def _run_live_canary(
         diagnostic: str | None = None
         returncode: int | None = None
         attempts_used = 0
+        attempt_diagnostics: list[str] = []
         for attempt in range(1, 3):
             attempts_used = attempt
+            output_path.unlink(missing_ok=True)
             try:
                 proc = subprocess.run(
                     command,
@@ -322,16 +335,24 @@ def _run_live_canary(
                         _diagnostic_from_stderr(proc.stderr)
                         or "canary_nonzero_exit"
                     )
-                    if diagnostic == "connection_failed" and attempt == 1:
+                    attempt_diagnostics.append(diagnostic)
+                    if _retryable_readiness_diagnostic(diagnostic) and attempt == 1:
                         continue
                     break
+
                 diagnostic = _validate_canary_output(role, task_type, output_path)
+                if diagnostic is not None:
+                    attempt_diagnostics.append(diagnostic)
+                    if _retryable_readiness_diagnostic(diagnostic) and attempt == 1:
+                        continue
                 break
             except subprocess.TimeoutExpired:
                 diagnostic = "canary_timeout"
+                attempt_diagnostics.append(diagnostic)
                 break
             except Exception:
                 diagnostic = "canary_internal_error"
+                attempt_diagnostics.append(diagnostic)
                 break
 
     duration_ms = int((time.monotonic() - started) * 1000)
@@ -341,6 +362,7 @@ def _run_live_canary(
         "task_type": task_type,
         "passed": passed,
         "diagnostic": diagnostic,
+        "attempt_diagnostics": attempt_diagnostics,
         "attempts_used": attempts_used,
         "duration_ms": duration_ms,
     }
