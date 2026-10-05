@@ -112,6 +112,7 @@ class ConsolidationTests(unittest.TestCase):
 
         _write_json(evidence / "ORIGIN.json", {
             "github_run_id": run_id,
+            "github_run_attempt": 1,
             "conclusion": "success",
             "head_branch": "main",
             "head_sha": sha,
