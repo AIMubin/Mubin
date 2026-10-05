@@ -35,6 +35,7 @@ def build_curation_queue_plan(root: Path, spec: dict[str, Any], out_path: Path |
         "purpose": "operational curation quotas only; quotas never create or infer gold labels",
         "anchor_rule": "Each case is counted once against an operational anchor source, but source_ids must enumerate every canonical source used by the case.",
         "candidate_reserve_policy": {
+            "policy_version": 1,
             "reserve_slots_per_primary": RESERVE_SLOTS_PER_PRIMARY,
             "rule": (
                 "Primary record quotas remain exact. Reserve candidate slots are "
