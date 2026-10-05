@@ -162,10 +162,13 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn('"candidate_non_holdout_slots"', self.acquisition_workflow)
         self.assertIn('"candidate_holdout_slots"', self.acquisition_workflow)
         self.assertIn(
-            "reserve protocol changed the canonical 896-task primary prefix",
+            "reserve protocol changed the frozen non-holdout primary task prefix",
             self.acquisition_workflow,
         )
-        self.assertIn(
+        self.assertIn("expected_primary_ids", self.acquisition_workflow)
+        self.assertIn("expected_reserve_ids", self.acquisition_workflow)
+        self.assertIn("primary task prefix contains reserve metadata", self.acquisition_workflow)
+        self.assertNotIn(
             'canonical_evidence["factory"]["curator_tasks_sha256"]',
             self.acquisition_workflow,
         )
