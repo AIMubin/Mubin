@@ -564,6 +564,7 @@ class CampaignTests(unittest.TestCase):
         b = q["benchmarks"][0]
         self.assertEqual(q["total_target"], 4)
         self.assertEqual(q["total_candidate_slots"], 8)
+        self.assertEqual(q["candidate_reserve_policy"]["policy_version"], 1)
         self.assertEqual(
             q["candidate_reserve_policy"]["reserve_slots_per_primary"],
             1,
