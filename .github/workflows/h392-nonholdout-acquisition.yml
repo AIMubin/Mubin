@@ -49,8 +49,22 @@ jobs:
       EVIDENCE_DIR: /tmp/h392-evidence
 
     steps:
-      - name: Checkout Mubin
+      - name: Checkout exact source revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify checkout provenance
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -eu
+          actual="$(git rev-parse HEAD)"
+          test -n "$EXPECTED_SOURCE_SHA"
+          if [ "$actual" != "$EXPECTED_SOURCE_SHA" ]; then
+            echo "Acquisition checkout does not match the intended source revision." >&2
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -115,6 +129,7 @@ jobs:
           import json
           import os
           from pathlib import Path
+          import subprocess
 
           root = Path.cwd()
           evidence_dir = Path(os.environ["EVIDENCE_DIR"])
@@ -226,7 +241,10 @@ jobs:
               "schema_version": 1,
               "campaign_id": "H3.9.2",
               "partition": "non_holdout",
-              "runner_commit": os.environ.get("GITHUB_SHA"),
+              "runner_commit": subprocess.check_output(
+                  ["git", "rev-parse", "HEAD"], text=True
+              ).strip(),
+              "github_event_sha": os.environ.get("GITHUB_SHA"),
               "source_count": len(source_rows),
               "all_sources_verified": all(x["verified"] for x in source_rows),
               "sources": source_rows,
