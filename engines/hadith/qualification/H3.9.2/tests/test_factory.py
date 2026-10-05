@@ -253,6 +253,55 @@ class FactoryTests(unittest.TestCase):
                 primary["anchor_segment"]["segment_id"],
             )
 
+    def test_reserve_reconciliation_fails_closed_without_cumulative_eligibility(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "reserve_slots_per_primary": 1,
+                "rule": "one reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+            plan_path = root / "factory-work" / "plan.json"
+            build_factory_plan(root, plan_path)
+            tasks_path = root / "factory-work" / "tasks.jsonl"
+            build_factory_tasks(
+                root, plan_path, index, tasks_path, "non_holdout", False
+            )
+            reserve = load_jsonl(tasks_path)[1]
+            self.assertEqual(reserve["candidate_slot_kind"], "reserve")
+
+            single_task = root / "factory-work" / "reserve-only.jsonl"
+            dump_jsonl(single_task, [reserve])
+            curator = root / "factory-work" / "curator.jsonl"
+            verifier = root / "factory-work" / "verifier.jsonl"
+            dump_jsonl(curator, [])
+            dump_jsonl(verifier, [])
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "reserve candidate reconciliation is disabled",
+            ):
+                reconcile_factory(
+                    root,
+                    single_task,
+                    curator,
+                    verifier,
+                    cache,
+                    root / "staging",
+                    root / "factory-work" / "adjudication.jsonl",
+                    root / "factory-work" / "ledger.jsonl",
+                    False,
+                )
+
     def test_source_index_verifies_pinned_bytes_and_builds_segments(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
