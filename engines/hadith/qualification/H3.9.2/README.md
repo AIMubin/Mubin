@@ -94,3 +94,8 @@ H4 development may continue in parallel. H4 qualification requires the H3.9.2 be
 python -m compileall -q benchmark_campaign tests
 python -m unittest discover -s tests -v
 ```
+
+
+## Cumulative curation evidence
+
+See `CONSOLIDATION.md` for the schema-24 cumulative primary-evidence gate, adjudication accounting, and hash-bound reserve replacement eligibility. Reserve reconciliation remains disabled until a later reviewed protocol change.
