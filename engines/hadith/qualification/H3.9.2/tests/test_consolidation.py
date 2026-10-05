@@ -768,7 +768,7 @@ class ConsolidationTests(unittest.TestCase):
         _write_jsonl(ledger_path, ledger)
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
-            with self.assertRaisesRegex(ValueError, "independent model families"):
+            with self.assertRaisesRegex(ValueError, "model_family_not_independent"):
                 consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_promoted_gold_disagreement_fails_closed(self):
@@ -811,7 +811,7 @@ class ConsolidationTests(unittest.TestCase):
         _write_jsonl(ledger_path, ledger)
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
-            with self.assertRaisesRegex(ValueError, "gold disagreement"):
+            with self.assertRaisesRegex(ValueError, "gold_disagreement"):
                 consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_adjudication_reason_is_rederived_from_bound_responses(self):
@@ -943,7 +943,7 @@ class ConsolidationTests(unittest.TestCase):
         _write_jsonl(ledger_path, ledger)
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
-            with self.assertRaisesRegex(ValueError, "source grounding invalid"):
+            with self.assertRaisesRegex(ValueError, "verifier_support_invalid"):
                 consolidation.validate_primary_run_evidence(
                     self.root, evidence, self.source_cache
                 )
