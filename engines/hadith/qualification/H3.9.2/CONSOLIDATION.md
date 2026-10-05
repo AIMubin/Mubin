@@ -14,6 +14,8 @@ The first cumulative consolidation is bound to these successful campaign runs:
 
 Together they represent exactly **168 primary tasks** for `external-critical-commentary`.
 
+The workflow does not trust editable dispatch inputs as the canonicality decision. `run_ids` and `expected_task_count` must exactly match the repository-reviewed values in `artifacts/H3.9.2-STATUS.json`; otherwise it fails before artifact acquisition. Future campaign runs must therefore be explicitly admitted into the reviewed repository history before cumulative consolidation can consume them.
+
 Observed encrypted-shard outcomes are:
 
 - promoted: **34**
