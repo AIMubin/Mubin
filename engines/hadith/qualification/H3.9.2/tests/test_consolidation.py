@@ -1,0 +1,342 @@
+from __future__ import annotations
+
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from benchmark_campaign import consolidation
+from benchmark_campaign.core import canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file
+
+
+def _write_json(path: Path, obj) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _write_jsonl(path: Path, rows) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="\n") as fh:
+        for row in rows:
+            fh.write(json.dumps(row, sort_keys=True) + "\n")
+
+
+def _task(slot_id: str, anchor: str = "s1") -> dict:
+    row = {
+        "task_id": slot_id,
+        "slot_id": slot_id,
+        "benchmark_id": "b1",
+        "partition": "non_holdout",
+        "anchor_source_id": anchor,
+    }
+    row["task_fingerprint"] = sha256_bytes(canonical_json_bytes(row))
+    return row
+
+
+def _plan(slot_ids: list[str]) -> dict:
+    slots = [
+        {
+            "slot_id": slot_id,
+            "benchmark_id": "b1",
+            "partition": "non_holdout",
+            "anchor_source_id": "s1",
+        }
+        for slot_id in slot_ids
+    ]
+    slots.extend(
+        {
+            "slot_id": f"{slot_id}:reserve:01",
+            "benchmark_id": "b1",
+            "partition": "non_holdout",
+            "anchor_source_id": "s1",
+            "candidate_slot_kind": "reserve",
+            "replacement_for_slot_id": slot_id,
+            "reserve_attempt": 1,
+        }
+        for slot_id in slot_ids
+    )
+    return {"slots": slots}
+
+
+class ConsolidationTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name) / "root"
+        self.root.mkdir()
+        self.evidence_root = Path(self.tmp.name) / "evidence"
+        self.evidence_root.mkdir()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _evidence(
+        self,
+        name: str,
+        tasks: list[dict],
+        outcomes: dict[str, tuple[str, str | None]],
+        *,
+        curator_rejections: dict[str, str] | None = None,
+        verifier_task_ids: set[str] | None = None,
+        verifier_rejections: dict[str, str] | None = None,
+        run_id: int = 1001,
+        sha: str = "a" * 40,
+    ) -> Path:
+        curator_rejections = curator_rejections or {}
+        verifier_task_ids = verifier_task_ids or set()
+        verifier_rejections = verifier_rejections or {}
+        evidence = self.evidence_root / name
+        bundle = evidence / "source-bearing"
+        bundle.mkdir(parents=True)
+
+        _write_json(evidence / "ORIGIN.json", {
+            "github_run_id": run_id,
+            "conclusion": "success",
+            "head_branch": "main",
+            "head_sha": sha,
+            "artifact_id": run_id + 100,
+            "artifact_name": f"h392-curation-chunk-{name}",
+            "artifact_sha256": "b" * 64,
+        })
+
+        _write_jsonl(bundle / "curator-tasks.jsonl", tasks)
+        curator_responses = []
+        for task in tasks:
+            tid = task["task_id"]
+            if tid in curator_rejections:
+                continue
+            outcome, _reason = outcomes[tid]
+            if outcome == "skipped":
+                curator_responses.append({
+                    "task_id": tid,
+                    "status": "no_candidate",
+                    "reason": "unsupported",
+                })
+            else:
+                curator_responses.append({
+                    "task_id": tid,
+                    "status": "candidate",
+                    "candidate": {},
+                })
+        _write_jsonl(bundle / "curator-responses.jsonl", curator_responses)
+        curator_rejection_rows = [
+            {
+                "task_id": tid,
+                "task_fingerprint": next(
+                    t["task_fingerprint"] for t in tasks if t["task_id"] == tid
+                ),
+                "error_code": code,
+            }
+            for tid, code in curator_rejections.items()
+        ]
+        _write_json(bundle / "curator-run.json", {
+            "role": "curator",
+            "partition": "non_holdout",
+            "task_count": len(tasks),
+            "attempted_task_count": len(curator_responses) + len(curator_rejection_rows),
+            "completed_task_count": len(curator_responses),
+            "rejected_task_count": len(curator_rejection_rows),
+            "pending_task_count": 0,
+            "output_sha256": sha256_file(bundle / "curator-responses.jsonl"),
+            "rejections": curator_rejection_rows,
+        })
+
+        _write_jsonl(
+            bundle / "verifier-tasks.jsonl",
+            [{"task_id": tid} for tid in sorted(verifier_task_ids)],
+        )
+        verifier_responses = [
+            {"task_id": tid, "status": "candidate", "answer": {}}
+            for tid in sorted(verifier_task_ids)
+            if tid not in verifier_rejections
+        ]
+        _write_jsonl(bundle / "verifier-responses.jsonl", verifier_responses)
+        if verifier_task_ids:
+            rejection_rows = [
+                {"task_id": tid, "error_code": code}
+                for tid, code in verifier_rejections.items()
+            ]
+            _write_json(bundle / "verifier-run.json", {
+                "role": "verifier",
+                "partition": "non_holdout",
+                "task_count": len(verifier_task_ids),
+                "attempted_task_count": len(verifier_responses) + len(rejection_rows),
+                "completed_task_count": len(verifier_responses),
+                "rejected_task_count": len(rejection_rows),
+                "pending_task_count": 0,
+                "output_sha256": sha256_file(bundle / "verifier-responses.jsonl"),
+                "rejections": rejection_rows,
+            })
+
+        ledger = []
+        adjudication = []
+        reviewed = []
+        counts = {"promoted": 0, "adjudication": 0, "skipped": 0}
+        for task in tasks:
+            tid = task["task_id"]
+            outcome, reason = outcomes[tid]
+            counts[outcome] += 1
+            case_id = f"case-{tid}" if outcome == "promoted" else None
+            ledger.append({
+                "task_id": tid,
+                "task_fingerprint": task["task_fingerprint"],
+                "benchmark_id": task["benchmark_id"],
+                "partition": "non_holdout",
+                "outcome": outcome,
+                "reason": reason,
+                "case_id": case_id,
+            })
+            if outcome == "adjudication":
+                adjudication.append({"task_id": tid, "reason": reason})
+            if outcome == "promoted":
+                reviewed.append({
+                    "case_id": case_id,
+                    "benchmark_id": "b1",
+                    "factory_task_id": tid,
+                    "factory_slot_id": tid,
+                    "factory_task_fingerprint": task["task_fingerprint"],
+                })
+        _write_jsonl(bundle / "CURATION_LEDGER.jsonl", ledger)
+        _write_jsonl(bundle / "adjudication.jsonl", adjudication)
+        if reviewed:
+            _write_jsonl(bundle / "reviewed" / "b1" / "reviewed.jsonl", reviewed)
+
+        summary = {
+            "schema_version": 1,
+            "campaign_id": "H3.9.2",
+            "kind": "non_holdout_curator_verifier_chunk",
+            "github_sha": sha,
+            "github_run_id": str(run_id),
+            "task_offset": 0,
+            "task_limit": len(tasks),
+            "selected_task_count": len(tasks),
+            "selected_tasks_sha256": sha256_file(bundle / "curator-tasks.jsonl"),
+            "curator": {
+                "output_sha256": sha256_file(bundle / "curator-responses.jsonl"),
+            },
+            "verifier": (
+                {"output_sha256": sha256_file(bundle / "verifier-responses.jsonl")}
+                if verifier_task_ids else
+                {"not_run_reason": "no_curator_candidates"}
+            ),
+            "reconciliation": {
+                "promoted_count": counts["promoted"],
+                "adjudication_count": counts["adjudication"],
+                "skipped_count": counts["skipped"],
+            },
+            "contains_source_text": False,
+            "contains_gold_payloads": False,
+            "source_bearing_bundle_encrypted": True,
+        }
+        _write_json(evidence / "CURATION_RUN_SUMMARY.json", summary)
+        return evidence
+
+    def test_consolidates_and_hash_binds_replacement_eligibility(self):
+        tasks = [_task("p0"), _task("p1"), _task("p2")]
+        self._evidence(
+            "0-3",
+            tasks,
+            {
+                "p0": ("promoted", None),
+                "p1": ("adjudication", "missing_verifier_response"),
+                "p2": ("skipped", "no_curator_candidate"),
+            },
+            verifier_task_ids={"p0"},
+        )
+        out = Path(self.tmp.name) / "out"
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0", "p1", "p2"])
+        ):
+            summary = consolidation.consolidate_primary_evidence(
+                self.root, self.evidence_root, out, expected_task_count=3
+            )
+
+        self.assertEqual(
+            summary["outcomes"],
+            {"adjudication": 1, "promoted": 1, "skipped": 1},
+        )
+        self.assertEqual(summary["replacement_eligible_primary_count"], 1)
+        self.assertEqual(summary["pending_adjudication_count"], 1)
+        self.assertEqual(
+            summary["canonical_reason_counts"]["candidate_input_blindness"],
+            1,
+        )
+        eligibility = load_json(out / "REPLACEMENT_ELIGIBILITY.json")
+        self.assertFalse(eligibility["rules"]["pending_adjudication_is_replaceable"])
+        self.assertFalse(eligibility["rules"]["reserve_reconciliation_enabled"])
+        self.assertEqual(eligibility["eligible"][0]["primary_slot_id"], "p2")
+        self.assertEqual(
+            eligibility["eligible"][0]["cumulative_ledger_sha256"],
+            sha256_file(out / "CUMULATIVE_LEDGER.jsonl"),
+        )
+
+    def test_duplicate_primary_task_across_runs_fails_closed(self):
+        task = _task("p0")
+        self._evidence(
+            "a", [task], {"p0": ("skipped", "no_curator_candidate")}, run_id=1
+        )
+        self._evidence(
+            "b",
+            [task],
+            {"p0": ("skipped", "no_curator_candidate")},
+            run_id=2,
+            sha="c" * 40,
+        )
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0"])
+        ):
+            with self.assertRaisesRegex(ValueError, "duplicate primary task"):
+                consolidation.consolidate_primary_evidence(
+                    self.root, self.evidence_root, Path(self.tmp.name) / "out"
+                )
+
+    def test_collectable_curator_rejection_is_terminal_and_reserve_eligible(self):
+        task = _task("p0")
+        self._evidence(
+            "reject",
+            [task],
+            {"p0": ("skipped", "no_curator_candidate")},
+            curator_rejections={"p0": "adapter:contract_support_not_verbatim"},
+        )
+        out = Path(self.tmp.name) / "out"
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0"])
+        ):
+            summary = consolidation.consolidate_primary_evidence(
+                self.root, self.evidence_root, out, expected_task_count=1
+            )
+        self.assertEqual(summary["replacement_eligible_primary_count"], 1)
+        row = load_jsonl(out / "CUMULATIVE_LEDGER.jsonl")[0]
+        self.assertEqual(
+            row["canonical_reason"],
+            "curator_rejection:adapter:contract_support_not_verbatim",
+        )
+
+    def test_skipped_task_without_terminal_curator_evidence_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "bad",
+            [task],
+            {"p0": ("skipped", "no_curator_candidate")},
+        )
+        curator_responses = evidence / "source-bearing" / "curator-responses.jsonl"
+        _write_jsonl(curator_responses, [])
+        manifest_path = evidence / "source-bearing" / "curator-run.json"
+        manifest = load_json(manifest_path)
+        manifest["completed_task_count"] = 0
+        manifest["attempted_task_count"] = 0
+        manifest["output_sha256"] = sha256_file(curator_responses)
+        _write_json(manifest_path, manifest)
+        summary_path = evidence / "CURATION_RUN_SUMMARY.json"
+        summary = load_json(summary_path)
+        summary["curator"]["output_sha256"] = manifest["output_sha256"]
+        _write_json(summary_path, summary)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "does not account for every selected task"
+            ):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+
+if __name__ == "__main__":
+    unittest.main()
