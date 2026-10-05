@@ -52,7 +52,7 @@ Auto-promotion still requires literal source support, an exact `gitblob:<sha>#ch
 
 Freeze schema 24 separates **record quota** from **candidate-discovery capacity**. The original 1,280 primary slots remain the exact record-quota surface and retain their IDs/order/task fingerprints. One reserve candidate slot is preregistered for each primary, giving 2,560 candidate slots total while leaving the record target at 1,280. Reserve tasks are linked by `replacement_for_slot_id` and must use a source window distinct from their linked primary.
 
-Reserve promotion is intentionally **disabled** in schema 24. The standard reviewed workflows remain bounded to the 896 non-holdout primary tasks, and reconciliation fails closed if a reserve task is supplied. A later protocol revision must bind reserve use to cumulative evidence that the linked primary is terminally replaceable; unresolved adjudication is not replacement eligibility.
+Reserve promotion is intentionally **disabled** in schema 24. The standard reviewed workflows remain bounded to the 896 non-holdout primary tasks, reconciliation fails closed if a reserve task is supplied, and campaign validation rejects records that carry reserve factory-slot IDs. A later protocol revision must bind reserve use to cumulative evidence that the linked primary is terminally replaceable; unresolved adjudication is not replacement eligibility.
 
 ## Non-holdout workflow
 
