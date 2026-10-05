@@ -18,6 +18,9 @@ class CurationWorkflowTests(unittest.TestCase):
         cls.campaign_workflow = (
             repo_root / ".github" / "workflows" / "h392-curation-campaign.yml"
         ).read_text(encoding="utf-8")
+        cls.acquisition_workflow = (
+            repo_root / ".github" / "workflows" / "h392-nonholdout-acquisition.yml"
+        ).read_text(encoding="utf-8")
 
     def test_secret_bearing_workflow_pins_third_party_actions_to_commits(self):
         self.assertIn(
@@ -146,6 +149,24 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("curator_response_counts", aggregate)
         self.assertIn("verifier_response_counts", aggregate)
         self.assertIn("continue-on-error: true", self.campaign_workflow)
+
+    def test_acquisition_ci_distinguishes_primary_quota_from_candidate_capacity(self):
+        self.assertIn(
+            'task_count != int(plan["candidate_non_holdout_slots"])',
+            self.acquisition_workflow,
+        )
+        self.assertIn('"primary_slot_count"', self.acquisition_workflow)
+        self.assertIn('"reserve_slot_count"', self.acquisition_workflow)
+        self.assertIn('"candidate_non_holdout_slots"', self.acquisition_workflow)
+        self.assertIn('"candidate_holdout_slots"', self.acquisition_workflow)
+        self.assertIn(
+            "reserve protocol changed the canonical 896-task primary prefix",
+            self.acquisition_workflow,
+        )
+        self.assertIn(
+            'canonical_evidence["factory"]["curator_tasks_sha256"]',
+            self.acquisition_workflow,
+        )
 
     def test_campaign_secret_bearing_actions_are_commit_pinned(self):
         self.assertIn(
