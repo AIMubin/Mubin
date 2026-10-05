@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
+from .consolidation import consolidate_primary_evidence
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -128,6 +129,11 @@ def main(argv: list[str] | None = None) -> int:
     fs.add_argument("--verifier-responses", type=Path)
     fs.add_argument("--adjudication", type=Path)
     fs.add_argument("--reviewed-dir", type=Path)
+
+    cp = sub.add_parser("consolidate-primary")
+    cp.add_argument("--evidence-root", type=Path, required=True)
+    cp.add_argument("--out-dir", type=Path, required=True)
+    cp.add_argument("--expected-task-count", type=int)
 
     prep = sub.add_parser("prepare-manifests")
     prep.add_argument("--spec", type=Path)
@@ -332,6 +338,19 @@ def main(argv: list[str] | None = None) -> int:
         reviewed_dir = _resolve(root, args.reviewed_dir)
         assert plan is not None
         report = factory_status(plan, curator, verifier, adjudication, reviewed_dir)
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "consolidate-primary":
+        evidence_root = _resolve(root, args.evidence_root)
+        out_dir = _resolve(root, args.out_dir)
+        assert evidence_root is not None and out_dir is not None
+        report = consolidate_primary_evidence(
+            root,
+            evidence_root,
+            out_dir,
+            expected_task_count=args.expected_task_count,
+        )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
 
