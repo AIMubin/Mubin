@@ -110,3 +110,19 @@ No disagreement is silently discarded or rewritten into agreement. Reserve tasks
 ## Orchestration trust boundary
 
 `model_family` and `model_ref` are **orchestration metadata**, not scholarly evidence and not a model's self-asserted authority. The runner/custodian is responsible for wrapping model output with the actual model family/ref used for that run. The factory enforces structural separation, rejects ordinary answer-bearing fields/label values from the Verifier input, normalizes model-family strings for independence checks, and hashes both response envelopes. It does not claim cryptographic proof of a provider identity or immunity to deliberate steganographic leakage.
+
+
+## Cumulative primary evidence gate
+
+Canonical encrypted primary runs are consolidated before reserve activation. The implementation is documented in `CONSOLIDATION.md` and exposed by:
+
+```bash
+python -m benchmark_campaign consolidate-primary \
+  --evidence-root /path/to/provenance-bound/decrypted-runs \
+  --out-dir /path/to/protected/cumulative-output \
+  --expected-task-count 168
+```
+
+The consolidator rejects duplicate primary tasks, reserve tasks, task/fingerprint drift, incomplete Curator/Verifier manifests, reviewed/adjudication mismatches, and unbound terminal failures. It emits a cumulative ledger, cumulative adjudication queue, merged reviewed records, and a replacement-eligibility manifest whose entries are bound to the cumulative ledger SHA-256.
+
+A primary is replacement eligible only when the cumulative evidence proves a terminal Curator `no_candidate` or a task-local Curator contract/model-output rejection. Promoted primaries and every unresolved adjudication remain ineligible. The resulting manifest is evidence only: schema 24 still keeps reserve reconciliation disabled.
