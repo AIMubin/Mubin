@@ -199,6 +199,8 @@ Freeze schema 24 separates **record quota** from **candidate-discovery capacity*
 
 The next reviewed **primary** campaign therefore continues at offsets `104..167` with `task_offset=104`, `task_count=64`, `shard_size=8`, and `max-parallel=4`. Reserve offsets are capacity for later completion; they are not a reason to skip unresolved adjudication or abandon primary collection.
 
+Freeze schema 24 deliberately does **not** activate reserve promotion yet. The reviewed workflows use `primary_non_holdout_slots` as their execution bound, and reconciliation rejects reserve tasks until a cumulative replacement-eligibility artifact exists. A pending adjudication is not an eligible replacement: only a later, evidence-bound consolidation step may establish that a linked primary slot is terminally unusable.
+
 Before final benchmark assembly, the independently encrypted shard outputs still need a cumulative consolidation step that accounts for promoted, adjudication, rejected, and reserve-derived cases under the exact frozen quotas. Reserve capacity solves the demonstrated candidate-shortage problem; it does not by itself perform that consolidation.
 
 Never tune prompts or model behavior against the sealed final holdout.
