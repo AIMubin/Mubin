@@ -193,6 +193,7 @@ class ConsolidationTests(unittest.TestCase):
                         "benchmark_id": task["benchmark_id"],
                         "case_id": f"case-{tid}",
                         "anchor_source_id": task["anchor_source_id"],
+                        "family_id": f"family-{tid}",
                         "gold_status": "source_attributed",
                         "synthetic": False,
                         "source_refs": [{
@@ -201,6 +202,12 @@ class ConsolidationTests(unittest.TestCase):
                             "excerpt": "anchor evidence",
                         }],
                         "answer_provenance": answer_provenance,
+                        "annotation": {
+                            "reviewers": [],
+                            "source_verified": True,
+                            "adjudicated": False,
+                            "adjudicator": None,
+                        },
                         "payload": {
                             "input": candidate_input,
                             "gold": {"label": "yes"},
