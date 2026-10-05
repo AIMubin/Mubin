@@ -156,6 +156,8 @@ class CurationWorkflowTests(unittest.TestCase):
             self.acquisition_workflow,
         )
         self.assertIn('"primary_slot_count"', self.acquisition_workflow)
+        self.assertIn('"primary_non_holdout_slots"', self.acquisition_workflow)
+        self.assertIn('"primary_holdout_slots"', self.acquisition_workflow)
         self.assertIn('"reserve_slot_count"', self.acquisition_workflow)
         self.assertIn('"candidate_non_holdout_slots"', self.acquisition_workflow)
         self.assertIn('"candidate_holdout_slots"', self.acquisition_workflow)
