@@ -106,11 +106,13 @@ class CurationWorkflowTests(unittest.TestCase):
             self.campaign_workflow,
         )
 
-    def test_campaign_reviewed_stage_is_bounded_to_40_tasks_and_eight_per_shard(self):
-        self.assertIn("count < 1 or count > 40", self.campaign_workflow)
+    def test_campaign_reviewed_stage_is_bounded_to_64_tasks_and_eight_per_shard(self):
+        self.assertIn("count < 1 or count > 64", self.campaign_workflow)
         self.assertIn("shard_size < 1 or shard_size > 8", self.campaign_workflow)
         self.assertIn("task_offset + task_count exceeds 896", self.campaign_workflow)
         self.assertIn("expected_shards", self.campaign_workflow)
+        self.assertIn('default: "40"', self.campaign_workflow)
+        self.assertIn('default: "64"', self.campaign_workflow)
 
     def test_campaign_aggregate_uses_only_redacted_shard_summaries(self):
         aggregate = self.campaign_workflow.split(
