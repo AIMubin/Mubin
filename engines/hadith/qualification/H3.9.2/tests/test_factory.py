@@ -17,7 +17,12 @@ from benchmark_campaign.factory import (
     _gold_contract_error,
 )
 from benchmark_campaign.source_cache import cache_filename, git_blob_sha
-from benchmark_campaign.validate import (_validate_factory_slot_binding, _validate_factory_verification, _validate_factory_risk_policy)
+from benchmark_campaign.validate import (
+    _validate_factory_reserve_policy,
+    _validate_factory_slot_binding,
+    _validate_factory_verification,
+    _validate_factory_risk_policy,
+)
 
 
 class FactoryTests(unittest.TestCase):
@@ -283,6 +288,51 @@ class FactoryTests(unittest.TestCase):
             self.assertNotEqual(
                 reserve["anchor_segment"]["segment_id"],
                 primary["anchor_segment"]["segment_id"],
+            )
+
+    def test_reserve_slot_cannot_enter_qualification_records_in_schema_24(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
+                "reserve_slots_per_primary": 1,
+                "rule": "one reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+            plan = build_factory_plan(root)
+            primary = next(
+                x for x in plan["slots"]
+                if x["partition"] == "non_holdout"
+                and x.get("candidate_slot_kind") != "reserve"
+            )
+            reserve = next(
+                x for x in plan["slots"]
+                if x["partition"] == "non_holdout"
+                and x.get("candidate_slot_kind") == "reserve"
+            )
+
+            self.assertEqual(
+                _validate_factory_reserve_policy(
+                    root,
+                    {"case_id": "p", "factory_slot_id": primary["slot_id"]},
+                    "b1",
+                ),
+                [],
+            )
+            violations = _validate_factory_reserve_policy(
+                root,
+                {"case_id": "r", "factory_slot_id": reserve["slot_id"]},
+                "b1",
+            )
+            self.assertEqual(
+                [v.code for v in violations],
+                ["qualification.reserve_slot_not_eligible"],
             )
 
     def test_reserve_reconciliation_fails_closed_without_cumulative_eligibility(self):
