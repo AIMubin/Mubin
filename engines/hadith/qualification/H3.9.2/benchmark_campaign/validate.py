@@ -317,7 +317,7 @@ def _validate_factory_slot_binding(root: Path, record: dict[str, Any],
     if slot is None:
         out.append(Violation(
             "qualification.factory_slot_unknown",
-            "factory_slot_id is not present in the frozen 1,280-slot plan",
+            "factory_slot_id is not present in the frozen candidate plan",
             benchmark_id, cid,
         ))
         return out
