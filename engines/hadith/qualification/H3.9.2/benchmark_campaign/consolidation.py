@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
+import json
 import re
 
 from .core import canonical_json_bytes, dump_jsonl, load_json, load_jsonl, sha256_bytes, sha256_file, write_json
@@ -10,6 +11,8 @@ from .factory import (
     _canonical_model_family,
     _gold_agrees,
     _gold_contract_error,
+    _policy,
+    _slot_binding_sha256,
     _task_rows,
     _verify_factory_candidate_refs,
     _verify_supports,
@@ -19,6 +22,7 @@ from .factory import (
     build_factory_plan,
 )
 from .freeze import FREEZE_SCHEMA_VERSION
+from .curation import seal_reviewed_record
 from .normalization import fingerprint_payload
 
 
@@ -499,6 +503,7 @@ def _validate_reviewed_record_binding(
     reviewed_ap_base = dict(reviewed_ap)
     candidate_supports = candidate_ap_base.pop("supports", None)
     reviewed_supports = reviewed_ap_base.pop("supports", None)
+    candidate_ap_base.pop("gold_binding_sha256", None)
     reviewed_ap_base.pop("gold_binding_sha256", None)
     if canonical_json_bytes(candidate_ap_base) != canonical_json_bytes(reviewed_ap_base):
         raise ValueError(f"reviewed answer provenance differs from Curator candidate: {task_id}")
@@ -610,6 +615,50 @@ def _validate_reviewed_record_binding(
         expected_verifier_supports
     ):
         raise ValueError(f"reviewed factory Verifier supports differ from response: {task_id}")
+
+    # Reconstruct the exact record that reconcile_factory would have sealed.
+    # This is the final fail-closed bridge over the entire candidate surface,
+    # including duplicate refs, anchor semantics, provenance normalization,
+    # derived hashes, and any candidate fields preserved by sealing.
+    expected_candidate = json.loads(json.dumps(candidate, ensure_ascii=False))
+    slots = {
+        str(slot["slot_id"]): slot
+        for slot in build_factory_plan(root)["slots"]
+    }
+    expected_slot = slots.get(str(task.get("slot_id")))
+    if expected_slot is None:
+        raise ValueError(f"reviewed record task slot missing from frozen plan: {task_id}")
+    expected_candidate["factory_verification"] = {
+        "factory_version": int(_policy(root).get("factory_version", 0)),
+        "risk_tier": int(task.get("risk_tier", 0)),
+        "slot_binding_sha256": _slot_binding_sha256(expected_slot),
+        "curator_model_family": curator["model_family"],
+        "curator_model_ref": curator["model_ref"],
+        "verifier_model_family": verifier["model_family"],
+        "verifier_model_ref": verifier["model_ref"],
+        "curator_response_sha256": _response_sha256(curator),
+        "verifier_response_sha256": _response_sha256(verifier),
+        "curator_execution_binding": curator.get("execution_binding"),
+        "verifier_execution_binding": verifier.get("execution_binding"),
+        "verifier_supports": expected_verifier_supports,
+        "agreement": "exact_gold_match",
+        "task_fingerprint": task["task_fingerprint"],
+    }
+    try:
+        expected_record = seal_reviewed_record(
+            root, expected_candidate, source_cache_dir
+        )
+    except Exception as exc:
+        raise ValueError(
+            f"reviewed record candidate cannot be resealed: {task_id}: {exc}"
+        ) from exc
+    expected_record["factory_task_id"] = task_id
+    expected_record["factory_slot_id"] = task.get("slot_id", task_id)
+    expected_record["factory_task_fingerprint"] = task["task_fingerprint"]
+    if canonical_json_bytes(record) != canonical_json_bytes(expected_record):
+        raise ValueError(
+            f"reviewed record differs from exact resealed Factory output: {task_id}"
+        )
 
 
 def _validate_manifest_counts(
