@@ -42,9 +42,9 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical primary campaign runs now cover offsets 0..167 (168 external-critical-commentary tasks) and produced 34 promoted, 103 adjudication, and 31 skipped/rejected outcomes inside encrypted workflow artifacts. Even if every pending adjudication were accepted and every remaining primary succeeded, the 210-record non-holdout quota for this benchmark requires at least 31 reserve replacements. Freeze schema 24 already preregisters one reserve per primary but keeps reserve reconciliation disabled. The immediate blocker is cumulative provenance-bound consolidation of the encrypted shard evidence; no workflow outputs have yet been consolidated into repository benchmark records.",
+  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical primary campaign runs now cover offsets 0..167 (168 external-critical-commentary tasks) and produced 34 promoted, 103 adjudication, and 31 skipped/rejected outcomes inside encrypted workflow artifacts. Even if every pending adjudication were accepted and every remaining primary succeeded, the 210-record non-holdout quota for this benchmark requires at least 31 reserve replacements. Freeze schema 24 preregistered one reserve per primary; freeze schema 25 adds cumulative provenance and replacement-eligibility binding while keeping reserve reconciliation disabled. The immediate blocker is cumulative provenance-bound consolidation of the encrypted shard evidence; no workflow outputs have yet been consolidated into repository benchmark records.",
   "next_action": "Run the cumulative primary-evidence consolidation over canonical campaign runs 37280971913, 37295517184, and 37326459365, verify exact 168-task coverage and the hash-bound replacement-eligibility manifest, then review the cumulative adjudication ledger before executing the remaining external-critical-commentary primaries at offsets 168..209. Reserve reconciliation remains disabled.",
-  "freeze_schema_version": 24,
+  "freeze_schema_version": 25,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
   "factory_candidate_slot_count": 2560,
@@ -73,7 +73,7 @@
     "consolidated_into_repository": false
   },
   "reserve_reconciliation_enabled": false,
-  "reserve_reconciliation_reason": "Freeze schema 24 preregisters reserve candidate slots, but promotion remains fail-closed until cumulative replacement eligibility is implemented and bound.",
+  "reserve_reconciliation_reason": "Freeze schema 25 produces hash-bound cumulative replacement eligibility, but reserve promotion remains fail-closed until a separate reviewed activation protocol consumes that binding.",
   "candidate_reserve_policy_version": 1,
   "candidate_reserve_capacity_guarantees_quota": false,
   "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory.",
@@ -84,5 +84,6 @@
     37280971913,
     37295517184,
     37326459365
-  ]
+  ],
+  "cumulative_consolidation_protocol_freeze_schema": 25
 }
