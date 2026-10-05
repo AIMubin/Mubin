@@ -175,7 +175,10 @@ jobs:
                   encoding="utf-8"
               )
           )
-          legacy_primary_sha256 = canonical_evidence["factory"]["curator_tasks_sha256"]
+          legacy_primary_sha256 = canonical_evidence["factory"].get(
+              "primary_curator_tasks_sha256",
+              canonical_evidence["factory"]["curator_tasks_sha256"],
+          )
           if primary_sha256 != legacy_primary_sha256:
               raise SystemExit(
                   "reserve protocol changed the canonical 896-task primary prefix"
