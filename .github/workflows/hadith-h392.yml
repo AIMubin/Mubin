@@ -8,6 +8,7 @@ on:
       - ".github/workflows/h392-curation-pilot.yml"
       - ".github/workflows/h392-curation-campaign.yml"
       - ".github/workflows/h392-nonholdout-acquisition.yml"
+      - ".github/workflows/h392-cumulative-consolidation.yml"
   push:
     branches: [main, "bootstrap/**", "h392/**"]
     paths:
@@ -15,6 +16,7 @@ on:
       - ".github/workflows/h392-curation-pilot.yml"
       - ".github/workflows/h392-curation-campaign.yml"
       - ".github/workflows/h392-nonholdout-acquisition.yml"
+      - ".github/workflows/h392-cumulative-consolidation.yml"
 
 permissions:
   contents: read

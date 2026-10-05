@@ -537,6 +537,59 @@ def _blind_input_error(value: Any, task: dict[str, Any], path: str = "input") ->
     return None
 
 
+def _verifier_task_from_curator(
+    task: dict[str, Any],
+    response: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Project a Curator candidate into the exact blinded Verifier task.
+
+    Returns (task, None) for a safe candidate, (None, blindness_reason) for an
+    unsafe candidate, and raises on malformed candidate structure. This helper
+    is shared by live preparation and historical evidence validation so a
+    stored Verifier task can be checked against the exact projection that
+    should have been sent.
+    """
+    if response.get("status") != "candidate":
+        return None, None
+    tid = str(task["task_id"])
+    candidate = response.get("candidate")
+    if not isinstance(candidate, dict):
+        raise ValueError(f"candidate payload missing: {tid}")
+    payload = candidate.get("payload")
+    if not isinstance(payload, dict) or "input" not in payload:
+        raise ValueError(f"candidate payload.input missing: {tid}")
+    blind_error = _blind_input_error(payload["input"], task)
+    if blind_error is not None:
+        return None, blind_error
+    verifier_task = {
+        "task_id": tid,
+        "task_fingerprint": task["task_fingerprint"],
+        "benchmark_id": task["benchmark_id"],
+        "partition": task["partition"],
+        "visibility": task["visibility"],
+        "allowed_source_pool": task["allowed_source_pool"],
+        "forbidden_source_pool": task["forbidden_source_pool"],
+        "allowed_labels": task["allowed_labels"],
+        "task_type": task["task_type"],
+        "retrieval_terms": task["retrieval_terms"],
+        "anchor_source_id": task["anchor_source_id"],
+        "retrieval_scope": task["retrieval_scope"],
+        "anchor_segment": task["anchor_segment"],
+        "candidate_input": payload["input"],
+        "instructions": {
+            "contract": "agents/VERIFIER_CONTRACT.md",
+            "blind_to_curator_gold": True,
+            "blind_to_curator_supports": True,
+            "independent_source_check": True,
+        },
+    }
+    unsigned_verifier_task = dict(verifier_task)
+    verifier_task["verifier_task_fingerprint"] = sha256_bytes(
+        canonical_json_bytes(unsigned_verifier_task)
+    )
+    return verifier_task, None
+
+
 def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path: Path, out_path: Path,
                            partition: str = "non_holdout", custodian_mode: bool = False) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
@@ -568,13 +621,7 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
         if response.get("status") != "candidate":
             continue
         input_candidates += 1
-        candidate = response.get("candidate")
-        if not isinstance(candidate, dict):
-            raise ValueError(f"candidate payload missing: {tid}")
-        payload = candidate.get("payload")
-        if not isinstance(payload, dict) or "input" not in payload:
-            raise ValueError(f"candidate payload.input missing: {tid}")
-        blind_error = _blind_input_error(payload["input"], task)
+        verifier_task, blind_error = _verifier_task_from_curator(task, response)
         if blind_error is not None:
             if partition == "holdout":
                 raise ValueError(
@@ -586,33 +633,8 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
             # unsafe input to the independent Verifier.
             blindness_rejections += 1
             continue
-        verifier_task = {
-            "task_id": tid,
-            "task_fingerprint": task["task_fingerprint"],
-            "benchmark_id": task["benchmark_id"],
-            "partition": task["partition"],
-            "visibility": task["visibility"],
-            "allowed_source_pool": task["allowed_source_pool"],
-            "forbidden_source_pool": task["forbidden_source_pool"],
-            "allowed_labels": task["allowed_labels"],
-            "task_type": task["task_type"],
-            "retrieval_terms": task["retrieval_terms"],
-            "anchor_source_id": task["anchor_source_id"],
-            "retrieval_scope": task["retrieval_scope"],
-            "anchor_segment": task["anchor_segment"],
-            "candidate_input": payload["input"],
-            "instructions": {
-                "contract": "agents/VERIFIER_CONTRACT.md",
-                "blind_to_curator_gold": True,
-                "blind_to_curator_supports": True,
-                "independent_source_check": True,
-            },
-        }
-        verifier_task["task_fingerprint"] = task["task_fingerprint"]
-        unsigned_verifier_task = dict(verifier_task)
-        verifier_task["verifier_task_fingerprint"] = sha256_bytes(
-            canonical_json_bytes(unsigned_verifier_task)
-        )
+        if verifier_task is None:
+            raise ValueError(f"candidate did not produce verifier task: {tid}")
         out.append(verifier_task)
     dump_jsonl(out_path, out)
     return {
