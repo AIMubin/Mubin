@@ -117,6 +117,11 @@ class ConsolidationTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name) / "root"
         self.root.mkdir()
+        (self.root / "config").mkdir()
+        _write_json(
+            self.root / "config" / "factory-policy.json",
+            {"factory_version": 1},
+        )
         (self.root / "sources").mkdir()
         _write_json(
             self.root / "sources" / "source-registry.json",
