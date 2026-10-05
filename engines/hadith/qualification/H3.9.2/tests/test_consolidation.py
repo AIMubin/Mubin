@@ -102,6 +102,7 @@ class ConsolidationTests(unittest.TestCase):
         run_id: int = 1001,
         sha: str = "a" * 40,
         task_offset: int = 0,
+        artifact_id: int | None = None,
     ) -> Path:
         curator_rejections = curator_rejections or {}
         verifier_task_ids = verifier_task_ids or set()
@@ -117,7 +118,7 @@ class ConsolidationTests(unittest.TestCase):
             "head_branch": "main",
             "head_sha": sha,
             "workflow_path": ".github/workflows/h392-curation-campaign.yml",
-            "artifact_id": run_id + 100,
+            "artifact_id": artifact_id if artifact_id is not None else run_id + 100,
             "artifact_name": f"h392-curation-chunk-{task_offset}-{len(tasks)}",
             "artifact_sha256": "b" * 64,
             "encrypted_bundle_sha256": "f" * 64,
@@ -378,6 +379,52 @@ class ConsolidationTests(unittest.TestCase):
             ):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
+
+    def test_multiple_artifacts_from_one_run_count_as_one_run(self):
+        self._evidence(
+            "first",
+            [_task("p0")],
+            {"p0": ("skipped", "no_curator_candidate")},
+            run_id=77,
+            task_offset=0,
+            artifact_id=1001,
+        )
+        self._evidence(
+            "second",
+            [_task("p1")],
+            {"p1": ("skipped", "no_curator_candidate")},
+            run_id=77,
+            task_offset=1,
+            artifact_id=1002,
+        )
+        out = Path(self.tmp.name) / "out"
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0", "p1"])
+        ):
+            summary = consolidation.consolidate_primary_evidence(
+                self.root, self.evidence_root, out, expected_task_count=2
+            )
+        self.assertEqual(summary["input_run_ids"], [77])
+        self.assertEqual(summary["input_run_count"], 1)
+        self.assertEqual(summary["input_artifact_count"], 2)
+
+    def test_artifact_task_range_must_match_summary_range(self):
+        self._evidence(
+            "swapped",
+            [_task("p1")],
+            {"p1": ("skipped", "no_curator_candidate")},
+            task_offset=0,
+        )
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0", "p1"])
+        ):
+            with self.assertRaisesRegex(ValueError, "artifact task offsets differ"):
+                consolidation.consolidate_primary_evidence(
+                    self.root,
+                    self.evidence_root,
+                    Path(self.tmp.name) / "out",
+                    expected_task_count=1,
+                )
 
     def test_expected_count_requires_exact_zero_based_prefix(self):
         task = _task("p1")
