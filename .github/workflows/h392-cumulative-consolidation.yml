@@ -1,0 +1,284 @@
+name: H3.9.2 cumulative primary evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_ids:
+        description: Comma-separated canonical successful H3.9.2 campaign run IDs
+        required: true
+        default: "37280971913,37295517184,37326459365"
+      expected_task_count:
+        description: Exact cumulative primary-task count expected after consolidation
+        required: true
+        default: "168"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+    env:
+      EVIDENCE_ROOT: /tmp/h392-cumulative/evidence
+      CUMULATIVE_DIR: /tmp/h392-cumulative/source-bearing
+      REDACTED_DIR: /tmp/h392-cumulative/redacted
+      EXPECTED_TASK_COUNT: ${{ inputs.expected_task_count }}
+      RUN_IDS: ${{ inputs.run_ids }}
+
+    steps:
+      - name: Checkout Mubin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Refuse stale or non-main dispatch
+        run: |
+          set -eu
+          if [ "${GITHUB_REF_NAME:-}" != "main" ]; then
+            echo "Cumulative consolidation must be dispatched from main." >&2
+            exit 1
+          fi
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Refusing stale cumulative consolidation; dispatch from current main." >&2
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+
+      - name: Install campaign dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate runtime inputs
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          test -n "$ARTIFACT_KEY"
+          python - <<'PY'
+          import os
+          raw = [x.strip() for x in os.environ["RUN_IDS"].split(",") if x.strip()]
+          if not raw or len(raw) != len(set(raw)) or any(not x.isdigit() for x in raw):
+              raise SystemExit("run_ids must be a non-empty unique comma-separated list of numeric run IDs")
+          expected = int(os.environ["EXPECTED_TASK_COUNT"])
+          if expected < 1 or expected > 896:
+              raise SystemExit("expected_task_count must be in [1, 896]")
+          PY
+
+      - name: Fetch and provenance-bind canonical encrypted artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p "$EVIDENCE_ROOT"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import stat
+          import urllib.request
+          import zipfile
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          run_ids = [int(x.strip()) for x in os.environ["RUN_IDS"].split(",") if x.strip()]
+          root = Path(os.environ["EVIDENCE_ROOT"])
+
+          def request(url):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "mubin-h392-consolidation",
+                  },
+              )
+              return urllib.request.urlopen(req, timeout=120)
+
+          def api_json(url):
+              with request(url) as response:
+                  return json.load(response)
+
+          def safe_unzip(archive, dest):
+              dest.mkdir(parents=True, exist_ok=True)
+              with zipfile.ZipFile(archive) as zf:
+                  for info in zf.infolist():
+                      p = Path(info.filename)
+                      mode = (info.external_attr >> 16) & 0xFFFF
+                      if p.is_absolute() or ".." in p.parts or stat.S_ISLNK(mode):
+                          raise SystemExit(f"unsafe artifact ZIP member: {info.filename}")
+                  zf.extractall(dest)
+
+          artifact_count = 0
+          for run_id in run_ids:
+              run = api_json(f"https://api.github.com/repos/{repo}/actions/runs/{run_id}")
+              if run.get("status") != "completed" or run.get("conclusion") != "success":
+                  raise SystemExit(f"run {run_id} is not completed/success")
+              if run.get("head_branch") != "main":
+                  raise SystemExit(f"run {run_id} is not a main-branch run")
+              if run.get("path") != ".github/workflows/h392-curation-campaign.yml":
+                  raise SystemExit(f"run {run_id} is not an H3.9.2 campaign batch")
+              if run.get("event") != "workflow_dispatch":
+                  raise SystemExit(f"run {run_id} was not a reviewed manual campaign dispatch")
+
+              artifacts = api_json(
+                  f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100"
+              ).get("artifacts", [])
+              chunks = [
+                  a for a in artifacts
+                  if str(a.get("name", "")).startswith("h392-curation-chunk-")
+              ]
+              if not chunks:
+                  raise SystemExit(f"run {run_id} has no curation chunk artifacts")
+
+              for artifact in chunks:
+                  if artifact.get("expired") is True:
+                      raise SystemExit(f"artifact {artifact.get('id')} from run {run_id} is expired")
+                  digest = artifact.get("digest")
+                  if not isinstance(digest, str) or not digest.startswith("sha256:"):
+                      raise SystemExit(f"artifact {artifact.get('id')} has no SHA-256 digest")
+                  artifact_id = int(artifact["id"])
+                  evidence = root / f"run-{run_id}-artifact-{artifact_id}"
+                  raw_dir = evidence / "_raw"
+                  evidence.mkdir(parents=True)
+                  archive = evidence / "artifact.zip"
+
+                  with request(str(artifact["archive_download_url"])) as response:
+                      archive.write_bytes(response.read())
+                  actual = hashlib.sha256(archive.read_bytes()).hexdigest()
+                  expected = digest.split(":", 1)[1]
+                  if actual != expected:
+                      raise SystemExit(f"artifact ZIP digest mismatch: {artifact_id}")
+
+                  safe_unzip(archive, raw_dir)
+                  summaries = list(raw_dir.rglob("CURATION_RUN_SUMMARY.json"))
+                  bundles = list(raw_dir.rglob("h392-curation-source-bearing.tar.gz.aesgcm"))
+                  bundle_hashes = list(raw_dir.rglob("ENCRYPTED_BUNDLE_SHA256.txt"))
+                  if len(summaries) != 1 or len(bundles) != 1 or len(bundle_hashes) != 1:
+                      raise SystemExit(f"artifact {artifact_id} has an unexpected curation bundle layout")
+
+                  encrypted_sha = hashlib.sha256(bundles[0].read_bytes()).hexdigest()
+                  declared_sha = bundle_hashes[0].read_text(encoding="utf-8").strip()
+                  if encrypted_sha != declared_sha:
+                      raise SystemExit(f"encrypted source-bearing bundle digest mismatch: {artifact_id}")
+
+                  shutil.copy2(summaries[0], evidence / "CURATION_RUN_SUMMARY.json")
+                  shutil.copy2(
+                      bundles[0],
+                      evidence / "h392-curation-source-bearing.tar.gz.aesgcm",
+                  )
+                  (evidence / "ORIGIN.json").write_text(
+                      json.dumps({
+                          "github_run_id": run_id,
+                          "conclusion": run["conclusion"],
+                          "head_branch": run["head_branch"],
+                          "head_sha": run["head_sha"],
+                          "workflow_path": run["path"],
+                          "artifact_id": artifact_id,
+                          "artifact_name": artifact["name"],
+                          "artifact_sha256": actual,
+                          "encrypted_bundle_sha256": encrypted_sha,
+                      }, indent=2, sort_keys=True) + "\n",
+                      encoding="utf-8",
+                  )
+                  shutil.rmtree(raw_dir)
+                  archive.unlink()
+                  artifact_count += 1
+
+          if artifact_count < 1:
+              raise SystemExit("no canonical curation artifacts were acquired")
+          print(f"provenance-bound artifacts: {artifact_count}")
+          PY
+
+      - name: Decrypt source-bearing evidence into ephemeral workspace
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import tarfile
+
+          from benchmark_campaign.artifact_crypto import decrypt_file
+
+          root = Path(os.environ["EVIDENCE_ROOT"])
+          passphrase = os.environ["ARTIFACT_KEY"]
+          for evidence in sorted(p for p in root.iterdir() if p.is_dir()):
+              encrypted = evidence / "h392-curation-source-bearing.tar.gz.aesgcm"
+              archive = evidence / "source-bearing.tar.gz"
+              target = evidence / "source-bearing"
+              decrypt_file(encrypted, archive, passphrase)
+              target.mkdir()
+              with tarfile.open(archive, "r:gz") as tf:
+                  members = tf.getmembers()
+                  for member in members:
+                      p = Path(member.name)
+                      if (
+                          p.is_absolute()
+                          or ".." in p.parts
+                          or member.issym()
+                          or member.islnk()
+                          or member.isdev()
+                      ):
+                          raise SystemExit(f"unsafe source-bearing tar member: {member.name}")
+                  tf.extractall(target, members=members, filter="data")
+              archive.unlink()
+              encrypted.unlink()
+          PY
+
+      - name: Consolidate cumulative primary evidence
+        run: |
+          set -eu
+          mkdir -p "$CUMULATIVE_DIR" "$REDACTED_DIR"
+          python -m benchmark_campaign consolidate-primary             --evidence-root "$EVIDENCE_ROOT"             --out-dir "$CUMULATIVE_DIR"             --expected-task-count "$EXPECTED_TASK_COUNT"             > "$REDACTED_DIR/CUMULATIVE_SUMMARY.json"
+          {
+            echo '### H3.9.2 cumulative primary evidence'
+            echo '```json'
+            cat "$REDACTED_DIR/CUMULATIVE_SUMMARY.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Encrypt cumulative source-bearing evidence
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          tar -C "$CUMULATIVE_DIR" -czf /tmp/h392-cumulative-source-bearing.tar.gz .
+          python -m benchmark_campaign.artifact_crypto encrypt             --input /tmp/h392-cumulative-source-bearing.tar.gz             --output "$REDACTED_DIR/h392-cumulative-source-bearing.tar.gz.aesgcm"             --passphrase-env ARTIFACT_KEY
+          sha256sum "$REDACTED_DIR/h392-cumulative-source-bearing.tar.gz.aesgcm"             | awk '{print $1}' > "$REDACTED_DIR/ENCRYPTED_CUMULATIVE_BUNDLE_SHA256.txt"
+          rm -f /tmp/h392-cumulative-source-bearing.tar.gz
+
+      - name: Remove decrypted evidence and prove upload is redacted
+        run: |
+          set -eu
+          rm -rf "$EVIDENCE_ROOT" "$CUMULATIVE_DIR"
+          test -s "$REDACTED_DIR/CUMULATIVE_SUMMARY.json"
+          test -s "$REDACTED_DIR/h392-cumulative-source-bearing.tar.gz.aesgcm"
+          test ! -e "$REDACTED_DIR/CUMULATIVE_LEDGER.jsonl"
+          test ! -e "$REDACTED_DIR/CUMULATIVE_ADJUDICATION.jsonl"
+          test ! -e "$REDACTED_DIR/REPLACEMENT_ELIGIBILITY.json"
+          test ! -e "$REDACTED_DIR/reviewed"
+
+      - name: Upload encrypted cumulative evidence and redacted summary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: h392-cumulative-primary-evidence
+          path: /tmp/h392-cumulative/redacted
+          if-no-files-found: error
+          retention-days: 30
