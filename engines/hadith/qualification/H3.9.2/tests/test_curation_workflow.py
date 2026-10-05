@@ -191,6 +191,10 @@ class CurationWorkflowTests(unittest.TestCase):
             '".github/workflows/h392-curation-campaign.yml"',
             self.integrity_workflow,
         )
+        self.assertIn(
+            '".github/workflows/h392-nonholdout-acquisition.yml"',
+            self.integrity_workflow,
+        )
 
     def test_model_identity_is_not_exposed_as_dispatch_input(self):
         dispatch = self.workflow.split("permissions:", 1)[0]
