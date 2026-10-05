@@ -344,7 +344,9 @@ def build_factory_plan(root: Path, out_path: Path | None = None) -> dict[str, An
         "primary_slot_count": primary_slot_count,
         "reserve_slot_count": len(slots) - primary_slot_count,
         "reserve_slots_per_primary": reserve_slots_per_primary,
-        # Legacy names remain the exact record quotas / primary-slot counts.
+        "primary_holdout_slots": primary_holdout_slots,
+        "primary_non_holdout_slots": primary_non_holdout_slots,
+        # Legacy aliases remain for callers that predate candidate reserves.
         "holdout_slots": primary_holdout_slots,
         "non_holdout_slots": primary_non_holdout_slots,
         "candidate_holdout_slots": candidate_holdout_slots,
@@ -1102,6 +1104,12 @@ def factory_status(plan_path: Path, curator_responses_path: Path | None = None,
         "target_total": plan["target_total"],
         "slot_count": plan["slot_count"],
         "primary_slot_count": plan.get("primary_slot_count", plan["target_total"]),
+        "primary_non_holdout_slots": plan.get(
+            "primary_non_holdout_slots", plan.get("non_holdout_slots")
+        ),
+        "primary_holdout_slots": plan.get(
+            "primary_holdout_slots", plan.get("holdout_slots")
+        ),
         "reserve_slot_count": plan.get("reserve_slot_count", 0),
         "candidate_non_holdout_slots": plan.get("candidate_non_holdout_slots"),
         "candidate_holdout_slots": plan.get("candidate_holdout_slots"),
