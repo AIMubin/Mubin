@@ -300,6 +300,162 @@ def _validate_promoted_semantics(
         raise ValueError(f"promoted task Verifier provenance mismatch: {task_id}")
 
 
+def _validate_reviewed_record_binding(
+    task_id: str,
+    task: dict[str, Any],
+    record: dict[str, Any],
+    curator: dict[str, Any],
+    verifier: dict[str, Any],
+) -> None:
+    candidate = curator.get("candidate")
+    if not isinstance(candidate, dict):
+        raise ValueError(f"reviewed record lacks bound Curator candidate: {task_id}")
+
+    for field in (
+        "benchmark_id",
+        "case_id",
+        "anchor_source_id",
+        "gold_status",
+        "synthetic",
+        "payload",
+    ):
+        if canonical_json_bytes(record.get(field)) != canonical_json_bytes(candidate.get(field)):
+            raise ValueError(f"reviewed record differs from Curator candidate {field}: {task_id}")
+
+    candidate_refs = candidate.get("source_refs")
+    reviewed_refs = record.get("source_refs")
+    if not isinstance(candidate_refs, list) or not isinstance(reviewed_refs, list):
+        raise ValueError(f"reviewed record source_refs missing: {task_id}")
+    candidate_ref_projection = [
+        {
+            "source_id": ref.get("source_id"),
+            "locator": ref.get("locator"),
+            "excerpt": ref.get("excerpt"),
+        }
+        for ref in candidate_refs if isinstance(ref, dict)
+    ]
+    reviewed_ref_projection = [
+        {
+            "source_id": ref.get("source_id"),
+            "locator": ref.get("locator"),
+            "excerpt": ref.get("excerpt"),
+        }
+        for ref in reviewed_refs if isinstance(ref, dict)
+    ]
+    if (
+        len(candidate_ref_projection) != len(candidate_refs)
+        or len(reviewed_ref_projection) != len(reviewed_refs)
+        or canonical_json_bytes(candidate_ref_projection)
+        != canonical_json_bytes(reviewed_ref_projection)
+    ):
+        raise ValueError(f"reviewed record source_refs differ from Curator candidate: {task_id}")
+    expected_source_ids = [
+        str(ref["source_id"]) for ref in candidate_ref_projection
+        if isinstance(ref.get("source_id"), str)
+    ]
+    if record.get("source_ids") != expected_source_ids:
+        raise ValueError(f"reviewed record source_ids differ from Curator candidate: {task_id}")
+
+    candidate_ap = candidate.get("answer_provenance")
+    reviewed_ap = record.get("answer_provenance")
+    if not isinstance(candidate_ap, dict) or not isinstance(reviewed_ap, dict):
+        raise ValueError(f"reviewed record answer_provenance missing: {task_id}")
+    candidate_ap_base = dict(candidate_ap)
+    reviewed_ap_base = dict(reviewed_ap)
+    candidate_supports = candidate_ap_base.pop("supports", None)
+    reviewed_supports = reviewed_ap_base.pop("supports", None)
+    reviewed_ap_base.pop("gold_binding_sha256", None)
+    if canonical_json_bytes(candidate_ap_base) != canonical_json_bytes(reviewed_ap_base):
+        raise ValueError(f"reviewed answer provenance differs from Curator candidate: {task_id}")
+    if not isinstance(candidate_supports, list) or not isinstance(reviewed_supports, list):
+        raise ValueError(f"reviewed answer supports missing: {task_id}")
+    candidate_support_projection = [
+        {
+            "source_id": support.get("source_id"),
+            "support_text": support.get("support_text"),
+        }
+        for support in candidate_supports if isinstance(support, dict)
+    ]
+    reviewed_support_projection = [
+        {
+            "source_id": support.get("source_id"),
+            "support_text": support.get("support_text"),
+        }
+        for support in reviewed_supports if isinstance(support, dict)
+    ]
+    if (
+        len(candidate_support_projection) != len(candidate_supports)
+        or len(reviewed_support_projection) != len(reviewed_supports)
+        or canonical_json_bytes(candidate_support_projection)
+        != canonical_json_bytes(reviewed_support_projection)
+    ):
+        raise ValueError(f"reviewed answer supports differ from Curator candidate: {task_id}")
+
+    refs_by_id = {
+        str(ref["source_id"]): ref
+        for ref in reviewed_refs
+        if isinstance(ref, dict) and isinstance(ref.get("source_id"), str)
+    }
+    normalized_supports: list[dict[str, Any]] = []
+    for support in reviewed_supports:
+        sid = support.get("source_id")
+        support_text = support.get("support_text")
+        ref = refs_by_id.get(str(sid))
+        if (
+            ref is None
+            or not isinstance(support_text, str)
+            or support_text not in str(ref.get("excerpt", ""))
+        ):
+            raise ValueError(f"reviewed answer support binding invalid: {task_id}")
+        expected_support_sha = sha256_bytes(support_text.encode("utf-8"))
+        expected_excerpt_sha = sha256_bytes(str(ref.get("excerpt", "")).encode("utf-8"))
+        if support.get("support_text_sha256") != expected_support_sha:
+            raise ValueError(f"reviewed answer support hash mismatch: {task_id}")
+        if ref.get("excerpt_sha256") != expected_excerpt_sha:
+            raise ValueError(f"reviewed source excerpt hash mismatch: {task_id}")
+        if support.get("source_excerpt_sha256") != expected_excerpt_sha:
+            raise ValueError(f"reviewed answer excerpt binding mismatch: {task_id}")
+        normalized_supports.append({
+            "source_id": sid,
+            "support_text": support_text,
+            "support_text_sha256": expected_support_sha,
+            "source_excerpt_sha256": expected_excerpt_sha,
+        })
+    expected_gold_binding = sha256_bytes(canonical_json_bytes({
+        "gold": record["payload"]["gold"],
+        "supports": normalized_supports,
+        "mode": reviewed_ap.get("mode"),
+    }))
+    if reviewed_ap.get("gold_binding_sha256") != expected_gold_binding:
+        raise ValueError(f"reviewed answer gold binding mismatch: {task_id}")
+
+    fv = record.get("factory_verification")
+    if not isinstance(fv, dict):
+        raise ValueError(f"reviewed record factory_verification missing: {task_id}")
+    expected_fields = {
+        "risk_tier": task.get("risk_tier"),
+        "curator_model_family": curator.get("model_family"),
+        "curator_model_ref": curator.get("model_ref"),
+        "verifier_model_family": verifier.get("model_family"),
+        "verifier_model_ref": verifier.get("model_ref"),
+        "curator_response_sha256": _response_sha256(curator),
+        "verifier_response_sha256": _response_sha256(verifier),
+        "curator_execution_binding": curator.get("execution_binding"),
+        "verifier_execution_binding": verifier.get("execution_binding"),
+        "agreement": "exact_gold_match",
+        "task_fingerprint": task.get("task_fingerprint"),
+    }
+    for field, expected in expected_fields.items():
+        if canonical_json_bytes(fv.get(field)) != canonical_json_bytes(expected):
+            raise ValueError(f"reviewed factory verification {field} mismatch: {task_id}")
+    if not isinstance(fv.get("factory_version"), int) or fv["factory_version"] < 1:
+        raise ValueError(f"reviewed factory version invalid: {task_id}")
+    if not isinstance(fv.get("slot_binding_sha256"), str) or _SHA256_RE.fullmatch(
+        fv["slot_binding_sha256"]
+    ) is None:
+        raise ValueError(f"reviewed factory slot binding invalid: {task_id}")
+
+
 def _validate_manifest_counts(
     manifest: dict[str, Any],
     task_count: int,
@@ -545,6 +701,10 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
             raise ValueError(f"reviewed record task fingerprint mismatch: {tid}")
         if str(record.get("case_id")) != str(ledger[tid].get("case_id")):
             raise ValueError(f"reviewed record case_id differs from ledger: {tid}")
+        curator = curator_responses.get(tid)
+        verifier = verifier_responses.get(tid)
+        assert isinstance(curator, dict) and isinstance(verifier, dict)
+        _validate_reviewed_record_binding(tid, task, record, curator, verifier)
 
     for tid, row in adjudication.items():
         if row.get("reason") != ledger[tid].get("reason"):
