@@ -260,3 +260,6 @@ Combined with the canonical freeze-23 runs over offsets `0..103`, the first 168 
 Therefore primary-only execution can reach at most `34 + 103 + 42 = 179` records even if every pending adjudication is accepted and every remaining primary succeeds. The exact non-holdout quota is 210, so at least 31 reserve replacements are mathematically unavoidable.
 
 Do not continue to `168..209` until `.github/workflows/h392-cumulative-consolidation.yml` has consolidated runs `37280971913`, `37295517184`, and `37326459365` into exactly 168 provenance-bound primary outcomes. The consolidation stage does not enable reserve reconciliation; it only establishes the cumulative ledger and hash-bound replacement-eligibility evidence required for the next reviewed decision.
+
+
+Freeze schema 25 is the protocol revision that implements this cumulative consolidation gate. Historical canonical runs from freeze schemas 23 and 24 remain admissible inputs only because the primary task prefix and fingerprints were preserved; every decrypted task is revalidated against the current frozen plan. Reserve promotion remains disabled after consolidation.
