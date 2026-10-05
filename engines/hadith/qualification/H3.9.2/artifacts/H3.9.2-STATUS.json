@@ -69,5 +69,7 @@
   },
   "reserve_reconciliation_enabled": false,
   "reserve_reconciliation_reason": "Freeze schema 24 preregisters reserve candidate slots, but promotion remains fail-closed until cumulative replacement eligibility is implemented and bound.",
-  "candidate_reserve_policy_version": 1
+  "candidate_reserve_policy_version": 1,
+  "candidate_reserve_capacity_guarantees_quota": false,
+  "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory."
 }
