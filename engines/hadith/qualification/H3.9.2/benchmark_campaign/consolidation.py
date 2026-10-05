@@ -505,6 +505,19 @@ def consolidate_primary_evidence(
             "artifact_name": origin["artifact_name"],
             "artifact_sha256": origin["artifact_sha256"],
         })
+        summary = validated["summary"]
+        artifact_offsets = sorted(
+            offset_by_slot[str(row["slot_id"])]
+            for row in validated["ledger_rows"]
+        )
+        expected_artifact_offsets = list(range(
+            int(summary["task_offset"]),
+            int(summary["task_offset"]) + int(summary["selected_task_count"]),
+        ))
+        if artifact_offsets != expected_artifact_offsets:
+            raise ValueError(
+                f"artifact task offsets differ from bound chunk summary: {origin['artifact_id']}"
+            )
         for row in validated["ledger_rows"]:
             tid = row["task_id"]
             if tid in seen_tasks:
