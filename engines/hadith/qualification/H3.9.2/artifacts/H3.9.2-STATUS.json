@@ -66,5 +66,7 @@
       37295517184
     ],
     "consolidated_into_repository": false
-  }
+  },
+  "reserve_reconciliation_enabled": false,
+  "reserve_reconciliation_reason": "Freeze schema 24 preregisters reserve candidate slots, but promotion remains fail-closed until cumulative replacement eligibility is implemented and bound."
 }
