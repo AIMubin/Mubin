@@ -374,6 +374,10 @@ def _validate_reviewed_record_binding(
 
     if record.get("gold_status") != "source_attributed" or record.get("synthetic") is not False:
         raise ValueError(f"reviewed record qualification status invalid: {task_id}")
+    if not isinstance(record.get("family_id"), str) or not record["family_id"].strip():
+        raise ValueError(f"reviewed record family_id invalid: {task_id}")
+    if not isinstance(record.get("annotation"), dict):
+        raise ValueError(f"reviewed record annotation invalid: {task_id}")
 
     candidate_ap = candidate.get("answer_provenance")
     reviewed_ap = record.get("answer_provenance")
@@ -384,7 +388,7 @@ def _validate_reviewed_record_binding(
         or reviewed_ap.get("extraction_method") != "ai"
         or reviewed_ap.get("human_reviewed") is not False
         or reviewed_ap.get("source_verified") is not True
-        or reviewed_ap.get("mode") not in {"direct_extract", "attributed_composite"}
+        or reviewed_ap.get("mode") != "direct_extract"
     ):
         raise ValueError(f"reviewed record answer_provenance invalid: {task_id}")
     candidate_ap_base = dict(candidate_ap)
