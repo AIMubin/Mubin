@@ -171,9 +171,18 @@ Because reconciliation semantics changed, the earlier non-holdout chunks are dia
 5. keep each shard independently encrypted and redacted;
 6. aggregate only `CURATION_RUN_SUMMARY.json` from completed shards into a campaign summary;
 7. review Curator/Verifier rejection counts, verifier-preparation blindness rejects, candidate/no-candidate totals, promoted/adjudication/skipped yield, adjudication reasons, benchmark outcome mix, and complete shard coverage;
-8. expand beyond 40 tasks only after the v22 rerun confirms that false order-only disagreement is gone and no new protocol defect appears.
+8. treat this 40-task reviewed rerun as the gate for any larger campaign stage; its completed freeze-23 result is recorded below.
 
-The reviewed-stage workflow caps `task_count <= 40` and `shard_size <= 8`. This remains a governance brake rather than a technical limit.
+The canonical freeze-23 40-task campaign completed successfully on offsets `0..39` with complete shard coverage: 15 promoted, 24 adjudication, and 1 skipped. Its adjudication profile was 14 `curator_requested_adjudication`, 6 `gold_disagreement`, 3 `missing_verifier_response`, and 1 `verifier_support_not_in_curator_provenance`. On the exact overlapping offsets `8..39`, `gold_disagreement` fell from 15 in the earlier order-sensitive campaign to 4 under set-semantic reconciliation. Because model completions are stochastic this is not a paired deterministic proof, but it confirms that the corrected protocol no longer exhibits the prior systematic disagreement pattern and exposes no new reconciliation defect.
+
+The next reviewed stage therefore continues the same frozen protocol over offsets `40..103`:
+
+1. dispatch one **64-task** non-holdout campaign batch with `task_offset=40`, `task_count=64`, and `shard_size=8`;
+2. retain `max-parallel=4` so endpoint concurrency is not increased beyond the already observed stable level;
+3. keep the same one-time readiness gate and SHA-bound delegated shards;
+4. review aggregate yield, task-local rejection rates, verifier-preparation rejects, and adjudication reasons before advancing beyond 64-task batches.
+
+The reviewed-stage workflow now caps `task_count <= 64` and `shard_size <= 8`. This remains a governance brake rather than a technical limit. This stage changes only campaign orchestration bounds; the frozen H3.9.2 qualification protocol remains freeze schema 23.
 
 Never tune prompts or model behavior against the sealed final holdout.
 
