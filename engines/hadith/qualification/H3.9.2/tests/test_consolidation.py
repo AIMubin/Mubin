@@ -252,6 +252,30 @@ class ConsolidationTests(unittest.TestCase):
             "curator": {
                 "output_sha256": sha256_file(bundle / "curator-responses.jsonl"),
             },
+            "verifier_preparation": {
+                "input_candidates": sum(
+                    1 for row in curator_responses if row.get("status") == "candidate"
+                ),
+                "verifier_tasks": len(verifier_task_ids),
+                "rejected_candidates": (
+                    sum(1 for row in curator_responses if row.get("status") == "candidate")
+                    - len(verifier_task_ids)
+                ),
+                "rejection_counts": (
+                    {
+                        "candidate_input_blindness": (
+                            sum(1 for row in curator_responses if row.get("status") == "candidate")
+                            - len(verifier_task_ids)
+                        )
+                    }
+                    if (
+                        sum(1 for row in curator_responses if row.get("status") == "candidate")
+                        - len(verifier_task_ids)
+                    )
+                    else {}
+                ),
+                "tasks_sha256": sha256_file(bundle / "verifier-tasks.jsonl"),
+            },
             "verifier": (
                 {"output_sha256": sha256_file(bundle / "verifier-responses.jsonl")}
                 if verifier_task_ids else
