@@ -6,11 +6,11 @@ on:
       task_offset:
         description: Zero-based first non-holdout task for this campaign batch
         required: true
-        default: "0"
-      task_count:
-        description: Total tasks in this campaign batch (1-40)
-        required: true
         default: "40"
+      task_count:
+        description: Total tasks in this campaign batch (1-64)
+        required: true
+        default: "64"
       shard_size:
         description: Tasks per parallel shard (1-8)
         required: true
@@ -131,8 +131,8 @@ jobs:
           shard_size = int(os.environ["SHARD_SIZE"])
           if offset < 0 or offset >= 896:
               raise SystemExit("task_offset must be in [0, 895]")
-          if count < 1 or count > 40:
-              raise SystemExit("task_count must be in [1, 40] for the reviewed campaign stage")
+          if count < 1 or count > 64:
+              raise SystemExit("task_count must be in [1, 64] for the reviewed campaign stage")
           if shard_size < 1 or shard_size > 8:
               raise SystemExit("shard_size must be in [1, 8]")
           if offset + count > 896:
