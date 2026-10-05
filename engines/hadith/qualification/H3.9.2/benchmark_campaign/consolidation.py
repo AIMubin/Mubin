@@ -366,6 +366,23 @@ def _validate_reviewed_record_binding(
         != canonical_json_bytes(reviewed_ref_projection)
     ):
         raise ValueError(f"reviewed record source_refs differ from Curator candidate: {task_id}")
+    for ref in reviewed_refs:
+        locator = ref.get("locator")
+        excerpt = ref.get("excerpt")
+        if not isinstance(locator, str) or not isinstance(excerpt, str):
+            raise ValueError(f"reviewed record source locator/excerpt malformed: {task_id}")
+        match = re.fullmatch(r"gitblob:([a-f0-9]{40})#char=(\d+):(\d+)", locator)
+        if match is None:
+            raise ValueError(f"reviewed record source locator malformed: {task_id}")
+        blob_sha, raw_start, raw_end = match.groups()
+        start, end = int(raw_start), int(raw_end)
+        if start < 0 or end <= start or end - start != len(excerpt):
+            raise ValueError(f"reviewed record source locator range mismatch: {task_id}")
+        if ref.get("source_blob_sha") != blob_sha:
+            raise ValueError(f"reviewed record source blob binding mismatch: {task_id}")
+        if ref.get("excerpt_sha256") != sha256_bytes(excerpt.encode("utf-8")):
+            raise ValueError(f"reviewed record source excerpt hash mismatch: {task_id}")
+
     expected_source_ids = [
         str(ref["source_id"]) for ref in candidate_ref_projection
         if isinstance(ref.get("source_id"), str)
