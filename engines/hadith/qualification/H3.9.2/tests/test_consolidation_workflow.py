@@ -58,6 +58,13 @@ class ConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn("artifact ZIP digest mismatch", self.workflow)
         self.assertIn("encrypted source-bearing bundle digest mismatch", self.workflow)
 
+    def test_canonical_history_rejects_rerun_ambiguity(self):
+        self.assertIn('int(run.get("run_attempt", 0)) != 1', self.workflow)
+        self.assertIn(
+            "canonical consolidation accepts only attempt 1",
+            self.workflow,
+        )
+
     def test_artifact_redirect_does_not_forward_github_token(self):
         self.assertIn("class NoRedirect", self.workflow)
         self.assertIn("artifact_download_location", self.workflow)
