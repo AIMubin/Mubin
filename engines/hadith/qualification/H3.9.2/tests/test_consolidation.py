@@ -386,7 +386,9 @@ class ConsolidationTests(unittest.TestCase):
                     "factory_verification": {
                         "factory_version": 1,
                         "risk_tier": task["risk_tier"],
-                        "slot_binding_sha256": "9" * 64,
+                        "slot_binding_sha256": sha256_bytes(
+                            canonical_json_bytes(_plan([tid])["slots"][0])
+                        ),
                         "curator_model_family": curator_response["model_family"],
                         "curator_model_ref": curator_response["model_ref"],
                         "verifier_model_family": verifier_response["model_family"],
@@ -832,6 +834,31 @@ class ConsolidationTests(unittest.TestCase):
         self.assertEqual(summary["input_run_ids"], [77])
         self.assertEqual(summary["input_run_count"], 1)
         self.assertEqual(summary["input_artifact_count"], 2)
+
+    def test_reviewed_frozen_slot_binding_tamper_fails_closed(self):
+        self._evidence(
+            "slot-binding",
+            [_task("p0")],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            self.evidence_root / "slot-binding" / "source-bearing"
+            / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["factory_verification"]["slot_binding_sha256"] = "0" * 64
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0"])
+        ):
+            with self.assertRaisesRegex(ValueError, "frozen slot binding mismatch"):
+                consolidation.consolidate_primary_evidence(
+                    self.root,
+                    self.evidence_root,
+                    Path(self.tmp.name) / "out",
+                    expected_task_count=1,
+                )
 
     def test_nonempty_output_directory_fails_closed(self):
         self._evidence(
