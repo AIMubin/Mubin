@@ -131,10 +131,12 @@ jobs:
 
           task_count = 0
           task_source_ids = set()
+          task_lines = []
           with tasks_path.open(encoding="utf-8") as fh:
               for line in fh:
                   if not line.strip():
                       continue
+                  task_lines.append(line)
                   row = json.loads(line)
                   task_count += 1
                   task_source_ids.update(row["retrieval_scope"]["source_ids"])
@@ -149,10 +151,35 @@ jobs:
               raise SystemExit(f"index source set mismatch: {index_sources} != {expected_non}")
           if task_source_ids & expected_hold:
               raise SystemExit("holdout source leaked into non-holdout tasks")
-          if task_count != int(plan["non_holdout_slots"]):
-              raise SystemExit("task count does not equal frozen non-holdout slot count")
-          if int(plan["slot_count"]) != 1280 or int(plan["holdout_slots"]) != 384 or int(plan["non_holdout_slots"]) != 896:
+          if task_count != int(plan["candidate_non_holdout_slots"]):
+              raise SystemExit(
+                  "task count does not equal frozen non-holdout candidate slot count"
+              )
+          if (
+              int(plan["target_total"]) != 1280
+              or int(plan["primary_slot_count"]) != 1280
+              or int(plan["holdout_slots"]) != 384
+              or int(plan["non_holdout_slots"]) != 896
+              or int(plan["reserve_slot_count"]) != 1280
+              or int(plan["candidate_holdout_slots"]) != 768
+              or int(plan["candidate_non_holdout_slots"]) != 1792
+              or int(plan["slot_count"]) != 2560
+          ):
               raise SystemExit("factory plan cardinality mismatch")
+
+          primary_count = int(plan["non_holdout_slots"])
+          primary_bytes = "".join(task_lines[:primary_count]).encode("utf-8")
+          primary_sha256 = hashlib.sha256(primary_bytes).hexdigest()
+          canonical_evidence = json.loads(
+              (root / "artifacts" / "NONHOLDOUT_ACQUISITION_EVIDENCE.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          legacy_primary_sha256 = canonical_evidence["factory"]["curator_tasks_sha256"]
+          if primary_sha256 != legacy_primary_sha256:
+              raise SystemExit(
+                  "reserve protocol changed the canonical 896-task primary prefix"
+              )
 
           source_rows = []
           for item in sorted(cache_manifest["sources"], key=lambda x: x["source_id"]):
@@ -182,11 +209,19 @@ jobs:
                   "per_source": index_manifest["per_source"],
               },
               "factory": {
+                  "target_total": plan["target_total"],
                   "slot_count": plan["slot_count"],
+                  "primary_slot_count": plan["primary_slot_count"],
+                  "reserve_slot_count": plan["reserve_slot_count"],
                   "non_holdout_slots": plan["non_holdout_slots"],
                   "holdout_slots": plan["holdout_slots"],
+                  "candidate_non_holdout_slots": plan["candidate_non_holdout_slots"],
+                  "candidate_holdout_slots": plan["candidate_holdout_slots"],
                   "non_holdout_task_count": task_count,
                   "curator_tasks_sha256": hashlib.sha256(tasks_path.read_bytes()).hexdigest(),
+                  "primary_curator_tasks_sha256": primary_sha256,
+                  "legacy_primary_curator_tasks_sha256": legacy_primary_sha256,
+                  "primary_prefix_preserved": primary_sha256 == legacy_primary_sha256,
                   "holdout_source_count_in_task_scope": len(task_source_ids & expected_hold),
               },
               "artifact_policy": {
