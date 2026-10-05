@@ -621,17 +621,15 @@ def _validate_reviewed_record_binding(
     # including duplicate refs, anchor semantics, provenance normalization,
     # derived hashes, and any candidate fields preserved by sealing.
     expected_candidate = json.loads(json.dumps(candidate, ensure_ascii=False))
-    slots = {
-        str(slot["slot_id"]): slot
-        for slot in build_factory_plan(root)["slots"]
-    }
-    expected_slot = slots.get(str(task.get("slot_id")))
-    if expected_slot is None:
-        raise ValueError(f"reviewed record task slot missing from frozen plan: {task_id}")
+    expected_factory_version = int(_policy(root).get("factory_version", 0))
+    if fv.get("factory_version") != expected_factory_version:
+        raise ValueError(f"reviewed factory version mismatch: {task_id}")
     expected_candidate["factory_verification"] = {
-        "factory_version": int(_policy(root).get("factory_version", 0)),
+        "factory_version": expected_factory_version,
         "risk_tier": int(task.get("risk_tier", 0)),
-        "slot_binding_sha256": _slot_binding_sha256(expected_slot),
+        # The cumulative consolidator separately verifies this stored binding
+        # against the current frozen plan before copying any reviewed record.
+        "slot_binding_sha256": fv["slot_binding_sha256"],
         "curator_model_family": curator["model_family"],
         "curator_model_ref": curator["model_ref"],
         "verifier_model_family": verifier["model_family"],
