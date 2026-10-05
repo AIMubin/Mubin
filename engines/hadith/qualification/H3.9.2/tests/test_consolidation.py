@@ -9,7 +9,12 @@ from unittest.mock import patch
 from benchmark_campaign import consolidation
 from benchmark_campaign.core import canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file
 from benchmark_campaign.factory import _verifier_task_from_curator
+from benchmark_campaign.source_cache import cache_filename, git_blob_sha
 from benchmark_campaign.normalization import fingerprint_payload
+
+
+TEST_SOURCE_TEXT = "anchor evidence"
+TEST_BLOB_SHA = git_blob_sha(TEST_SOURCE_TEXT.encode("utf-8"))
 
 
 def _write_json(path: Path, obj) -> None:
@@ -112,6 +117,26 @@ class ConsolidationTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name) / "root"
         self.root.mkdir()
+        (self.root / "sources").mkdir()
+        _write_json(
+            self.root / "sources" / "source-registry.json",
+            {
+                "schema_version": 2,
+                "sources": [{
+                    "source_id": "s1",
+                    "qualification_eligible": True,
+                    "source_blob_sha": TEST_BLOB_SHA,
+                    "source_repo": "test/repo",
+                    "source_path": "s1.txt",
+                    "repo_ref": "a" * 40,
+                }],
+            },
+        )
+        self.source_cache = Path(self.tmp.name) / "source-cache"
+        self.source_cache.mkdir()
+        (self.source_cache / cache_filename("s1")).write_text(
+            TEST_SOURCE_TEXT, encoding="utf-8"
+        )
         self.evidence_root = Path(self.tmp.name) / "evidence"
         self.evidence_root.mkdir()
 
@@ -199,7 +224,7 @@ class ConsolidationTests(unittest.TestCase):
                         "synthetic": False,
                         "source_refs": [{
                             "source_id": task["anchor_source_id"],
-                            "locator": "gitblob:" + "1" * 40 + "#char=0:15",
+                            "locator": "gitblob:" + TEST_BLOB_SHA + "#char=0:15",
                             "excerpt": "anchor evidence",
                         }],
                         "answer_provenance": answer_provenance,
@@ -267,7 +292,7 @@ class ConsolidationTests(unittest.TestCase):
                             "source_id": next(
                                 task for task in tasks if task["task_id"] == tid
                             )["anchor_source_id"],
-                            "locator": "gitblob:" + "1" * 40 + "#char=0:15",
+                            "locator": "gitblob:" + TEST_BLOB_SHA + "#char=0:15",
                             "excerpt": "anchor evidence",
                             "support_text": "anchor evidence",
                         }],
@@ -361,7 +386,7 @@ class ConsolidationTests(unittest.TestCase):
                 for ref in candidate_refs:
                     excerpt = ref["excerpt"]
                     reviewed_ref = dict(ref)
-                    reviewed_ref["source_blob_sha"] = "1" * 40
+                    reviewed_ref["source_blob_sha"] = TEST_BLOB_SHA
                     reviewed_ref["excerpt_sha256"] = sha256_bytes(
                         excerpt.encode("utf-8")
                     )
@@ -414,11 +439,11 @@ class ConsolidationTests(unittest.TestCase):
                         "verifier_execution_binding": verifier_response["execution_binding"],
                         "verifier_supports": [{
                             "source_id": task["anchor_source_id"],
-                            "locator": "gitblob:" + "1" * 40 + "#char=0:15",
+                            "locator": "gitblob:" + TEST_BLOB_SHA + "#char=0:15",
                             "excerpt_sha256": sha256_bytes(
                                 "anchor evidence".encode("utf-8")
                             ),
-                            "source_blob_sha": "1" * 40,
+                            "source_blob_sha": TEST_BLOB_SHA,
                             "char_start": 0,
                             "char_end": 15,
                             "support_text_sha256": sha256_bytes(
