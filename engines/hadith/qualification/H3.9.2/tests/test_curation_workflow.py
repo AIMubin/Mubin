@@ -175,6 +175,20 @@ class CurationWorkflowTests(unittest.TestCase):
             self.acquisition_workflow,
         )
 
+    def test_acquisition_checkout_and_evidence_bind_to_exact_source_revision(self):
+        self.assertIn("Checkout exact source revision", self.acquisition_workflow)
+        self.assertIn(
+            "github.event.pull_request.head.sha || github.sha",
+            self.acquisition_workflow,
+        )
+        self.assertIn("Verify checkout provenance", self.acquisition_workflow)
+        self.assertIn('actual="$(git rev-parse HEAD)"', self.acquisition_workflow)
+        self.assertIn(
+            '"runner_commit": subprocess.check_output(',
+            self.acquisition_workflow,
+        )
+        self.assertIn('"github_event_sha": os.environ.get("GITHUB_SHA")', self.acquisition_workflow)
+
     def test_acquisition_actions_are_commit_pinned(self):
         self.assertIn(
             "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
