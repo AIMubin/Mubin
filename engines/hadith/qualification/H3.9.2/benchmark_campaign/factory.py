@@ -92,6 +92,9 @@ def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) 
         "benchmark_id", "partition", "anchor_source_id", "task_type",
         "allowed_labels", "auto_promotion", "risk_tier", "visibility",
     )
+    reserve_fields = (
+        "candidate_slot_kind", "replacement_for_slot_id", "reserve_attempt",
+    )
     for task in rows:
         slot_id = str(task.get("slot_id", ""))
         expected = slots.get(slot_id)
@@ -100,6 +103,9 @@ def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) 
         if task.get("task_id") != slot_id:
             raise ValueError(f"factory task_id must equal frozen slot_id: {slot_id}")
         for field in policy_fields:
+            if task.get(field) != expected.get(field):
+                raise ValueError(f"factory task {field} differs from frozen slot: {slot_id}")
+        for field in reserve_fields:
             if task.get(field) != expected.get(field):
                 raise ValueError(f"factory task {field} differs from frozen slot: {slot_id}")
         bid = expected["benchmark_id"]
@@ -234,7 +240,53 @@ def build_factory_plan(root: Path, out_path: Path | None = None) -> dict[str, An
     spec = load_json(root / "config" / "benchmark-spec.json")
     bspec = {b["id"]: b for b in spec["benchmarks"]}
     policy = _policy(root)
+    reserve_policy = quotas.get("candidate_reserve_policy", {})
+    reserve_slots_per_primary = reserve_policy.get("reserve_slots_per_primary", 0)
+    if (
+        not isinstance(reserve_slots_per_primary, int)
+        or isinstance(reserve_slots_per_primary, bool)
+        or reserve_slots_per_primary < 0
+        or reserve_slots_per_primary > 4
+    ):
+        raise ValueError("reserve_slots_per_primary must be an integer in [0, 4]")
+
+    def make_slot(
+        bid: str,
+        bp: dict[str, Any],
+        sb: dict[str, Any],
+        partition_name: str,
+        sid: str,
+        ordinal: int,
+        *,
+        reserve_attempt: int | None = None,
+    ) -> dict[str, Any]:
+        primary_slot_id = f"{bid}:{partition_name}:{sid}:{ordinal:04d}"
+        slot = {
+            "slot_id": primary_slot_id,
+            "benchmark_id": bid,
+            "partition": partition_name,
+            "anchor_source_id": sid,
+            "ordinal": ordinal,
+            "task_type": sb["evaluation"]["task_type"],
+            "allowed_labels": sb["evaluation"]["labels"],
+            "auto_promotion": bp["auto_promotion"],
+            "risk_tier": bp["risk_tier"],
+            "visibility": "custodian_only" if partition_name == "holdout" else "development_safe",
+        }
+        if reserve_attempt is not None:
+            slot["slot_id"] = (
+                f"{primary_slot_id}:reserve:{reserve_attempt:02d}"
+            )
+            slot["candidate_slot_kind"] = "reserve"
+            slot["replacement_for_slot_id"] = primary_slot_id
+            slot["reserve_attempt"] = reserve_attempt
+        return slot
+
     slots: list[dict[str, Any]] = []
+
+    # Primary slots are generated first and remain byte-for-semantic identical to
+    # the original 1,280-slot plan. This preserves all pre-existing primary slot
+    # IDs, hashes, task offsets, and task fingerprints.
     for q in quotas["benchmarks"]:
         bid = q["benchmark_id"]
         bp = policy["benchmarks"][bid]
@@ -243,30 +295,68 @@ def build_factory_plan(root: Path, out_path: Path | None = None) -> dict[str, An
             for anchor in q[partition_key]["anchor_quotas"]:
                 sid = anchor["anchor_source_id"]
                 for ordinal in range(1, int(anchor["target_cases"]) + 1):
-                    slot_id = f"{bid}:{partition_name}:{sid}:{ordinal:04d}"
-                    slots.append({
-                        "slot_id": slot_id,
-                        "benchmark_id": bid,
-                        "partition": partition_name,
-                        "anchor_source_id": sid,
-                        "ordinal": ordinal,
-                        "task_type": sb["evaluation"]["task_type"],
-                        "allowed_labels": sb["evaluation"]["labels"],
-                        "auto_promotion": bp["auto_promotion"],
-                        "risk_tier": bp["risk_tier"],
-                        "visibility": "custodian_only" if partition_name == "holdout" else "development_safe",
-                    })
+                    slots.append(
+                        make_slot(bid, bp, sb, partition_name, sid, ordinal)
+                    )
+
+    primary_slot_count = len(slots)
+    primary_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "holdout"
+    )
+    primary_non_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "non_holdout"
+    )
+    if primary_slot_count != int(quotas["total_target"]):
+        raise ValueError("primary factory slot count does not match frozen curation target")
+
+    # Reserve slots are distinct source-window opportunities. They are appended
+    # after the complete primary prefix so offsets 0..895 on the non-holdout
+    # surface remain unchanged. Each reserve is explicitly linked to the primary
+    # slot it may replace; adjudication-required primary outcomes are not erased.
+    if reserve_slots_per_primary:
+        for q in quotas["benchmarks"]:
+            bid = q["benchmark_id"]
+            bp = policy["benchmarks"][bid]
+            sb = bspec[bid]
+            for partition_key, partition_name in (("non_holdout", "non_holdout"), ("holdout", "holdout")):
+                for anchor in q[partition_key]["anchor_quotas"]:
+                    sid = anchor["anchor_source_id"]
+                    for ordinal in range(1, int(anchor["target_cases"]) + 1):
+                        for reserve_attempt in range(1, reserve_slots_per_primary + 1):
+                            slots.append(
+                                make_slot(
+                                    bid, bp, sb, partition_name, sid, ordinal,
+                                    reserve_attempt=reserve_attempt,
+                                )
+                            )
+
+    candidate_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "holdout"
+    )
+    candidate_non_holdout_slots = sum(
+        1 for slot in slots if slot["partition"] == "non_holdout"
+    )
     plan = {
         "campaign_id": spec["campaign_id"],
         "factory_version": 1,
         "slot_count": len(slots),
         "target_total": quotas["total_target"],
-        "holdout_slots": sum(1 for s in slots if s["partition"] == "holdout"),
-        "non_holdout_slots": sum(1 for s in slots if s["partition"] == "non_holdout"),
+        "primary_slot_count": primary_slot_count,
+        "reserve_slot_count": len(slots) - primary_slot_count,
+        "reserve_slots_per_primary": reserve_slots_per_primary,
+        # Legacy names remain the exact record quotas / primary-slot counts.
+        "holdout_slots": primary_holdout_slots,
+        "non_holdout_slots": primary_non_holdout_slots,
+        "candidate_holdout_slots": candidate_holdout_slots,
+        "candidate_non_holdout_slots": candidate_non_holdout_slots,
         "slots": slots,
     }
-    if plan["slot_count"] != int(quotas["total_target"]):
-        raise ValueError("factory slot count does not match frozen curation target")
+    expected_candidate_total = int(quotas.get(
+        "total_candidate_slots",
+        int(quotas["total_target"]) * (1 + reserve_slots_per_primary),
+    ))
+    if plan["slot_count"] != expected_candidate_total:
+        raise ValueError("candidate factory slot count does not match frozen reserve policy")
     if out_path is not None:
         write_json(out_path, plan)
     return plan
@@ -351,6 +441,11 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
                 "return_no_candidate_when_unsupported": True,
             },
         }
+        for field in (
+            "candidate_slot_kind", "replacement_for_slot_id", "reserve_attempt",
+        ):
+            if field in slot:
+                task[field] = slot[field]
         task["task_fingerprint"] = sha256_bytes(canonical_json_bytes(task))
         tasks.append(task)
     dump_jsonl(out_path, tasks)
