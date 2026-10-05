@@ -220,6 +220,13 @@ class ConsolidationTests(unittest.TestCase):
                         "case_id": f"case-{tid}",
                         "anchor_source_id": task["anchor_source_id"],
                         "family_id": f"family-{tid}",
+                        "annotation": {
+                            "reviewers": [],
+                            "source_verified": True,
+                            "adjudicated": False,
+                            "adjudicator": None,
+                        },
+                        "family_id": f"family-{tid}",
                         "gold_status": "source_attributed",
                         "synthetic": False,
                         "source_refs": [{
@@ -973,6 +980,7 @@ class ConsolidationTests(unittest.TestCase):
                     self.evidence_root,
                     Path(self.tmp.name) / "out",
                     expected_task_count=1,
+                    source_cache_dir=self.source_cache,
                 )
 
     def test_nonempty_output_directory_fails_closed(self):
@@ -1008,6 +1016,7 @@ class ConsolidationTests(unittest.TestCase):
                     self.evidence_root,
                     Path(self.tmp.name) / "out",
                     expected_task_count=1,
+                    source_cache_dir=self.source_cache,
                 )
 
     def test_expected_count_requires_exact_zero_based_prefix(self):
@@ -1027,6 +1036,7 @@ class ConsolidationTests(unittest.TestCase):
                     self.evidence_root,
                     Path(self.tmp.name) / "out",
                     expected_task_count=1,
+                    source_cache_dir=self.source_cache,
                 )
 
 
