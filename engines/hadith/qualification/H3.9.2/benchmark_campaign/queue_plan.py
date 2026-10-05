@@ -38,9 +38,9 @@ def build_curation_queue_plan(root: Path, spec: dict[str, Any], out_path: Path |
             "reserve_slots_per_primary": RESERVE_SLOTS_PER_PRIMARY,
             "rule": (
                 "Primary record quotas remain exact. Reserve candidate slots are "
-                "distinct deterministic source-window opportunities and may replace "
-                "only unusable primary candidate slots; they do not erase or bypass "
-                "adjudication-required outcomes."
+                "additional preregistered deterministic discovery opportunities. "
+                "They do not convert adjudication outcomes into accepted records "
+                "and do not alter exact benchmark quotas."
             ),
             "primary_slot_prefix_preserved": True,
         },
