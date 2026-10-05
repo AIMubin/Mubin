@@ -26,6 +26,7 @@ jobs:
     env:
       EVIDENCE_ROOT: /tmp/h392-cumulative/evidence
       CUMULATIVE_DIR: /tmp/h392-cumulative/source-bearing
+      SOURCE_CACHE_DIR: /tmp/h392-cumulative/source-cache
       REDACTED_DIR: /tmp/h392-cumulative/redacted
       EXPECTED_TASK_COUNT: ${{ inputs.expected_task_count }}
       RUN_IDS: ${{ inputs.run_ids }}
@@ -101,6 +102,18 @@ jobs:
           if status.get("reserve_reconciliation_enabled") is not False:
               raise SystemExit("reserve reconciliation must remain disabled")
           PY
+
+      - name: Acquire and verify pinned non-holdout sources for evidence grounding
+        run: |
+          set -eu
+          python -m benchmark_campaign acquire-sources \
+            --partition non_holdout \
+            --cache-dir "$SOURCE_CACHE_DIR" \
+            > "$RUNNER_TEMP/h392-cumulative-acquire.json"
+          python -m benchmark_campaign verify-source-cache \
+            --partition non_holdout \
+            --cache-dir "$SOURCE_CACHE_DIR" \
+            > "$RUNNER_TEMP/h392-cumulative-verify.json"
 
       - name: Fetch and provenance-bind canonical encrypted artifacts
         env:
@@ -325,7 +338,12 @@ jobs:
         run: |
           set -eu
           mkdir -p "$CUMULATIVE_DIR" "$REDACTED_DIR"
-          python -m benchmark_campaign consolidate-primary             --evidence-root "$EVIDENCE_ROOT"             --out-dir "$CUMULATIVE_DIR"             --expected-task-count "$EXPECTED_TASK_COUNT"             > "$REDACTED_DIR/CUMULATIVE_SUMMARY.json"
+          python -m benchmark_campaign consolidate-primary \
+            --evidence-root "$EVIDENCE_ROOT" \
+            --out-dir "$CUMULATIVE_DIR" \
+            --source-cache-dir "$SOURCE_CACHE_DIR" \
+            --expected-task-count "$EXPECTED_TASK_COUNT" \
+            > "$REDACTED_DIR/CUMULATIVE_SUMMARY.json"
           {
             echo '### H3.9.2 cumulative primary evidence'
             echo '```json'
@@ -346,7 +364,7 @@ jobs:
       - name: Remove decrypted evidence and prove upload is redacted
         run: |
           set -eu
-          rm -rf "$EVIDENCE_ROOT" "$CUMULATIVE_DIR"
+          rm -rf "$EVIDENCE_ROOT" "$CUMULATIVE_DIR" "$SOURCE_CACHE_DIR"
           test -s "$REDACTED_DIR/CUMULATIVE_SUMMARY.json"
           test -s "$REDACTED_DIR/h392-cumulative-source-bearing.tar.gz.aesgcm"
           test ! -e "$REDACTED_DIR/CUMULATIVE_LEDGER.jsonl"
