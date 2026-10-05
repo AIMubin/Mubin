@@ -175,6 +175,23 @@ class CurationWorkflowTests(unittest.TestCase):
             self.acquisition_workflow,
         )
 
+    def test_acquisition_actions_are_commit_pinned(self):
+        self.assertIn(
+            "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            self.acquisition_workflow,
+        )
+        self.assertIn(
+            "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            self.acquisition_workflow,
+        )
+        self.assertIn(
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            self.acquisition_workflow,
+        )
+        self.assertNotIn("actions/checkout@v", self.acquisition_workflow)
+        self.assertNotIn("actions/setup-python@v", self.acquisition_workflow)
+        self.assertNotIn("actions/upload-artifact@v", self.acquisition_workflow)
+
     def test_campaign_secret_bearing_actions_are_commit_pinned(self):
         self.assertIn(
             "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
