@@ -1,6 +1,6 @@
 {
   "campaign_id": "H3.9.2",
-  "release": "3.9.2-r3",
+  "release": "3.9.2-r5",
   "total_target": 1280,
   "completed": 0,
   "pending": 1280,
@@ -250,5 +250,13 @@
       ]
     }
   ],
-  "note": "Operational sampling quotas only. Gold labels must come from source-grounded human review and are sealed before developer/tuning access."
+  "note": "Exact record quotas remain unchanged. Freeze schema 24 adds one deterministic reserve candidate opportunity per primary slot after non-holdout yield demonstrated that the one-slot-per-record discovery plan could not reach exact cardinality. Primary slot IDs/offsets/fingerprints remain an unchanged prefix. Reserve capacity does not convert adjudication outcomes into accepted records; final assembly still requires cumulative consolidation and exact quota validation.",
+  "primary_candidate_slots": 1280,
+  "reserve_candidate_slots": 1280,
+  "total_candidate_slots": 2560,
+  "non_holdout_primary_candidate_slots": 896,
+  "non_holdout_total_candidate_slots": 1792,
+  "holdout_primary_candidate_slots": 384,
+  "holdout_total_candidate_slots": 768,
+  "reserve_slots_per_primary": 1
 }
