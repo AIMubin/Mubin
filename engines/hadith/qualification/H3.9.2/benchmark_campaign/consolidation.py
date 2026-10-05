@@ -429,6 +429,7 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
             "source_sha": origin["head_sha"],
             "source_artifact_id": origin["artifact_id"],
             "source_artifact_sha256": origin["artifact_sha256"],
+            "source_encrypted_bundle_sha256": origin["encrypted_bundle_sha256"],
         })
 
     return {
@@ -494,16 +495,28 @@ def consolidate_primary_evidence(
     input_artifacts: list[dict[str, Any]] = []
     seen_tasks: set[str] = set()
     seen_case_ids: set[str] = set()
+    seen_artifacts: set[tuple[int, int]] = set()
+    run_sha_by_id: dict[int, str] = {}
 
     for evidence_dir in evidence_dirs:
         validated = validate_primary_run_evidence(root, evidence_dir)
         origin = validated["origin"]
+        run_id = int(origin["github_run_id"])
+        artifact_id = int(origin["artifact_id"])
+        artifact_key = (run_id, artifact_id)
+        if artifact_key in seen_artifacts:
+            raise ValueError(f"duplicate source artifact in cumulative evidence: {run_id}/{artifact_id}")
+        seen_artifacts.add(artifact_key)
+        prior_sha = run_sha_by_id.setdefault(run_id, str(origin["head_sha"]))
+        if prior_sha != origin["head_sha"]:
+            raise ValueError(f"source run SHA differs across artifacts: {run_id}")
         input_artifacts.append({
-            "github_run_id": origin["github_run_id"],
+            "github_run_id": run_id,
             "head_sha": origin["head_sha"],
-            "artifact_id": origin["artifact_id"],
+            "artifact_id": artifact_id,
             "artifact_name": origin["artifact_name"],
             "artifact_sha256": origin["artifact_sha256"],
+            "encrypted_bundle_sha256": origin["encrypted_bundle_sha256"],
         })
         summary = validated["summary"]
         artifact_offsets = sorted(
