@@ -245,3 +245,18 @@ h4_release_allowed = false
 ```
 
 The real 1,280-case population, benchmark freeze, system/model lock, one-shot holdout evaluation, and architecture gate remain required before H4 qualification or release.
+
+
+## Canonical offsets 104..167 result and consolidation gate
+
+Campaign run `37326459365` completed primary offsets `104..167` successfully on freeze-24 main SHA `eecaae31e38603fe7b08e3a66597f6c46cc260ce`. Its 64 selected tasks produced 12 promoted, 41 adjudication, and 11 skipped outcomes.
+
+Combined with the canonical freeze-23 runs over offsets `0..103`, the first 168 `external-critical-commentary` primaries now account for:
+
+- 34 promoted;
+- 103 adjudication;
+- 31 skipped/rejected.
+
+Therefore primary-only execution can reach at most `34 + 103 + 42 = 179` records even if every pending adjudication is accepted and every remaining primary succeeds. The exact non-holdout quota is 210, so at least 31 reserve replacements are mathematically unavoidable.
+
+Do not continue to `168..209` until `.github/workflows/h392-cumulative-consolidation.yml` has consolidated runs `37280971913`, `37295517184`, and `37326459365` into exactly 168 provenance-bound primary outcomes. The consolidation stage does not enable reserve reconciliation; it only establishes the cumulative ledger and hash-bound replacement-eligibility evidence required for the next reviewed decision.
