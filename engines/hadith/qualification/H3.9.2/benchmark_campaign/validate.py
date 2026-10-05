@@ -283,6 +283,43 @@ def _requires_factory_slot_binding(record: dict[str, Any]) -> bool:
     )
 
 
+def _validate_factory_reserve_policy(
+    root: Path,
+    record: dict[str, Any],
+    benchmark_id: str,
+) -> list[Violation]:
+    """Freeze-24 reserve candidates are preregistered but not qualification-enabled."""
+    slot_id = record.get("factory_slot_id")
+    if not isinstance(slot_id, str) or not slot_id:
+        return []
+    try:
+        from .factory import build_factory_plan
+        slots = {
+            str(slot["slot_id"]): slot
+            for slot in build_factory_plan(root).get("slots", [])
+        }
+    except Exception as exc:
+        return [Violation(
+            "qualification.factory_plan_unavailable",
+            f"cannot re-derive frozen factory plan: {exc}",
+            benchmark_id,
+            record.get("case_id"),
+        )]
+    slot = slots.get(slot_id)
+    if slot is None or slot.get("candidate_slot_kind") != "reserve":
+        return []
+    return [Violation(
+        "qualification.reserve_slot_not_eligible",
+        (
+            "freeze schema 24 preregisters reserve candidate slots but does not "
+            "permit reserve-derived benchmark records before cumulative replacement "
+            "eligibility is explicitly bound"
+        ),
+        benchmark_id,
+        record.get("case_id"),
+    )]
+
+
 def _validate_factory_slot_binding(root: Path, record: dict[str, Any],
                                    benchmark_id: str) -> list[Violation]:
     if not _requires_factory_slot_binding(record):
@@ -496,6 +533,7 @@ def validate_benchmark(root: Path, bspec: dict[str, Any], campaign_spec: dict[st
     for r in records:
         violations.extend(validate_record(r, benchmark_id, registry, sealed_holdout_required))
         violations.extend(_validate_factory_risk_policy(r, benchmark_id, factory_policy))
+        violations.extend(_validate_factory_reserve_policy(root, r, benchmark_id))
         violations.extend(_validate_factory_slot_binding(root, r, benchmark_id))
         cid = r.get("case_id")
         if isinstance(cid, str):
