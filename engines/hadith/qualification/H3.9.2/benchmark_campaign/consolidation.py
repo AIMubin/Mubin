@@ -329,8 +329,10 @@ def _validate_reviewed_record_binding(
         "benchmark_id",
         "case_id",
         "anchor_source_id",
+        "family_id",
         "gold_status",
         "synthetic",
+        "annotation",
         "payload",
     ):
         if canonical_json_bytes(record.get(field)) != canonical_json_bytes(candidate.get(field)):
@@ -370,10 +372,21 @@ def _validate_reviewed_record_binding(
     if record.get("source_ids") != expected_source_ids:
         raise ValueError(f"reviewed record source_ids differ from Curator candidate: {task_id}")
 
+    if record.get("gold_status") != "source_attributed" or record.get("synthetic") is not False:
+        raise ValueError(f"reviewed record qualification status invalid: {task_id}")
+
     candidate_ap = candidate.get("answer_provenance")
     reviewed_ap = record.get("answer_provenance")
     if not isinstance(candidate_ap, dict) or not isinstance(reviewed_ap, dict):
         raise ValueError(f"reviewed record answer_provenance missing: {task_id}")
+    if (
+        reviewed_ap.get("answer_origin") != "human_authored_source"
+        or reviewed_ap.get("extraction_method") != "ai"
+        or reviewed_ap.get("human_reviewed") is not False
+        or reviewed_ap.get("source_verified") is not True
+        or reviewed_ap.get("mode") not in {"direct_extract", "attributed_composite"}
+    ):
+        raise ValueError(f"reviewed record answer_provenance invalid: {task_id}")
     candidate_ap_base = dict(candidate_ap)
     reviewed_ap_base = dict(reviewed_ap)
     candidate_supports = candidate_ap_base.pop("supports", None)
