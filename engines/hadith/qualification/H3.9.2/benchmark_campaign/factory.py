@@ -815,6 +815,15 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
     if actual_partition != partition:
         raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
     _validate_tasks_against_frozen_plan(root, task_rows)
+    reserve_tasks = [
+        task for task in task_rows
+        if task.get("candidate_slot_kind") == "reserve"
+    ]
+    if reserve_tasks:
+        raise ValueError(
+            "reserve candidate reconciliation is disabled until cumulative "
+            "replacement eligibility is explicitly bound"
+        )
     tasks = {str(t["task_id"]): t for t in task_rows}
 
     curators = {str(r["task_id"]): r for r in load_jsonl(curator_responses_path)}
