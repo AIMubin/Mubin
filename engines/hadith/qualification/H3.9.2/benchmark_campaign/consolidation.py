@@ -469,6 +469,49 @@ def _validate_reviewed_record_binding(
     ) is None:
         raise ValueError(f"reviewed factory slot binding invalid: {task_id}")
 
+    answer = verifier.get("answer")
+    answer_supports = answer.get("supports") if isinstance(answer, dict) else None
+    stored_verifier_supports = fv.get("verifier_supports")
+    if not isinstance(answer_supports, list) or not isinstance(stored_verifier_supports, list):
+        raise ValueError(f"reviewed factory Verifier supports missing: {task_id}")
+    expected_verifier_supports: list[dict[str, Any]] = []
+    for support in answer_supports:
+        if not isinstance(support, dict):
+            raise ValueError(f"reviewed factory Verifier support malformed: {task_id}")
+        sid = support.get("source_id")
+        locator = support.get("locator")
+        excerpt = support.get("excerpt")
+        support_text = support.get("support_text")
+        if (
+            not isinstance(sid, str)
+            or not isinstance(locator, str)
+            or not isinstance(excerpt, str)
+            or not isinstance(support_text, str)
+            or not support_text
+            or support_text not in excerpt
+        ):
+            raise ValueError(f"reviewed factory Verifier support malformed: {task_id}")
+        match = re.fullmatch(r"gitblob:([a-f0-9]{40})#char=(\d+):(\d+)", locator)
+        if match is None:
+            raise ValueError(f"reviewed factory Verifier locator malformed: {task_id}")
+        blob_sha, raw_start, raw_end = match.groups()
+        start, end = int(raw_start), int(raw_end)
+        if start < 0 or end <= start:
+            raise ValueError(f"reviewed factory Verifier locator range invalid: {task_id}")
+        expected_verifier_supports.append({
+            "source_id": sid,
+            "locator": locator,
+            "excerpt_sha256": sha256_bytes(excerpt.encode("utf-8")),
+            "source_blob_sha": blob_sha,
+            "char_start": start,
+            "char_end": end,
+            "support_text_sha256": sha256_bytes(support_text.encode("utf-8")),
+        })
+    if canonical_json_bytes(stored_verifier_supports) != canonical_json_bytes(
+        expected_verifier_supports
+    ):
+        raise ValueError(f"reviewed factory Verifier supports differ from response: {task_id}")
+
 
 def _validate_manifest_counts(
     manifest: dict[str, Any],
