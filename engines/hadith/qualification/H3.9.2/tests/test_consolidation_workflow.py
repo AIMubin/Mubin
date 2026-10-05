@@ -102,6 +102,42 @@ class ConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn("CUMULATIVE_LEDGER.jsonl", proof)
         self.assertIn("REPLACEMENT_ELIGIBILITY.json", proof)
 
+    def test_dispatch_inputs_must_match_repository_reviewed_history(self):
+        self.assertIn(
+            'status["cumulative_consolidation_run_ids"]',
+            self.workflow,
+        )
+        self.assertIn(
+            'status["cumulative_consolidation_expected_primary_tasks"]',
+            self.workflow,
+        )
+        self.assertIn(
+            "run_ids differ from the repository-reviewed canonical campaign history",
+            self.workflow,
+        )
+        self.assertIn(
+            "expected_task_count differs from the repository-reviewed canonical prefix",
+            self.workflow,
+        )
+        self.assertIn(
+            'status.get("reserve_reconciliation_enabled") is not False',
+            self.workflow,
+        )
+
+    def test_main_is_reconfirmed_before_consolidation_and_publication(self):
+        self.assertGreaterEqual(
+            self.workflow.count("git ls-remote origin refs/heads/main"),
+            3,
+        )
+        self.assertIn(
+            "Main advanced while cumulative evidence was being acquired",
+            self.workflow,
+        )
+        self.assertIn(
+            "Main advanced before cumulative evidence publication",
+            self.workflow,
+        )
+
     def test_initial_canonical_history_is_explicit(self):
         self.assertIn(
             'default: "37280971913,37295517184,37326459365"',
