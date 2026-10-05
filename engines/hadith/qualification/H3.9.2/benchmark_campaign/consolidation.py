@@ -11,6 +11,8 @@ from .factory import (
     _gold_agrees,
     _gold_contract_error,
     _task_rows,
+    _verify_factory_candidate_refs,
+    _verify_supports,
     _validate_response_identity,
     _validate_tasks_against_frozen_plan,
     _verifier_task_from_curator,
@@ -222,10 +224,8 @@ def _validate_ledger_response_binding(
     if entry.get("curator_model_family") != expected_curator_family:
         raise ValueError(f"curation ledger Curator model family mismatch: {task_id}")
 
-    # Reconciliation intentionally short-circuits before consulting Verifier
-    # evidence for some Curator-side outcomes (for example
-    # curator_requested_adjudication). A Verifier response may therefore exist
-    # in the shard while the ledger correctly records no Verifier binding.
+    # Only provable pre-Verifier short circuits may omit a Verifier binding.
+    # Post-Verifier adjudications must bind the exact response they consumed.
     stored_verifier_sha = entry.get("verifier_response_sha256")
     stored_verifier_family = entry.get("verifier_model_family")
     if stored_verifier_sha is None:
@@ -233,6 +233,29 @@ def _validate_ledger_response_binding(
             raise ValueError(f"curation ledger Verifier family exists without hash: {task_id}")
         if entry.get("outcome") == "promoted":
             raise ValueError(f"promoted ledger row lacks Verifier response binding: {task_id}")
+
+        reason = entry.get("reason")
+        curator_candidate = (
+            curator_response.get("candidate")
+            if isinstance(curator_response, dict)
+            else None
+        )
+        pre_verifier_short_circuit = (
+            entry.get("outcome") == "skipped"
+            or reason == "curator_requested_adjudication"
+            or (
+                reason == "malformed_candidate_or_verifier_answer"
+                and not isinstance(curator_candidate, dict)
+            )
+        )
+        no_verifier_available = (
+            reason == "missing_verifier_response"
+            and verifier_response is None
+        )
+        if not pre_verifier_short_circuit and not no_verifier_available:
+            raise ValueError(
+                f"post-Verifier ledger row lacks Verifier response binding: {task_id}"
+            )
         return
 
     expected_verifier_sha = _response_sha256(verifier_response)
@@ -248,6 +271,8 @@ def _validate_ledger_response_binding(
 
 
 def _validate_promoted_semantics(
+    root: Path,
+    source_cache_dir: Path,
     task_id: str,
     task: dict[str, Any],
     curator: dict[str, Any],
@@ -295,6 +320,17 @@ def _validate_promoted_semantics(
     refs = candidate.get("source_refs")
     if not isinstance(refs, list) or not refs:
         raise ValueError(f"promoted task lacks Curator source refs: {task_id}")
+    try:
+        _verify_factory_candidate_refs(
+            root,
+            source_cache_dir,
+            refs,
+            set(task.get("allowed_source_pool", [])),
+        )
+    except Exception as exc:
+        raise ValueError(
+            f"promoted task Curator source grounding invalid: {task_id}: {exc}"
+        ) from exc
     source_ids = {
         str(ref.get("source_id"))
         for ref in refs
@@ -306,9 +342,20 @@ def _validate_promoted_semantics(
     supports = answer.get("supports")
     if not isinstance(supports, list) or not supports:
         raise ValueError(f"promoted task lacks Verifier supports: {task_id}")
+    try:
+        verified_supports = _verify_supports(
+            root,
+            source_cache_dir,
+            supports,
+            set(task.get("allowed_source_pool", [])),
+        )
+    except Exception as exc:
+        raise ValueError(
+            f"promoted task Verifier source grounding invalid: {task_id}: {exc}"
+        ) from exc
     verifier_source_ids = {
         str(support.get("source_id"))
-        for support in supports
+        for support in verified_supports
         if isinstance(support, dict) and isinstance(support.get("source_id"), str)
     }
     if not verifier_source_ids or not verifier_source_ids.issubset(source_ids):
@@ -316,6 +363,8 @@ def _validate_promoted_semantics(
 
 
 def _validate_reviewed_record_binding(
+    root: Path,
+    source_cache_dir: Path,
     task_id: str,
     task: dict[str, Any],
     record: dict[str, Any],
@@ -326,18 +375,45 @@ def _validate_reviewed_record_binding(
     if not isinstance(candidate, dict):
         raise ValueError(f"reviewed record lacks bound Curator candidate: {task_id}")
 
-    for field in (
-        "benchmark_id",
-        "case_id",
-        "anchor_source_id",
-        "family_id",
-        "gold_status",
-        "synthetic",
-        "annotation",
-        "payload",
-    ):
+    derived_or_rewritten = {
+        "source_ids",
+        "source_refs",
+        "answer_provenance",
+        "content_fingerprint",
+        "factory_verification",
+        "factory_task_id",
+        "factory_slot_id",
+        "factory_task_fingerprint",
+        "source_id",
+        "source_ref",
+        "split",
+    }
+    preserved_candidate_fields = {
+        key for key in candidate if key not in derived_or_rewritten
+    }
+    for field in sorted(preserved_candidate_fields):
         if canonical_json_bytes(record.get(field)) != canonical_json_bytes(candidate.get(field)):
-            raise ValueError(f"reviewed record differs from Curator candidate {field}: {task_id}")
+            raise ValueError(
+                f"reviewed record differs from Curator candidate {field}: {task_id}"
+            )
+    allowed_record_fields = (
+        preserved_candidate_fields
+        | {
+            "source_ids",
+            "source_refs",
+            "answer_provenance",
+            "content_fingerprint",
+            "factory_verification",
+            "factory_task_id",
+            "factory_slot_id",
+            "factory_task_fingerprint",
+        }
+    )
+    unexpected_fields = sorted(set(record) - allowed_record_fields)
+    if unexpected_fields:
+        raise ValueError(
+            f"reviewed record has fields not produced by sealing: {task_id}: {unexpected_fields}"
+        )
 
     candidate_refs = candidate.get("source_refs")
     reviewed_refs = record.get("source_refs")
@@ -515,39 +591,17 @@ def _validate_reviewed_record_binding(
     stored_verifier_supports = fv.get("verifier_supports")
     if not isinstance(answer_supports, list) or not isinstance(stored_verifier_supports, list):
         raise ValueError(f"reviewed factory Verifier supports missing: {task_id}")
-    expected_verifier_supports: list[dict[str, Any]] = []
-    for support in answer_supports:
-        if not isinstance(support, dict):
-            raise ValueError(f"reviewed factory Verifier support malformed: {task_id}")
-        sid = support.get("source_id")
-        locator = support.get("locator")
-        excerpt = support.get("excerpt")
-        support_text = support.get("support_text")
-        if (
-            not isinstance(sid, str)
-            or not isinstance(locator, str)
-            or not isinstance(excerpt, str)
-            or not isinstance(support_text, str)
-            or not support_text
-            or support_text not in excerpt
-        ):
-            raise ValueError(f"reviewed factory Verifier support malformed: {task_id}")
-        match = re.fullmatch(r"gitblob:([a-f0-9]{40})#char=(\d+):(\d+)", locator)
-        if match is None:
-            raise ValueError(f"reviewed factory Verifier locator malformed: {task_id}")
-        blob_sha, raw_start, raw_end = match.groups()
-        start, end = int(raw_start), int(raw_end)
-        if start < 0 or end <= start:
-            raise ValueError(f"reviewed factory Verifier locator range invalid: {task_id}")
-        expected_verifier_supports.append({
-            "source_id": sid,
-            "locator": locator,
-            "excerpt_sha256": sha256_bytes(excerpt.encode("utf-8")),
-            "source_blob_sha": blob_sha,
-            "char_start": start,
-            "char_end": end,
-            "support_text_sha256": sha256_bytes(support_text.encode("utf-8")),
-        })
+    try:
+        expected_verifier_supports = _verify_supports(
+            root,
+            source_cache_dir,
+            answer_supports,
+            set(task.get("allowed_source_pool", [])),
+        )
+    except Exception as exc:
+        raise ValueError(
+            f"reviewed factory Verifier support grounding invalid: {task_id}: {exc}"
+        ) from exc
     if canonical_json_bytes(stored_verifier_supports) != canonical_json_bytes(
         expected_verifier_supports
     ):
@@ -573,7 +627,11 @@ def _validate_manifest_counts(
         raise ValueError(f"{role} manifest attempted_task_count mismatch")
 
 
-def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, Any]:
+def validate_primary_run_evidence(
+    root: Path,
+    evidence_dir: Path,
+    source_cache_dir: Path | None = None,
+) -> dict[str, Any]:
     """Validate one decrypted canonical non-holdout primary curation artifact."""
 
     origin = _load_origin(evidence_dir / "ORIGIN.json")
@@ -778,13 +836,17 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         raise ValueError("curation ledger outcome sets overlap")
 
     for tid in promoted_ids:
+        if source_cache_dir is None:
+            raise ValueError("promoted cumulative evidence requires a verified source cache")
         curator = curator_responses.get(tid)
         verifier = verifier_responses.get(tid)
         if not isinstance(curator, dict) or curator.get("status") != "candidate":
             raise ValueError(f"promoted task lacks Curator candidate response: {tid}")
         if tid not in verifier_task_ids or not isinstance(verifier, dict) or verifier.get("status") != "candidate":
             raise ValueError(f"promoted task lacks independent Verifier candidate response: {tid}")
-        _validate_promoted_semantics(tid, task_map[tid], curator, verifier)
+        _validate_promoted_semantics(
+            root, source_cache_dir, tid, task_map[tid], curator, verifier
+        )
     for tid in adjudication_ids:
         if curator_responses.get(tid, {}).get("status") != "candidate":
             raise ValueError(f"adjudication task lacks Curator candidate response: {tid}")
@@ -802,7 +864,9 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         curator = curator_responses.get(tid)
         verifier = verifier_responses.get(tid)
         assert isinstance(curator, dict) and isinstance(verifier, dict)
-        _validate_reviewed_record_binding(tid, task, record, curator, verifier)
+        _validate_reviewed_record_binding(
+            root, source_cache_dir, tid, task, record, curator, verifier
+        )
 
     for tid, row in adjudication.items():
         if row.get("reason") != ledger[tid].get("reason"):
@@ -893,6 +957,7 @@ def consolidate_primary_evidence(
     out_dir: Path,
     *,
     expected_task_count: int | None = None,
+    source_cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     evidence_dirs = sorted(
         path for path in evidence_root.iterdir()
@@ -929,7 +994,9 @@ def consolidate_primary_evidence(
     run_sha_by_id: dict[int, str] = {}
 
     for evidence_dir in evidence_dirs:
-        validated = validate_primary_run_evidence(root, evidence_dir)
+        validated = validate_primary_run_evidence(
+            root, evidence_dir, source_cache_dir=source_cache_dir
+        )
         origin = validated["origin"]
         run_id = int(origin["github_run_id"])
         artifact_id = int(origin["artifact_id"])
