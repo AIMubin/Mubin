@@ -242,6 +242,8 @@ def build_factory_plan(root: Path, out_path: Path | None = None) -> dict[str, An
     policy = _policy(root)
     reserve_policy = quotas.get("candidate_reserve_policy", {})
     reserve_slots_per_primary = reserve_policy.get("reserve_slots_per_primary", 0)
+    if reserve_slots_per_primary and reserve_policy.get("primary_slot_prefix_preserved") is not True:
+        raise ValueError("reserve candidate policy must preserve the primary slot prefix")
     if (
         not isinstance(reserve_slots_per_primary, int)
         or isinstance(reserve_slots_per_primary, bool)
