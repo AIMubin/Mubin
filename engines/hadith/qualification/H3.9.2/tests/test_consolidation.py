@@ -452,6 +452,21 @@ class ConsolidationTests(unittest.TestCase):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
 
+    def test_origin_rerun_attempt_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "rerun",
+            [task],
+            {"p0": ("skipped", "no_curator_candidate")},
+        )
+        origin_path = evidence / "ORIGIN.json"
+        origin = load_json(origin_path)
+        origin["github_run_attempt"] = 2
+        _write_json(origin_path, origin)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "must be exactly 1"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
     def test_rehashed_verifier_task_projection_tamper_fails_closed(self):
         task = _task("p0")
         evidence = self._evidence(
