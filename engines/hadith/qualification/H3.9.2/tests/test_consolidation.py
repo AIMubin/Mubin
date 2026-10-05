@@ -814,6 +814,71 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "gold disagreement"):
                 consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
+    def test_adjudication_reason_is_rederived_from_bound_responses(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "false-gold-disagreement",
+            [task],
+            {"p0": ("adjudication", "gold_disagreement")},
+            verifier_task_ids={"p0"},
+        )
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "differs from deterministic reconciliation"
+            ):
+                consolidation.validate_primary_run_evidence(
+                    self.root, evidence, self.source_cache
+                )
+
+    def test_real_gold_disagreement_matches_deterministic_reconciliation(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "real-gold-disagreement",
+            [task],
+            {"p0": ("adjudication", "gold_disagreement")},
+            verifier_task_ids={"p0"},
+        )
+        bundle = evidence / "source-bearing"
+        verifier_path = bundle / "verifier-responses.jsonl"
+        rows = load_jsonl(verifier_path)
+        raw = {
+            "task_id": rows[0]["task_id"],
+            "status": "candidate",
+            "answer": {
+                **rows[0]["answer"],
+                "gold": {"label": "no"},
+            },
+        }
+        rows[0] = _stamped(task, raw, "verifier-family")
+        _write_jsonl(verifier_path, rows)
+
+        manifest_path = bundle / "verifier-run.json"
+        manifest = load_json(manifest_path)
+        manifest["output_sha256"] = sha256_file(verifier_path)
+        _write_json(manifest_path, manifest)
+
+        summary_path = evidence / "CURATION_RUN_SUMMARY.json"
+        summary = load_json(summary_path)
+        summary["verifier"]["output_sha256"] = sha256_file(verifier_path)
+        _write_json(summary_path, summary)
+
+        ledger_path = bundle / "CURATION_LEDGER.jsonl"
+        ledger = load_jsonl(ledger_path)
+        ledger[0]["verifier_response_sha256"] = sha256_bytes(
+            canonical_json_bytes(rows[0])
+        )
+        ledger[0]["verifier_model_family"] = rows[0]["model_family"]
+        _write_jsonl(ledger_path, ledger)
+
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            validated = consolidation.validate_primary_run_evidence(
+                self.root, evidence, self.source_cache
+            )
+        self.assertEqual(
+            validated["ledger_rows"][0]["canonical_reason"],
+            "gold_disagreement",
+        )
+
     def test_post_verifier_adjudication_requires_verifier_binding(self):
         task = _task("p0")
         evidence = self._evidence(
