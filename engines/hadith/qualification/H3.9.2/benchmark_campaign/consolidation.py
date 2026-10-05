@@ -366,6 +366,136 @@ def _validate_promoted_semantics(
         raise ValueError(f"promoted task Verifier provenance mismatch: {task_id}")
 
 
+def _derive_reconciliation_outcome(
+    root: Path,
+    source_cache_dir: Path | None,
+    task_id: str,
+    task: dict[str, Any],
+    curator: dict[str, Any] | None,
+    verifier: dict[str, Any] | None,
+) -> tuple[str, str | None]:
+    """Re-run the ordered, deterministic Factory reconciliation predicates."""
+
+    if curator is None or curator.get("status") != "candidate":
+        return "skipped", "no_curator_candidate"
+
+    candidate = curator.get("candidate")
+    if not isinstance(candidate, dict):
+        return "adjudication", "malformed_candidate_or_verifier_answer"
+
+    provenance = candidate.get("answer_provenance")
+    if (
+        task.get("auto_promotion") is True
+        and isinstance(provenance, dict)
+        and provenance.get("mode") == "adjudication_required"
+    ):
+        return "adjudication", "curator_requested_adjudication"
+
+    if verifier is None:
+        return "adjudication", "missing_verifier_response"
+
+    if _canonical_model_family(curator["model_family"]) == _canonical_model_family(
+        verifier["model_family"]
+    ):
+        return "adjudication", "model_family_not_independent"
+
+    if verifier.get("status") != "candidate":
+        return "adjudication", "verifier_no_candidate"
+
+    answer = verifier.get("answer")
+    if not isinstance(answer, dict):
+        return "adjudication", "malformed_candidate_or_verifier_answer"
+
+    if source_cache_dir is None:
+        raise ValueError(
+            f"candidate reconciliation requires a verified source cache: {task_id}"
+        )
+
+    try:
+        _verify_factory_candidate_refs(
+            root,
+            source_cache_dir,
+            candidate.get("source_refs"),
+            set(task.get("allowed_source_pool", [])),
+        )
+    except Exception:
+        return "adjudication", "curator_locator_invalid"
+
+    payload = candidate.get("payload")
+    if not isinstance(payload, dict) or "gold" not in payload:
+        return "adjudication", "curator_gold_missing"
+
+    curator_gold_error = _gold_contract_error(payload["gold"], task)
+    if curator_gold_error is not None:
+        return (
+            "adjudication",
+            f"curator_gold_contract_invalid:{curator_gold_error}",
+        )
+
+    verifier_gold_error = _gold_contract_error(answer.get("gold"), task)
+    if verifier_gold_error is not None:
+        return (
+            "adjudication",
+            f"verifier_gold_contract_invalid:{verifier_gold_error}",
+        )
+
+    if not _gold_agrees(payload["gold"], answer["gold"], task):
+        return "adjudication", "gold_disagreement"
+
+    try:
+        verifier_supports = _verify_supports(
+            root,
+            source_cache_dir,
+            answer.get("supports"),
+            set(task.get("allowed_source_pool", [])),
+        )
+    except Exception:
+        return "adjudication", "verifier_support_invalid"
+
+    if task.get("auto_promotion") is not True:
+        return "adjudication", "policy_requires_human_or_authority_gate"
+
+    if candidate.get("gold_status") != "source_attributed":
+        return "adjudication", "auto_promotion_requires_source_attributed"
+
+    if candidate.get("benchmark_id") != task.get("benchmark_id"):
+        return "adjudication", "benchmark_id_mismatch"
+
+    if candidate.get("anchor_source_id") != task.get("anchor_source_id"):
+        return "adjudication", "anchor_source_id_mismatch"
+
+    source_ids = {
+        str(ref.get("source_id"))
+        for ref in candidate.get("source_refs", [])
+        if isinstance(ref, dict) and isinstance(ref.get("source_id"), str)
+    }
+    if not source_ids or not source_ids.issubset(
+        set(task.get("allowed_source_pool", []))
+    ):
+        return "adjudication", "curator_source_partition_violation"
+
+    verifier_source_ids = {
+        str(support.get("source_id"))
+        for support in verifier_supports
+        if isinstance(support, dict) and isinstance(support.get("source_id"), str)
+    }
+    if not verifier_source_ids.issubset(source_ids):
+        return "adjudication", "verifier_support_not_in_curator_provenance"
+
+    # The Factory's final promotion predicate is successful sealing. The
+    # generated factory_verification envelope does not affect sealing itself,
+    # so a placeholder preserves the exact qualification-contract decision
+    # without depending on a second frozen-plan lookup here.
+    candidate_for_seal = json.loads(json.dumps(candidate, ensure_ascii=False))
+    candidate_for_seal["factory_verification"] = {}
+    try:
+        seal_reviewed_record(root, candidate_for_seal, source_cache_dir)
+    except Exception:
+        return "adjudication", "curator_candidate_failed_qualification_contract"
+
+    return "promoted", None
+
+
 def _validate_reviewed_record_binding(
     root: Path,
     source_cache_dir: Path,
@@ -867,12 +997,27 @@ def validate_primary_run_evidence(
     if set(ledger) != set(task_map):
         raise ValueError("curation ledger does not account for every selected task")
     for tid, entry in ledger.items():
-        _validate_ledger_response_binding(
+        curator = curator_responses.get(tid)
+        verifier = verifier_responses.get(tid)
+        _validate_ledger_response_binding(tid, entry, curator, verifier)
+        expected_outcome, expected_reason = _derive_reconciliation_outcome(
+            root,
+            source_cache_dir,
             tid,
-            entry,
-            curator_responses.get(tid),
-            verifier_responses.get(tid),
+            task_map[tid],
+            curator,
+            verifier,
         )
+        if (
+            entry.get("outcome") != expected_outcome
+            or entry.get("reason") != expected_reason
+        ):
+            raise ValueError(
+                "curation ledger outcome/reason differs from deterministic "
+                f"reconciliation: {tid}: "
+                f"{entry.get('outcome')}/{entry.get('reason')} != "
+                f"{expected_outcome}/{expected_reason}"
+            )
 
     reviewed = _reviewed_by_task(reviewed_dir)
     adjudication = _adjudication_by_task(adjudication_path)
