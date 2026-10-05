@@ -894,6 +894,15 @@ def consolidate_primary_evidence(
             cid = str(record.get("case_id"))
             if not cid or cid in seen_case_ids:
                 raise ValueError(f"duplicate/empty case_id across cumulative evidence: {cid}")
+            slot_id = str(record.get("factory_slot_id", ""))
+            slot = slot_by_id.get(slot_id)
+            if slot is None:
+                raise ValueError(f"reviewed record references unknown frozen slot: {_tid}")
+            fv = record.get("factory_verification")
+            if not isinstance(fv, dict) or fv.get("slot_binding_sha256") != sha256_bytes(
+                canonical_json_bytes(slot)
+            ):
+                raise ValueError(f"reviewed record frozen slot binding mismatch: {_tid}")
             seen_case_ids.add(cid)
             reviewed_by_benchmark[str(record["benchmark_id"])].append(record)
 
