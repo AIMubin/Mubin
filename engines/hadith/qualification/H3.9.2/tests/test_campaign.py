@@ -553,6 +553,15 @@ class CampaignTests(unittest.TestCase):
         })
         q = build_curation_queue_plan(self.root, self.spec)
         b = q["benchmarks"][0]
+        self.assertEqual(q["total_target"], 4)
+        self.assertEqual(q["total_candidate_slots"], 8)
+        self.assertEqual(
+            q["candidate_reserve_policy"]["reserve_slots_per_primary"],
+            1,
+        )
+        self.assertTrue(
+            q["candidate_reserve_policy"]["primary_slot_prefix_preserved"]
+        )
         self.assertEqual(sum(x["target_cases"] for x in b["holdout"]["anchor_quotas"]), 1)
         self.assertEqual(sum(x["target_cases"] for x in b["non_holdout"]["anchor_quotas"]), 3)
         self.assertEqual({x["anchor_source_id"] for x in b["holdout"]["anchor_quotas"]}, {"s-ho"})
