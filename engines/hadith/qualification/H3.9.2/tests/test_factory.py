@@ -171,6 +171,36 @@ class FactoryTests(unittest.TestCase):
         self.assertEqual(actual_ids, expected_ids)
         self.assertTrue(all(":reserve:" not in x for x in actual_ids))
 
+    def test_reserve_policy_requires_supported_version_and_prefix_preservation(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 2,
+                "reserve_slots_per_primary": 1,
+                "rule": "unsupported",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+            with self.assertRaisesRegex(
+                ValueError,
+                "unsupported candidate reserve policy version",
+            ):
+                build_factory_plan(root)
+
+            quotas["candidate_reserve_policy"]["policy_version"] = 1
+            quotas["candidate_reserve_policy"]["primary_slot_prefix_preserved"] = False
+            write_json(quotas_path, quotas)
+            with self.assertRaisesRegex(
+                ValueError,
+                "must preserve the primary slot prefix",
+            ):
+                build_factory_plan(root)
+
     def test_enabling_reserve_capacity_does_not_change_primary_task_fingerprint(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
