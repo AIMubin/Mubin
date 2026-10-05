@@ -174,10 +174,32 @@ class ConsolidationTests(unittest.TestCase):
                     "task_id": tid,
                     "status": "candidate",
                     "candidate": {
+                        "benchmark_id": task["benchmark_id"],
+                        "case_id": f"case-{tid}",
+                        "anchor_source_id": task["anchor_source_id"],
+                        "gold_status": "source_attributed",
+                        "synthetic": False,
+                        "source_refs": [{
+                            "source_id": task["anchor_source_id"],
+                            "locator": "gitblob:" + "1" * 40 + "#char=0:15",
+                            "excerpt": "anchor evidence",
+                        }],
+                        "answer_provenance": {
+                            "answer_origin": "human_authored_source",
+                            "extraction_method": "ai",
+                            "source_verified": True,
+                            "human_reviewed": False,
+                            "mode": "direct_extract",
+                            "supports": [{
+                                "source_id": task["anchor_source_id"],
+                                "support_text": "anchor evidence",
+                            }],
+                            "verbatim_answer": "anchor evidence",
+                        },
                         "payload": {
                             "input": candidate_input,
                             "gold": {"label": "yes"},
-                        }
+                        },
                     },
                 }
             curator_responses.append(_stamped(task, raw, "curator-family"))
@@ -223,7 +245,21 @@ class ConsolidationTests(unittest.TestCase):
         verifier_responses = [
             _stamped(
                 next(task for task in tasks if task["task_id"] == tid),
-                {"task_id": tid, "status": "candidate", "answer": {}},
+                {
+                    "task_id": tid,
+                    "status": "candidate",
+                    "answer": {
+                        "gold": {"label": "yes"},
+                        "supports": [{
+                            "source_id": next(
+                                task for task in tasks if task["task_id"] == tid
+                            )["anchor_source_id"],
+                            "locator": "gitblob:" + "1" * 40 + "#char=0:15",
+                            "excerpt": "anchor evidence",
+                            "support_text": "anchor evidence",
+                        }],
+                    },
+                },
                 "verifier-family",
             )
             for tid in sorted(verifier_task_ids)
@@ -254,6 +290,9 @@ class ConsolidationTests(unittest.TestCase):
                 "rejections": rejection_rows,
             })
 
+        curator_by_id = {str(row["task_id"]): row for row in curator_responses}
+        verifier_by_id = {str(row["task_id"]): row for row in verifier_responses}
+
         ledger = []
         adjudication = []
         reviewed = []
@@ -263,6 +302,8 @@ class ConsolidationTests(unittest.TestCase):
             outcome, reason = outcomes[tid]
             counts[outcome] += 1
             case_id = f"case-{tid}" if outcome == "promoted" else None
+            curator_response = curator_by_id.get(tid)
+            verifier_response = verifier_by_id.get(tid)
             ledger.append({
                 "task_id": tid,
                 "task_fingerprint": task["task_fingerprint"],
@@ -271,6 +312,22 @@ class ConsolidationTests(unittest.TestCase):
                 "outcome": outcome,
                 "reason": reason,
                 "case_id": case_id,
+                "curator_response_sha256": (
+                    sha256_bytes(canonical_json_bytes(curator_response))
+                    if curator_response is not None else None
+                ),
+                "verifier_response_sha256": (
+                    sha256_bytes(canonical_json_bytes(verifier_response))
+                    if verifier_response is not None else None
+                ),
+                "curator_model_family": (
+                    curator_response.get("model_family")
+                    if curator_response is not None else None
+                ),
+                "verifier_model_family": (
+                    verifier_response.get("model_family")
+                    if verifier_response is not None else None
+                ),
             })
             if outcome == "adjudication":
                 adjudication.append({"task_id": tid, "reason": reason})
@@ -500,6 +557,106 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exact blinded projection"):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
+    def test_promoted_ledger_response_hash_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "ledger-hash",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        ledger_path = evidence / "source-bearing" / "CURATION_LEDGER.jsonl"
+        rows = load_jsonl(ledger_path)
+        rows[0]["verifier_response_sha256"] = "0" * 64
+        _write_jsonl(ledger_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "Verifier response hash mismatch"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_promoted_same_model_family_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "same-family",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        bundle = evidence / "source-bearing"
+        verifier_path = bundle / "verifier-responses.jsonl"
+        rows = load_jsonl(verifier_path)
+        raw = {
+            "task_id": rows[0]["task_id"],
+            "status": rows[0]["status"],
+            "answer": rows[0]["answer"],
+        }
+        rows[0] = _stamped(task, raw, "curator-family")
+        _write_jsonl(verifier_path, rows)
+
+        manifest_path = bundle / "verifier-run.json"
+        manifest = load_json(manifest_path)
+        manifest["output_sha256"] = sha256_file(verifier_path)
+        _write_json(manifest_path, manifest)
+
+        summary_path = evidence / "CURATION_RUN_SUMMARY.json"
+        summary = load_json(summary_path)
+        summary["verifier"]["output_sha256"] = sha256_file(verifier_path)
+        _write_json(summary_path, summary)
+
+        ledger_path = bundle / "CURATION_LEDGER.jsonl"
+        ledger = load_jsonl(ledger_path)
+        ledger[0]["verifier_response_sha256"] = sha256_bytes(
+            canonical_json_bytes(rows[0])
+        )
+        ledger[0]["verifier_model_family"] = "curator-family"
+        _write_jsonl(ledger_path, ledger)
+
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "independent model families"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_promoted_gold_disagreement_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "gold-disagreement",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        bundle = evidence / "source-bearing"
+        verifier_path = bundle / "verifier-responses.jsonl"
+        rows = load_jsonl(verifier_path)
+        raw = {
+            "task_id": rows[0]["task_id"],
+            "status": "candidate",
+            "answer": {
+                **rows[0]["answer"],
+                "gold": {"label": "no"},
+            },
+        }
+        rows[0] = _stamped(task, raw, "verifier-family")
+        _write_jsonl(verifier_path, rows)
+
+        manifest_path = bundle / "verifier-run.json"
+        manifest = load_json(manifest_path)
+        manifest["output_sha256"] = sha256_file(verifier_path)
+        _write_json(manifest_path, manifest)
+
+        summary_path = evidence / "CURATION_RUN_SUMMARY.json"
+        summary = load_json(summary_path)
+        summary["verifier"]["output_sha256"] = sha256_file(verifier_path)
+        _write_json(summary_path, summary)
+
+        ledger_path = bundle / "CURATION_LEDGER.jsonl"
+        ledger = load_jsonl(ledger_path)
+        ledger[0]["verifier_response_sha256"] = sha256_bytes(
+            canonical_json_bytes(rows[0])
+        )
+        _write_jsonl(ledger_path, ledger)
+
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "gold disagreement"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
     def test_reviewed_record_benchmark_mismatch_fails_closed(self):
         task = _task("p0")
         evidence = self._evidence(
@@ -545,6 +702,23 @@ class ConsolidationTests(unittest.TestCase):
         self.assertEqual(summary["input_run_ids"], [77])
         self.assertEqual(summary["input_run_count"], 1)
         self.assertEqual(summary["input_artifact_count"], 2)
+
+    def test_nonempty_output_directory_fails_closed(self):
+        self._evidence(
+            "stale-output",
+            [_task("p0")],
+            {"p0": ("skipped", "no_curator_candidate")},
+        )
+        out = Path(self.tmp.name) / "out"
+        out.mkdir()
+        (out / "stale.txt").write_text("stale", encoding="utf-8")
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0"])
+        ):
+            with self.assertRaisesRegex(ValueError, "output directory must be empty"):
+                consolidation.consolidate_primary_evidence(
+                    self.root, self.evidence_root, out, expected_task_count=1
+                )
 
     def test_artifact_task_range_must_match_summary_range(self):
         self._evidence(
