@@ -184,6 +184,8 @@ The 64-task freeze-23 campaign over offsets `40..103` also completed successfull
 
 Continuing primary execution without additional preregistered candidate capacity would therefore knowingly run a plan that cannot satisfy exact cardinality.
 
+This reserve-capacity decision is an explicit **non-holdout-driven protocol revision**: it was made after observing non-holdout collection yield, but before tuning, model lock, holdout curation, or final holdout evaluation. The exact record quotas, source partition, benchmark labels, evaluation thresholds, and holdout isolation are unchanged. The protocol version is advanced rather than silently mutating the earlier freeze surface.
+
 Freeze schema 24 separates **record quota** from **candidate-discovery capacity**. It preserves the complete original 1,280-slot primary plan unchanged and appends one reserve candidate slot per primary:
 
 - exact record target remains **1,280**;
