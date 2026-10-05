@@ -394,6 +394,8 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
 
     tasks: list[dict[str, Any]] = []
     usage: Counter[str] = Counter()
+    primary_segment_by_slot: dict[str, str] = {}
+    reserve_segments_by_primary: dict[str, set[str]] = defaultdict(set)
     for slot in [s for s in plan["slots"] if s["partition"] == partition]:
         bid = slot["benchmark_id"]
         anchor = slot["anchor_source_id"]
@@ -405,8 +407,40 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
             candidates,
             key=lambda x: (-_segment_score(str(x["text"]), bp.get("candidate_keywords", [])), str(x["segment_id"])),
         )
-        seg = ranked[usage[anchor] % len(ranked)]
+        ranked_index = usage[anchor] % len(ranked)
+        if slot.get("candidate_slot_kind") == "reserve":
+            primary_slot_id = slot.get("replacement_for_slot_id")
+            if not isinstance(primary_slot_id, str) or not primary_slot_id:
+                raise ValueError("reserve slot requires replacement_for_slot_id")
+            primary_segment_id = primary_segment_by_slot.get(primary_slot_id)
+            if primary_segment_id is None:
+                raise ValueError(
+                    "reserve slot must follow its primary slot in the candidate plan"
+                )
+            forbidden_segment_ids = {
+                primary_segment_id,
+                *reserve_segments_by_primary[primary_slot_id],
+            }
+            checked = 0
+            while (
+                str(ranked[ranked_index]["segment_id"]) in forbidden_segment_ids
+                and checked < len(ranked)
+            ):
+                usage[anchor] += 1
+                ranked_index = usage[anchor] % len(ranked)
+                checked += 1
+            if str(ranked[ranked_index]["segment_id"]) in forbidden_segment_ids:
+                raise ValueError(
+                    f"source lacks a distinct reserve segment for frozen slot: {primary_slot_id}"
+                )
+        seg = ranked[ranked_index]
         usage[anchor] += 1
+        if slot.get("candidate_slot_kind") == "reserve":
+            reserve_segments_by_primary[str(slot["replacement_for_slot_id"])].add(
+                str(seg["segment_id"])
+            )
+        else:
+            primary_segment_by_slot[str(slot["slot_id"])] = str(seg["segment_id"])
         pool_key = "holdout_source_pool" if partition == "holdout" else "non_holdout_source_pool"
         other_key = "non_holdout_source_pool" if partition == "holdout" else "holdout_source_pool"
         bplan = cplan["benchmarks"][bid]
