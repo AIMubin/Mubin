@@ -28,13 +28,13 @@ class FactoryTests(unittest.TestCase):
             plan = build_factory_plan(project, out)
             self.assertEqual(plan["target_total"], 1280)
             self.assertEqual(plan["primary_slot_count"], 1280)
-            self.assertEqual(plan["reserve_slots_per_primary"], 2)
-            self.assertEqual(plan["reserve_slot_count"], 2560)
-            self.assertEqual(plan["slot_count"], 3840)
+            self.assertEqual(plan["reserve_slots_per_primary"], 1)
+            self.assertEqual(plan["reserve_slot_count"], 1280)
+            self.assertEqual(plan["slot_count"], 2560)
             self.assertEqual(plan["holdout_slots"], 384)
             self.assertEqual(plan["non_holdout_slots"], 896)
-            self.assertEqual(plan["candidate_holdout_slots"], 1152)
-            self.assertEqual(plan["candidate_non_holdout_slots"], 2688)
+            self.assertEqual(plan["candidate_holdout_slots"], 768)
+            self.assertEqual(plan["candidate_non_holdout_slots"], 1792)
 
             primary = plan["slots"][:1280]
             self.assertTrue(all("candidate_slot_kind" not in x for x in primary))
@@ -60,7 +60,7 @@ class FactoryTests(unittest.TestCase):
                 )
             )
             self.assertTrue(
-                all(x.get("reserve_attempt") in {1, 2} for x in reserves)
+                all(x.get("reserve_attempt") == 1 for x in reserves)
             )
 
             risk3 = [x for x in plan["slots"] if x["risk_tier"] == 3]
