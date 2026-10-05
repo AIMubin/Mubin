@@ -17,6 +17,7 @@ from .factory import (
     build_factory_plan,
 )
 from .freeze import FREEZE_SCHEMA_VERSION
+from .normalization import fingerprint_payload
 
 
 _SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
@@ -374,6 +375,12 @@ def _validate_reviewed_record_binding(
 
     if record.get("gold_status") != "source_attributed" or record.get("synthetic") is not False:
         raise ValueError(f"reviewed record qualification status invalid: {task_id}")
+    try:
+        expected_content_fingerprint = fingerprint_payload(record.get("payload"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"reviewed record payload fingerprint invalid: {task_id}") from exc
+    if record.get("content_fingerprint") != expected_content_fingerprint:
+        raise ValueError(f"reviewed record content fingerprint mismatch: {task_id}")
     if not isinstance(record.get("family_id"), str) or not record["family_id"].strip():
         raise ValueError(f"reviewed record family_id invalid: {task_id}")
     if not isinstance(record.get("annotation"), dict):
