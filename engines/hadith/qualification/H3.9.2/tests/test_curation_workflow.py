@@ -109,10 +109,24 @@ class CurationWorkflowTests(unittest.TestCase):
     def test_campaign_reviewed_stage_is_bounded_to_64_tasks_and_eight_per_shard(self):
         self.assertIn("count < 1 or count > 64", self.campaign_workflow)
         self.assertIn("shard_size < 1 or shard_size > 8", self.campaign_workflow)
-        self.assertIn("task_offset + task_count exceeds 896", self.campaign_workflow)
+        self.assertIn("candidate_non_holdout_slots", self.campaign_workflow)
+        self.assertIn("build_factory_plan", self.campaign_workflow)
+        self.assertNotIn("task_offset + task_count exceeds 896", self.campaign_workflow)
         self.assertIn("expected_shards", self.campaign_workflow)
-        self.assertIn('default: "40"', self.campaign_workflow)
+        self.assertIn('default: "104"', self.campaign_workflow)
         self.assertIn('default: "64"', self.campaign_workflow)
+
+    def test_pilot_bounds_follow_frozen_candidate_plan_not_legacy_896_constant(self):
+        bounds = self.workflow.split("- name: Validate chunk bounds", 1)[1]
+        bounds = bounds.split("- name: Build isolated ephemeral workspace", 1)[0]
+        self.assertIn("build_factory_plan", bounds)
+        self.assertIn("candidate_non_holdout_slots", bounds)
+        self.assertNotIn("offset >= 896", bounds)
+        self.assertNotIn("exceeds the 896", bounds)
+        self.assertIn(
+            "frozen non-holdout candidate plan",
+            bounds,
+        )
 
     def test_campaign_aggregate_uses_only_redacted_shard_summaries(self):
         aggregate = self.campaign_workflow.split(
