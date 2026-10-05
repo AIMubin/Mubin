@@ -179,6 +179,7 @@ class FactoryTests(unittest.TestCase):
             quotas_path = root / "config" / "curation-quotas.json"
             quotas = load_json(quotas_path)
             quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
                 "reserve_slots_per_primary": 0,
                 "rule": "no reserve",
                 "primary_slot_prefix_preserved": True,
@@ -223,6 +224,7 @@ class FactoryTests(unittest.TestCase):
             quotas_path = root / "config" / "curation-quotas.json"
             quotas = load_json(quotas_path)
             quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
                 "reserve_slots_per_primary": 1,
                 "rule": "test reserve",
                 "primary_slot_prefix_preserved": True,
@@ -261,6 +263,7 @@ class FactoryTests(unittest.TestCase):
             quotas_path = root / "config" / "curation-quotas.json"
             quotas = load_json(quotas_path)
             quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
                 "reserve_slots_per_primary": 1,
                 "rule": "one reserve",
                 "primary_slot_prefix_preserved": True,
