@@ -292,6 +292,30 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
     for tid in verifier_task_ids:
         if curator_responses.get(tid, {}).get("status") != "candidate":
             raise ValueError(f"Verifier task is not backed by a Curator candidate: {tid}")
+    verifier_preparation = summary.get("verifier_preparation")
+    if not isinstance(verifier_preparation, dict):
+        raise ValueError("run summary verifier_preparation missing")
+    curator_candidate_count = sum(
+        1 for response in curator_responses.values()
+        if response.get("status") == "candidate"
+    )
+    blindness_rejections = curator_candidate_count - len(verifier_task_ids)
+    if blindness_rejections < 0:
+        raise ValueError("Verifier task count exceeds Curator candidate count")
+    expected_preparation_rejections = (
+        {"candidate_input_blindness": blindness_rejections}
+        if blindness_rejections else {}
+    )
+    if verifier_preparation.get("input_candidates") != curator_candidate_count:
+        raise ValueError("run summary verifier preparation input count mismatch")
+    if verifier_preparation.get("verifier_tasks") != len(verifier_task_ids):
+        raise ValueError("run summary verifier preparation task count mismatch")
+    if verifier_preparation.get("rejected_candidates") != blindness_rejections:
+        raise ValueError("run summary verifier preparation rejection count mismatch")
+    if verifier_preparation.get("rejection_counts", {}) != expected_preparation_rejections:
+        raise ValueError("run summary verifier preparation rejection reasons mismatch")
+    if verifier_preparation.get("tasks_sha256") != sha256_file(verifier_tasks_path):
+        raise ValueError("run summary verifier preparation task hash mismatch")
 
     verifier_responses = _response_map(verifier_responses_path, "verifier")
     verifier_rejections: dict[str, dict[str, Any]] = {}
