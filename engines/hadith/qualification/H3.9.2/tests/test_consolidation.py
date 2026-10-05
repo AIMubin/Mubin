@@ -226,6 +226,7 @@ class ConsolidationTests(unittest.TestCase):
                             "adjudicated": False,
                             "adjudicator": None,
                         },
+                        "curation_note": f"note-{tid}",
                         "family_id": f"family-{tid}",
                         "gold_status": "source_attributed",
                         "synthetic": False,
@@ -807,6 +808,97 @@ class ConsolidationTests(unittest.TestCase):
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "gold disagreement"):
                 consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
+
+    def test_post_verifier_adjudication_requires_verifier_binding(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "post-verifier-binding",
+            [task],
+            {"p0": ("adjudication", "gold_disagreement")},
+            verifier_task_ids={"p0"},
+        )
+        ledger_path = evidence / "source-bearing" / "CURATION_LEDGER.jsonl"
+        rows = load_jsonl(ledger_path)
+        rows[0]["verifier_response_sha256"] = None
+        rows[0]["verifier_model_family"] = None
+        _write_jsonl(ledger_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "post-Verifier ledger row lacks"):
+                consolidation.validate_primary_run_evidence(
+                    self.root, evidence, self.source_cache
+                )
+
+    def test_promoted_verifier_locator_must_resolve_against_pinned_source(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "forged-locator",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        bundle = evidence / "source-bearing"
+        verifier_path = bundle / "verifier-responses.jsonl"
+        rows = load_jsonl(verifier_path)
+        forged_raw = {
+            "task_id": rows[0]["task_id"],
+            "status": "candidate",
+            "answer": {
+                "gold": {"label": "yes"},
+                "supports": [{
+                    "source_id": "s1",
+                    "locator": "gitblob:" + "2" * 40 + "#char=0:15",
+                    "excerpt": TEST_SOURCE_TEXT,
+                    "support_text": TEST_SOURCE_TEXT,
+                }],
+            },
+        }
+        rows[0] = _stamped(task, forged_raw, "verifier-family")
+        _write_jsonl(verifier_path, rows)
+
+        manifest_path = bundle / "verifier-run.json"
+        manifest = load_json(manifest_path)
+        manifest["output_sha256"] = sha256_file(verifier_path)
+        _write_json(manifest_path, manifest)
+
+        summary_path = evidence / "CURATION_RUN_SUMMARY.json"
+        summary = load_json(summary_path)
+        summary["verifier"]["output_sha256"] = sha256_file(verifier_path)
+        _write_json(summary_path, summary)
+
+        ledger_path = bundle / "CURATION_LEDGER.jsonl"
+        ledger = load_jsonl(ledger_path)
+        ledger[0]["verifier_response_sha256"] = sha256_bytes(
+            canonical_json_bytes(rows[0])
+        )
+        _write_jsonl(ledger_path, ledger)
+
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(ValueError, "source grounding invalid"):
+                consolidation.validate_primary_run_evidence(
+                    self.root, evidence, self.source_cache
+                )
+
+    def test_reviewed_preserved_candidate_field_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "reviewed-preserved-field",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            evidence / "source-bearing" / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["curation_note"] = "tampered-note"
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "differs from Curator candidate curation_note"
+            ):
+                consolidation.validate_primary_run_evidence(
+                    self.root, evidence, self.source_cache
+                )
 
     def test_reviewed_verifier_support_binding_tamper_fails_closed(self):
         task = _task("p0")
