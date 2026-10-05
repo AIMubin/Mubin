@@ -534,7 +534,8 @@ class ConsolidationTests(unittest.TestCase):
             consolidation, "build_factory_plan", return_value=_plan(["p0", "p1", "p2"])
         ):
             summary = consolidation.consolidate_primary_evidence(
-                self.root, self.evidence_root, out, expected_task_count=3
+                self.root, self.evidence_root, out, expected_task_count=3,
+                source_cache_dir=self.source_cache,
             )
 
         self.assertEqual(
@@ -577,7 +578,8 @@ class ConsolidationTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, "duplicate primary task"):
                 consolidation.consolidate_primary_evidence(
-                    self.root, self.evidence_root, Path(self.tmp.name) / "out"
+                    self.root, self.evidence_root, Path(self.tmp.name) / "out",
+                    source_cache_dir=self.source_cache,
                 )
 
     def test_collectable_curator_rejection_is_terminal_and_reserve_eligible(self):
@@ -593,7 +595,8 @@ class ConsolidationTests(unittest.TestCase):
             consolidation, "build_factory_plan", return_value=_plan(["p0"])
         ):
             summary = consolidation.consolidate_primary_evidence(
-                self.root, self.evidence_root, out, expected_task_count=1
+                self.root, self.evidence_root, out, expected_task_count=1,
+                source_cache_dir=self.source_cache,
             )
         self.assertEqual(summary["replacement_eligible_primary_count"], 1)
         row = load_jsonl(out / "CUMULATIVE_LEDGER.jsonl")[0]
@@ -625,7 +628,7 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError, "does not account for every selected task"
             ):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
 
     def test_origin_rerun_attempt_fails_closed(self):
@@ -641,7 +644,7 @@ class ConsolidationTests(unittest.TestCase):
         _write_json(origin_path, origin)
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "must be exactly 1"):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_rehashed_verifier_task_projection_tamper_fails_closed(self):
         task = _task("p0")
@@ -674,7 +677,7 @@ class ConsolidationTests(unittest.TestCase):
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "exact blinded projection"):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_curator_requested_adjudication_preserves_short_circuit_ledger(self):
         task = _task("p0")
@@ -712,7 +715,7 @@ class ConsolidationTests(unittest.TestCase):
         _write_jsonl(ledger_path, rows)
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "Verifier response hash mismatch"):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_promoted_same_model_family_fails_closed(self):
         task = _task("p0")
@@ -753,7 +756,7 @@ class ConsolidationTests(unittest.TestCase):
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "independent model families"):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_promoted_gold_disagreement_fails_closed(self):
         task = _task("p0")
@@ -796,7 +799,7 @@ class ConsolidationTests(unittest.TestCase):
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "gold disagreement"):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_reviewed_verifier_support_binding_tamper_fails_closed(self):
         task = _task("p0")
@@ -818,7 +821,7 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError, "Verifier supports differ from response"
             ):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_reviewed_source_blob_binding_tamper_fails_closed(self):
         task = _task("p0")
@@ -838,7 +841,7 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError, "source blob binding mismatch"
             ):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_reviewed_content_fingerprint_tamper_fails_closed(self):
         task = _task("p0")
@@ -858,7 +861,7 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError, "content fingerprint mismatch"
             ):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_reviewed_payload_tamper_fails_closed(self):
         task = _task("p0")
@@ -878,7 +881,7 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError, "differs from Curator candidate payload"
             ):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_reviewed_factory_response_binding_tamper_fails_closed(self):
         task = _task("p0")
@@ -898,7 +901,7 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError, "verifier_response_sha256 mismatch"
             ):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_reviewed_record_benchmark_mismatch_fails_closed(self):
         task = _task("p0")
@@ -916,7 +919,7 @@ class ConsolidationTests(unittest.TestCase):
         _write_jsonl(reviewed_path, rows)
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "reviewed record benchmark mismatch"):
-                consolidation.validate_primary_run_evidence(self.root, evidence)
+                consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
     def test_multiple_artifacts_from_one_run_count_as_one_run(self):
         self._evidence(
@@ -940,7 +943,8 @@ class ConsolidationTests(unittest.TestCase):
             consolidation, "build_factory_plan", return_value=_plan(["p0", "p1"])
         ):
             summary = consolidation.consolidate_primary_evidence(
-                self.root, self.evidence_root, out, expected_task_count=2
+                self.root, self.evidence_root, out, expected_task_count=2,
+                source_cache_dir=self.source_cache,
             )
         self.assertEqual(summary["input_run_ids"], [77])
         self.assertEqual(summary["input_run_count"], 1)
