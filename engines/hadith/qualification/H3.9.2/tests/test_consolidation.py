@@ -332,13 +332,70 @@ class ConsolidationTests(unittest.TestCase):
             if outcome == "adjudication":
                 adjudication.append({"task_id": tid, "reason": reason})
             if outcome == "promoted":
-                reviewed.append({
-                    "case_id": case_id,
-                    "benchmark_id": "b1",
+                curator_response = curator_by_id[tid]
+                verifier_response = verifier_by_id[tid]
+                candidate = json.loads(json.dumps(
+                    curator_response["candidate"], ensure_ascii=False
+                ))
+                candidate_refs = candidate["source_refs"]
+                reviewed_refs = []
+                for ref in candidate_refs:
+                    excerpt = ref["excerpt"]
+                    reviewed_ref = dict(ref)
+                    reviewed_ref["source_blob_sha"] = "1" * 40
+                    reviewed_ref["excerpt_sha256"] = sha256_bytes(
+                        excerpt.encode("utf-8")
+                    )
+                    reviewed_refs.append(reviewed_ref)
+                ap = dict(candidate["answer_provenance"])
+                normalized_supports = []
+                for support in ap["supports"]:
+                    sid = support["source_id"]
+                    support_text = support["support_text"]
+                    ref = next(x for x in reviewed_refs if x["source_id"] == sid)
+                    normalized_supports.append({
+                        "source_id": sid,
+                        "support_text": support_text,
+                        "support_text_sha256": sha256_bytes(
+                            support_text.encode("utf-8")
+                        ),
+                        "source_excerpt_sha256": ref["excerpt_sha256"],
+                    })
+                ap["supports"] = normalized_supports
+                ap["gold_binding_sha256"] = sha256_bytes(canonical_json_bytes({
+                    "gold": candidate["payload"]["gold"],
+                    "supports": normalized_supports,
+                    "mode": ap["mode"],
+                }))
+                reviewed_record = {
+                    **candidate,
+                    "source_ids": [ref["source_id"] for ref in reviewed_refs],
+                    "source_refs": reviewed_refs,
+                    "answer_provenance": ap,
+                    "factory_verification": {
+                        "factory_version": 1,
+                        "risk_tier": task["risk_tier"],
+                        "slot_binding_sha256": "9" * 64,
+                        "curator_model_family": curator_response["model_family"],
+                        "curator_model_ref": curator_response["model_ref"],
+                        "verifier_model_family": verifier_response["model_family"],
+                        "verifier_model_ref": verifier_response["model_ref"],
+                        "curator_response_sha256": sha256_bytes(
+                            canonical_json_bytes(curator_response)
+                        ),
+                        "verifier_response_sha256": sha256_bytes(
+                            canonical_json_bytes(verifier_response)
+                        ),
+                        "curator_execution_binding": curator_response["execution_binding"],
+                        "verifier_execution_binding": verifier_response["execution_binding"],
+                        "agreement": "exact_gold_match",
+                        "task_fingerprint": task["task_fingerprint"],
+                    },
                     "factory_task_id": tid,
                     "factory_slot_id": tid,
                     "factory_task_fingerprint": task["task_fingerprint"],
-                })
+                }
+                reviewed.append(reviewed_record)
         _write_jsonl(bundle / "CURATION_LEDGER.jsonl", ledger)
         _write_jsonl(bundle / "adjudication.jsonl", adjudication)
         if reviewed:
@@ -655,6 +712,46 @@ class ConsolidationTests(unittest.TestCase):
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "gold disagreement"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_reviewed_payload_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "reviewed-payload",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            evidence / "source-bearing" / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["payload"]["gold"] = {"label": "no"}
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "differs from Curator candidate payload"
+            ):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_reviewed_factory_response_binding_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "reviewed-factory",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            evidence / "source-bearing" / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["factory_verification"]["verifier_response_sha256"] = "0" * 64
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "verifier_response_sha256 mismatch"
+            ):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
     def test_reviewed_record_benchmark_mismatch_fails_closed(self):
