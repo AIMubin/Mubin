@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       task_offset:
-        description: Zero-based first non-holdout candidate task for this campaign batch
+        description: Zero-based first non-holdout primary task for this campaign batch
         required: true
         default: "104"
       task_count:
