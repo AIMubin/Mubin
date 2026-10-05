@@ -795,6 +795,26 @@ class ConsolidationTests(unittest.TestCase):
             ):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
+    def test_reviewed_source_blob_binding_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "reviewed-source-blob",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            evidence / "source-bearing" / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["source_refs"][0]["source_blob_sha"] = "2" * 40
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "source blob binding mismatch"
+            ):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
     def test_reviewed_content_fingerprint_tamper_fails_closed(self):
         task = _task("p0")
         evidence = self._evidence(
