@@ -34,6 +34,26 @@ def _task(slot_id: str, anchor: str = "s1") -> dict:
     return row
 
 
+def _stamped(task: dict, raw: dict, family: str) -> dict:
+    row = dict(raw)
+    row["task_fingerprint"] = task["task_fingerprint"]
+    row["model_family"] = family
+    row["model_ref"] = f"{family}-ref"
+    row["execution_binding"] = {
+        "protocol_version": 1,
+        "config_sha256": "c" * 64,
+        "batch_id": "a" * 24,
+        "raw_response_sha256": sha256_bytes(canonical_json_bytes(raw)),
+        "adapter_command_sha256": "d" * 64,
+        "adapter_artifacts": [{
+            "path": "adapters/chat_completions.py",
+            "sha256": "e" * 64,
+            "size_bytes": 1,
+        }],
+    }
+    return row
+
+
 def _plan(slot_ids: list[str]) -> dict:
     slots = [
         {
@@ -81,6 +101,7 @@ class ConsolidationTests(unittest.TestCase):
         verifier_rejections: dict[str, str] | None = None,
         run_id: int = 1001,
         sha: str = "a" * 40,
+        task_offset: int = 0,
     ) -> Path:
         curator_rejections = curator_rejections or {}
         verifier_task_ids = verifier_task_ids or set()
@@ -94,9 +115,11 @@ class ConsolidationTests(unittest.TestCase):
             "conclusion": "success",
             "head_branch": "main",
             "head_sha": sha,
+            "workflow_path": ".github/workflows/h392-curation-campaign.yml",
             "artifact_id": run_id + 100,
-            "artifact_name": f"h392-curation-chunk-{name}",
+            "artifact_name": f"h392-curation-chunk-{task_offset}-{len(tasks)}",
             "artifact_sha256": "b" * 64,
+            "encrypted_bundle_sha256": "f" * 64,
         })
 
         _write_jsonl(bundle / "curator-tasks.jsonl", tasks)
@@ -107,17 +130,18 @@ class ConsolidationTests(unittest.TestCase):
                 continue
             outcome, _reason = outcomes[tid]
             if outcome == "skipped":
-                curator_responses.append({
+                raw = {
                     "task_id": tid,
                     "status": "no_candidate",
                     "reason": "unsupported",
-                })
+                }
             else:
-                curator_responses.append({
+                raw = {
                     "task_id": tid,
                     "status": "candidate",
                     "candidate": {},
-                })
+                }
+            curator_responses.append(_stamped(task, raw, "curator-family"))
         _write_jsonl(bundle / "curator-responses.jsonl", curator_responses)
         curator_rejection_rows = [
             {
@@ -137,6 +161,7 @@ class ConsolidationTests(unittest.TestCase):
             "completed_task_count": len(curator_responses),
             "rejected_task_count": len(curator_rejection_rows),
             "pending_task_count": 0,
+            "tasks_sha256": sha256_file(bundle / "curator-tasks.jsonl"),
             "output_sha256": sha256_file(bundle / "curator-responses.jsonl"),
             "rejections": curator_rejection_rows,
         })
@@ -146,14 +171,24 @@ class ConsolidationTests(unittest.TestCase):
             [{"task_id": tid} for tid in sorted(verifier_task_ids)],
         )
         verifier_responses = [
-            {"task_id": tid, "status": "candidate", "answer": {}}
+            _stamped(
+                next(task for task in tasks if task["task_id"] == tid),
+                {"task_id": tid, "status": "candidate", "answer": {}},
+                "verifier-family",
+            )
             for tid in sorted(verifier_task_ids)
             if tid not in verifier_rejections
         ]
         _write_jsonl(bundle / "verifier-responses.jsonl", verifier_responses)
         if verifier_task_ids:
             rejection_rows = [
-                {"task_id": tid, "error_code": code}
+                {
+                    "task_id": tid,
+                    "task_fingerprint": next(
+                        task["task_fingerprint"] for task in tasks if task["task_id"] == tid
+                    ),
+                    "error_code": code,
+                }
                 for tid, code in verifier_rejections.items()
             ]
             _write_json(bundle / "verifier-run.json", {
@@ -164,6 +199,7 @@ class ConsolidationTests(unittest.TestCase):
                 "completed_task_count": len(verifier_responses),
                 "rejected_task_count": len(rejection_rows),
                 "pending_task_count": 0,
+                "tasks_sha256": sha256_file(bundle / "verifier-tasks.jsonl"),
                 "output_sha256": sha256_file(bundle / "verifier-responses.jsonl"),
                 "rejections": rejection_rows,
             })
@@ -207,7 +243,7 @@ class ConsolidationTests(unittest.TestCase):
             "kind": "non_holdout_curator_verifier_chunk",
             "github_sha": sha,
             "github_run_id": str(run_id),
-            "task_offset": 0,
+            "task_offset": task_offset,
             "task_limit": len(tasks),
             "selected_task_count": len(tasks),
             "selected_tasks_sha256": sha256_file(bundle / "curator-tasks.jsonl"),
@@ -265,10 +301,14 @@ class ConsolidationTests(unittest.TestCase):
         self.assertFalse(eligibility["rules"]["pending_adjudication_is_replaceable"])
         self.assertFalse(eligibility["rules"]["reserve_reconciliation_enabled"])
         self.assertEqual(eligibility["eligible"][0]["primary_slot_id"], "p2")
+        self.assertEqual(eligibility["eligible"][0]["reserve_slots"][0]["slot_id"], "p2:reserve:01")
         self.assertEqual(
             eligibility["eligible"][0]["cumulative_ledger_sha256"],
             sha256_file(out / "CUMULATIVE_LEDGER.jsonl"),
         )
+        self.assertEqual(summary["input_run_ids"], [1001])
+        self.assertEqual(summary["input_run_count"], 1)
+        self.assertEqual(summary["input_artifact_count"], 1)
 
     def test_duplicate_primary_task_across_runs_fails_closed(self):
         task = _task("p0")
@@ -336,6 +376,26 @@ class ConsolidationTests(unittest.TestCase):
                 ValueError, "does not account for every selected task"
             ):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
+
+
+    def test_expected_count_requires_exact_zero_based_prefix(self):
+        task = _task("p1")
+        self._evidence(
+            "gap",
+            [task],
+            {"p1": ("skipped", "no_curator_candidate")},
+            task_offset=1,
+        )
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"), patch.object(
+            consolidation, "build_factory_plan", return_value=_plan(["p0", "p1"])
+        ):
+            with self.assertRaisesRegex(ValueError, "exact zero-based prefix"):
+                consolidation.consolidate_primary_evidence(
+                    self.root,
+                    self.evidence_root,
+                    Path(self.tmp.name) / "out",
+                    expected_task_count=1,
+                )
 
 
 if __name__ == "__main__":
