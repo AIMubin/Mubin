@@ -5,8 +5,14 @@ from pathlib import Path
 from typing import Any
 import re
 
-from .core import dump_jsonl, load_json, load_jsonl, sha256_file, write_json
-from .factory import _task_rows, _validate_tasks_against_frozen_plan, build_factory_plan
+from .core import canonical_json_bytes, dump_jsonl, load_json, load_jsonl, sha256_bytes, sha256_file, write_json
+from .factory import (
+    _task_rows,
+    _validate_response_identity,
+    _validate_tasks_against_frozen_plan,
+    build_factory_plan,
+)
+from .freeze import FREEZE_SCHEMA_VERSION
 
 
 _SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
@@ -39,10 +45,13 @@ def _load_origin(path: Path) -> dict[str, Any]:
     artifact_id = row.get("artifact_id")
     if not isinstance(artifact_id, int) or isinstance(artifact_id, bool) or artifact_id < 1:
         raise ValueError(f"origin artifact_id invalid: {run_id}")
+    if row.get("workflow_path") != ".github/workflows/h392-curation-campaign.yml":
+        raise ValueError(f"origin workflow_path invalid: {run_id}")
     artifact_name = row.get("artifact_name")
-    if not isinstance(artifact_name, str) or not artifact_name.startswith("h392-curation-chunk-"):
+    if not isinstance(artifact_name, str) or re.fullmatch(r"h392-curation-chunk-(\\d+)-(\\d+)", artifact_name) is None:
         raise ValueError(f"origin artifact_name invalid: {run_id}")
     _require_sha256(row.get("artifact_sha256"), f"origin artifact_sha256 for {run_id}")
+    _require_sha256(row.get("encrypted_bundle_sha256"), f"origin encrypted_bundle_sha256 for {run_id}")
     return row
 
 
@@ -202,8 +211,20 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         raise ValueError("run summary github_run_id differs from origin")
     if summary.get("github_sha") != origin["head_sha"]:
         raise ValueError("run summary github_sha differs from origin")
-    if int(summary.get("selected_task_count", -1)) < 1:
-        raise ValueError("run summary selected_task_count must be positive")
+    try:
+        task_offset = int(summary.get("task_offset"))
+        task_limit = int(summary.get("task_limit"))
+        selected_task_count = int(summary.get("selected_task_count"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("run summary chunk bounds must be integers") from exc
+    if task_offset < 0 or task_limit < 1 or selected_task_count < 1:
+        raise ValueError("run summary chunk bounds must be positive")
+    match = re.fullmatch(r"h392-curation-chunk-(\\d+)-(\\d+)", str(origin["artifact_name"]))
+    assert match is not None
+    if (int(match.group(1)), int(match.group(2))) != (task_offset, task_limit):
+        raise ValueError("artifact name chunk bounds differ from run summary")
+    if selected_task_count != task_limit:
+        raise ValueError("run summary selected_task_count differs from task_limit")
 
     tasks_path = bundle / "curator-tasks.jsonl"
     curator_responses_path = bundle / "curator-responses.jsonl"
@@ -245,6 +266,8 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
     _validate_manifest_counts(
         curator_manifest, len(tasks), len(curator_responses), len(curator_rejections), "curator"
     )
+    if curator_manifest.get("tasks_sha256") != sha256_file(tasks_path):
+        raise ValueError("Curator manifest task hash mismatch")
     if curator_manifest.get("output_sha256") != sha256_file(curator_responses_path):
         raise ValueError("Curator manifest output hash mismatch")
     if summary.get("curator", {}).get("output_sha256") != sha256_file(curator_responses_path):
@@ -254,6 +277,11 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         raise ValueError("Curator manifest does not account for every selected task")
     if set(curator_responses) & set(curator_rejections):
         raise ValueError("Curator response/rejection sets overlap")
+    for tid, response in curator_responses.items():
+        _validate_response_identity(response, task_map[tid], "curator")
+    for tid, rejection in curator_rejections.items():
+        if rejection.get("task_fingerprint") != task_map[tid].get("task_fingerprint"):
+            raise ValueError(f"Curator rejection task fingerprint mismatch: {tid}")
 
     verifier_task_ids = _verifier_task_ids(verifier_tasks_path)
     if not verifier_task_ids.issubset(task_map):
@@ -278,6 +306,8 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
             len(verifier_rejections),
             "verifier",
         )
+        if verifier_manifest.get("tasks_sha256") != sha256_file(verifier_tasks_path):
+            raise ValueError("Verifier manifest task hash mismatch")
         if verifier_manifest.get("output_sha256") != sha256_file(verifier_responses_path):
             raise ValueError("Verifier manifest output hash mismatch")
         if summary.get("verifier", {}).get("output_sha256") != sha256_file(verifier_responses_path):
@@ -287,8 +317,15 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
             raise ValueError("Verifier manifest does not account for every verifier task")
         if set(verifier_responses) & set(verifier_rejections):
             raise ValueError("Verifier response/rejection sets overlap")
+        for tid, response in verifier_responses.items():
+            _validate_response_identity(response, task_map[tid], "verifier")
+        for tid, rejection in verifier_rejections.items():
+            if rejection.get("task_fingerprint") != task_map[tid].get("task_fingerprint"):
+                raise ValueError(f"Verifier rejection task fingerprint mismatch: {tid}")
     elif load_jsonl(verifier_responses_path):
         raise ValueError("Verifier responses exist without verifier tasks")
+    elif verifier_manifest_path.exists():
+        raise ValueError("Verifier execution manifest exists without verifier tasks")
 
     ledger_rows = load_jsonl(ledger_path)
     ledger: dict[str, dict[str, Any]] = {}
@@ -434,6 +471,8 @@ def consolidate_primary_evidence(
         raise ValueError("no cumulative evidence directories found")
 
     plan = build_factory_plan(root)
+    factory_plan_sha = sha256_bytes(canonical_json_bytes(plan))
+    slot_by_id = {str(slot["slot_id"]): slot for slot in plan["slots"]}
     primary_non_holdout = [
         slot for slot in plan["slots"]
         if slot["partition"] == "non_holdout"
@@ -452,14 +491,14 @@ def consolidate_primary_evidence(
     cumulative_rows: list[dict[str, Any]] = []
     reviewed_by_benchmark: dict[str, list[dict[str, Any]]] = defaultdict(list)
     adjudication_rows: list[dict[str, Any]] = []
-    input_runs: list[dict[str, Any]] = []
+    input_artifacts: list[dict[str, Any]] = []
     seen_tasks: set[str] = set()
     seen_case_ids: set[str] = set()
 
     for evidence_dir in evidence_dirs:
         validated = validate_primary_run_evidence(root, evidence_dir)
         origin = validated["origin"]
-        input_runs.append({
+        input_artifacts.append({
             "github_run_id": origin["github_run_id"],
             "head_sha": origin["head_sha"],
             "artifact_id": origin["artifact_id"],
@@ -505,6 +544,8 @@ def consolidate_primary_evidence(
             raise ValueError(
                 f"cumulative task count {len(cumulative_rows)} does not match expected {expected_task_count}"
             )
+        if offsets != list(range(expected_task_count)):
+            raise ValueError("cumulative primary evidence is not an exact zero-based prefix")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     ledger_path = out_dir / "CUMULATIVE_LEDGER.jsonl"
@@ -520,10 +561,18 @@ def consolidate_primary_evidence(
     dump_jsonl(adjudication_path, adjudication_rows)
 
     reviewed_count = 0
+    reviewed_files: list[dict[str, Any]] = []
     for bid, rows in sorted(reviewed_by_benchmark.items()):
         rows.sort(key=lambda row: offset_by_slot[str(row["factory_slot_id"])])
         reviewed_count += len(rows)
-        dump_jsonl(out_dir / "reviewed" / bid / "reviewed.jsonl", rows)
+        reviewed_path = out_dir / "reviewed" / bid / "reviewed.jsonl"
+        dump_jsonl(reviewed_path, rows)
+        reviewed_files.append({
+            "benchmark_id": bid,
+            "record_count": len(rows),
+            "path": f"reviewed/{bid}/reviewed.jsonl",
+            "sha256": sha256_file(reviewed_path),
+        })
 
     eligibility_rows: list[dict[str, Any]] = []
     for row in cumulative_rows:
@@ -533,14 +582,22 @@ def consolidate_primary_evidence(
         reserve_ids = sorted(reserves_by_primary.get(primary_slot_id, []))
         if not reserve_ids:
             raise ValueError(f"eligible primary has no frozen linked reserve: {primary_slot_id}")
+        primary_slot = slot_by_id[primary_slot_id]
         eligibility_rows.append({
             "primary_slot_id": primary_slot_id,
+            "primary_slot_binding_sha256": sha256_bytes(canonical_json_bytes(primary_slot)),
             "primary_task_id": row["task_id"],
             "primary_task_fingerprint": row["task_fingerprint"],
             "primary_offset": row["primary_offset"],
             "primary_outcome": row["outcome"],
             "eligibility_reason": row["canonical_reason"],
-            "reserve_slot_ids": reserve_ids,
+            "reserve_slots": [
+                {
+                    "slot_id": reserve_id,
+                    "slot_binding_sha256": sha256_bytes(canonical_json_bytes(slot_by_id[reserve_id])),
+                }
+                for reserve_id in reserve_ids
+            ],
             "cumulative_ledger_sha256": ledger_sha,
         })
 
@@ -548,7 +605,8 @@ def consolidate_primary_evidence(
         "schema_version": 1,
         "campaign_id": "H3.9.2",
         "kind": "primary_replacement_eligibility",
-        "freeze_schema_version": 24,
+        "freeze_schema_version": FREEZE_SCHEMA_VERSION,
+        "factory_plan_sha256": factory_plan_sha,
         "cumulative_ledger_sha256": ledger_sha,
         "rules": {
             "promoted_is_replaceable": False,
@@ -573,18 +631,24 @@ def consolidate_primary_evidence(
         by_benchmark[str(row["benchmark_id"])][str(row["outcome"])] += 1
         by_anchor[str(row["anchor_source_id"])][str(row["outcome"])] += 1
 
+    input_artifacts.sort(key=lambda row: (int(row["github_run_id"]), int(row["artifact_id"])))
+    input_run_ids = sorted({int(row["github_run_id"]) for row in input_artifacts})
     manifest = {
         "schema_version": 1,
         "campaign_id": "H3.9.2",
         "kind": "cumulative_non_holdout_primary_evidence",
-        "freeze_schema_version": 24,
-        "input_runs": input_runs,
-        "input_run_count": len(input_runs),
+        "freeze_schema_version": FREEZE_SCHEMA_VERSION,
+        "factory_plan_sha256": factory_plan_sha,
+        "input_artifacts": input_artifacts,
+        "input_artifact_count": len(input_artifacts),
+        "input_run_ids": input_run_ids,
+        "input_run_count": len(input_run_ids),
         "task_count": len(cumulative_rows),
         "coverage_ranges": _compress_offsets(offsets),
         "cumulative_ledger_sha256": ledger_sha,
         "cumulative_adjudication_sha256": sha256_file(adjudication_path),
         "replacement_eligibility_sha256": sha256_file(eligibility_path),
+        "reviewed_files": reviewed_files,
         "reviewed_record_count": reviewed_count,
         "adjudication_count": len(adjudication_rows),
         "replacement_eligible_primary_count": len(eligibility_rows),
@@ -595,9 +659,10 @@ def consolidate_primary_evidence(
         "schema_version": 1,
         "campaign_id": "H3.9.2",
         "kind": "redacted_cumulative_non_holdout_primary_summary",
-        "freeze_schema_version": 24,
-        "input_run_ids": [row["github_run_id"] for row in input_runs],
-        "input_run_count": len(input_runs),
+        "freeze_schema_version": FREEZE_SCHEMA_VERSION,
+        "input_run_ids": input_run_ids,
+        "input_run_count": len(input_run_ids),
+        "input_artifact_count": len(input_artifacts),
         "task_count": len(cumulative_rows),
         "coverage_ranges": _compress_offsets(offsets),
         "outcomes": dict(sorted(outcome_counts.items())),
