@@ -9,6 +9,7 @@ from unittest.mock import patch
 from benchmark_campaign import consolidation
 from benchmark_campaign.core import canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file
 from benchmark_campaign.factory import _verifier_task_from_curator
+from benchmark_campaign.normalization import fingerprint_payload
 
 
 def _write_json(path: Path, obj) -> None:
@@ -390,6 +391,9 @@ class ConsolidationTests(unittest.TestCase):
                     "source_ids": [ref["source_id"] for ref in reviewed_refs],
                     "source_refs": reviewed_refs,
                     "answer_provenance": ap,
+                    "content_fingerprint": fingerprint_payload(
+                        candidate["payload"]
+                    ),
                     "factory_verification": {
                         "factory_version": 1,
                         "risk_tier": task["risk_tier"],
@@ -788,6 +792,26 @@ class ConsolidationTests(unittest.TestCase):
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(
                 ValueError, "Verifier supports differ from response"
+            ):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_reviewed_content_fingerprint_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "reviewed-fingerprint",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            evidence / "source-bearing" / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["content_fingerprint"] = "0" * 64
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "content fingerprint mismatch"
             ):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
