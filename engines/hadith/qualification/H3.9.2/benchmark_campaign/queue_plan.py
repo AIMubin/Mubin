@@ -6,6 +6,9 @@ from typing import Any
 from .core import load_json, write_json
 
 
+RESERVE_SLOTS_PER_PRIMARY = 2
+
+
 def _balanced_quotas(sources: list[str], total: int) -> list[dict[str, Any]]:
     if not sources:
         if total:
@@ -31,6 +34,16 @@ def build_curation_queue_plan(root: Path, spec: dict[str, Any], out_path: Path |
         "campaign_id": spec["campaign_id"],
         "purpose": "operational curation quotas only; quotas never create or infer gold labels",
         "anchor_rule": "Each case is counted once against an operational anchor source, but source_ids must enumerate every canonical source used by the case.",
+        "candidate_reserve_policy": {
+            "reserve_slots_per_primary": RESERVE_SLOTS_PER_PRIMARY,
+            "rule": (
+                "Primary record quotas remain exact. Reserve candidate slots are "
+                "distinct deterministic source-window opportunities and may replace "
+                "only unusable primary candidate slots; they do not erase or bypass "
+                "adjudication-required outcomes."
+            ),
+            "primary_slot_prefix_preserved": True,
+        },
         "benchmarks": [],
     }
     total_target = 0
@@ -77,6 +90,7 @@ def build_curation_queue_plan(root: Path, spec: dict[str, Any], out_path: Path |
         out["benchmarks"].append(item)
         total_target += int(b["target_total"])
     out["total_target"] = total_target
+    out["total_candidate_slots"] = total_target * (1 + RESERVE_SLOTS_PER_PRIMARY)
     out["pending_cases"] = total_target
     out["completed_cases"] = 0
     if out_path is not None:
