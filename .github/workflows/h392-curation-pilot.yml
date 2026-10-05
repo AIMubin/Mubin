@@ -179,7 +179,7 @@ jobs:
           from benchmark_campaign.factory import build_factory_plan
 
           plan = build_factory_plan(Path(".").resolve())
-          available = int(plan["candidate_non_holdout_slots"])
+          available = int(plan["primary_non_holdout_slots"])
           offset = int(os.environ["TASK_OFFSET"])
           limit = int(os.environ["TASK_LIMIT"])
           if offset < 0 or offset >= available:
@@ -190,7 +190,7 @@ jobs:
               raise SystemExit("TASK_LIMIT must be in [1, 64]")
           if offset + limit > available:
               raise SystemExit(
-                  "TASK_OFFSET + TASK_LIMIT exceeds the frozen non-holdout candidate plan"
+                  "TASK_OFFSET + TASK_LIMIT exceeds the frozen non-holdout primary plan"
               )
           PY
 
