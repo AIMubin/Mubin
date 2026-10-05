@@ -48,7 +48,7 @@ def _load_origin(path: Path) -> dict[str, Any]:
     if row.get("workflow_path") != ".github/workflows/h392-curation-campaign.yml":
         raise ValueError(f"origin workflow_path invalid: {run_id}")
     artifact_name = row.get("artifact_name")
-    if not isinstance(artifact_name, str) or re.fullmatch(r"h392-curation-chunk-(\\d+)-(\\d+)", artifact_name) is None:
+    if not isinstance(artifact_name, str) or re.fullmatch(r"h392-curation-chunk-(\d+)-(\d+)", artifact_name) is None:
         raise ValueError(f"origin artifact_name invalid: {run_id}")
     _require_sha256(row.get("artifact_sha256"), f"origin artifact_sha256 for {run_id}")
     _require_sha256(row.get("encrypted_bundle_sha256"), f"origin encrypted_bundle_sha256 for {run_id}")
@@ -219,7 +219,7 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         raise ValueError("run summary chunk bounds must be integers") from exc
     if task_offset < 0 or task_limit < 1 or selected_task_count < 1:
         raise ValueError("run summary chunk bounds must be positive")
-    match = re.fullmatch(r"h392-curation-chunk-(\\d+)-(\\d+)", str(origin["artifact_name"]))
+    match = re.fullmatch(r"h392-curation-chunk-(\d+)-(\d+)", str(origin["artifact_name"]))
     assert match is not None
     if (int(match.group(1)), int(match.group(2))) != (task_offset, task_limit):
         raise ValueError("artifact name chunk bounds differ from run summary")
