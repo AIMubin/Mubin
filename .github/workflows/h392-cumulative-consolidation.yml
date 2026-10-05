@@ -68,13 +68,38 @@ jobs:
           set -eu
           test -n "$ARTIFACT_KEY"
           python - <<'PY'
+          import json
           import os
+          from pathlib import Path
+
           raw = [x.strip() for x in os.environ["RUN_IDS"].split(",") if x.strip()]
           if not raw or len(raw) != len(set(raw)) or any(not x.isdigit() for x in raw):
               raise SystemExit("run_ids must be a non-empty unique comma-separated list of numeric run IDs")
           expected = int(os.environ["EXPECTED_TASK_COUNT"])
           if expected < 1 or expected > 896:
               raise SystemExit("expected_task_count must be in [1, 896]")
+
+          status = json.loads(
+              Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8")
+          )
+          canonical_runs = [
+              str(x) for x in status["cumulative_consolidation_run_ids"]
+          ]
+          canonical_count = int(
+              status["cumulative_consolidation_expected_primary_tasks"]
+          )
+          if raw != canonical_runs:
+              raise SystemExit(
+                  "run_ids differ from the repository-reviewed canonical campaign history"
+              )
+          if expected != canonical_count:
+              raise SystemExit(
+                  "expected_task_count differs from the repository-reviewed canonical prefix"
+              )
+          if int(status.get("freeze_schema_version", 0)) != 25:
+              raise SystemExit("cumulative consolidation requires freeze schema 25")
+          if status.get("reserve_reconciliation_enabled") is not False:
+              raise SystemExit("reserve reconciliation must remain disabled")
           PY
 
       - name: Fetch and provenance-bind canonical encrypted artifacts
@@ -281,6 +306,17 @@ jobs:
               encrypted.unlink()
           PY
 
+      - name: Reconfirm main before cumulative consolidation
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Main advanced while cumulative evidence was being acquired; dispatch again." >&2
+            exit 1
+          fi
+
       - name: Consolidate cumulative primary evidence
         run: |
           set -eu
@@ -313,6 +349,17 @@ jobs:
           test ! -e "$REDACTED_DIR/CUMULATIVE_ADJUDICATION.jsonl"
           test ! -e "$REDACTED_DIR/REPLACEMENT_ELIGIBILITY.json"
           test ! -e "$REDACTED_DIR/reviewed"
+
+      - name: Reconfirm main before publishing cumulative evidence
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Main advanced before cumulative evidence publication; refusing stale artifact." >&2
+            exit 1
+          fi
 
       - name: Upload encrypted cumulative evidence and redacted summary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
