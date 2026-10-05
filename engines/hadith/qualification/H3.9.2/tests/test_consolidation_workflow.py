@@ -1,0 +1,104 @@
+from __future__ import annotations
+
+import unittest
+from pathlib import Path
+
+
+class ConsolidationWorkflowTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        project = Path(__file__).resolve().parents[1]
+        repo_root = project.parents[3]
+        cls.workflow = (
+            repo_root / ".github" / "workflows" / "h392-cumulative-consolidation.yml"
+        ).read_text(encoding="utf-8")
+        cls.integrity = (
+            repo_root / ".github" / "workflows" / "hadith-h392.yml"
+        ).read_text(encoding="utf-8")
+
+    def test_integrity_ci_covers_consolidation_workflow(self):
+        self.assertGreaterEqual(
+            self.integrity.count(
+                '".github/workflows/h392-cumulative-consolidation.yml"'
+            ),
+            2,
+        )
+
+    def test_secret_bearing_workflow_pins_third_party_actions(self):
+        self.assertIn(
+            "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            self.workflow,
+        )
+        self.assertIn(
+            "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            self.workflow,
+        )
+        self.assertIn(
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            self.workflow,
+        )
+        self.assertNotIn("actions/checkout@v", self.workflow)
+        self.assertNotIn("actions/setup-python@v", self.workflow)
+        self.assertNotIn("actions/upload-artifact@v", self.workflow)
+
+    def test_workflow_is_main_only_and_refuses_stale_dispatch(self):
+        self.assertIn('GITHUB_REF_NAME:-', self.workflow)
+        self.assertIn("git ls-remote origin refs/heads/main", self.workflow)
+        self.assertIn("Refusing stale cumulative consolidation", self.workflow)
+
+    def test_workflow_binds_each_input_to_successful_campaign_main_run(self):
+        self.assertIn('run.get("conclusion") != "success"', self.workflow)
+        self.assertIn('run.get("head_branch") != "main"', self.workflow)
+        self.assertIn(
+            'run.get("path") != ".github/workflows/h392-curation-campaign.yml"',
+            self.workflow,
+        )
+        self.assertIn('run.get("event") != "workflow_dispatch"', self.workflow)
+        self.assertIn('artifact.get("digest")', self.workflow)
+        self.assertIn("artifact ZIP digest mismatch", self.workflow)
+        self.assertIn("encrypted source-bearing bundle digest mismatch", self.workflow)
+
+    def test_archive_extraction_is_fail_closed(self):
+        self.assertIn("unsafe artifact ZIP member", self.workflow)
+        self.assertIn("unsafe source-bearing tar member", self.workflow)
+        self.assertIn("member.issym()", self.workflow)
+        self.assertIn("member.islnk()", self.workflow)
+        self.assertIn('filter="data"', self.workflow)
+
+    def test_artifact_key_is_not_job_scoped(self):
+        job_env = self.workflow.split("    env:\n", 1)[1].split(
+            "\n\n    steps:", 1
+        )[0]
+        self.assertNotIn("H392_CURATION_ARTIFACT_KEY", job_env)
+        self.assertNotIn("ARTIFACT_KEY", job_env)
+        self.assertIn(
+            "ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}",
+            self.workflow,
+        )
+
+    def test_workflow_uploads_only_redacted_summary_and_encrypted_bundle(self):
+        upload = self.workflow.split(
+            "- name: Upload encrypted cumulative evidence and redacted summary", 1
+        )[1]
+        self.assertIn("path: /tmp/h392-cumulative/redacted", upload)
+        self.assertNotIn("EVIDENCE_ROOT", upload)
+        self.assertNotIn("CUMULATIVE_DIR", upload)
+        proof = self.workflow.split(
+            "- name: Remove decrypted evidence and prove upload is redacted", 1
+        )[1].split(
+            "- name: Upload encrypted cumulative evidence and redacted summary", 1
+        )[0]
+        self.assertIn('rm -rf "$EVIDENCE_ROOT" "$CUMULATIVE_DIR"', proof)
+        self.assertIn("CUMULATIVE_LEDGER.jsonl", proof)
+        self.assertIn("REPLACEMENT_ELIGIBILITY.json", proof)
+
+    def test_initial_canonical_history_is_explicit(self):
+        self.assertIn(
+            'default: "37280971913,37295517184,37326459365"',
+            self.workflow,
+        )
+        self.assertIn('default: "168"', self.workflow)
+
+
+if __name__ == "__main__":
+    unittest.main()
