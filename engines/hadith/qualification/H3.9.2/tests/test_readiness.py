@@ -202,6 +202,7 @@ class ReadinessGateTests(unittest.TestCase):
             )
         self.assertTrue(result["passed"])
         self.assertEqual(result["attempts_used"], 2)
+        self.assertEqual(result["attempt_diagnostics"], ["connection_failed"])
         self.assertEqual(run.call_count, 2)
 
         with patch(
@@ -224,6 +225,123 @@ class ReadinessGateTests(unittest.TestCase):
             )
         self.assertFalse(result["passed"])
         self.assertEqual(result["diagnostic"], "http_401")
+        self.assertEqual(result["attempt_diagnostics"], ["http_401"])
+        self.assertEqual(result["attempts_used"], 1)
+        self.assertEqual(run.call_count, 1)
+
+    def test_live_canary_retries_one_task_local_contract_failure(self):
+        with patch(
+            "benchmark_campaign.readiness.subprocess.run",
+            side_effect=[
+                SimpleNamespace(
+                    returncode=2,
+                    stderr="MUBIN_DIAGNOSTIC:contract_verbatim_not_supported\n",
+                ),
+                SimpleNamespace(returncode=0, stderr=""),
+            ],
+        ) as run, patch(
+            "benchmark_campaign.readiness._validate_canary_output",
+            return_value=None,
+        ):
+            result = _run_live_canary(
+                self.root,
+                "curator",
+                "multilabel",
+                "https://secret.example/v1",
+                "secret-model",
+                "secret-key",
+                "bearer",
+                "json_object",
+                300,
+            )
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["diagnostic"], None)
+        self.assertEqual(
+            result["attempt_diagnostics"],
+            ["contract_verbatim_not_supported"],
+        )
+        self.assertEqual(result["attempts_used"], 2)
+        self.assertEqual(run.call_count, 2)
+
+    def test_live_canary_blocks_after_repeated_task_local_contract_failure(self):
+        with patch(
+            "benchmark_campaign.readiness.subprocess.run",
+            return_value=SimpleNamespace(
+                returncode=2,
+                stderr="MUBIN_DIAGNOSTIC:contract_verbatim_not_supported\n",
+            ),
+        ) as run:
+            result = _run_live_canary(
+                self.root,
+                "curator",
+                "multilabel",
+                "https://secret.example/v1",
+                "secret-model",
+                "secret-key",
+                "bearer",
+                "json_object",
+                300,
+            )
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["diagnostic"], "contract_verbatim_not_supported")
+        self.assertEqual(
+            result["attempt_diagnostics"],
+            [
+                "contract_verbatim_not_supported",
+                "contract_verbatim_not_supported",
+            ],
+        )
+        self.assertEqual(result["attempts_used"], 2)
+        self.assertEqual(run.call_count, 2)
+
+    def test_live_canary_retries_one_semantic_capability_miss(self):
+        with patch(
+            "benchmark_campaign.readiness.subprocess.run",
+            return_value=SimpleNamespace(returncode=0, stderr=""),
+        ) as run, patch(
+            "benchmark_campaign.readiness._validate_canary_output",
+            side_effect=["canary_semantic_mismatch", None],
+        ):
+            result = _run_live_canary(
+                self.root,
+                "verifier",
+                "classification",
+                "https://secret.example/v1",
+                "secret-model",
+                "secret-key",
+                "bearer",
+                "json_object",
+                300,
+            )
+        self.assertTrue(result["passed"])
+        self.assertEqual(
+            result["attempt_diagnostics"],
+            ["canary_semantic_mismatch"],
+        )
+        self.assertEqual(result["attempts_used"], 2)
+        self.assertEqual(run.call_count, 2)
+
+    def test_live_canary_does_not_retry_readiness_internal_shape_failure(self):
+        with patch(
+            "benchmark_campaign.readiness.subprocess.run",
+            return_value=SimpleNamespace(returncode=0, stderr=""),
+        ) as run, patch(
+            "benchmark_campaign.readiness._validate_canary_output",
+            return_value="canary_output_invalid",
+        ):
+            result = _run_live_canary(
+                self.root,
+                "verifier",
+                "classification",
+                "https://secret.example/v1",
+                "secret-model",
+                "secret-key",
+                "bearer",
+                "json_object",
+                300,
+            )
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["diagnostic"], "canary_output_invalid")
         self.assertEqual(result["attempts_used"], 1)
         self.assertEqual(run.call_count, 1)
 
@@ -257,6 +375,7 @@ class ReadinessGateTests(unittest.TestCase):
                 "task_type": task_type,
                 "passed": True,
                 "diagnostic": None,
+                "attempt_diagnostics": [],
                 "attempts_used": 1,
                 "duration_ms": 1,
             }
