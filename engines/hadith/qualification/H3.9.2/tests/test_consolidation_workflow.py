@@ -58,6 +58,16 @@ class ConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn("artifact ZIP digest mismatch", self.workflow)
         self.assertIn("encrypted source-bearing bundle digest mismatch", self.workflow)
 
+    def test_artifact_redirect_does_not_forward_github_token(self):
+        self.assertIn("class NoRedirect", self.workflow)
+        self.assertIn("artifact_download_location", self.workflow)
+        self.assertIn("urllib.parse.urlparse(location)", self.workflow)
+        self.assertIn('headers={"User-Agent": "mubin-h392-consolidation"}', self.workflow)
+        download_block = self.workflow.split(
+            "download_url = artifact_download_location", 1
+        )[1].split("safe_unzip(archive, raw_dir)", 1)[0]
+        self.assertNotIn('"Authorization"', download_block)
+
     def test_archive_extraction_is_fail_closed(self):
         self.assertIn("unsafe artifact ZIP member", self.workflow)
         self.assertIn("unsafe source-bearing tar member", self.workflow)
