@@ -126,3 +126,8 @@ python -m benchmark_campaign consolidate-primary \
 The consolidator rejects duplicate primary tasks, reserve tasks, task/fingerprint drift, incomplete Curator/Verifier manifests, reviewed/adjudication mismatches, and unbound terminal failures. It emits a cumulative ledger, cumulative adjudication queue, merged reviewed records, and a replacement-eligibility manifest whose entries are bound to the cumulative ledger SHA-256.
 
 A primary is replacement eligible only when the cumulative evidence proves a terminal Curator `no_candidate` or a task-local Curator contract/model-output rejection. Promoted primaries and every unresolved adjudication remain ineligible. The resulting manifest is evidence only: schema 24 still keeps reserve reconciliation disabled.
+
+
+### Freeze schema 25: cumulative evidence binding
+
+Freeze schema 25 adds `benchmark_campaign/consolidation.py` to the frozen protocol surface and introduces provenance-bound cumulative primary accounting. It does not alter the schema-24 primary/reserve candidate plan. The cumulative artifact binds the exact zero-based primary prefix, source workflow/artifact digests, reviewed/adjudication outcomes, the current Factory-plan hash, and replacement-eligible primary/reserve slot bindings. Reserve reconciliation remains disabled.
