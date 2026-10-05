@@ -185,6 +185,10 @@ jobs:
               run = api_json(f"https://api.github.com/repos/{repo}/actions/runs/{run_id}")
               if run.get("status") != "completed" or run.get("conclusion") != "success":
                   raise SystemExit(f"run {run_id} is not completed/success")
+              if int(run.get("run_attempt", 0)) != 1:
+                  raise SystemExit(
+                      f"run {run_id} has rerun history; canonical consolidation accepts only attempt 1"
+                  )
               if run.get("head_branch") != "main":
                   raise SystemExit(f"run {run_id} is not a main-branch run")
               if run.get("path") != ".github/workflows/h392-curation-campaign.yml":
