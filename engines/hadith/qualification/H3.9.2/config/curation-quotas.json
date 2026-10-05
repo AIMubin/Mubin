@@ -390,9 +390,9 @@
   "purpose": "operational curation quotas only; quotas never create or infer gold labels",
   "total_target": 1280,
   "candidate_reserve_policy": {
-    "reserve_slots_per_primary": 2,
-    "rule": "Primary record quotas remain exact. Reserve candidate slots are distinct deterministic source-window opportunities and may replace only unusable primary candidate slots; they do not erase or bypass adjudication-required outcomes.",
+    "reserve_slots_per_primary": 1,
+    "rule": "Primary record quotas remain exact. Reserve candidate slots are additional preregistered deterministic discovery opportunities. They do not convert adjudication outcomes into accepted records and do not alter exact benchmark quotas.",
     "primary_slot_prefix_preserved": true
   },
-  "total_candidate_slots": 3840
+  "total_candidate_slots": 2560
 }
