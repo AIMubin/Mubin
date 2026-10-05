@@ -392,7 +392,11 @@ def _validate_reviewed_record_binding(
         key for key in candidate if key not in derived_or_rewritten
     }
     for field in sorted(preserved_candidate_fields):
-        if canonical_json_bytes(record.get(field)) != canonical_json_bytes(candidate.get(field)):
+        if (
+            field not in record
+            or canonical_json_bytes(record[field])
+            != canonical_json_bytes(candidate[field])
+        ):
             raise ValueError(
                 f"reviewed record differs from Curator candidate {field}: {task_id}"
             )
@@ -421,17 +425,17 @@ def _validate_reviewed_record_binding(
         raise ValueError(f"reviewed record source_refs missing: {task_id}")
     candidate_ref_projection = [
         {
-            "source_id": ref.get("source_id"),
-            "locator": ref.get("locator"),
-            "excerpt": ref.get("excerpt"),
+            key: value
+            for key, value in ref.items()
+            if key not in {"source_blob_sha", "excerpt_sha256"}
         }
         for ref in candidate_refs if isinstance(ref, dict)
     ]
     reviewed_ref_projection = [
         {
-            "source_id": ref.get("source_id"),
-            "locator": ref.get("locator"),
-            "excerpt": ref.get("excerpt"),
+            key: value
+            for key, value in ref.items()
+            if key not in {"source_blob_sha", "excerpt_sha256"}
         }
         for ref in reviewed_refs if isinstance(ref, dict)
     ]
