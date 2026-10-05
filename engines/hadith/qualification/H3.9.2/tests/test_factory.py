@@ -21,18 +21,51 @@ from benchmark_campaign.validate import (_validate_factory_slot_binding, _valida
 
 
 class FactoryTests(unittest.TestCase):
-    def test_real_factory_plan_expands_exactly_1280_slots(self):
+    def test_real_factory_plan_preserves_1280_primary_slots_and_adds_reserves(self):
         project = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "plan.json"
             plan = build_factory_plan(project, out)
-            self.assertEqual(plan["slot_count"], 1280)
             self.assertEqual(plan["target_total"], 1280)
+            self.assertEqual(plan["primary_slot_count"], 1280)
+            self.assertEqual(plan["reserve_slots_per_primary"], 2)
+            self.assertEqual(plan["reserve_slot_count"], 2560)
+            self.assertEqual(plan["slot_count"], 3840)
             self.assertEqual(plan["holdout_slots"], 384)
             self.assertEqual(plan["non_holdout_slots"], 896)
-            risk3 = [s for s in plan["slots"] if s["risk_tier"] == 3]
+            self.assertEqual(plan["candidate_holdout_slots"], 1152)
+            self.assertEqual(plan["candidate_non_holdout_slots"], 2688)
+
+            primary = plan["slots"][:1280]
+            self.assertTrue(all("candidate_slot_kind" not in x for x in primary))
+            non_holdout_primary = [
+                x for x in primary if x["partition"] == "non_holdout"
+            ]
+            self.assertEqual(len(non_holdout_primary), 896)
+            self.assertEqual(
+                non_holdout_primary[0]["slot_id"],
+                "external-critical-commentary:non_holdout:openiti:0279Tirmidhi.Sunan:0001",
+            )
+
+            reserves = plan["slots"][1280:]
+            self.assertTrue(reserves)
+            self.assertTrue(
+                all(x.get("candidate_slot_kind") == "reserve" for x in reserves)
+            )
+            self.assertTrue(
+                all(
+                    isinstance(x.get("replacement_for_slot_id"), str)
+                    and x["replacement_for_slot_id"]
+                    for x in reserves
+                )
+            )
+            self.assertTrue(
+                all(x.get("reserve_attempt") in {1, 2} for x in reserves)
+            )
+
+            risk3 = [x for x in plan["slots"] if x["risk_tier"] == 3]
             self.assertTrue(risk3)
-            self.assertTrue(all(s["auto_promotion"] is False for s in risk3))
+            self.assertTrue(all(x["auto_promotion"] is False for x in risk3))
 
     def test_holdout_output_requires_custodian_and_external_path(self):
         with tempfile.TemporaryDirectory() as d:
@@ -114,6 +147,65 @@ class FactoryTests(unittest.TestCase):
             }],
         })
         return cache, text1
+
+    def test_real_primary_non_holdout_prefix_remains_legacy_offset_stable(self):
+        project = Path(__file__).resolve().parents[1]
+        plan = build_factory_plan(project)
+        quotas = load_json(project / "config" / "curation-quotas.json")
+        expected_ids = []
+        for q in quotas["benchmarks"]:
+            bid = q["benchmark_id"]
+            for anchor in q["non_holdout"]["anchor_quotas"]:
+                sid = anchor["anchor_source_id"]
+                for ordinal in range(1, int(anchor["target_cases"]) + 1):
+                    expected_ids.append(
+                        f"{bid}:non_holdout:{sid}:{ordinal:04d}"
+                    )
+        actual_ids = [
+            slot["slot_id"]
+            for slot in plan["slots"]
+            if slot["partition"] == "non_holdout"
+        ][:896]
+        self.assertEqual(actual_ids, expected_ids)
+        self.assertTrue(all(":reserve:" not in x for x in actual_ids))
+
+    def test_reserve_task_carries_explicit_replacement_binding(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "reserve_slots_per_primary": 1,
+                "rule": "test reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+            plan_path = root / "factory-work" / "plan.json"
+            plan = build_factory_plan(root, plan_path)
+            self.assertEqual(plan["primary_slot_count"], 2)
+            self.assertEqual(plan["reserve_slot_count"], 2)
+
+            tasks_path = root / "factory-work" / "tasks.jsonl"
+            report = build_factory_tasks(
+                root, plan_path, index, tasks_path, "non_holdout", False
+            )
+            self.assertEqual(report["task_count"], 2)
+            tasks = load_jsonl(tasks_path)
+            primary, reserve = tasks
+            self.assertNotIn("candidate_slot_kind", primary)
+            self.assertEqual(reserve["candidate_slot_kind"], "reserve")
+            self.assertEqual(reserve["replacement_for_slot_id"], primary["slot_id"])
+            self.assertEqual(reserve["reserve_attempt"], 1)
+            self.assertNotEqual(
+                reserve["anchor_segment"]["segment_id"],
+                primary["anchor_segment"]["segment_id"],
+            )
 
     def test_source_index_verifies_pinned_bytes_and_builds_segments(self):
         with tempfile.TemporaryDirectory() as d:
