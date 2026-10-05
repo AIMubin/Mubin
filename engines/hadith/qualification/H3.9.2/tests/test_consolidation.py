@@ -401,6 +401,19 @@ class ConsolidationTests(unittest.TestCase):
                         ),
                         "curator_execution_binding": curator_response["execution_binding"],
                         "verifier_execution_binding": verifier_response["execution_binding"],
+                        "verifier_supports": [{
+                            "source_id": task["anchor_source_id"],
+                            "locator": "gitblob:" + "1" * 40 + "#char=0:15",
+                            "excerpt_sha256": sha256_bytes(
+                                "anchor evidence".encode("utf-8")
+                            ),
+                            "source_blob_sha": "1" * 40,
+                            "char_start": 0,
+                            "char_end": 15,
+                            "support_text_sha256": sha256_bytes(
+                                "anchor evidence".encode("utf-8")
+                            ),
+                        }],
                         "agreement": "exact_gold_match",
                         "task_fingerprint": task["task_fingerprint"],
                     },
@@ -747,6 +760,28 @@ class ConsolidationTests(unittest.TestCase):
 
         with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
             with self.assertRaisesRegex(ValueError, "gold disagreement"):
+                consolidation.validate_primary_run_evidence(self.root, evidence)
+
+    def test_reviewed_verifier_support_binding_tamper_fails_closed(self):
+        task = _task("p0")
+        evidence = self._evidence(
+            "reviewed-support",
+            [task],
+            {"p0": ("promoted", None)},
+            verifier_task_ids={"p0"},
+        )
+        reviewed_path = (
+            evidence / "source-bearing" / "reviewed" / "b1" / "reviewed.jsonl"
+        )
+        rows = load_jsonl(reviewed_path)
+        rows[0]["factory_verification"]["verifier_supports"][0][
+            "support_text_sha256"
+        ] = "0" * 64
+        _write_jsonl(reviewed_path, rows)
+        with patch.object(consolidation, "_validate_tasks_against_frozen_plan"):
+            with self.assertRaisesRegex(
+                ValueError, "Verifier supports differ from response"
+            ):
                 consolidation.validate_primary_run_evidence(self.root, evidence)
 
     def test_reviewed_payload_tamper_fails_closed(self):
