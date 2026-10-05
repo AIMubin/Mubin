@@ -7,6 +7,9 @@ import re
 
 from .core import canonical_json_bytes, dump_jsonl, load_json, load_jsonl, sha256_bytes, sha256_file, write_json
 from .factory import (
+    _canonical_model_family,
+    _gold_agrees,
+    _gold_contract_error,
     _task_rows,
     _validate_response_identity,
     _validate_tasks_against_frozen_plan,
@@ -191,6 +194,110 @@ def _canonical_adjudication_reason(
     if task_id in verifier_task_ids and verifier_response is None and verifier_rejection is not None:
         return f"verifier_rejection:{verifier_rejection.get('error_code')}"
     return "missing_verifier_response"
+
+
+def _response_sha256(row: dict[str, Any] | None) -> str | None:
+    return (
+        sha256_bytes(canonical_json_bytes(row))
+        if isinstance(row, dict)
+        else None
+    )
+
+
+def _validate_ledger_response_binding(
+    task_id: str,
+    entry: dict[str, Any],
+    curator_response: dict[str, Any] | None,
+    verifier_response: dict[str, Any] | None,
+) -> None:
+    expected_curator_sha = _response_sha256(curator_response)
+    expected_verifier_sha = _response_sha256(verifier_response)
+    if entry.get("curator_response_sha256") != expected_curator_sha:
+        raise ValueError(f"curation ledger Curator response hash mismatch: {task_id}")
+    if entry.get("verifier_response_sha256") != expected_verifier_sha:
+        raise ValueError(f"curation ledger Verifier response hash mismatch: {task_id}")
+    expected_curator_family = (
+        curator_response.get("model_family")
+        if isinstance(curator_response, dict)
+        else None
+    )
+    expected_verifier_family = (
+        verifier_response.get("model_family")
+        if isinstance(verifier_response, dict)
+        else None
+    )
+    if entry.get("curator_model_family") != expected_curator_family:
+        raise ValueError(f"curation ledger Curator model family mismatch: {task_id}")
+    if entry.get("verifier_model_family") != expected_verifier_family:
+        raise ValueError(f"curation ledger Verifier model family mismatch: {task_id}")
+
+
+def _validate_promoted_semantics(
+    task_id: str,
+    task: dict[str, Any],
+    curator: dict[str, Any],
+    verifier: dict[str, Any],
+) -> None:
+    if _canonical_model_family(curator["model_family"]) == _canonical_model_family(
+        verifier["model_family"]
+    ):
+        raise ValueError(f"promoted task lacks independent model families: {task_id}")
+    if task.get("auto_promotion") is not True:
+        raise ValueError(f"promoted task is not auto-promotion eligible: {task_id}")
+
+    candidate = curator.get("candidate")
+    answer = verifier.get("answer")
+    if not isinstance(candidate, dict) or not isinstance(answer, dict):
+        raise ValueError(f"promoted task has malformed candidate/Verifier answer: {task_id}")
+
+    provenance = candidate.get("answer_provenance")
+    if isinstance(provenance, dict) and provenance.get("mode") == "adjudication_required":
+        raise ValueError(f"promoted task requested adjudication: {task_id}")
+
+    payload = candidate.get("payload")
+    if not isinstance(payload, dict) or "gold" not in payload:
+        raise ValueError(f"promoted task lacks Curator gold: {task_id}")
+    curator_gold_error = _gold_contract_error(payload["gold"], task)
+    if curator_gold_error is not None:
+        raise ValueError(
+            f"promoted task Curator gold violates contract: {task_id}: {curator_gold_error}"
+        )
+    verifier_gold_error = _gold_contract_error(answer.get("gold"), task)
+    if verifier_gold_error is not None:
+        raise ValueError(
+            f"promoted task Verifier gold violates contract: {task_id}: {verifier_gold_error}"
+        )
+    if not _gold_agrees(payload["gold"], answer["gold"], task):
+        raise ValueError(f"promoted task Curator/Verifier gold disagreement: {task_id}")
+
+    if candidate.get("gold_status") != "source_attributed":
+        raise ValueError(f"promoted task is not source_attributed: {task_id}")
+    if candidate.get("benchmark_id") != task.get("benchmark_id"):
+        raise ValueError(f"promoted task candidate benchmark mismatch: {task_id}")
+    if candidate.get("anchor_source_id") != task.get("anchor_source_id"):
+        raise ValueError(f"promoted task candidate anchor mismatch: {task_id}")
+
+    refs = candidate.get("source_refs")
+    if not isinstance(refs, list) or not refs:
+        raise ValueError(f"promoted task lacks Curator source refs: {task_id}")
+    source_ids = {
+        str(ref.get("source_id"))
+        for ref in refs
+        if isinstance(ref, dict) and isinstance(ref.get("source_id"), str)
+    }
+    if not source_ids or not source_ids.issubset(set(task.get("allowed_source_pool", []))):
+        raise ValueError(f"promoted task Curator source pool mismatch: {task_id}")
+
+    supports = answer.get("supports")
+    if not isinstance(supports, list) or not supports:
+        raise ValueError(f"promoted task lacks Verifier supports: {task_id}")
+    verifier_source_ids = {
+        str(support.get("source_id"))
+        for support in supports
+        if isinstance(support, dict) and isinstance(support.get("source_id"), str)
+    }
+    if not verifier_source_ids or not verifier_source_ids.issubset(source_ids):
+        raise ValueError(f"promoted task Verifier provenance mismatch: {task_id}")
 
 
 def _validate_manifest_counts(
@@ -396,6 +503,13 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         ledger[tid] = row
     if set(ledger) != set(task_map):
         raise ValueError("curation ledger does not account for every selected task")
+    for tid, entry in ledger.items():
+        _validate_ledger_response_binding(
+            tid,
+            entry,
+            curator_responses.get(tid),
+            verifier_responses.get(tid),
+        )
 
     reviewed = _reviewed_by_task(reviewed_dir)
     adjudication = _adjudication_by_task(adjudication_path)
@@ -410,10 +524,13 @@ def validate_primary_run_evidence(root: Path, evidence_dir: Path) -> dict[str, A
         raise ValueError("curation ledger outcome sets overlap")
 
     for tid in promoted_ids:
-        if curator_responses.get(tid, {}).get("status") != "candidate":
+        curator = curator_responses.get(tid)
+        verifier = verifier_responses.get(tid)
+        if not isinstance(curator, dict) or curator.get("status") != "candidate":
             raise ValueError(f"promoted task lacks Curator candidate response: {tid}")
-        if tid not in verifier_task_ids or verifier_responses.get(tid, {}).get("status") != "candidate":
+        if tid not in verifier_task_ids or not isinstance(verifier, dict) or verifier.get("status") != "candidate":
             raise ValueError(f"promoted task lacks independent Verifier candidate response: {tid}")
+        _validate_promoted_semantics(tid, task_map[tid], curator, verifier)
     for tid in adjudication_ids:
         if curator_responses.get(tid, {}).get("status") != "candidate":
             raise ValueError(f"adjudication task lacks Curator candidate response: {tid}")
@@ -629,7 +746,11 @@ def consolidate_primary_evidence(
         if offsets != list(range(expected_task_count)):
             raise ValueError("cumulative primary evidence is not an exact zero-based prefix")
 
-    out_dir.mkdir(parents=True, exist_ok=True)
+    if out_dir.exists():
+        if any(out_dir.iterdir()):
+            raise ValueError("cumulative output directory must be empty")
+    else:
+        out_dir.mkdir(parents=True)
     ledger_path = out_dir / "CUMULATIVE_LEDGER.jsonl"
     dump_jsonl(ledger_path, cumulative_rows)
     ledger_sha = sha256_file(ledger_path)
