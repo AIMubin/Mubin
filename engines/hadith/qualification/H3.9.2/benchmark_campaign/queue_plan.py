@@ -6,7 +6,7 @@ from typing import Any
 from .core import load_json, write_json
 
 
-RESERVE_SLOTS_PER_PRIMARY = 2
+RESERVE_SLOTS_PER_PRIMARY = 1
 
 
 def _balanced_quotas(sources: list[str], total: int) -> list[dict[str, Any]]:
