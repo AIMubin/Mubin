@@ -133,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
     cp = sub.add_parser("consolidate-primary")
     cp.add_argument("--evidence-root", type=Path, required=True)
     cp.add_argument("--out-dir", type=Path, required=True)
+    cp.add_argument("--source-cache-dir", type=Path, required=True)
     cp.add_argument("--expected-task-count", type=int)
 
     prep = sub.add_parser("prepare-manifests")
@@ -344,12 +345,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "consolidate-primary":
         evidence_root = _resolve(root, args.evidence_root)
         out_dir = _resolve(root, args.out_dir)
-        assert evidence_root is not None and out_dir is not None
+        source_cache_dir = _resolve(root, args.source_cache_dir)
+        assert (
+            evidence_root is not None
+            and out_dir is not None
+            and source_cache_dir is not None
+        )
         report = consolidate_primary_evidence(
             root,
             evidence_root,
             out_dir,
             expected_task_count=args.expected_task_count,
+            source_cache_dir=source_cache_dir,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
