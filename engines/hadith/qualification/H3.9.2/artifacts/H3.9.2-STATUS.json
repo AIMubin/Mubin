@@ -16,10 +16,10 @@
   "source_pins_verified": true,
   "developer_local_source_cache_acquired": false,
   "non_holdout_ci_ephemeral_cache_acquired_and_verified": true,
-  "non_holdout_ci_verified_commit": "5d05903735d80df7efc5510f4788440136d04e78",
-  "non_holdout_ci_workflow_run_id": 37075157665,
-  "non_holdout_ci_artifact_id": 11255079467,
-  "non_holdout_ci_artifact_digest": "sha256:d175aad25ed83697815799d53ee576deae9110f73ef9bcabe5f17bfe7d3acd71",
+  "non_holdout_ci_verified_commit": "eecaae31e38603fe7b08e3a66597f6c46cc260ce",
+  "non_holdout_ci_workflow_run_id": 37325004780,
+  "non_holdout_ci_artifact_id": 11352046360,
+  "non_holdout_ci_artifact_digest": "sha256:f8d3c4c78eb5072ba1bc1fdcb9f0ce5905d89449b716c6fa71271cfcba31a595",
   "non_holdout_source_count": 12,
   "non_holdout_source_bytes_total": 119090785,
   "non_holdout_index_segment_count": 24212,
@@ -42,8 +42,8 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Freeze-23 campaign runs executed the first 104 primary external-critical-commentary tasks and produced 22 promoted, 62 adjudication, and 20 skipped/rejected outcomes inside encrypted workflow artifacts. Because 20 primary opportunities are already unusable, the exact 210 non-holdout target cannot be reached from the original 210 primary slots alone. Freeze schema 24 therefore preserves the original 1,280 primary-slot prefix and adds one deterministic reserve candidate per primary without changing record quotas, source partitions, labels, thresholds, or holdout isolation. No workflow outputs have yet been cumulatively consolidated into repository benchmark records.",
-  "next_action": "Verify the freeze-24 candidate plan in acquisition CI, continue primary non-holdout execution at offset 104 in 64-task batches, and build cumulative encrypted-artifact consolidation/adjudication accounting before final benchmark assembly. Reserve candidate offsets are completion capacity, not a substitute for unresolved adjudication.",
+  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical primary campaign runs now cover offsets 0..167 (168 external-critical-commentary tasks) and produced 34 promoted, 103 adjudication, and 31 skipped/rejected outcomes inside encrypted workflow artifacts. Even if every pending adjudication were accepted and every remaining primary succeeded, the 210-record non-holdout quota for this benchmark requires at least 31 reserve replacements. Freeze schema 24 already preregisters one reserve per primary but keeps reserve reconciliation disabled. The immediate blocker is cumulative provenance-bound consolidation of the encrypted shard evidence; no workflow outputs have yet been consolidated into repository benchmark records.",
+  "next_action": "Run the cumulative primary-evidence consolidation over canonical campaign runs 37280971913, 37295517184, and 37326459365, verify exact 168-task coverage and the hash-bound replacement-eligibility manifest, then review the cumulative adjudication ledger before executing the remaining external-critical-commentary primaries at offsets 168..209. Reserve reconciliation remains disabled.",
   "freeze_schema_version": 24,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -56,20 +56,33 @@
   "candidate_reserve_policy_versioned": true,
   "candidate_reserve_policy_basis": "Added after non-holdout collection demonstrated primary-slot candidate shortage; no tuning/model lock/holdout curation/final holdout evaluation had begun.",
   "non_holdout_execution_evidence": {
-    "protocol_freeze_schema": 23,
-    "primary_tasks_executed": 104,
-    "promoted_in_encrypted_shards": 22,
-    "adjudication_in_encrypted_shards": 62,
-    "skipped_or_rejected_from_reconciliation": 20,
+    "protocol_freeze_schemas": [
+      23,
+      24
+    ],
+    "primary_tasks_executed": 168,
+    "promoted_in_encrypted_shards": 34,
+    "adjudication_in_encrypted_shards": 103,
+    "skipped_or_rejected_from_reconciliation": 31,
     "workflow_runs": [
       37280971913,
-      37295517184
+      37295517184,
+      37326459365
     ],
+    "primary_offset_coverage": "0..167",
     "consolidated_into_repository": false
   },
   "reserve_reconciliation_enabled": false,
   "reserve_reconciliation_reason": "Freeze schema 24 preregisters reserve candidate slots, but promotion remains fail-closed until cumulative replacement eligibility is implemented and bound.",
   "candidate_reserve_policy_version": 1,
   "candidate_reserve_capacity_guarantees_quota": false,
-  "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory."
+  "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory.",
+  "cumulative_consolidation_ready": false,
+  "cumulative_consolidation_workflow": ".github/workflows/h392-cumulative-consolidation.yml",
+  "cumulative_consolidation_expected_primary_tasks": 168,
+  "cumulative_consolidation_run_ids": [
+    37280971913,
+    37295517184,
+    37326459365
+  ]
 }
