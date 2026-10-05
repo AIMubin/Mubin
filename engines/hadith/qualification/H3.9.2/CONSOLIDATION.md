@@ -2,7 +2,7 @@
 
 This stage consolidates canonical encrypted **non-holdout primary** campaign artifacts before any reserve candidate is allowed to participate in benchmark population.
 
-It does not change record quotas, source partitions, label vocabularies, model prompts, inference settings, holdout policy, or final benchmark cardinality. Freeze schema 24 already preregisters reserve capacity and explicitly requires cumulative replacement eligibility before reserve use.
+It does not change record quotas, source partitions, label vocabularies, model prompts, inference settings, holdout policy, or final benchmark cardinality. Freeze schema 24 preregistered reserve capacity and explicitly deferred activation until cumulative replacement eligibility existed. Freeze schema 25 adds that cumulative evidence protocol without changing quotas, partitions, labels, thresholds, prompts, or holdout isolation.
 
 ## Current canonical input boundary
 
@@ -82,7 +82,7 @@ No pending adjudication is replacement eligible.
 
 `REPLACEMENT_ELIGIBILITY.json` is hash-bound to `CUMULATIVE_LEDGER.jsonl`.
 
-Schema-24 eligibility rules are:
+Schema-25 eligibility rules are:
 
 ```text
 primary promoted
@@ -135,3 +135,8 @@ The artifact encryption key remains a protected GitHub Secret and is step-scoped
 - the encrypted bundle SHA-256 text file.
 
 The redacted summary contains no source text, gold payloads, or model identity.
+
+
+## Freeze binding
+
+This implementation is part of **freeze schema 25**. Historical canonical primary artifacts from schemas 23 and 24 are admissible only because the primary task prefix and fingerprints were preserved. Every decrypted task is revalidated against the current frozen plan, and an expected cumulative count requires an exact zero-based primary prefix with no gaps or overlaps.
