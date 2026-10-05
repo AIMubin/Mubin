@@ -158,6 +158,8 @@ jobs:
           if (
               int(plan["target_total"]) != 1280
               or int(plan["primary_slot_count"]) != 1280
+              or int(plan["primary_holdout_slots"]) != 384
+              or int(plan["primary_non_holdout_slots"]) != 896
               or int(plan["holdout_slots"]) != 384
               or int(plan["non_holdout_slots"]) != 896
               or int(plan["reserve_slot_count"]) != 1280
@@ -167,7 +169,7 @@ jobs:
           ):
               raise SystemExit("factory plan cardinality mismatch")
 
-          primary_count = int(plan["non_holdout_slots"])
+          primary_count = int(plan["primary_non_holdout_slots"])
           primary_bytes = "".join(task_lines[:primary_count]).encode("utf-8")
           primary_sha256 = hashlib.sha256(primary_bytes).hexdigest()
           canonical_evidence = json.loads(
@@ -216,6 +218,8 @@ jobs:
                   "slot_count": plan["slot_count"],
                   "primary_slot_count": plan["primary_slot_count"],
                   "reserve_slot_count": plan["reserve_slot_count"],
+                  "primary_non_holdout_slots": plan["primary_non_holdout_slots"],
+                  "primary_holdout_slots": plan["primary_holdout_slots"],
                   "non_holdout_slots": plan["non_holdout_slots"],
                   "holdout_slots": plan["holdout_slots"],
                   "candidate_non_holdout_slots": plan["candidate_non_holdout_slots"],
