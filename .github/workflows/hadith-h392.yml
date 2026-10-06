@@ -10,6 +10,7 @@ on:
       - ".github/workflows/h392-nonholdout-acquisition.yml"
       - ".github/workflows/h392-cumulative-consolidation.yml"
       - ".github/workflows/h392-reserve-activation.yml"
+      - ".github/workflows/h392-reserve-campaign.yml"
   push:
     branches: [main, "bootstrap/**", "h392/**"]
     paths:
