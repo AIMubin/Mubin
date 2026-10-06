@@ -197,6 +197,21 @@ def validate_reserve_activation(
     if activation.get("reserve_reconciliation_enabled") is not True:
         raise ValueError("reserve activation manifest does not enable reconciliation")
 
+    status_path = root / "artifacts" / "H3.9.2-STATUS.json"
+    if not status_path.exists():
+        raise ValueError("reserve activation requires repository-approved status binding")
+    status = load_json(status_path)
+    approved = status.get("reserve_activation")
+    if not isinstance(approved, dict) or approved.get("enabled") is not True:
+        raise ValueError("reserve activation has not been reviewed and enabled in repository status")
+    activation_sha = sha256_file(activation_path)
+    if approved.get("manifest_sha256") != activation_sha:
+        raise ValueError("reserve activation manifest SHA-256 differs from repository-approved binding")
+    if approved.get("cumulative_ledger_sha256") != activation.get("cumulative_ledger_sha256"):
+        raise ValueError("reserve activation cumulative-ledger binding differs from repository status")
+    if approved.get("replacement_eligibility_sha256") != activation.get("replacement_eligibility_sha256"):
+        raise ValueError("reserve activation eligibility binding differs from repository status")
+
     _plan, plan_sha, slots = _factory_plan_binding(root)
     if activation.get("factory_plan_sha256") != plan_sha:
         raise ValueError("reserve activation factory-plan binding mismatch")
