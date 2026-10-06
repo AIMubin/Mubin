@@ -825,7 +825,8 @@ def _verify_supports(root: Path, source_cache_dir: Path, supports: Any, allowed_
 def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path,
                       verifier_responses_path: Path, source_cache_dir: Path,
                       reviewed_dir: Path, adjudication_path: Path, ledger_path: Path,
-                      custodian_mode: bool = False, partition: str = "non_holdout") -> dict[str, Any]:
+                      custodian_mode: bool = False, partition: str = "non_holdout",
+                      reserve_activation_path: Path | None = None) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
         raise ValueError("partition must be holdout or non_holdout")
     if partition == "holdout":
@@ -843,11 +844,21 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         task for task in task_rows
         if task.get("candidate_slot_kind") == "reserve"
     ]
+    reserve_activation: dict[str, Any] | None = None
+    reserve_activation_sha256: str | None = None
     if reserve_tasks:
-        raise ValueError(
-            "reserve candidate reconciliation is disabled until cumulative "
-            "replacement eligibility is explicitly bound"
+        if reserve_activation_path is None:
+            raise ValueError(
+                "reserve candidate reconciliation requires a reviewed activation manifest"
+            )
+        from .post_consolidation import validate_reserve_activation
+
+        reserve_activation = validate_reserve_activation(
+            root, reserve_activation_path, task_rows
         )
+        reserve_activation_sha256 = sha256_file(reserve_activation_path)
+    elif reserve_activation_path is not None:
+        raise ValueError("reserve activation manifest supplied for primary-only reconciliation")
     tasks = {str(t["task_id"]): t for t in task_rows}
 
     curators = {str(r["task_id"]): r for r in load_jsonl(curator_responses_path)}
@@ -1044,6 +1055,15 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             "agreement": "exact_gold_match",
             "task_fingerprint": task["task_fingerprint"],
         }
+        if task.get("candidate_slot_kind") == "reserve":
+            assert reserve_activation is not None and reserve_activation_sha256 is not None
+            candidate["factory_verification"]["reserve_activation"] = {
+                "activation_manifest_sha256": reserve_activation_sha256,
+                "cumulative_ledger_sha256": reserve_activation["cumulative_ledger_sha256"],
+                "replacement_eligibility_sha256": reserve_activation["replacement_eligibility_sha256"],
+                "replacement_for_slot_id": task["replacement_for_slot_id"],
+                "reserve_attempt": task["reserve_attempt"],
+            }
         try:
             sealed = seal_reviewed_record(root, candidate, source_cache_dir)
         except Exception as exc:
