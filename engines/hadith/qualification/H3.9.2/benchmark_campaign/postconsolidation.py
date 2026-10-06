@@ -402,12 +402,17 @@ def prepare_postconsolidation_bindings(
     frozen_reason_counts = result.get("canonical_reason_counts")
     if not isinstance(frozen_reason_counts, dict):
         raise ValueError("frozen cumulative reason counts missing")
-    expected_adjudication_reasons = {
-        key: int(value)
-        for key, value in frozen_reason_counts.items()
-        if key in reason_counts
-    }
-    if reason_counts != expected_adjudication_reasons:
+    skip_reason_counts = Counter(
+        str(row["eligibility_reason"]) for row in eligible
+    )
+    expected_adjudication_reasons: dict[str, int] = {}
+    for key, value in frozen_reason_counts.items():
+        remaining = int(value) - int(skip_reason_counts.get(str(key), 0))
+        if remaining < 0:
+            raise ValueError("eligible skip reasons exceed frozen cumulative reason count")
+        if remaining:
+            expected_adjudication_reasons[str(key)] = remaining
+    if reason_counts != dict(sorted(expected_adjudication_reasons.items())):
         raise ValueError("adjudication reason counts differ from frozen cumulative summary")
 
     reserve_leaves = sorted(reserve_leaves)
