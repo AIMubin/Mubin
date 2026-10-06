@@ -189,6 +189,7 @@
     "planning_completed": false,
     "adjudication_execution_enabled": false,
     "reserve_execution_enabled": false,
-    "reserve_reconciliation_enabled": false
+    "reserve_reconciliation_enabled": false,
+    "source_encrypted_bundle_sha256": "c6b5afa771a2aeba2f5017264d2fb98af56882baee0c6fe0109104678651c9f4"
   }
 }
