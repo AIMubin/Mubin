@@ -335,6 +335,32 @@ class FactoryTests(unittest.TestCase):
                 ["qualification.reserve_activation_missing"],
             )
 
+            write_json(root / "artifacts" / "H3.9.2-STATUS.json", {
+                "reserve_activation": {
+                    "enabled": True,
+                    "manifest_sha256": "a" * 64,
+                    "cumulative_ledger_sha256": "b" * 64,
+                    "replacement_eligibility_sha256": "c" * 64,
+                }
+            })
+            activated_record = {
+                "case_id": "r",
+                "factory_slot_id": reserve["slot_id"],
+                "factory_verification": {
+                    "reserve_activation": {
+                        "activation_manifest_sha256": "a" * 64,
+                        "cumulative_ledger_sha256": "b" * 64,
+                        "replacement_eligibility_sha256": "c" * 64,
+                        "replacement_for_slot_id": reserve["replacement_for_slot_id"],
+                        "reserve_attempt": reserve["reserve_attempt"],
+                    }
+                },
+            }
+            self.assertEqual(
+                _validate_factory_reserve_policy(root, activated_record, "b1"),
+                [],
+            )
+
     def test_reserve_reconciliation_fails_closed_without_reviewed_activation(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
