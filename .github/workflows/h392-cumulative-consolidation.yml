@@ -92,6 +92,16 @@ jobs:
               raise SystemExit("cumulative consolidation target is already completed")
           if int(target.get("protocol_freeze_schema", 0)) != 25:
               raise SystemExit("cumulative consolidation target requires freeze schema 25")
+
+          execution = status["non_holdout_execution_evidence"]
+          if [str(x) for x in execution["workflow_runs"]] != canonical_runs:
+              raise SystemExit("canonical target run IDs disagree with execution evidence")
+          if int(execution["primary_tasks_executed"]) != canonical_count:
+              raise SystemExit("canonical target count disagrees with execution evidence")
+          expected_coverage = f"0..{canonical_count - 1}"
+          if execution.get("primary_offset_coverage") != expected_coverage:
+              raise SystemExit("canonical target prefix disagrees with execution evidence")
+
           if raw != canonical_runs:
               raise SystemExit(
                   "run_ids differ from the repository-reviewed canonical campaign history"
