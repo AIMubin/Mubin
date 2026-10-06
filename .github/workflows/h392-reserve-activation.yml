@@ -224,7 +224,7 @@ jobs:
           H392_CURATION_ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
         run: |
           set -eu
-          python -m benchmark_campaign.artifact_crypto decrypt             --in "$WORK_ROOT/raw/h392-cumulative-source-bearing.tar.gz.aesgcm"             --out "$WORK_ROOT/cumulative.tar.gz"             --key-env H392_CURATION_ARTIFACT_KEY
+          python -m benchmark_campaign.artifact_crypto decrypt             --input "$WORK_ROOT/raw/h392-cumulative-source-bearing.tar.gz.aesgcm"             --output "$WORK_ROOT/cumulative.tar.gz"             --passphrase-env H392_CURATION_ARTIFACT_KEY
           python - <<'PY'
           import os
           from pathlib import Path
