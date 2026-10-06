@@ -87,6 +87,14 @@ def _relative_to_root(root: Path, path: Path) -> str:
         raise ValueError("control evidence path must be inside campaign root") from exc
 
 
+def _paths_overlap(a: Path, b: Path) -> bool:
+    ar = a.resolve()
+    br = b.resolve()
+    if ar == br:
+        return True
+    return ar in br.parents or br in ar.parents
+
+
 def prepare_postconsolidation_bindings(
     root: Path,
     cumulative_dir: Path,
@@ -108,6 +116,12 @@ def prepare_postconsolidation_bindings(
 
     if FREEZE_SCHEMA_VERSION != 26:
         raise ValueError("post-consolidation preparation requires freeze schema 26")
+    if _paths_overlap(public_out_dir, private_out_dir):
+        raise ValueError("public and private output directories must not overlap")
+    if _paths_overlap(cumulative_dir, public_out_dir) or _paths_overlap(
+        cumulative_dir, private_out_dir
+    ):
+        raise ValueError("post-consolidation outputs must not overlap cumulative plaintext")
 
     control = load_json(control_evidence_path)
     status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
@@ -215,6 +229,29 @@ def prepare_postconsolidation_bindings(
         raise ValueError("cumulative manifest run count differs from frozen control")
     if manifest.get("input_artifact_count") != canonical.get("input_artifact_count"):
         raise ValueError("cumulative manifest artifact count differs from frozen control")
+    input_artifacts = manifest.get("input_artifacts")
+    if (
+        not isinstance(input_artifacts, list)
+        or len(input_artifacts) != canonical.get("input_artifact_count")
+    ):
+        raise ValueError("cumulative manifest input artifact list/count mismatch")
+    observed_run_ids = sorted({
+        int(row.get("github_run_id"))
+        for row in input_artifacts
+        if isinstance(row, dict) and isinstance(row.get("github_run_id"), int)
+    })
+    if observed_run_ids != canonical.get("campaign_run_ids"):
+        raise ValueError("cumulative manifest artifact run IDs differ from frozen control")
+    if any(
+        not isinstance(row, dict)
+        or row.get("github_run_attempt") != 1
+        or not isinstance(row.get("artifact_id"), int)
+        or not isinstance(row.get("artifact_name"), str)
+        or not isinstance(row.get("head_sha"), str)
+        or len(row.get("head_sha", "")) != 40
+        for row in input_artifacts
+    ):
+        raise ValueError("cumulative manifest input artifact provenance is incomplete")
     if manifest.get("reviewed_record_count") != result.get("reviewed_record_count"):
         raise ValueError("cumulative manifest reviewed count differs from frozen control")
     if manifest.get("adjudication_count") != result.get("pending_adjudication"):
