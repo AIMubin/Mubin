@@ -120,12 +120,12 @@ Canonical encrypted primary runs are consolidated before reserve activation. The
 python -m benchmark_campaign consolidate-primary \
   --evidence-root /path/to/provenance-bound/decrypted-runs \
   --out-dir /path/to/protected/cumulative-output \
-  --expected-task-count 168
+  --expected-task-count 210
 ```
 
 The consolidator rejects duplicate primary tasks, reserve tasks, task/fingerprint drift, incomplete Curator/Verifier manifests, reviewed/adjudication mismatches, and unbound terminal failures. It emits a cumulative ledger, cumulative adjudication queue, merged reviewed records, and a replacement-eligibility manifest whose entries are bound to the cumulative ledger SHA-256.
 
-A primary is replacement eligible only when the cumulative evidence proves a terminal Curator `no_candidate` or a task-local Curator contract/model-output rejection. Promoted primaries and every unresolved adjudication remain ineligible. The resulting manifest is evidence only: schema 24 still keeps reserve reconciliation disabled.
+A primary is replacement eligible only when the cumulative evidence proves a terminal Curator `no_candidate` or a task-local Curator contract/model-output rejection. Promoted primaries and every unresolved adjudication remain ineligible. The resulting manifest is evidence only: freeze schema 25 still keeps reserve reconciliation disabled.
 
 
 ### Freeze schema 25: cumulative evidence binding
