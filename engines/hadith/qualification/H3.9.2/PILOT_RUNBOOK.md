@@ -247,19 +247,21 @@ h4_release_allowed = false
 The real 1,280-case population, benchmark freeze, system/model lock, one-shot holdout evaluation, and architecture gate remain required before H4 qualification or release.
 
 
-## Canonical offsets 104..167 result and consolidation gate
+## Canonical primary prefix 0..209 and second consolidation gate
 
-Campaign run `37326459365` completed primary offsets `104..167` successfully on freeze-24 main SHA `eecaae31e38603fe7b08e3a66597f6c46cc260ce`. Its 64 selected tasks produced 12 promoted, 41 adjudication, and 11 skipped outcomes.
+The first three canonical campaign runs covered offsets `0..167`, after which schema-25 cumulative run `37409931064` proved an exact 168-task ledger with 34 promoted, 103 adjudication, 31 skipped, and 31 replacement-eligible terminal primaries.
 
-Combined with the canonical freeze-23 runs over offsets `0..103`, the first 168 `external-critical-commentary` primaries now account for:
+Campaign run `37426135905` subsequently completed the remaining primary offsets `168..209` successfully on main SHA `fe55559fd97d1731204264341cfa6ddb1b28821d`. Its exact 42-task surface produced 6 promoted, 26 adjudication, and 10 skipped outcomes. The earlier failed run `37412193331` is diagnostic only and is not canonical.
 
-- 34 promoted;
-- 103 adjudication;
-- 31 skipped/rejected.
+Across the four admitted successful campaign runs, raw primary accounting is now:
 
-Therefore primary-only execution can reach at most `34 + 103 + 42 = 179` records even if every pending adjudication is accepted and every remaining primary succeeds. The exact non-holdout quota is 210, so at least 31 reserve replacements are mathematically unavoidable.
+- 40 promoted;
+- 129 adjudication;
+- 41 skipped/rejected;
+- 210 total primary opportunities, covering `0..209` with no gaps.
 
-Do not continue to `168..209` until `.github/workflows/h392-cumulative-consolidation.yml` has consolidated runs `37280971913`, `37295517184`, and `37326459365` into exactly 168 provenance-bound primary outcomes. The consolidation stage does not enable reserve reconciliation; it only establishes the cumulative ledger and hash-bound replacement-eligibility evidence required for the next reviewed decision.
+These totals are **not yet the authoritative cumulative result**. Before any reserve activation decision, run `.github/workflows/h392-cumulative-consolidation.yml` with the repository-reviewed four-run history and `expected_task_count=210`. The consolidation stage must reconstruct Factory reconciliation, normalize adjudication reasons, revalidate source grounding, and derive the replacement-eligibility manifest from the exact cumulative ledger.
 
+Do not activate reserve reconciliation before that 210-primary cumulative artifact succeeds, is reviewed, and is frozen into repository evidence.
 
 Freeze schema 25 is the protocol revision that implements this cumulative consolidation gate. Historical canonical runs from freeze schemas 23 and 24 remain admissible inputs only because the primary task prefix and fingerprints were preserved; every decrypted task is revalidated against the current frozen plan. Reserve promotion remains disabled after consolidation.
