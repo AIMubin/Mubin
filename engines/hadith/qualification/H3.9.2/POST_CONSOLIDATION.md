@@ -59,7 +59,7 @@ The planner emits only a redacted control plane:
 - `POST_CONSOLIDATION_MANIFEST.json`
 - a redacted summary on stdout.
 
-The adjudication plan contains task/slot identifiers, primary offsets, benchmark/anchor identifiers, canonical reasons, source-run bindings, and a hash of the encrypted cumulative adjudication evidence row. It contains no source text, gold payloads, or model identity.
+The adjudication plan contains only task/slot identifiers, primary offsets, benchmark/anchor identifiers, canonical reasons, source-run bindings, and the already-public cumulative-ledger binding. It deliberately publishes **no hash of the full adjudication evidence row**, because those encrypted rows may contain low-entropy model-family metadata that must not become guessable through an unkeyed commitment. It contains no source text, gold payloads, or model identity.
 
 The reserve activation plan contains only the 41 primary slots already proven terminally replaceable and their linked frozen reserve slots. Each row binds:
 
