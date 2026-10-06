@@ -333,6 +333,22 @@ def prepare_postconsolidation_bindings(
         raise ValueError("cumulative ledger must contain exactly 210 rows")
     if sorted(observed_offsets) != list(range(210)):
         raise ValueError("cumulative ledger does not contain the exact 0..209 primary prefix")
+    ledger_outcomes = Counter(str(row.get("outcome")) for row in ledger_rows)
+    expected_outcomes = {
+        "promoted": int(result.get("promoted", -1)),
+        "adjudication": int(result.get("pending_adjudication", -1)),
+        "skipped": int(result.get("skipped", -1)),
+    }
+    if {key: ledger_outcomes.get(key, 0) for key in expected_outcomes} != expected_outcomes:
+        raise ValueError("cumulative ledger outcomes differ from frozen control")
+    if sum(ledger_outcomes.values()) != sum(expected_outcomes.values()):
+        raise ValueError("cumulative ledger contains an unexpected outcome class")
+    skipped_task_ids = {
+        str(row["task_id"]) for row in ledger_rows if row.get("outcome") == "skipped"
+    }
+    adjudication_task_ids = {
+        str(row["task_id"]) for row in ledger_rows if row.get("outcome") == "adjudication"
+    }
 
     eligible = eligibility.get("eligible")
     if not isinstance(eligible, list):
@@ -431,6 +447,8 @@ def prepare_postconsolidation_bindings(
 
     if len(reserve_private) != 41:
         raise ValueError("authoritative 210-primary evidence must authorize exactly 41 reserves")
+    if {str(row["primary_task_id"]) for row in reserve_private} != skipped_task_ids:
+        raise ValueError("replacement eligibility does not exactly cover terminal skipped primaries")
 
     adjudication_private: list[dict[str, Any]] = []
     adjudication_leaves: list[str] = []
@@ -493,6 +511,8 @@ def prepare_postconsolidation_bindings(
     expected_adjudication = int(result.get("pending_adjudication", -1))
     if len(adjudication_private) != expected_adjudication or len(adjudication_private) != 129:
         raise ValueError("cumulative adjudication count differs from frozen control")
+    if seen_adjudication != adjudication_task_ids:
+        raise ValueError("cumulative adjudication queue does not exactly cover ledger adjudications")
     if set(seen_adjudication) & {str(row["primary_task_id"]) for row in reserve_private}:
         raise ValueError("adjudication and replacement-eligible primary sets overlap")
 
@@ -503,7 +523,9 @@ def prepare_postconsolidation_bindings(
     if not isinstance(frozen_reason_counts, dict):
         raise ValueError("frozen cumulative reason counts missing")
     skip_reason_counts = Counter(
-        str(row["eligibility_reason"]) for row in eligible
+        str(row["canonical_reason"])
+        for row in ledger_rows
+        if row.get("outcome") == "skipped"
     )
     expected_adjudication_reasons: dict[str, int] = {}
     for key, value in frozen_reason_counts.items():
