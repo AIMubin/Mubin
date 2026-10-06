@@ -28,7 +28,7 @@ The workflow must reproduce these counts from the decrypted, provenance-bound ev
 
 Workflow run `37409931064` executed on main commit `696b0e1c30fda5cdb4ea011840b562d63f151701` and completed successfully. It reproduced the exact 168-task prefix and the `34 promoted / 103 adjudication / 31 skipped` accounting.
 
-The published redacted/encrypted artifact is permanently referenced in `artifacts/CUMULATIVE_PRIMARY_EVIDENCE.json`. The compact repository evidence binds:
+The published redacted/encrypted artifact is permanently referenced in `artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json`. The compact repository evidence binds:
 
 - GitHub artifact digest `sha256:abdc98472114378c0d2bb4b680d9d9549dbc624698bd3ab822c2970ef6ad301d`;
 - redacted-summary SHA-256 `fef1a9aba21ade7c4f04deee51095124ef7b0297758dbad3bc4b3107ed023e46`;
