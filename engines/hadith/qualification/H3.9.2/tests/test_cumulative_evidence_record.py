@@ -175,6 +175,27 @@ class CumulativeEvidenceRecordTests(unittest.TestCase):
             41,
         )
 
+    def test_schema26_postconsolidation_preparation_is_ready_but_execution_disabled(self):
+        prep = self.status["postconsolidation_preparation"]
+
+        self.assertEqual(self.status["freeze_schema_version"], 26)
+        self.assertEqual(self.status["postconsolidation_protocol_version"], 1)
+        self.assertEqual(
+            self.status["postconsolidation_workflow"],
+            ".github/workflows/h392-postconsolidation-prepare.yml",
+        )
+        self.assertTrue(prep["ready"])
+        self.assertFalse(prep["completed"])
+        self.assertEqual(prep["protocol_freeze_schema"], 26)
+        self.assertEqual(prep["source_cumulative_freeze_schema"], 25)
+        self.assertEqual(prep["source_cumulative_run_id"], 37471731102)
+        self.assertEqual(prep["expected_primary_task_count"], 210)
+        self.assertEqual(prep["expected_pending_adjudication_count"], 129)
+        self.assertEqual(prep["expected_authorized_reserve_count"], 41)
+        self.assertFalse(prep["reserve_reconciliation_enabled"])
+        self.assertFalse(prep["adjudication_execution_enabled"])
+        self.assertFalse(self.status["reserve_reconciliation_enabled"])
+
 
 if __name__ == "__main__":
     unittest.main()
