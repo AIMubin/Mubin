@@ -617,6 +617,31 @@
           "factory_verification"
         ]
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "factory_slot_id": {
+            "type": "string",
+            "pattern": ":reserve:[0-9]+$"
+          }
+        },
+        "required": [
+          "factory_slot_id"
+        ]
+      },
+      "then": {
+        "required": [
+          "factory_verification"
+        ],
+        "properties": {
+          "factory_verification": {
+            "required": [
+              "reserve_activation"
+            ]
+          }
+        }
+      }
     }
   ]
 }
