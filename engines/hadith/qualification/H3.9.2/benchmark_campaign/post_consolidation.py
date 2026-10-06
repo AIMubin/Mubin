@@ -367,7 +367,6 @@ def build_post_consolidation_plan(
         key=lambda tid: int(ledger_by_task[tid]["primary_offset"]),
     ):
         ledger_row = ledger_by_task[task_id]
-        source_row = adjudication_by_task[task_id]
         adjudication_plan_rows.append({
             "task_id": task_id,
             "slot_id": ledger_row["slot_id"],
@@ -377,9 +376,6 @@ def build_post_consolidation_plan(
             "canonical_reason": ledger_row["canonical_reason"],
             "source_run_id": ledger_row["source_run_id"],
             "source_sha": ledger_row["source_sha"],
-            "adjudication_evidence_sha256": sha256_bytes(
-                canonical_json_bytes(source_row)
-            ),
             "cumulative_ledger_sha256": actual_ledger_sha,
         })
 
@@ -436,7 +432,6 @@ def build_post_consolidation_plan(
         "source_cumulative_freeze_schema_version": SOURCE_CUMULATIVE_FREEZE_SCHEMA_VERSION,
         "factory_plan_sha256": factory_plan_sha,
         "cumulative_ledger_sha256": actual_ledger_sha,
-        "cumulative_adjudication_sha256": actual_adjudication_sha,
         "replacement_eligibility_sha256": actual_eligibility_sha,
         "adjudication_plan_sha256": sha256_file(adjudication_plan_path),
         "reserve_activation_plan_sha256": sha256_file(reserve_plan_path),
