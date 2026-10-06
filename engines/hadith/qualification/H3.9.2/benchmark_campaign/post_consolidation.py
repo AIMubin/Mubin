@@ -59,6 +59,10 @@ def build_post_consolidation_plan(
     linked reserve slots whose primaries are already proven terminally replaceable.
     """
 
+    try:
+        evidence_rel = str(evidence_path.resolve().relative_to(root.resolve()))
+    except ValueError as exc:
+        raise ValueError("post-consolidation evidence path must be inside campaign root") from exc
     evidence = load_json(evidence_path)
     if evidence.get("campaign_id") != "H3.9.2":
         raise ValueError("post-consolidation evidence campaign mismatch")
@@ -364,7 +368,7 @@ def build_post_consolidation_plan(
         "campaign_id": "H3.9.2",
         "kind": "post_consolidation_planning_manifest",
         "source_cumulative_run_id": evidence["workflow"]["run_id"],
-        "source_cumulative_evidence_path": str(evidence_path),
+        "source_cumulative_evidence_path": evidence_rel,
         "source_cumulative_freeze_schema_version": SOURCE_CUMULATIVE_FREEZE_SCHEMA_VERSION,
         "factory_plan_sha256": factory_plan_sha,
         "cumulative_ledger_sha256": actual_ledger_sha,
