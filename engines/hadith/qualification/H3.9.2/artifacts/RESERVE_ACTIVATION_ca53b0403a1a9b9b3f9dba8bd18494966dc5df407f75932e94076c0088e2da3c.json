@@ -1,0 +1,390 @@
+{
+  "activated": [
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 29,
+      "primary_task_fingerprint": "1bbebe22aa919dc62190cfa497b45c8c8ba8d32b0d81ab1bd7d0beb50576d11c",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0279Tirmidhi.Sunan:0030",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0279Tirmidhi.Sunan:0030",
+      "reserve_slot_binding_sha256": "be3b2204f0710272070eb9e0fcf97d081387586fc437269f8d0c1602a0dce047",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0279Tirmidhi.Sunan:0030:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 43,
+      "primary_task_fingerprint": "ef48bbb6baa3b6da91d7410cda533341324e17948e7b194b09d4159f4d12a57c",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0009",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0009",
+      "reserve_slot_binding_sha256": "504d1a82e01e1e58993871fa047764e3b64b680cb42612dd8bdf03d298f20775",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0009:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 44,
+      "primary_task_fingerprint": "9fa06110328b4475e610adbe1a4375a3b9b10de9d2d7792eae067985bfcfb8ff",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0010",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0010",
+      "reserve_slot_binding_sha256": "e0ee4800b87c764dbccd551e6fe44a1c33a75f995ff2c23ca1cc4c8ac9b01615",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0010:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 45,
+      "primary_task_fingerprint": "7e3d6f9edc11478f42a63bfdc0cd9a4122a6aa0cea9afc559988040c609dc5f1",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0011",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0011",
+      "reserve_slot_binding_sha256": "b1e31fecbc5dfe87ac908bf331d3c4cc51d2279d80715d42fb93dba67947b9d9",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0011:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_no_candidate",
+      "primary_offset": 47,
+      "primary_task_fingerprint": "ce1e1e8b2c4bf62b28138103ed66c0ebaeece0b35276662c8a91c99f61a83d44",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0013",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0013",
+      "reserve_slot_binding_sha256": "530913be96ddfd8962bb18a3234cb6344d3a44ae833e0a8913a3fda1bb86acb7",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0013:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 50,
+      "primary_task_fingerprint": "f3d1edc4189ed479982ba2a6605dbcf06d5db63a6560ad2b350e9f8efc4b52a0",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0016",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0016",
+      "reserve_slot_binding_sha256": "590475f3fa6a3a195058d4efde0ab805922493b3988996dfa3c0b8e4b7faef67",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0016:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 52,
+      "primary_task_fingerprint": "e2deb8faf85189640001f07294eb76fb52b29129b3158ddd15c8d835225728dc",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0018",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0018",
+      "reserve_slot_binding_sha256": "e03d7e3773b22f6ce11b4e517454d46dc2191def0047661b86d471aacf630292",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0018:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 55,
+      "primary_task_fingerprint": "d5a0d0e20ff2c0ab8a7f9a39dbce47e9c0bc02c6e05b3a644d146fe79f0b3596",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0021",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0021",
+      "reserve_slot_binding_sha256": "3ea8bac1b154d7f98c65f88cfa0d1afa8285ce5b238fd4b177df74e6b34fa5ec",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0021:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 67,
+      "primary_task_fingerprint": "68029a6d12aab447977b0793f3aedc60133d7a6c92d4f76abc10c856c98a243e",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0033",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0033",
+      "reserve_slot_binding_sha256": "5073f7769c663a560b705e2af43ad5e0cd6fd86ec6483259b3ffac7d450cfa77",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0033:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 68,
+      "primary_task_fingerprint": "ffa9cd7f01d4fd621887a842d95af107d21d9401fee45ab77016d9f3523c4f98",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0034",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0034",
+      "reserve_slot_binding_sha256": "d23926022f8eb433c68cbb6fd4182faa46c0b83005b9716fd21276fc0e3a3e40",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0458Bayhaqi.SunanKubra:0034:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 184,
+      "primary_task_fingerprint": "fabe0df2859c920fe4d8d716d9928c3bfb30fed81dafb7acfbecff76f6f3b678",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0010",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0010",
+      "reserve_slot_binding_sha256": "97a50d8718149b93f9436077a06d8601a86f0b60fae65a9833136bc2a54aaf8e",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0010:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 186,
+      "primary_task_fingerprint": "1f8f6e4ac6c4b920efd1d8c43555baf4fdc389ea1276f846d72f92e9df50643c",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0012",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0012",
+      "reserve_slot_binding_sha256": "9b80e4b2d9e7444ea9eb4e99f3fde5a4a6224f9c8b8b59e4445f870109dce150",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0012:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 188,
+      "primary_task_fingerprint": "1a5751dd84fc9c4052d66a993e70df2d6d2ed5b534d30a0401ad3c00b263083c",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0014",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0014",
+      "reserve_slot_binding_sha256": "f45e8ec9753cd680cd7ab666878ff5e45dab43264e301d9a88601abbe05e4bab",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0014:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 194,
+      "primary_task_fingerprint": "9cfd5465ab18b1a6693616988651af796ddf22dce7e8a3910e2af8d2a410107d",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0020",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0020",
+      "reserve_slot_binding_sha256": "7231114c65ebd3b5b2bd1efa90b54e3ad5fb579cf949a34476afc14d1f69033c",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0020:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 198,
+      "primary_task_fingerprint": "969199c36cc84bdc6d5f6703c8109539af0baf79f78f43db5b829ba80a0c33fd",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0024",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0024",
+      "reserve_slot_binding_sha256": "5f3bf564e2e432006be03f0a927ac74280f6c1d1ede4f7649bd5b581f74bbf8f",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0024:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 199,
+      "primary_task_fingerprint": "a549741fc7299fd16f10e29134f480210e4d2519d5b7f96d5808b6fa3ff32335",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0025",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0025",
+      "reserve_slot_binding_sha256": "7d841280f7a2e13ff25906982771be5dbd19c987502700c69a164f2f7042fc04",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0025:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 202,
+      "primary_task_fingerprint": "e91d16a335b4d4a6b90fe39e9fd0fa91bd6b84cb64429c9f90c37e285f6ba43c",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0028",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0028",
+      "reserve_slot_binding_sha256": "7ff9b0dc541f27e031a2a5e909561ce2392c17c3b2a6ac66a9c785d8d35a9456",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0028:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 206,
+      "primary_task_fingerprint": "a9c92906dc01da47ef449c3e1771117afe34db8dede1c26a70a733014b88c7c9",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0032",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0032",
+      "reserve_slot_binding_sha256": "25657f1ca9ff013389973eadf6bb4e4180f9ca476d82f160a38e828cb7cb9892",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0751IbnQayyimJawziyya.ZadMacad:0032:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 71,
+      "primary_task_fingerprint": "36c8d939c08f8f0a32be5356fafe4231d7050ba907e0de53f63877a6c8ae529a",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0002",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0002",
+      "reserve_slot_binding_sha256": "9ffa6662b2f8c656d04310da2dc5e26daca3a1cb03918ac0cccce1da043c020b",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0002:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 77,
+      "primary_task_fingerprint": "cd5d2bcc78b5743ec26278cec1f514d02e8b2130fed29e73143ad18b0c020808",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0008",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0008",
+      "reserve_slot_binding_sha256": "6e6d5ba31330fb2aa1e0c38726befda29e37d3e8c6a74f7b5d18c5ea60a518bc",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0008:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 78,
+      "primary_task_fingerprint": "d8c62483751a31c8109df772de5acc4792ab35c0bb737aa8e4208b9bf38e6ca3",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0009",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0009",
+      "reserve_slot_binding_sha256": "c32d080094fa3c4fbbcf78f846d40597ac590c93bf503eff4d6aeb022e130f6a",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0009:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 80,
+      "primary_task_fingerprint": "3df5dcb9737b2da85bd37f3fbb83cb19ff7d9d24294990acdb7f3a4f9f94e323",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0011",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0011",
+      "reserve_slot_binding_sha256": "1499fe26780f91c220b8388e053cda8b5baafd541ed39b68cf8224af3883d0ba",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0011:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 84,
+      "primary_task_fingerprint": "7fe5d3d7aa94ff5b464b25a5e39e24ff88e7a52c4d5820478ab07e24c2ad956f",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0015",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0015",
+      "reserve_slot_binding_sha256": "cab30f0337254e950358f0c973331b9e494f7f2cf45094ef67b621a28afd0862",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0015:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 86,
+      "primary_task_fingerprint": "fae8cab1645b3bed50f06a1d43c95c783274ab7f85569bbd171dc36b3e3915fc",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0017",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0017",
+      "reserve_slot_binding_sha256": "dd8b64ad96ed2a48a3bfa274601a5e4be286296d79543736c9c2300eb8b36542",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0017:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 87,
+      "primary_task_fingerprint": "3ae6da9eb387cfd8b2e385411f12c3fc8dff832d4d0bf2e22ac7e870cb394e86",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0018",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0018",
+      "reserve_slot_binding_sha256": "d868a466945cffb947be2ddda54785185001715b8f43361abfa7cc4cd4a663b2",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0018:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 90,
+      "primary_task_fingerprint": "99f43273763bdf0a5794eb17e52515a7a41143dca4e9c699f989a00463f6e9f4",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0021",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0021",
+      "reserve_slot_binding_sha256": "45b8d927360289712bc3440daacbb61c0e1707ea14d8c1a42035bad8cf9a0b1d",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0021:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 96,
+      "primary_task_fingerprint": "5f3cab3c1a6aced9cdaa729ebab74bd5d2bc7685a199b63a49dfaa49f09c594e",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0027",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0027",
+      "reserve_slot_binding_sha256": "8e32f5d8ee55f458c8bcec934efee424d5a1f1507722e74b0fdae57c11a02793",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0027:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 102,
+      "primary_task_fingerprint": "d7fdbe7640e56231bf3815afe3e494c41158dfe5310a319614a77ad2edc7f892",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0033",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0033",
+      "reserve_slot_binding_sha256": "fe9b20ab428895b60219a952622b0caf776255bd76ef314f08164353c1dbc48d",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0762IbnYusufZaylaci.NasbRaya:0033:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:model_output_invalid_json",
+      "primary_offset": 141,
+      "primary_task_fingerprint": "1a8629331ddacfa1de0b9da48bcf88488675b97fe626e8f5de09791776deea9b",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0002",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0002",
+      "reserve_slot_binding_sha256": "8fe00c363269a147e25c443a1daf59c1eb39d32ae6e6dd4169d2ef9597ee6c5f",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0002:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 149,
+      "primary_task_fingerprint": "2a2694852ed3071112220423f7c36918c863cf931558390828405f02fd45820d",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0010",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0010",
+      "reserve_slot_binding_sha256": "612b8fab2b9898ac2ea2d5040436d535c131f030245352f1a97d975104b9f89b",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0010:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_no_candidate",
+      "primary_offset": 151,
+      "primary_task_fingerprint": "55ca3726cc3250b7e779aa422b71636b815944e4404541d1576ad78de4da8029",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0012",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0012",
+      "reserve_slot_binding_sha256": "1b346fde019209d357a89ed195765b4387c542f14c5d76ebb87b15bcb53afb5f",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0012:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 156,
+      "primary_task_fingerprint": "df0f4c94e6e2d6e312fe1b5d286941b0375acb46497b898033195e75f6425567",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0017",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0017",
+      "reserve_slot_binding_sha256": "f62ebaf124d986e05b42c1168c692abc0b7c4734a3afd83fd4996e8df36b8e3d",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0017:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 159,
+      "primary_task_fingerprint": "1b6d00f9e2bfb5ad6e3f15bc47f6b3f7be79a350b9f985bd5436b84aa89b3f45",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0020",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0020",
+      "reserve_slot_binding_sha256": "9cc835ff7b124a93c5845a467ad219272d332d9d298c67a4af2e74ae0d40070c",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0020:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:model_output_unbalanced_json",
+      "primary_offset": 165,
+      "primary_task_fingerprint": "4d9510293b11dcf5b96f9df5a693bc8bd021e3de0b4b23aad55779f5d6976e41",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0026",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0026",
+      "reserve_slot_binding_sha256": "a81d2c6ca96a9438e1d7f56cfe16ca89518990590dd1455b9e3e6bf691fab23e",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0026:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 169,
+      "primary_task_fingerprint": "b280a0a484e1612e68de873c9887eeb35383c4e5fb9378252442e7140de43807",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0030",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0030",
+      "reserve_slot_binding_sha256": "c42f080739802d2b713ebdcc89cd5e59f66d582ea2d587c8374c59417ae0e242",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0030:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_no_candidate",
+      "primary_offset": 174,
+      "primary_task_fingerprint": "d4451510cb0d848afc9497befe0869a071103c9944b3392bdb33f6fe5d544c73",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0035",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0035",
+      "reserve_slot_binding_sha256": "ddc751a32fae776abbf2380208082b912b8cc567ad17255a33d8446cb7d95278",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:0774IbnKathir.TafsirQuran:0035:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_no_candidate",
+      "primary_offset": 114,
+      "primary_task_fingerprint": "4731429636a53d623dc166bb8070f3843ff9e2a8b02f19a7343e152cf4b1f148",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0010",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0010",
+      "reserve_slot_binding_sha256": "a6fec59c6c017cc36beafc3252bb511d772c3099ed520e78eff3f52adaa0ff78",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0010:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 118,
+      "primary_task_fingerprint": "dc522a7b8feac17ba5318b3f1f1d226232ce1a0b7ebf83cae046382e757a9d3a",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0014",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0014",
+      "reserve_slot_binding_sha256": "87ae182004b16176407f8525cf2a5c55775a38fc4f4fd1632e3b4a8476ad4bee",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0014:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 122,
+      "primary_task_fingerprint": "8a71a4b08a55044bcf00da8c50d699eb2b74741b01cb308b31f858bebedca1f4",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0018",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0018",
+      "reserve_slot_binding_sha256": "6ba2690cab57f743525873381f19bd045b9f3279ebe3a1423103b468351cba31",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0018:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 131,
+      "primary_task_fingerprint": "d92f6ba04a95bbd5d7fd3349584ff466c87dbc7f517018a97ada0e76da0eee20",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0027",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0027",
+      "reserve_slot_binding_sha256": "c4a54403022880315721c53c8b24d01f6309e57e077a47802a3f3ee4872b5cee",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0027:reserve:01"
+    },
+    {
+      "eligibility_reason": "curator_rejection:adapter:contract_support_not_verbatim",
+      "primary_offset": 134,
+      "primary_task_fingerprint": "088e37b8f0ef3d32f4d5e4a23b2a57e36475d37d63c721d58a85895122b39f4c",
+      "primary_task_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0030",
+      "replacement_for_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0030",
+      "reserve_slot_binding_sha256": "02b1f42043349859fc6fac5c9eb34694ed2349d545cb4c3ca5a4312c7450460d",
+      "reserve_slot_id": "external-critical-commentary:non_holdout:openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi:0030:reserve:01"
+    }
+  ],
+  "activated_reserve_slot_count": 41,
+  "campaign_id": "H3.9.2",
+  "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+  "eligible_primary_count": 41,
+  "factory_plan_sha256": "8f7824f26c7db3124d6fc8b521195fe1189bf2897d28687153821d44d6ea4f6f",
+  "kind": "reserve_activation_manifest",
+  "policy": {
+    "activation_scope": "only hash-bound reserve slots linked to terminal replacement-eligible primaries",
+    "pending_adjudication_is_activatable": false,
+    "promoted_primary_is_activatable": false
+  },
+  "protocol_freeze_schema": 26,
+  "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+  "requires_repository_approval": true,
+  "reserve_reconciliation_authorized": true,
+  "schema_version": 1,
+  "source_cumulative_freeze_schema": 25
+}
