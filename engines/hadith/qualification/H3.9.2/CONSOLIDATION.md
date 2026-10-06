@@ -176,3 +176,10 @@ The redacted summary contains no source text, gold payloads, or model identity.
 ## Freeze binding
 
 This implementation is part of **freeze schema 25**. Historical canonical primary artifacts from schemas 23 and 24 are admissible only because the primary task prefix and fingerprints were preserved. Every decrypted task is revalidated against the current frozen plan, and an expected cumulative count requires an exact zero-based primary prefix with no gaps or overlaps.
+
+
+## Handoff to freeze schema 26
+
+The schema-25 cumulative boundary is complete. Freeze schema 26 does not alter the cumulative ledger or eligibility rules; it consumes the frozen 210-primary bundle and produces redacted, content-addressed next-step plans. See `POST_CONSOLIDATION.md`.
+
+The planning workflow must reproduce exactly **129 pending adjudications** and **41 linked reserve tasks** while keeping adjudication execution, reserve execution, and reserve reconciliation disabled.
