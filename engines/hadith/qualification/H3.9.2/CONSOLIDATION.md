@@ -6,7 +6,7 @@ It does not change record quotas, source partitions, label vocabularies, model p
 
 ## Current canonical input boundary
 
-The repository-reviewed cumulative target is now bound to these successful campaign runs:
+The completed second cumulative consolidation is bound to these successful campaign runs:
 
 - `37280971913` — primary offsets `0..39`
 - `37295517184` — primary offsets `40..103`
@@ -17,7 +17,7 @@ Together they represent exactly **210 primary tasks** for `external-critical-com
 
 Campaign run `37412193331` is explicitly excluded: it concluded failure after a Verifier timeout in shard `176..183`, so its partial artifacts are diagnostic only and are not part of canonical history.
 
-The workflow does not trust editable dispatch inputs as the canonicality decision. `run_ids` and `expected_task_count` must exactly match the repository-reviewed target in `artifacts/H3.9.2-STATUS.json`; otherwise it fails before artifact acquisition.
+The workflow does not trust editable dispatch inputs as the canonicality decision. Before execution, `run_ids` and `expected_task_count` must exactly match the repository-reviewed target in `artifacts/H3.9.2-STATUS.json`; otherwise it fails before artifact acquisition. After a target is frozen as completed, the status closes that target so an accidental redispatch fails closed.
 
 Raw successful-shard accounting across the four admitted campaign runs is:
 
