@@ -442,6 +442,57 @@ class FactoryTests(unittest.TestCase):
                     False,
                 )
 
+    def test_reconciliation_rejects_mixed_primary_and_reserve_task_sets(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
+                "reserve_slots_per_primary": 1,
+                "rule": "one reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+            plan_path = root / "factory-work" / "plan.json"
+            build_factory_plan(root, plan_path)
+            tasks_path = root / "factory-work" / "tasks.jsonl"
+            build_factory_tasks(root, plan_path, index, tasks_path, "non_holdout", False)
+            rows = load_jsonl(tasks_path)
+            primary = next(row for row in rows if row.get("candidate_slot_kind") != "reserve")
+            reserve = next(row for row in rows if row.get("candidate_slot_kind") == "reserve")
+
+            mixed = root / "factory-work" / "mixed.jsonl"
+            dump_jsonl(mixed, [primary, reserve])
+            curator = root / "factory-work" / "curator.jsonl"
+            verifier = root / "factory-work" / "verifier.jsonl"
+            dump_jsonl(curator, [])
+            dump_jsonl(verifier, [])
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "do not mix primary and reserve tasks",
+            ):
+                reconcile_factory(
+                    root,
+                    mixed,
+                    curator,
+                    verifier,
+                    cache,
+                    root / "staging",
+                    root / "factory-work" / "adjudication.jsonl",
+                    root / "factory-work" / "ledger.jsonl",
+                    False,
+                    "non_holdout",
+                    root / "unused-activation.json",
+                )
+
     def test_approved_reserve_reconciliation_promotes_with_activation_binding(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
