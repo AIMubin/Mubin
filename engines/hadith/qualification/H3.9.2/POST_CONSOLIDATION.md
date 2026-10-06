@@ -129,6 +129,18 @@ For any reserve task set:
 
 Final benchmark validation separately requires that this activation binding match the **repository-approved** activation recorded in `H3.9.2-STATUS.json`. This prevents a locally fabricated activation manifest from producing qualification-eligible records.
 
+## Approved reserve execution
+
+The reviewed execution surface is now `.github/workflows/h392-reserve-campaign.yml`. It is manual, main-only, stale-dispatch resistant, and bound to the committed activation manifest rather than to a copied count.
+
+The execution target is exactly **41 non-holdout reserve slots**. Before any model task runs, the workflow revalidates repository status, the activation manifest SHA-256, the Factory-plan binding, and the exact activated slot count. It then performs one centralized Curator/Verifier readiness gate and dispatches the activated set in deterministic shards of at most eight tasks through the reusable curation runner.
+
+The reusable runner keeps ordinary manual pilot dispatch primary-only. Reserve mode is available only to a `workflow_call` caller using `task_scope=approved_reserve`. In that mode, task selection is by exact activated reserve slot ID, not by the unrestricted candidate suffix, and `factory-reconcile` receives the repository-approved `--reserve-activation` manifest. Any unlisted reserve fails closed.
+
+Every shard persists source-bearing tasks, model responses, reviewed records, adjudication rows, and the curation ledger only inside the existing authenticated encrypted bundle. The campaign aggregate reads only redacted shard summaries and requires exact 0..40 coverage, one outcome per activated slot, a single Git commit, and the approved activation hash.
+
+A successful execution run is still evidence, not a mutation of the canonical benchmark population. Its run/artifact provenance and source-bearing outcomes must be consolidated and frozen before repository status marks the execution target complete or any later eligibility expansion is considered.
+
 ## Adjudication sequencing
 
 Reserve activation for the current 41 terminal failures may proceed independently of adjudication because those 41 primaries are already final.

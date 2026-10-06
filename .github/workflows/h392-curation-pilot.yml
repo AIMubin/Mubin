@@ -67,6 +67,10 @@ on:
         required: false
         type: string
         default: ""
+      task_scope:
+        required: false
+        type: string
+        default: "primary"
     secrets:
       H392_CURATOR_ENDPOINT:
         required: true
@@ -104,6 +108,7 @@ jobs:
       REDACTED_DIR: /tmp/h392-curation/redacted
       TASK_OFFSET: ${{ inputs.task_offset }}
       TASK_LIMIT: ${{ inputs.task_limit }}
+      TASK_SCOPE: ${{ inputs.task_scope || 'primary' }}
       CURATOR_AUTH_STYLE: ${{ inputs.curator_auth_style }}
       VERIFIER_AUTH_STYLE: ${{ inputs.verifier_auth_style }}
       CURATOR_JSON_MODE: ${{ inputs.curator_json_mode }}
@@ -174,24 +179,46 @@ jobs:
       - name: Validate chunk bounds
         run: |
           python - <<'PY'
+          import json
           import os
           from pathlib import Path
-          from benchmark_campaign.factory import build_factory_plan
 
-          plan = build_factory_plan(Path(".").resolve())
-          available = int(plan["primary_non_holdout_slots"])
+          from benchmark_campaign.factory import build_factory_plan
+          from benchmark_campaign.post_consolidation import validate_reserve_activation
+
+          root = Path(".").resolve()
+          plan = build_factory_plan(root)
+          scope = os.environ["TASK_SCOPE"]
           offset = int(os.environ["TASK_OFFSET"])
           limit = int(os.environ["TASK_LIMIT"])
-          if offset < 0 or offset >= available:
-              raise SystemExit(
-                  f"TASK_OFFSET must be in [0, {available - 1}]"
+
+          if scope == "primary":
+              available = int(plan["primary_non_holdout_slots"])
+              bound_name = "frozen non-holdout primary plan"
+          elif scope == "approved_reserve":
+              status = json.loads(
+                  (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
               )
+              if status.get("reserve_reconciliation_enabled") is not True:
+                  raise SystemExit("repository-approved reserve reconciliation is not enabled")
+              approved = status.get("reserve_activation")
+              if not isinstance(approved, dict) or approved.get("enabled") is not True:
+                  raise SystemExit("repository-approved reserve activation is missing")
+              activation_path = root / approved["evidence_path"]
+              activation = validate_reserve_activation(root, activation_path, [])
+              available = int(activation["activated_reserve_slot_count"])
+              if available != int(approved["activated_reserve_slot_count"]):
+                  raise SystemExit("approved reserve count differs from activation evidence")
+              bound_name = "repository-approved reserve activation"
+          else:
+              raise SystemExit("TASK_SCOPE must be primary or approved_reserve")
+
+          if offset < 0 or offset >= available:
+              raise SystemExit(f"TASK_OFFSET must be in [0, {available - 1}]")
           if limit < 1 or limit > 64:
               raise SystemExit("TASK_LIMIT must be in [1, 64]")
           if offset + limit > available:
-              raise SystemExit(
-                  "TASK_OFFSET + TASK_LIMIT exceeds the frozen non-holdout primary plan"
-              )
+              raise SystemExit(f"TASK_OFFSET + TASK_LIMIT exceeds the {bound_name}")
           PY
 
       - name: Build isolated ephemeral workspace
@@ -310,26 +337,67 @@ jobs:
           import os
           from pathlib import Path
 
+          from benchmark_campaign.core import sha256_file
+          from benchmark_campaign.post_consolidation import validate_reserve_activation
+
+          root = Path(".").resolve()
           run = Path(os.environ["RUN_DIR"])
           rows = [
-              json.loads(line) for line in (run / "all-curator-tasks.jsonl").read_text(encoding="utf-8").splitlines()
+              json.loads(line)
+              for line in (run / "all-curator-tasks.jsonl").read_text(encoding="utf-8").splitlines()
               if line.strip()
           ]
           offset = int(os.environ["TASK_OFFSET"])
           limit = int(os.environ["TASK_LIMIT"])
-          selected = rows[offset:offset + limit]
+          scope = os.environ["TASK_SCOPE"]
+          activation_sha256 = None
+
+          if scope == "primary":
+              selected = rows[offset:offset + limit]
+              if any(row.get("candidate_slot_kind") == "reserve" for row in selected):
+                  raise SystemExit("primary selection crossed into reserve candidate surface")
+          elif scope == "approved_reserve":
+              status = json.loads(
+                  (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+              )
+              approved = status["reserve_activation"]
+              activation_path = root / approved["evidence_path"]
+              activation = validate_reserve_activation(root, activation_path, [])
+              activation_sha256 = sha256_file(activation_path)
+              activated_ids = sorted(
+                  str(row["reserve_slot_id"]) for row in activation["activated"]
+              )
+              selected_ids = activated_ids[offset:offset + limit]
+              by_id = {str(row["task_id"]): row for row in rows}
+              if len(by_id) != len(rows):
+                  raise SystemExit("factory task set contains duplicate task IDs")
+              missing = [task_id for task_id in selected_ids if task_id not in by_id]
+              if missing:
+                  raise SystemExit(f"activated reserve tasks missing from Factory output: {missing}")
+              selected = [by_id[task_id] for task_id in selected_ids]
+              validate_reserve_activation(root, activation_path, selected)
+              if any(row.get("candidate_slot_kind") != "reserve" for row in selected):
+                  raise SystemExit("approved reserve selection contains a non-reserve task")
+          else:
+              raise SystemExit("unsupported TASK_SCOPE")
+
+          if len(selected) != limit:
+              raise SystemExit("selected task count differs from requested chunk size")
+
           out = run / "curator-tasks.jsonl"
           with out.open("w", encoding="utf-8", newline="\n") as fh:
               for row in selected:
                   fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
           summary = {
+              "task_scope": scope,
               "task_offset": offset,
               "task_limit": limit,
               "selected_task_count": len(selected),
               "selected_tasks_sha256": hashlib.sha256(out.read_bytes()).hexdigest(),
+              "reserve_activation_sha256": activation_sha256,
           }
           (Path(os.environ["REDACTED_DIR"]) / "chunk.json").write_text(
-              json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+              json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
           )
           PY
           rm "$RUN_DIR/all-curator-tasks.jsonl"
@@ -451,7 +519,21 @@ jobs:
 
       - name: Reconcile source evidence and policy gates
         run: |
+          set -eu
           mkdir -p "$RUN_DIR/reviewed"
+          extra=()
+          if [ "$TASK_SCOPE" = "approved_reserve" ]; then
+            activation_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads(
+              (Path("artifacts") / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+          )
+          print(status["reserve_activation"]["evidence_path"])
+          PY
+          )"
+            extra+=(--reserve-activation "$activation_path")
+          fi
           python -m benchmark_campaign factory-reconcile \
             --partition non_holdout \
             --tasks "$RUN_DIR/curator-tasks.jsonl" \
@@ -461,6 +543,7 @@ jobs:
             --reviewed-dir "$RUN_DIR/reviewed" \
             --adjudication-out "$RUN_DIR/adjudication.jsonl" \
             --ledger-out "$RUN_DIR/CURATION_LEDGER.jsonl" \
+            "${extra[@]}" \
             > "$REDACTED_DIR/reconcile-report.json"
 
       - name: Build redacted run summary
