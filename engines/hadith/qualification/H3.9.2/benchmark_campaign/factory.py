@@ -847,6 +847,8 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
     reserve_activation: dict[str, Any] | None = None
     reserve_activation_sha256: str | None = None
     if reserve_tasks:
+        if len(reserve_tasks) != len(task_rows):
+            raise ValueError("do not mix primary and reserve tasks in one reconciliation")
         if partition != "non_holdout":
             raise ValueError("schema-26 reserve activation currently supports non_holdout only")
         if reserve_activation_path is None:
