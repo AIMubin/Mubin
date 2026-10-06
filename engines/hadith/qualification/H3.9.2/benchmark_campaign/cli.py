@@ -7,6 +7,7 @@ from pathlib import Path
 from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
 from .consolidation import consolidate_primary_evidence
+from .post_consolidation import build_reserve_activation_manifest
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -135,6 +136,12 @@ def main(argv: list[str] | None = None) -> int:
     cp.add_argument("--out-dir", type=Path, required=True)
     cp.add_argument("--source-cache-dir", type=Path, required=True)
     cp.add_argument("--expected-task-count", type=int)
+
+    ra = sub.add_parser("build-reserve-activation")
+    ra.add_argument("--cumulative-dir", type=Path, required=True)
+    ra.add_argument("--out", type=Path, required=True)
+    ra.add_argument("--expected-cumulative-ledger-sha256", required=True)
+    ra.add_argument("--expected-replacement-eligibility-sha256", required=True)
 
     prep = sub.add_parser("prepare-manifests")
     prep.add_argument("--spec", type=Path)
@@ -357,6 +364,20 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             expected_task_count=args.expected_task_count,
             source_cache_dir=source_cache_dir,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "build-reserve-activation":
+        cumulative_dir = _resolve(root, args.cumulative_dir)
+        out = _resolve(root, args.out)
+        assert cumulative_dir is not None and out is not None
+        report = build_reserve_activation_manifest(
+            root,
+            cumulative_dir,
+            out,
+            expected_cumulative_ledger_sha256=args.expected_cumulative_ledger_sha256,
+            expected_replacement_eligibility_sha256=args.expected_replacement_eligibility_sha256,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
