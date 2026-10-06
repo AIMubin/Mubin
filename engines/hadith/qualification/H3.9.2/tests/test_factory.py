@@ -392,6 +392,29 @@ class FactoryTests(unittest.TestCase):
                 [],
             )
 
+            outside = Path(d) / "RESERVE_ACTIVATION_OUTSIDE.json"
+            outside.write_bytes(activation_path.read_bytes())
+            for malicious_path in (str(outside), "../RESERVE_ACTIVATION_OUTSIDE.json"):
+                with self.subTest(evidence_path=malicious_path):
+                    write_json(root / "artifacts" / "H3.9.2-STATUS.json", {
+                        "reserve_reconciliation_enabled": True,
+                        "reserve_activation": {
+                            "enabled": True,
+                            "evidence_path": malicious_path,
+                            "manifest_sha256": activation_sha,
+                            "cumulative_ledger_sha256": "b" * 64,
+                            "replacement_eligibility_sha256": "c" * 64,
+                            "activated_reserve_slot_count": 1,
+                        }
+                    })
+                    violations = _validate_factory_reserve_policy(
+                        root, activated_record, "b1"
+                    )
+                    self.assertEqual(
+                        [v.code for v in violations],
+                        ["qualification.reserve_activation_evidence_path"],
+                    )
+
     def test_reserve_reconciliation_fails_closed_without_reviewed_activation(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
