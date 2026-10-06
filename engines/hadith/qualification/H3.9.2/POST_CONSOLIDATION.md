@@ -158,7 +158,7 @@ It must not contain source excerpts, gold payloads, credentials, model identity,
 
 ## Current state
 
-At schema-26 protocol introduction:
+After repository approval of activation run `37524604933`:
 
 ```ini
 cumulative_primary_evidence_complete = true
