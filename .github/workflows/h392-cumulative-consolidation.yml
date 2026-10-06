@@ -6,11 +6,11 @@ on:
       run_ids:
         description: Comma-separated canonical successful H3.9.2 campaign run IDs
         required: true
-        default: "37280971913,37295517184,37326459365"
+        default: "37280971913,37295517184,37326459365,37426135905"
       expected_task_count:
         description: Exact cumulative primary-task count expected after consolidation
         required: true
-        default: "168"
+        default: "210"
 
 permissions:
   actions: read
@@ -83,12 +83,15 @@ jobs:
           status = json.loads(
               Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8")
           )
-          canonical_runs = [
-              str(x) for x in status["cumulative_consolidation_run_ids"]
-          ]
-          canonical_count = int(
-              status["cumulative_consolidation_expected_primary_tasks"]
-          )
+          target = status["cumulative_consolidation_target"]
+          canonical_runs = [str(x) for x in target["run_ids"]]
+          canonical_count = int(target["expected_primary_tasks"])
+          if target.get("ready") is not True:
+              raise SystemExit("cumulative consolidation target is not ready")
+          if target.get("completed") is not False:
+              raise SystemExit("cumulative consolidation target is already completed")
+          if int(target.get("protocol_freeze_schema", 0)) != 25:
+              raise SystemExit("cumulative consolidation target requires freeze schema 25")
           if raw != canonical_runs:
               raise SystemExit(
                   "run_ids differ from the repository-reviewed canonical campaign history"
