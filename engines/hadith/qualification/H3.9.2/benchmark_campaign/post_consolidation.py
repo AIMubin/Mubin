@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections import Counter
 from pathlib import Path
+import tarfile
+import tempfile
 from typing import Any
 
 from .core import (
@@ -13,6 +15,7 @@ from .core import (
     write_json,
 )
 from .factory import build_factory_plan
+from .artifact_crypto import decrypt_file
 
 
 POST_CONSOLIDATION_SCHEMA_VERSION = 1
@@ -47,14 +50,16 @@ def _factory_plan_bindings(root: Path) -> tuple[dict[str, Any], dict[str, dict[s
 
 def build_post_consolidation_plan(
     root: Path,
-    cumulative_dir: Path,
+    encrypted_bundle_path: Path,
     out_dir: Path,
     evidence_path: Path,
+    passphrase: str,
 ) -> dict[str, Any]:
     """Validate a frozen cumulative bundle and derive redacted next-step plans.
 
     This planner deliberately does not adjudicate cases and does not enable reserve
-    execution. It turns the encrypted cumulative boundary into two exact,
+    execution. It verifies and decrypts the repository-bound cumulative ciphertext,
+    then turns that exact boundary into two content-addressed,
     content-addressed control-plane plans: one for pending adjudication and one for
     linked reserve slots whose primaries are already proven terminally replaceable.
     """
@@ -131,6 +136,64 @@ def build_post_consolidation_plan(
     if expected_eligibility_sha != completed.get("replacement_eligibility_sha256"):
         raise ValueError("evidence eligibility hash differs from completed cumulative state")
 
+    expected_bundle_sha = _require_hex_sha256(
+        evidence.get("artifact", {}).get("encrypted_bundle_sha256"),
+        "evidence encrypted_bundle_sha256",
+    )
+    if expected_bundle_sha != protocol.get("source_encrypted_bundle_sha256"):
+        raise ValueError("evidence encrypted bundle differs from reviewed planning source")
+    if expected_bundle_sha != completed.get("encrypted_bundle_sha256"):
+        raise ValueError("evidence encrypted bundle differs from completed cumulative state")
+    if not encrypted_bundle_path.is_file():
+        raise FileNotFoundError(encrypted_bundle_path)
+    if sha256_file(encrypted_bundle_path) != expected_bundle_sha:
+        raise ValueError("encrypted cumulative bundle differs from frozen repository evidence")
+    if not isinstance(passphrase, str) or not passphrase:
+        raise ValueError("post-consolidation artifact passphrase is required")
+
+    with tempfile.TemporaryDirectory(prefix="h392-post-consolidation-") as tmp:
+        work = Path(tmp)
+        archive = work / "cumulative.tar.gz"
+        cumulative_dir = work / "cumulative"
+        decrypt_file(encrypted_bundle_path, archive, passphrase)
+        cumulative_dir.mkdir()
+        with tarfile.open(archive, "r:gz") as tf:
+            members = tf.getmembers()
+            for member in members:
+                member_path = Path(member.name)
+                if (
+                    member_path.is_absolute()
+                    or ".." in member_path.parts
+                    or member.issym()
+                    or member.islnk()
+                    or member.isdev()
+                ):
+                    raise ValueError(f"unsafe cumulative tar member: {member.name}")
+            tf.extractall(cumulative_dir, members=members, filter="data")
+        return _build_from_decrypted_cumulative(
+            root,
+            cumulative_dir,
+            out_dir,
+            evidence,
+            evidence_rel,
+            protocol,
+            completed,
+            expected_ledger_sha,
+            expected_eligibility_sha,
+        )
+
+
+def _build_from_decrypted_cumulative(
+    root: Path,
+    cumulative_dir: Path,
+    out_dir: Path,
+    evidence: dict[str, Any],
+    evidence_rel: str,
+    protocol: dict[str, Any],
+    completed: dict[str, Any],
+    expected_ledger_sha: str,
+    expected_eligibility_sha: str,
+) -> dict[str, Any]:
     manifest_path = cumulative_dir / "CUMULATIVE_MANIFEST.json"
     ledger_path = cumulative_dir / "CUMULATIVE_LEDGER.jsonl"
     adjudication_path = cumulative_dir / "CUMULATIVE_ADJUDICATION.jsonl"
