@@ -213,6 +213,11 @@ jobs:
               raise SystemExit("frozen cumulative artifact is expired")
           if artifact.get("name") != "h392-cumulative-primary-evidence":
               raise SystemExit("frozen cumulative artifact name mismatch")
+          artifact_run = artifact.get("workflow_run")
+          if not isinstance(artifact_run, dict) or int(artifact_run.get("id", 0)) != run_id:
+              raise SystemExit("frozen cumulative artifact is not owned by the bound run")
+          if artifact_run.get("head_sha") != run.get("head_sha"):
+              raise SystemExit("frozen cumulative artifact head SHA differs from the bound run")
           if artifact.get("digest") != expected_zip:
               raise SystemExit("GitHub cumulative artifact digest differs from frozen status")
 
@@ -343,7 +348,8 @@ jobs:
           test -s "$PUBLIC_DIR/POSTCONSOLIDATION_SUMMARY.json"
           test -s "$PUBLIC_DIR/h392-postconsolidation-private.tar.gz.aesgcm"
           test -s "$PUBLIC_DIR/ENCRYPTED_POSTCONSOLIDATION_PRIVATE_SHA256.txt"
-          test "$(find "$PUBLIC_DIR" -maxdepth 1 -type f | wc -l)" -eq 4
+          test "$(find "$PUBLIC_DIR" -mindepth 1 -maxdepth 1 | wc -l)" -eq 4
+          test "$(find "$PUBLIC_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l)" -eq 4
           test ! -e "$PUBLIC_DIR/PRIVATE_MANIFEST.json"
           test ! -e "$PUBLIC_DIR/RESERVE_AUTHORIZATION_PRIVATE.json"
           test ! -e "$PUBLIC_DIR/ADJUDICATION_QUEUE_PRIVATE.jsonl"
