@@ -42,8 +42,8 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical cumulative primary-evidence run 37409931064 on main commit 696b0e1c30fda5cdb4ea011840b562d63f151701 successfully provenance-bound the exact external-critical-commentary primary prefix 0..167 and reproduced 34 promoted, 103 pending adjudication, and 31 skipped outcomes. All 31 terminal skipped primaries are replacement eligible under freeze schema 25; all 103 pending adjudications remain ineligible. Reserve reconciliation remains disabled. The encrypted cumulative evidence is permanently referenced by hashes and identifiers in artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json; source-bearing cumulative material remains encrypted and is not committed as plaintext.",
-  "next_action": "Execute only the remaining external-critical-commentary primary offsets 168..209 as one reviewed 42-task campaign batch. After that run succeeds, admit its run ID into the repository-reviewed canonical history, set the cumulative expected primary prefix to 210, and run cumulative consolidation again before designing or activating any reserve reconciliation.",
+  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical campaign run 37426135905 on main commit fe55559fd97d1731204264341cfa6ddb1b28821d completed the external-critical-commentary primary surface through offset 209 with exact 42/42 coverage for offsets 168..209. Across the four admitted successful campaign runs, raw encrypted-shard accounting is now 210 primary tasks: 40 promoted, 129 adjudication, and 41 skipped. These totals are pre-consolidation only; the authoritative cumulative ledger, normalized adjudication reasons, and replacement-eligibility manifest still require a schema-25 cumulative consolidation over the exact 0..209 prefix. The earlier failed run 37412193331 is excluded from canonical history. Reserve reconciliation remains disabled.",
+  "next_action": "Dispatch the schema-25 cumulative primary-evidence workflow with canonical run IDs 37280971913,37295517184,37326459365,37426135905 and expected_task_count=210. Verify exact zero-based coverage 0..209 and freeze the resulting cumulative evidence before designing or activating any reserve reconciliation.",
   "freeze_schema_version": 25,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -58,21 +58,25 @@
   "non_holdout_execution_evidence": {
     "protocol_freeze_schemas": [
       23,
-      24
+      24,
+      25
     ],
-    "primary_tasks_executed": 168,
-    "promoted_in_encrypted_shards": 34,
-    "adjudication_in_encrypted_shards": 103,
-    "skipped_or_rejected_from_reconciliation": 31,
+    "primary_tasks_executed": 210,
+    "promoted_in_encrypted_shards": 40,
+    "adjudication_in_encrypted_shards": 129,
+    "skipped_or_rejected_from_reconciliation": 41,
     "workflow_runs": [
       37280971913,
       37295517184,
-      37326459365
+      37326459365,
+      37426135905
     ],
-    "primary_offset_coverage": "0..167",
-    "cumulative_evidence_verified": true,
-    "cumulative_consolidation_run_id": 37409931064,
-    "cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json",
+    "primary_offset_coverage": "0..209",
+    "latest_primary_batch_run_id": 37426135905,
+    "latest_primary_batch_evidence_path": "artifacts/PRIMARY_BATCH_EVIDENCE_168_210.json",
+    "last_completed_cumulative_prefix": "0..167",
+    "last_completed_cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json",
+    "preconsolidation_outcomes_are_authoritative": false,
     "consolidated_into_repository_benchmark_records": false
   },
   "reserve_reconciliation_enabled": false,
@@ -80,28 +84,40 @@
   "candidate_reserve_policy_version": 1,
   "candidate_reserve_capacity_guarantees_quota": false,
   "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory.",
-  "cumulative_consolidation_ready": true,
-  "cumulative_consolidation_completed": true,
   "cumulative_consolidation_workflow": ".github/workflows/h392-cumulative-consolidation.yml",
-  "cumulative_consolidation_expected_primary_tasks": 168,
-  "cumulative_consolidation_run_ids": [
-    37280971913,
-    37295517184,
-    37326459365
-  ],
-  "cumulative_consolidation_protocol_freeze_schema": 25,
-  "cumulative_consolidation_successful_run_id": 37409931064,
-  "cumulative_consolidation_runner_commit": "696b0e1c30fda5cdb4ea011840b562d63f151701",
-  "cumulative_consolidation_artifact_id": 11387909752,
-  "cumulative_consolidation_artifact_digest": "sha256:abdc98472114378c0d2bb4b680d9d9549dbc624698bd3ab822c2970ef6ad301d",
-  "cumulative_consolidation_summary_sha256": "fef1a9aba21ade7c4f04deee51095124ef7b0297758dbad3bc4b3107ed023e46",
-  "cumulative_ledger_sha256": "473ccc5fc8f6f545208c2868d28e40aafc88b9dcda397921f80d4a037528bea9",
-  "replacement_eligibility_sha256": "1233bead33e534325b6f88f952ed28ebb3764bdc3d739cd2f77d42a43d6dac12",
-  "encrypted_cumulative_bundle_sha256": "1497788cd01c03102cccac126ac7234f9cbdfff3284ebe53d78b8c911b1b5a7d",
-  "cumulative_promoted_primary_count": 34,
-  "cumulative_pending_adjudication_count": 103,
-  "cumulative_skipped_primary_count": 31,
-  "cumulative_replacement_eligible_primary_count": 31,
-  "cumulative_reviewed_record_count": 34,
-  "cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json"
+  "canonical_primary_batch_evidence_path": "artifacts/PRIMARY_BATCH_EVIDENCE_168_210.json",
+  "cumulative_consolidation_target": {
+    "ready": true,
+    "completed": false,
+    "expected_primary_tasks": 210,
+    "run_ids": [
+      37280971913,
+      37295517184,
+      37326459365,
+      37426135905
+    ],
+    "protocol_freeze_schema": 25
+  },
+  "last_completed_cumulative_consolidation": {
+    "expected_primary_tasks": 168,
+    "source_run_ids": [
+      37280971913,
+      37295517184,
+      37326459365
+    ],
+    "successful_run_id": 37409931064,
+    "runner_commit": "696b0e1c30fda5cdb4ea011840b562d63f151701",
+    "artifact_id": 11387909752,
+    "artifact_digest": "sha256:abdc98472114378c0d2bb4b680d9d9549dbc624698bd3ab822c2970ef6ad301d",
+    "summary_sha256": "fef1a9aba21ade7c4f04deee51095124ef7b0297758dbad3bc4b3107ed023e46",
+    "cumulative_ledger_sha256": "473ccc5fc8f6f545208c2868d28e40aafc88b9dcda397921f80d4a037528bea9",
+    "replacement_eligibility_sha256": "1233bead33e534325b6f88f952ed28ebb3764bdc3d739cd2f77d42a43d6dac12",
+    "encrypted_bundle_sha256": "1497788cd01c03102cccac126ac7234f9cbdfff3284ebe53d78b8c911b1b5a7d",
+    "promoted_primary_count": 34,
+    "pending_adjudication_count": 103,
+    "skipped_primary_count": 31,
+    "replacement_eligible_primary_count": 31,
+    "reviewed_record_count": 34,
+    "evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json"
+  }
 }

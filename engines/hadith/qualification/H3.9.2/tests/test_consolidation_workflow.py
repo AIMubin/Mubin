@@ -129,11 +129,12 @@ class ConsolidationWorkflowTests(unittest.TestCase):
 
     def test_dispatch_inputs_must_match_repository_reviewed_history(self):
         self.assertIn(
-            'status["cumulative_consolidation_run_ids"]',
+            'status["cumulative_consolidation_target"]',
             self.workflow,
         )
+        self.assertIn('target["run_ids"]', self.workflow)
         self.assertIn(
-            'status["cumulative_consolidation_expected_primary_tasks"]',
+            'target["expected_primary_tasks"]',
             self.workflow,
         )
         self.assertIn(
@@ -146,6 +147,19 @@ class ConsolidationWorkflowTests(unittest.TestCase):
         )
         self.assertIn(
             'status.get("reserve_reconciliation_enabled") is not False',
+            self.workflow,
+        )
+        self.assertIn('status["non_holdout_execution_evidence"]', self.workflow)
+        self.assertIn(
+            "canonical target run IDs disagree with execution evidence",
+            self.workflow,
+        )
+        self.assertIn(
+            "canonical target count disagrees with execution evidence",
+            self.workflow,
+        )
+        self.assertIn(
+            "canonical target prefix disagrees with execution evidence",
             self.workflow,
         )
 
@@ -163,12 +177,15 @@ class ConsolidationWorkflowTests(unittest.TestCase):
             self.workflow,
         )
 
-    def test_initial_canonical_history_is_explicit(self):
+    def test_current_canonical_history_is_explicit(self):
         self.assertIn(
-            'default: "37280971913,37295517184,37326459365"',
+            'default: "37280971913,37295517184,37326459365,37426135905"',
             self.workflow,
         )
-        self.assertIn('default: "168"', self.workflow)
+        self.assertIn('default: "210"', self.workflow)
+        self.assertIn('target.get("ready") is not True', self.workflow)
+        self.assertIn('target.get("completed") is not False', self.workflow)
+        self.assertIn('target.get("protocol_freeze_schema", 0)', self.workflow)
 
 
 if __name__ == "__main__":

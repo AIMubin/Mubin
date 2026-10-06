@@ -12,87 +12,139 @@ class CumulativeEvidenceRecordTests(unittest.TestCase):
         cls.status = json.loads(
             (cls.project / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
         )
-        cls.evidence_path = cls.project / cls.status["cumulative_evidence_path"]
-        cls.evidence = json.loads(cls.evidence_path.read_text(encoding="utf-8"))
 
-    def test_status_is_bound_to_successful_168_primary_evidence(self):
-        evidence = self.evidence
-        status = self.status
+        completed = cls.status["last_completed_cumulative_consolidation"]
+        cls.completed = completed
+        cls.completed_evidence = json.loads(
+            (cls.project / completed["evidence_path"]).read_text(encoding="utf-8")
+        )
 
-        self.assertTrue(status["cumulative_consolidation_ready"])
-        self.assertTrue(status["cumulative_consolidation_completed"])
+        cls.batch_evidence = json.loads(
+            (cls.project / cls.status["canonical_primary_batch_evidence_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+
+    def test_last_completed_168_primary_consolidation_remains_immutably_bound(self):
+        evidence = self.completed_evidence
+        completed = self.completed
+
         self.assertTrue(evidence["canonical_main_evidence"])
-        self.assertEqual(evidence["campaign_id"], status["campaign_id"])
+        self.assertEqual(evidence["campaign_id"], self.status["campaign_id"])
         self.assertEqual(
             evidence["workflow"]["run_id"],
-            status["cumulative_consolidation_successful_run_id"],
+            completed["successful_run_id"],
         )
-        self.assertEqual(
-            evidence["runner_commit"],
-            status["cumulative_consolidation_runner_commit"],
-        )
-        self.assertEqual(
-            evidence["artifact"]["id"],
-            status["cumulative_consolidation_artifact_id"],
-        )
-        self.assertEqual(
-            evidence["artifact"]["digest"],
-            status["cumulative_consolidation_artifact_digest"],
-        )
+        self.assertEqual(evidence["runner_commit"], completed["runner_commit"])
+        self.assertEqual(evidence["artifact"]["id"], completed["artifact_id"])
+        self.assertEqual(evidence["artifact"]["digest"], completed["artifact_digest"])
         self.assertEqual(
             evidence["artifact"]["redacted_summary_sha256"],
-            status["cumulative_consolidation_summary_sha256"],
+            completed["summary_sha256"],
         )
         self.assertEqual(
             evidence["artifact"]["encrypted_bundle_sha256"],
-            status["encrypted_cumulative_bundle_sha256"],
+            completed["encrypted_bundle_sha256"],
         )
         self.assertEqual(
             evidence["bindings"]["cumulative_ledger_sha256"],
-            status["cumulative_ledger_sha256"],
+            completed["cumulative_ledger_sha256"],
         )
         self.assertEqual(
             evidence["bindings"]["replacement_eligibility_sha256"],
-            status["replacement_eligibility_sha256"],
+            completed["replacement_eligibility_sha256"],
+        )
+        self.assertEqual(
+            evidence["canonical_input"]["campaign_run_ids"],
+            completed["source_run_ids"],
+        )
+        self.assertEqual(
+            evidence["canonical_input"]["expected_primary_task_count"],
+            completed["expected_primary_tasks"],
+        )
+        self.assertEqual(completed["expected_primary_tasks"], 168)
+
+    def test_final_primary_batch_is_canonical_and_exactly_completes_210_prefix(self):
+        evidence = self.batch_evidence
+        execution = self.status["non_holdout_execution_evidence"]
+
+        self.assertTrue(evidence["canonical_main_evidence"])
+        self.assertEqual(evidence["workflow"]["run_id"], 37426135905)
+        self.assertEqual(evidence["workflow"]["run_attempt"], 1)
+        self.assertEqual(evidence["workflow"]["conclusion"], "success")
+        self.assertEqual(
+            evidence["workflow"]["head_sha"],
+            "fe55559fd97d1731204264341cfa6ddb1b28821d",
         )
 
-    def test_canonical_prefix_accounting_and_next_batch_are_exact(self):
-        evidence = self.evidence
-        status = self.status
-        result = evidence["result"]
-        canonical = evidence["canonical_input"]
-        next_action = evidence["next_action"]
+        surface = evidence["requested_surface"]
+        self.assertTrue(surface["exact_contiguous_coverage"])
+        self.assertEqual(surface["task_offset"], 168)
+        self.assertEqual(surface["task_count"], 42)
+        self.assertEqual(surface["primary_offset_end_inclusive"], 209)
 
+        aggregate = evidence["aggregate"]
+        self.assertTrue(aggregate["coverage_complete"])
+        self.assertEqual(aggregate["coverage_errors"], [])
+        self.assertEqual(aggregate["completed_shards"], aggregate["expected_shards"])
+        self.assertEqual(aggregate["selected_tasks"], 42)
         self.assertEqual(
-            canonical["campaign_run_ids"],
-            status["cumulative_consolidation_run_ids"],
+            aggregate["promoted"] + aggregate["adjudication"] + aggregate["skipped"],
+            42,
         )
-        self.assertEqual(
-            canonical["expected_primary_task_count"],
-            status["cumulative_consolidation_expected_primary_tasks"],
-        )
-        self.assertEqual(result["task_count"], canonical["expected_primary_task_count"])
-        self.assertEqual(
-            result["promoted"] + result["pending_adjudication"] + result["skipped"],
-            result["task_count"],
-        )
-        self.assertEqual(result["promoted"], status["cumulative_promoted_primary_count"])
-        self.assertEqual(
-            result["pending_adjudication"],
-            status["cumulative_pending_adjudication_count"],
-        )
-        self.assertEqual(result["skipped"], status["cumulative_skipped_primary_count"])
-        self.assertEqual(
-            result["replacement_eligible_primary_count"],
-            status["cumulative_replacement_eligible_primary_count"],
-        )
-        self.assertFalse(evidence["reserve_policy"]["reserve_reconciliation_enabled"])
-        self.assertFalse(status["reserve_reconciliation_enabled"])
 
-        self.assertEqual(next_action["task_offset"], result["task_count"])
-        self.assertEqual(next_action["task_count"], 42)
-        self.assertEqual(next_action["task_offset"] + next_action["task_count"], 210)
-        self.assertEqual(next_action["shard_size"], 8)
+        self.assertEqual(execution["primary_tasks_executed"], 210)
+        self.assertEqual(execution["primary_offset_coverage"], "0..209")
+        self.assertEqual(
+            execution["workflow_runs"],
+            [37280971913, 37295517184, 37326459365, 37426135905],
+        )
+        self.assertFalse(execution["preconsolidation_outcomes_are_authoritative"])
+        self.assertFalse(self.status["reserve_reconciliation_enabled"])
+
+        shards = evidence["shards"]
+        self.assertEqual(
+            [(row["task_offset"], row["task_limit"]) for row in shards],
+            [(168, 8), (176, 8), (184, 8), (192, 8), (200, 8), (208, 2)],
+        )
+        self.assertEqual(sum(row["selected_tasks"] for row in shards), 42)
+        self.assertEqual(len({row["artifact_id"] for row in shards}), 6)
+        self.assertTrue(
+            all(row["artifact_digest"].startswith("sha256:") for row in shards)
+        )
+        self.assertTrue(
+            all(len(row["summary_sha256"]) == 64 for row in shards)
+        )
+        self.assertTrue(
+            all(len(row["encrypted_bundle_sha256"]) == 64 for row in shards)
+        )
+
+    def test_210_primary_cumulative_target_is_reviewed_but_not_yet_completed(self):
+        target = self.status["cumulative_consolidation_target"]
+        evidence = self.batch_evidence
+
+        self.assertTrue(target["ready"])
+        self.assertFalse(target["completed"])
+        self.assertEqual(target["expected_primary_tasks"], 210)
+        self.assertEqual(target["protocol_freeze_schema"], 25)
+        self.assertEqual(
+            target["run_ids"],
+            [37280971913, 37295517184, 37326459365, 37426135905],
+        )
+        self.assertEqual(
+            evidence["next_action"]["canonical_run_ids"],
+            target["run_ids"],
+        )
+        self.assertEqual(
+            evidence["next_action"]["expected_primary_task_count"],
+            target["expected_primary_tasks"],
+        )
+
+        excluded = {
+            row["run_id"]: row["reason"]
+            for row in evidence["excluded_noncanonical_runs"]
+        }
+        self.assertIn(37412193331, excluded)
 
 
 if __name__ == "__main__":
