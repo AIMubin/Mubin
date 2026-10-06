@@ -335,10 +335,27 @@ class FactoryTests(unittest.TestCase):
                 ["qualification.reserve_activation_missing"],
             )
 
+            activation_path = root / "artifacts" / "RESERVE_ACTIVATION_TEST.json"
+            write_json(activation_path, {
+                "kind": "reserve_activation_manifest",
+                "reserve_reconciliation_authorized": True,
+                "requires_repository_approval": True,
+                "cumulative_ledger_sha256": "b" * 64,
+                "replacement_eligibility_sha256": "c" * 64,
+                "activated": [{
+                    "reserve_slot_id": reserve["slot_id"],
+                    "reserve_slot_binding_sha256": sha256_bytes(
+                        canonical_json_bytes(reserve)
+                    ),
+                    "replacement_for_slot_id": reserve["replacement_for_slot_id"],
+                }],
+            })
+            activation_sha = hashlib.sha256(activation_path.read_bytes()).hexdigest()
             write_json(root / "artifacts" / "H3.9.2-STATUS.json", {
                 "reserve_activation": {
                     "enabled": True,
-                    "manifest_sha256": "a" * 64,
+                    "evidence_path": "artifacts/RESERVE_ACTIVATION_TEST.json",
+                    "manifest_sha256": activation_sha,
                     "cumulative_ledger_sha256": "b" * 64,
                     "replacement_eligibility_sha256": "c" * 64,
                 }
@@ -348,7 +365,7 @@ class FactoryTests(unittest.TestCase):
                 "factory_slot_id": reserve["slot_id"],
                 "factory_verification": {
                     "reserve_activation": {
-                        "activation_manifest_sha256": "a" * 64,
+                        "activation_manifest_sha256": activation_sha,
                         "cumulative_ledger_sha256": "b" * 64,
                         "replacement_eligibility_sha256": "c" * 64,
                         "replacement_for_slot_id": reserve["replacement_for_slot_id"],
