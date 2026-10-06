@@ -76,11 +76,16 @@ class CumulativeEvidenceRecordTests(unittest.TestCase):
             result["promoted"] + result["pending_adjudication"] + result["skipped"],
             result["task_count"],
         )
+        self.assertEqual(result["promoted"], status["cumulative_promoted_primary_count"])
+        self.assertEqual(
+            result["pending_adjudication"],
+            status["cumulative_pending_adjudication_count"],
+        )
+        self.assertEqual(result["skipped"], status["cumulative_skipped_primary_count"])
         self.assertEqual(
             result["replacement_eligible_primary_count"],
             status["cumulative_replacement_eligible_primary_count"],
         )
-        self.assertEqual(result["replacement_eligible_primary_count"], result["skipped"])
         self.assertFalse(evidence["reserve_policy"]["reserve_reconciliation_enabled"])
         self.assertFalse(status["reserve_reconciliation_enabled"])
 
