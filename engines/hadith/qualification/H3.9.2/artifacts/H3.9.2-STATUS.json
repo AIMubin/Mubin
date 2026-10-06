@@ -43,7 +43,7 @@
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
   "reason": "The authoritative schema-25 cumulative primary evidence for external-critical-commentary is frozen at 210 primary tasks: 40 promoted, 129 pending adjudication, 41 skipped, and 41 currently replacement-eligible terminal primaries. Freeze schema 26 adds a post-consolidation protocol that can derive a reserve-activation manifest only from the exact reviewed cumulative-ledger and replacement-eligibility hashes. Reserve execution remains disabled until that activation evidence itself is generated, reviewed, and frozen. Pending adjudications remain non-replaceable and require a separate human/authority adjudication decision path; an adjudication rejection may only become replaceable through a later evidence-bound eligibility update.",
-  "next_action": "After schema-26 protocol review/merge, dispatch .github/workflows/h392-reserve-activation.yml on main. Verify that it reproduces exactly 41 activated reserve slots from cumulative ledger SHA-256 36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d and replacement-eligibility SHA-256 21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee. Freeze the resulting activation artifact before setting reserve_reconciliation_enabled=true or executing any reserve task.",
+  "next_action": "Execute only the 41 repository-approved non-holdout reserve slots in the committed activation manifest, preserving exact activation-manifest, cumulative-ledger, replacement-eligibility, and Factory-plan bindings. Resolve the 129 pending adjudications separately through human/authority review. Re-consolidate evidence before any further reserve eligibility expansion.",
   "freeze_schema_version": 26,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -80,8 +80,8 @@
     "consolidated_into_repository_benchmark_records": false,
     "cumulative_evidence_verified": true
   },
-  "reserve_reconciliation_enabled": false,
-  "reserve_reconciliation_reason": "Freeze schema 26 defines the hash-bound activation mechanism, but no activation artifact has yet been generated and frozen. The current 41 eligible slots are evidence only, not execution authority.",
+  "reserve_reconciliation_enabled": true,
+  "reserve_reconciliation_reason": "Reserve activation evidence from workflow run 37524604933 was independently verified and frozen in repository state. Only the exact 41 reserve slots in the committed activation manifest are authorized; the 129 pending adjudications remain non-replaceable.",
   "candidate_reserve_policy_version": 1,
   "candidate_reserve_capacity_guarantees_quota": false,
   "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory.",
@@ -184,12 +184,31 @@
     "adjudication_policy": "Pending adjudications are not reserve eligible. Acceptance requires human/authority review consistent with CURATION.md; rejection does not silently activate a reserve and must be incorporated by a later evidence-bound eligibility update."
   },
   "reserve_activation_target": {
-    "ready": true,
-    "completed": false,
+    "ready": false,
+    "completed": true,
     "source_cumulative_run_id": 37471731102,
     "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
     "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
     "expected_eligible_primary_count": 41,
-    "expected_activated_reserve_slot_count": 41
+    "expected_activated_reserve_slot_count": 41,
+    "successful_run_id": 37524604933,
+    "runner_commit": "69f288d515fd8b65747eba9cedabade9f3cc123a",
+    "artifact_id": 11442200728,
+    "artifact_digest": "sha256:7c4001c1a90caae84b9eeb7944da2b1dab2e5dd534c4a8e2530241989fcdfd32",
+    "manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
+    "evidence_path": "artifacts/RESERVE_ACTIVATION_ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c.json"
+  },
+  "reserve_activation": {
+    "enabled": true,
+    "evidence_path": "artifacts/RESERVE_ACTIVATION_ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c.json",
+    "manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
+    "workflow_run_id": 37524604933,
+    "runner_commit": "69f288d515fd8b65747eba9cedabade9f3cc123a",
+    "artifact_id": 11442200728,
+    "artifact_digest": "sha256:7c4001c1a90caae84b9eeb7944da2b1dab2e5dd534c4a8e2530241989fcdfd32",
+    "factory_plan_sha256": "8f7824f26c7db3124d6fc8b521195fe1189bf2897d28687153821d44d6ea4f6f",
+    "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+    "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+    "activated_reserve_slot_count": 41
   }
 }
