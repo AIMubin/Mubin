@@ -100,6 +100,18 @@ class PostConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn("len(leaves) != 41", self.workflow)
         self.assertIn("len(adjudication) != 129", self.workflow)
 
+    def test_plaintext_cleanup_runs_even_after_failure(self):
+        self.assertIn("name: Cleanup decrypted and private plaintext", self.workflow)
+        self.assertIn("if: always()", self.workflow)
+        self.assertIn(
+            'rm -rf "$CUMULATIVE_DIR" "$PRIVATE_DIR" "$CUMULATIVE_ARTIFACT_DIR"',
+            self.workflow,
+        )
+        self.assertIn(
+            'rm -f "$RUNNER_TEMP/h392-postconsolidation-private.tar.gz"',
+            self.workflow,
+        )
+
     def test_only_redacted_bindings_and_encrypted_private_map_are_uploaded(self):
         for name in (
             "POSTCONSOLIDATION_BINDING.json",
