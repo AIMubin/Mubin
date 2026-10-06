@@ -42,7 +42,7 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical cumulative primary-evidence run 37409931064 on main commit 696b0e1c30fda5cdb4ea011840b562d63f151701 successfully provenance-bound the exact external-critical-commentary primary prefix 0..167 and reproduced 34 promoted, 103 pending adjudication, and 31 skipped outcomes. All 31 terminal skipped primaries are replacement eligible under freeze schema 25; all 103 pending adjudications remain ineligible. Reserve reconciliation remains disabled. The encrypted cumulative evidence is permanently referenced by hashes and identifiers in artifacts/CUMULATIVE_PRIMARY_EVIDENCE.json; source-bearing cumulative material remains encrypted and is not committed as plaintext.",
+  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical cumulative primary-evidence run 37409931064 on main commit 696b0e1c30fda5cdb4ea011840b562d63f151701 successfully provenance-bound the exact external-critical-commentary primary prefix 0..167 and reproduced 34 promoted, 103 pending adjudication, and 31 skipped outcomes. All 31 terminal skipped primaries are replacement eligible under freeze schema 25; all 103 pending adjudications remain ineligible. Reserve reconciliation remains disabled. The encrypted cumulative evidence is permanently referenced by hashes and identifiers in artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json; source-bearing cumulative material remains encrypted and is not committed as plaintext.",
   "next_action": "Execute only the remaining external-critical-commentary primary offsets 168..209 as one reviewed 42-task campaign batch. After that run succeeds, admit its run ID into the repository-reviewed canonical history, set the cumulative expected primary prefix to 210, and run cumulative consolidation again before designing or activating any reserve reconciliation.",
   "freeze_schema_version": 25,
   "factory_primary_slot_count": 1280,
@@ -72,7 +72,7 @@
     "primary_offset_coverage": "0..167",
     "cumulative_evidence_verified": true,
     "cumulative_consolidation_run_id": 37409931064,
-    "cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE.json",
+    "cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json",
     "consolidated_into_repository_benchmark_records": false
   },
   "reserve_reconciliation_enabled": false,
@@ -103,5 +103,5 @@
   "cumulative_skipped_primary_count": 31,
   "cumulative_replacement_eligible_primary_count": 31,
   "cumulative_reviewed_record_count": 34,
-  "cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE.json"
+  "cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json"
 }
