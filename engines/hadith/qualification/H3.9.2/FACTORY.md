@@ -131,3 +131,10 @@ A primary is replacement eligible only when the cumulative evidence proves a ter
 ### Freeze schema 25: cumulative evidence binding
 
 Freeze schema 25 adds `benchmark_campaign/consolidation.py` to the frozen protocol surface and introduces provenance-bound cumulative primary accounting. It does not alter the schema-24 primary/reserve candidate plan. The cumulative artifact binds the exact zero-based primary prefix, source workflow/artifact digests, reviewed/adjudication outcomes, the current Factory-plan hash, and replacement-eligible primary/reserve slot bindings. Reserve reconciliation remains disabled.
+
+
+## Freeze schema 26: post-consolidation planning gate
+
+Freeze schema 26 adds `benchmark_campaign/post_consolidation.py` and the manual `.github/workflows/h392-post-consolidation-plan.yml` workflow. The planner consumes the frozen schema-25 cumulative bundle, revalidates the exact cumulative ledger and replacement-eligibility bindings, and derives two redacted control-plane plans: the 129-item adjudication plan and the 41-item linked reserve activation plan.
+
+This revision does **not** adjudicate cases, execute reserves, or enable reserve reconciliation. The generated plans carry `execution_enabled=false`, and the existing Factory reconciliation path continues to reject reserve tasks until a later reviewed activation revision explicitly consumes the frozen plan.
