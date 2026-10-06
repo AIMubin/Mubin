@@ -43,12 +43,12 @@ class PostConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn('downloaded cumulative summary digest mismatch', self.workflow)
         self.assertIn('downloaded cumulative bundle digest mismatch', self.workflow)
 
-    def test_tar_extraction_is_fail_closed(self):
-        self.assertIn('unsafe cumulative tar member', self.workflow)
-        self.assertIn('member.issym()', self.workflow)
-        self.assertIn('member.islnk()', self.workflow)
-        self.assertIn('member.isdev()', self.workflow)
-        self.assertIn('filter="data"', self.workflow)
+    def test_planner_receives_encrypted_bundle_and_step_scoped_secret(self):
+        self.assertIn('--encrypted-bundle "$WORK_ROOT/source.aesgcm"', self.workflow)
+        self.assertIn('--passphrase-env ARTIFACT_KEY', self.workflow)
+        self.assertIn('ARTIFACT_KEY:', self.workflow)
+        self.assertIn('secrets.H392_CURATION_ARTIFACT_KEY', self.workflow)
+        self.assertNotIn('CUMULATIVE_DIR:', self.workflow)
 
     def test_planner_publishes_only_redacted_control_plane(self):
         self.assertIn('plan-post-consolidation', self.workflow)
