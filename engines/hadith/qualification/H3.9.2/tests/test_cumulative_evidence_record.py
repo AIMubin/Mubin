@@ -102,6 +102,23 @@ class CumulativeEvidenceRecordTests(unittest.TestCase):
         self.assertFalse(execution["preconsolidation_outcomes_are_authoritative"])
         self.assertFalse(self.status["reserve_reconciliation_enabled"])
 
+        shards = evidence["shards"]
+        self.assertEqual(
+            [(row["task_offset"], row["task_limit"]) for row in shards],
+            [(168, 8), (176, 8), (184, 8), (192, 8), (200, 8), (208, 2)],
+        )
+        self.assertEqual(sum(row["selected_tasks"] for row in shards), 42)
+        self.assertEqual(len({row["artifact_id"] for row in shards}), 6)
+        self.assertTrue(
+            all(row["artifact_digest"].startswith("sha256:") for row in shards)
+        )
+        self.assertTrue(
+            all(len(row["summary_sha256"]) == 64 for row in shards)
+        )
+        self.assertTrue(
+            all(len(row["encrypted_bundle_sha256"]) == 64 for row in shards)
+        )
+
     def test_210_primary_cumulative_target_is_reviewed_but_not_yet_completed(self):
         target = self.status["cumulative_consolidation_target"]
         evidence = self.batch_evidence
