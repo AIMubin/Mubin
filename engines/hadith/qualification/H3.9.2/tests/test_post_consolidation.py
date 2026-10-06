@@ -135,10 +135,14 @@ class PostConsolidationTests(unittest.TestCase):
         return out, result
 
     def _approve(self, out: Path, result: dict) -> None:
+        approved = self.root / "artifacts" / "RESERVE_ACTIVATION_TEST.json"
+        approved.parent.mkdir(parents=True, exist_ok=True)
+        approved.write_bytes(out.read_bytes())
         _write_json(self.root / "artifacts" / "H3.9.2-STATUS.json", {
             "reserve_activation": {
                 "enabled": True,
-                "manifest_sha256": sha256_file(out),
+                "evidence_path": "artifacts/RESERVE_ACTIVATION_TEST.json",
+                "manifest_sha256": sha256_file(approved),
                 "cumulative_ledger_sha256": result["cumulative_ledger_sha256"],
                 "replacement_eligibility_sha256": result["replacement_eligibility_sha256"],
             }
