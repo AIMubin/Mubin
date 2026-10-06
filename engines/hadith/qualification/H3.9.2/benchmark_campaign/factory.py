@@ -7,7 +7,7 @@ import hashlib
 import json
 import re
 
-from .core import canonical_json_bytes, dump_jsonl, load_json, load_jsonl, sha256_bytes, write_json
+from .core import canonical_json_bytes, dump_jsonl, load_json, load_jsonl, sha256_bytes, sha256_file, write_json
 from .curation import seal_reviewed_record
 from .source_cache import cache_filename, verify_cached_source, verify_source_cache
 from .source_registry import load_source_registry, source_map
