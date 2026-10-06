@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "campaign_id": "H3.9.2",
+  "evidence_kind": "canonical_non_holdout_primary_campaign_batch",
+  "canonical_main_evidence": true,
+  "workflow": {
+    "path": ".github/workflows/h392-curation-campaign.yml",
+    "run_id": 37426135905,
+    "run_attempt": 1,
+    "event": "workflow_dispatch",
+    "conclusion": "success",
+    "head_branch": "main",
+    "head_sha": "fe55559fd97d1731204264341cfa6ddb1b28821d"
+  },
+  "requested_surface": {
+    "benchmark_id": "external-critical-commentary",
+    "task_offset": 168,
+    "task_count": 42,
+    "shard_size": 8,
+    "primary_offset_start": 168,
+    "primary_offset_end_inclusive": 209,
+    "exact_contiguous_coverage": true
+  },
+  "aggregate": {
+    "artifact_id": 11399659511,
+    "artifact_name": "h392-campaign-batch-summary",
+    "artifact_digest": "sha256:7a5c66cc7c657e71d350bbd4365076ad782bcd32163beeb5d0f48d857ea7e24b",
+    "summary_sha256": "b0752a634ad880e7bed5ce2445381e92ba3867738315784b87c592a16196f84c",
+    "completed_shards": 6,
+    "expected_shards": 6,
+    "coverage_complete": true,
+    "coverage_errors": [],
+    "selected_tasks": 42,
+    "promoted": 6,
+    "adjudication": 26,
+    "skipped": 10,
+    "curator_attempted": 42,
+    "curator_completed": 33,
+    "curator_rejected": 9,
+    "verifier_preparation_input_candidates": 32,
+    "verifier_preparation_tasks": 31,
+    "verifier_preparation_rejected": 1,
+    "verifier_attempted": 31,
+    "verifier_completed": 28,
+    "verifier_rejected": 3,
+    "adjudication_reason_counts": {
+      "curator_requested_adjudication": 21,
+      "gold_disagreement": 3,
+      "missing_verifier_response": 2
+    },
+    "curator_rejection_counts": {
+      "adapter:contract_support_not_verbatim": 9
+    },
+    "verifier_preparation_rejection_counts": {
+      "candidate_input_blindness": 1
+    },
+    "verifier_rejection_counts": {
+      "adapter:contract_support_not_verbatim": 3
+    },
+    "contains_source_text": false,
+    "contains_gold_payloads": false
+  },
+  "shards": [
+    {
+      "task_offset": 168,
+      "task_limit": 8,
+      "artifact_id": 11397093834,
+      "artifact_name": "h392-curation-chunk-168-8",
+      "artifact_digest": "sha256:bda51c2382303d8ec2c6e5c7140f9dc349dd6c9ae5fc0e36f1ef3388c0fe5c74",
+      "summary_sha256": "b7e4966b6fcc298a4e2c925aa7eb5d8d80aff75c7422559f3d1d9b3085702882",
+      "encrypted_bundle_sha256": "7e91c35e966eadc722be0e0a4799af43b709799c61a353022191de094e5e5b35",
+      "selected_tasks": 8,
+      "promoted": 1,
+      "adjudication": 5,
+      "skipped": 2
+    },
+    {
+      "task_offset": 176,
+      "task_limit": 8,
+      "artifact_id": 11399420324,
+      "artifact_name": "h392-curation-chunk-176-8",
+      "artifact_digest": "sha256:cc84e0fe4819722fd233a64d179fe72be8456eeaca04afb3cf826ddbfaa5021f",
+      "summary_sha256": "a2c2f8a9fd470a902a5a6d1c2b3d0c7f7566d8026af6dae672b07170dedaa10a",
+      "encrypted_bundle_sha256": "548afb368111f3baec012fc95fe438cf576c7fab917704e2d77ffeb38de51915",
+      "selected_tasks": 8,
+      "promoted": 1,
+      "adjudication": 7,
+      "skipped": 0
+    },
+    {
+      "task_offset": 184,
+      "task_limit": 8,
+      "artifact_id": 11397107209,
+      "artifact_name": "h392-curation-chunk-184-8",
+      "artifact_digest": "sha256:1f5da1424604a782938e20e0f1e62cb3cc7249fd2e3a6028ea244bbfd447ef13",
+      "summary_sha256": "d11eb0228e6fe1588f5f6ef2b926a2dfc20fd103e36f43c33bbbe23355298983",
+      "encrypted_bundle_sha256": "9a1f19935b5bb11636571fdc17f0fcb592fecc42ea9280bd5f9cba4ca8d32518",
+      "selected_tasks": 8,
+      "promoted": 2,
+      "adjudication": 3,
+      "skipped": 3
+    },
+    {
+      "task_offset": 192,
+      "task_limit": 8,
+      "artifact_id": 11397183601,
+      "artifact_name": "h392-curation-chunk-192-8",
+      "artifact_digest": "sha256:ab7ba16fbd54eeb0a8c6ccd576ccddd0455ecada139f9550c0e61cc5f4be0207",
+      "summary_sha256": "1b4e7521b7f188d788ed44b939a511205bcf842520a5a1c47904822711ccd8ed",
+      "encrypted_bundle_sha256": "b735e11ade1b80ece16884f6cd1583591b9c5b170dab3cb80a8204ae51a96813",
+      "selected_tasks": 8,
+      "promoted": 1,
+      "adjudication": 4,
+      "skipped": 3
+    },
+    {
+      "task_offset": 200,
+      "task_limit": 8,
+      "artifact_id": 11399856755,
+      "artifact_name": "h392-curation-chunk-200-8",
+      "artifact_digest": "sha256:69e1cd15d10abf9026ba3d384788e0bc55619ea81d36780d5358e49fc1f63f21",
+      "summary_sha256": "ba62af031fb90ae503a9be748ee1b8d2001259c27056060a737aeee8a430b5c5",
+      "encrypted_bundle_sha256": "e23e14900fda49025fc43bb744b86c5b9369af2ec178dc29f96cb2691132554b",
+      "selected_tasks": 8,
+      "promoted": 1,
+      "adjudication": 5,
+      "skipped": 2
+    },
+    {
+      "task_offset": 208,
+      "task_limit": 2,
+      "artifact_id": 11397568561,
+      "artifact_name": "h392-curation-chunk-208-2",
+      "artifact_digest": "sha256:310c48947d123b65b1527fd70cf395c9cbafc257124aaf49a008366e7b7dc6fd",
+      "summary_sha256": "6fe00fed0c661f58eab53fd2492a2d6239645fd6ecc136c511d0fb4bdcc74efd",
+      "encrypted_bundle_sha256": "59d89fc73962aa50f9804b02d697373feab369a5e6a84ba82264fababcc59497",
+      "selected_tasks": 2,
+      "promoted": 0,
+      "adjudication": 2,
+      "skipped": 0
+    }
+  ],
+  "canonical_history_effect": {
+    "prior_primary_prefix_end_inclusive": 167,
+    "new_primary_prefix_end_inclusive": 209,
+    "cumulative_primary_task_count_before_consolidation": 210,
+    "preconsolidation_outcomes": {
+      "promoted": 40,
+      "adjudication": 129,
+      "skipped": 41
+    },
+    "note": "These 210-task outcome totals are raw successful-shard accounting. They are not the authoritative cumulative ledger or final replacement-eligibility count until schema-25 cumulative consolidation succeeds over all four canonical runs."
+  },
+  "excluded_noncanonical_runs": [
+    {
+      "run_id": 37412193331,
+      "reason": "campaign run concluded failure after verifier timeout in shard 176..183; aggregate coverage was incomplete and the run is not admitted into canonical history"
+    }
+  ],
+  "reserve_policy": {
+    "reserve_reconciliation_enabled": false,
+    "activation_requires_successful_210_primary_cumulative_consolidation": true
+  },
+  "next_action": {
+    "workflow": ".github/workflows/h392-cumulative-consolidation.yml",
+    "canonical_run_ids": [
+      37280971913,
+      37295517184,
+      37326459365,
+      37426135905
+    ],
+    "expected_primary_task_count": 210,
+    "purpose": "Produce the authoritative cumulative ledger, normalized adjudication reasons, and replacement-eligibility manifest for the exact primary prefix 0..209 before any reserve activation."
+  }
+}
