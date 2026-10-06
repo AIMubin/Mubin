@@ -164,15 +164,32 @@ class PostConsolidationTests(unittest.TestCase):
         write_json(eligibility_path, eligibility)
         eligibility_sha = sha256_file(eligibility_path)
 
+        run_ids = [37280971913, 37295517184, 37326459365, 37426135905]
+        per_run_artifacts = [5, 8, 8, 6]
+        input_artifacts = []
+        artifact_counter = 0
+        for run_id, count in zip(run_ids, per_run_artifacts):
+            for _ in range(count):
+                input_artifacts.append({
+                    "github_run_id": run_id,
+                    "github_run_attempt": 1,
+                    "head_sha": f"{artifact_counter + 1:040x}",
+                    "artifact_id": 10000 + artifact_counter,
+                    "artifact_name": f"h392-curation-chunk-{artifact_counter * 8}-8",
+                    "artifact_sha256": "a" * 64,
+                    "encrypted_bundle_sha256": "b" * 64,
+                })
+                artifact_counter += 1
+
         manifest = {
             "schema_version": 1,
             "campaign_id": "H3.9.2",
             "kind": "cumulative_non_holdout_primary_evidence",
             "freeze_schema_version": 25,
             "factory_plan_sha256": factory_plan_sha,
-            "input_artifacts": [],
+            "input_artifacts": input_artifacts,
             "input_artifact_count": 27,
-            "input_run_ids": [37280971913, 37295517184, 37326459365, 37426135905],
+            "input_run_ids": run_ids,
             "input_run_count": 4,
             "task_count": 210,
             "coverage_ranges": [{"start": 0, "end": 210}],
@@ -205,9 +222,13 @@ class PostConsolidationTests(unittest.TestCase):
                 "digest": "sha256:" + "d" * 64,
                 "redacted_summary_sha256": "e" * 64,
                 "encrypted_bundle_sha256": "f" * 64,
+                "redacted": True,
+                "source_bearing_payload_encrypted": True,
             },
             "canonical_input": {
-                "campaign_run_ids": [37280971913, 37295517184, 37326459365, 37426135905],
+                "campaign_run_ids": run_ids,
+                "input_run_count": 4,
+                "input_artifact_count": 27,
                 "expected_primary_task_count": 210,
                 "benchmark_id": "external-critical-commentary",
                 "primary_offset_start": 0,
@@ -246,7 +267,13 @@ class PostConsolidationTests(unittest.TestCase):
             "reserve_reconciliation_enabled": False,
             "last_completed_cumulative_consolidation": {
                 "expected_primary_tasks": 210,
+                "source_run_ids": run_ids,
                 "successful_run_id": 37471731102,
+                "runner_commit": "e1422b3262ee308084ce2212a2f2825fdc737032",
+                "artifact_id": 11416657955,
+                "artifact_digest": "sha256:" + "d" * 64,
+                "summary_sha256": "e" * 64,
+                "encrypted_bundle_sha256": "f" * 64,
                 "cumulative_ledger_sha256": ledger_sha,
                 "replacement_eligibility_sha256": eligibility_sha,
                 "evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json",
