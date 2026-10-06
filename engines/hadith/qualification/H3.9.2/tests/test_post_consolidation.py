@@ -139,12 +139,14 @@ class PostConsolidationTests(unittest.TestCase):
         approved.parent.mkdir(parents=True, exist_ok=True)
         approved.write_bytes(out.read_bytes())
         _write_json(self.root / "artifacts" / "H3.9.2-STATUS.json", {
+            "reserve_reconciliation_enabled": True,
             "reserve_activation": {
                 "enabled": True,
                 "evidence_path": "artifacts/RESERVE_ACTIVATION_TEST.json",
                 "manifest_sha256": sha256_file(approved),
                 "cumulative_ledger_sha256": result["cumulative_ledger_sha256"],
                 "replacement_eligibility_sha256": result["replacement_eligibility_sha256"],
+                "activated_reserve_slot_count": result["activated_reserve_slot_count"],
             }
         })
 
