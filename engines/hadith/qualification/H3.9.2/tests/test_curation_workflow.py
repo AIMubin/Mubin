@@ -117,8 +117,8 @@ class CurationWorkflowTests(unittest.TestCase):
         self.assertIn("build_factory_plan", self.campaign_workflow)
         self.assertNotIn("task_offset + task_count exceeds 896", self.campaign_workflow)
         self.assertIn("expected_shards", self.campaign_workflow)
-        self.assertIn('default: "104"', self.campaign_workflow)
-        self.assertIn('default: "64"', self.campaign_workflow)
+        self.assertIn('default: "168"', self.campaign_workflow)
+        self.assertIn('default: "42"', self.campaign_workflow)
 
     def test_pilot_bounds_follow_frozen_primary_plan_until_reserve_eligibility_exists(self):
         bounds = self.workflow.split("- name: Validate chunk bounds", 1)[1]

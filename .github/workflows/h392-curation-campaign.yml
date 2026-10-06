@@ -6,11 +6,11 @@ on:
       task_offset:
         description: Zero-based first non-holdout primary task for this campaign batch
         required: true
-        default: "104"
+        default: "168"
       task_count:
         description: Total tasks in this campaign batch (1-64)
         required: true
-        default: "64"
+        default: "42"
       shard_size:
         description: Tasks per parallel shard (1-8)
         required: true

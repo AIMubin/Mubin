@@ -24,6 +24,20 @@ Observed encrypted-shard outcomes are:
 
 The workflow must reproduce these counts from the decrypted, provenance-bound evidence. They are not accepted merely because they appear in documentation.
 
+## First canonical consolidation result
+
+Workflow run `37409931064` executed on main commit `696b0e1c30fda5cdb4ea011840b562d63f151701` and completed successfully. It reproduced the exact 168-task prefix and the `34 promoted / 103 adjudication / 31 skipped` accounting.
+
+The published redacted/encrypted artifact is permanently referenced in `artifacts/CUMULATIVE_PRIMARY_EVIDENCE_168.json`. The compact repository evidence binds:
+
+- GitHub artifact digest `sha256:abdc98472114378c0d2bb4b680d9d9549dbc624698bd3ab822c2970ef6ad301d`;
+- redacted-summary SHA-256 `fef1a9aba21ade7c4f04deee51095124ef7b0297758dbad3bc4b3107ed023e46`;
+- encrypted cumulative bundle SHA-256 `1497788cd01c03102cccac126ac7234f9cbdfff3284ebe53d78b8c911b1b5a7d`;
+- cumulative-ledger SHA-256 `473ccc5fc8f6f545208c2868d28e40aafc88b9dcda397921f80d4a037528bea9`;
+- replacement-eligibility SHA-256 `1233bead33e534325b6f88f952ed28ebb3764bdc3d739cd2f77d42a43d6dac12`.
+
+The result proves **31 replacement-eligible terminal primaries**. The **103 pending adjudications remain replacement-ineligible**, and reserve reconciliation remains disabled.
+
 ## Workflow
 
 Use:
@@ -125,7 +139,9 @@ After 168 primary opportunities, 31 are already terminally unusable. Even under 
 
 The exact `external-critical-commentary` non-holdout quota is 210, so at least 31 reserve replacements are unavoidable.
 
-The next live collection step is therefore deferred until cumulative consolidation is verified. After that, the remaining primary surface for this benchmark is exactly `168..209` (42 tasks). Reserve execution remains a separate later step.
+The first cumulative consolidation is now verified. The next live collection step is therefore exactly the remaining primary surface `168..209` (**42 tasks**), executed with the existing primary-only campaign workflow.
+
+After that batch succeeds, its run ID must first be admitted into the repository-reviewed canonical history and the expected cumulative prefix advanced from 168 to 210. A second cumulative consolidation over the exact `0..209` prefix must succeed before any reserve activation protocol is designed or enabled. Reserve execution remains a separate later step.
 
 ## Security boundary
 
