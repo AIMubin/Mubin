@@ -390,6 +390,13 @@ jobs:
           actual="$(sha256sum "$PUBLIC_DIR/h392-postconsolidation-private.tar.gz.aesgcm" | awk '{print $1}')"
           test "$expected" = "$actual"
 
+      - name: Cleanup decrypted and private plaintext
+        if: always()
+        run: |
+          rm -rf "$CUMULATIVE_DIR" "$PRIVATE_DIR" "$CUMULATIVE_ARTIFACT_DIR"
+          rm -f "$RUNNER_TEMP/h392-postconsolidation-private.tar.gz"
+          rm -f "$RUNNER_TEMP/h392-postconsolidation-report.json"
+
       - name: Reconfirm main before publishing post-consolidation preparation
         run: |
           set -eu
