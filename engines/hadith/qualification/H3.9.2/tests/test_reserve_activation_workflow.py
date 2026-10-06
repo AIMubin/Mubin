@@ -71,6 +71,17 @@ class ReserveActivationWorkflowTests(unittest.TestCase):
         self.assertIn("h392-cumulative-source-bearing.tar.gz.aesgcm", section)
         self.assertIn("encrypted cumulative bundle digest mismatch", section)
 
+    def test_decrypt_step_matches_artifact_crypto_cli_contract(self):
+        section = self.workflow.split(
+            "- name: Decrypt cumulative evidence ephemerally", 1
+        )[1].split("- name: Build hash-bound reserve activation manifest", 1)[0]
+        self.assertIn("--input", section)
+        self.assertIn("--output", section)
+        self.assertIn("--passphrase-env", section)
+        self.assertNotIn("--in ", section)
+        self.assertNotIn("--out ", section)
+        self.assertNotIn("--key-env", section)
+
     def test_activation_builder_consumes_exact_reviewed_hashes(self):
         section = self.workflow.split(
             "- name: Build hash-bound reserve activation manifest", 1
