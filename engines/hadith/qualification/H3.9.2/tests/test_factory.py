@@ -290,7 +290,7 @@ class FactoryTests(unittest.TestCase):
                 primary["anchor_segment"]["segment_id"],
             )
 
-    def test_reserve_slot_cannot_enter_qualification_records_in_schema_24(self):
+    def test_reserve_slot_cannot_enter_qualification_records_without_approved_activation(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
             root.mkdir()
@@ -332,10 +332,10 @@ class FactoryTests(unittest.TestCase):
             )
             self.assertEqual(
                 [v.code for v in violations],
-                ["qualification.reserve_slot_not_eligible"],
+                ["qualification.reserve_activation_missing"],
             )
 
-    def test_reserve_reconciliation_fails_closed_without_cumulative_eligibility(self):
+    def test_reserve_reconciliation_fails_closed_without_reviewed_activation(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
             root.mkdir()
@@ -371,7 +371,7 @@ class FactoryTests(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 ValueError,
-                "reserve candidate reconciliation is disabled",
+                "reserve candidate reconciliation requires a reviewed activation manifest",
             ):
                 reconcile_factory(
                     root,
