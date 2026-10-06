@@ -227,6 +227,8 @@ def validate_reserve_activation(
     if not status_path.exists():
         raise ValueError("reserve activation requires repository-approved status binding")
     status = load_json(status_path)
+    if status.get("reserve_reconciliation_enabled") is not True:
+        raise ValueError("reserve reconciliation is not enabled in repository status")
     approved = status.get("reserve_activation")
     if not isinstance(approved, dict) or approved.get("enabled") is not True:
         raise ValueError("reserve activation has not been reviewed and enabled in repository status")
@@ -271,6 +273,8 @@ def validate_reserve_activation(
 
     if int(activation.get("activated_reserve_slot_count", -1)) != len(allowed):
         raise ValueError("reserve activation slot count mismatch")
+    if int(approved.get("activated_reserve_slot_count", -1)) != len(allowed):
+        raise ValueError("repository-approved reserve activation slot count mismatch")
     activated_primary_ids = {
         str(row.get("replacement_for_slot_id", ""))
         for row in activated_rows
