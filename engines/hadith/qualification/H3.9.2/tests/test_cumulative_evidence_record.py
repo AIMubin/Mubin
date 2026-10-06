@@ -147,7 +147,7 @@ class CumulativeEvidenceRecordTests(unittest.TestCase):
             "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json",
         )
 
-    def test_completed_target_is_fail_closed_for_redispatch_and_reserves(self):
+    def test_completed_target_is_fail_closed_for_redispatch_and_preserves_historical_reserve_state(self):
         target = self.status["cumulative_consolidation_target"]
         evidence = self.completed_evidence
 
@@ -165,14 +165,30 @@ class CumulativeEvidenceRecordTests(unittest.TestCase):
             evidence["canonical_input"]["campaign_run_ids"],
         )
 
+        # Schema-25 cumulative evidence remains immutable historical input:
+        # reserves were disabled when this evidence was created and pending
+        # adjudications were not replacement eligible. Schema-26 repository
+        # approval may enable only the separately hash-bound reserve set.
         self.assertFalse(evidence["reserve_policy"]["reserve_reconciliation_enabled"])
-        self.assertFalse(self.status["reserve_reconciliation_enabled"])
         self.assertFalse(
             evidence["reserve_policy"]["pending_adjudication_is_replacement_eligible"]
         )
         self.assertEqual(
             evidence["reserve_policy"]["replacement_eligible_primary_count"],
             41,
+        )
+
+        self.assertTrue(self.status["reserve_reconciliation_enabled"])
+        activation = self.status["reserve_activation"]
+        self.assertTrue(activation["enabled"])
+        self.assertEqual(activation["activated_reserve_slot_count"], 41)
+        self.assertEqual(
+            activation["cumulative_ledger_sha256"],
+            self.status["last_completed_cumulative_consolidation"]["cumulative_ledger_sha256"],
+        )
+        self.assertEqual(
+            activation["replacement_eligibility_sha256"],
+            self.status["last_completed_cumulative_consolidation"]["replacement_eligibility_sha256"],
         )
 
 
