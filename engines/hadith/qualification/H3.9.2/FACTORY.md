@@ -131,3 +131,12 @@ A primary is replacement eligible only when the cumulative evidence proves a ter
 ### Freeze schema 25: cumulative evidence binding
 
 Freeze schema 25 adds `benchmark_campaign/consolidation.py` to the frozen protocol surface and introduces provenance-bound cumulative primary accounting. It does not alter the schema-24 primary/reserve candidate plan. The cumulative artifact binds the exact zero-based primary prefix, source workflow/artifact digests, reviewed/adjudication outcomes, the current Factory-plan hash, and replacement-eligible primary/reserve slot bindings. Reserve reconciliation remains disabled.
+
+
+### Freeze schema 26: post-consolidation identity commitments
+
+The authoritative schema-25 cumulative result over primary offsets `0..209` proves **41 replacement-eligible terminal primaries** and **129 pending adjudications**. Schema 26 does not change either classification.
+
+`benchmark_campaign/postconsolidation.py` and `POST_CONSOLIDATION.md` add a preparation stage that reopens the encrypted cumulative evidence only in an ephemeral trusted workspace and converts the exact private reserve/adjudication identities into secret-nonce SHA-256 commitment leaves. The public binding contains only opaque leaves, set hashes, counts, cumulative hashes, and the frozen Factory-plan hash. The exact task/slot-to-commitment mapping remains encrypted.
+
+This stage is **authorization preparation only**. `factory-reconcile` continues to reject reserve tasks, campaign validation continues to reject reserve-derived qualification records, and no adjudication decision is accepted by schema 26. A later reviewed revision must verify commitment membership before it may enable either execution surface.
