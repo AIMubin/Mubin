@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
 from .consolidation import consolidate_primary_evidence
+from .postconsolidation import prepare_postconsolidation_bindings
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -135,6 +137,17 @@ def main(argv: list[str] | None = None) -> int:
     cp.add_argument("--out-dir", type=Path, required=True)
     cp.add_argument("--source-cache-dir", type=Path, required=True)
     cp.add_argument("--expected-task-count", type=int)
+
+    pc = sub.add_parser("prepare-postconsolidation")
+    pc.add_argument("--cumulative-dir", type=Path, required=True)
+    pc.add_argument("--control-evidence", type=Path, required=True)
+    pc.add_argument("--public-out-dir", type=Path, required=True)
+    pc.add_argument("--private-out-dir", type=Path, required=True)
+    pc.add_argument(
+        "--commitment-secret-env",
+        default="H392_CURATION_ARTIFACT_KEY",
+        help="environment variable containing the protected commitment secret",
+    )
 
     prep = sub.add_parser("prepare-manifests")
     prep.add_argument("--spec", type=Path)
@@ -357,6 +370,37 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             expected_task_count=args.expected_task_count,
             source_cache_dir=source_cache_dir,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "prepare-postconsolidation":
+        cumulative_dir = _resolve(root, args.cumulative_dir)
+        control_evidence = _resolve(root, args.control_evidence)
+        public_out_dir = _resolve(root, args.public_out_dir)
+        private_out_dir = _resolve(root, args.private_out_dir)
+        assert all(
+            x is not None
+            for x in (
+                cumulative_dir,
+                control_evidence,
+                public_out_dir,
+                private_out_dir,
+            )
+        )
+        secret = os.environ.get(args.commitment_secret_env)
+        if not secret:
+            raise SystemExit(
+                f"required commitment secret environment variable is empty: "
+                f"{args.commitment_secret_env}"
+            )
+        report = prepare_postconsolidation_bindings(
+            root,
+            cumulative_dir,
+            control_evidence,
+            public_out_dir,
+            private_out_dir,
+            commitment_secret=secret,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
