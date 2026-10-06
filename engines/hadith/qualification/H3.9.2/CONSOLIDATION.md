@@ -6,23 +6,26 @@ It does not change record quotas, source partitions, label vocabularies, model p
 
 ## Current canonical input boundary
 
-The first cumulative consolidation is bound to these successful campaign runs:
+The repository-reviewed cumulative target is now bound to these successful campaign runs:
 
 - `37280971913` — primary offsets `0..39`
 - `37295517184` — primary offsets `40..103`
 - `37326459365` — primary offsets `104..167`
+- `37426135905` — primary offsets `168..209`
 
-Together they represent exactly **168 primary tasks** for `external-critical-commentary`.
+Together they represent exactly **210 primary tasks** for `external-critical-commentary`, with a zero-based contiguous prefix `0..209`.
 
-The workflow does not trust editable dispatch inputs as the canonicality decision. `run_ids` and `expected_task_count` must exactly match the repository-reviewed values in `artifacts/H3.9.2-STATUS.json`; otherwise it fails before artifact acquisition. Future campaign runs must therefore be explicitly admitted into the reviewed repository history before cumulative consolidation can consume them.
+Campaign run `37412193331` is explicitly excluded: it concluded failure after a Verifier timeout in shard `176..183`, so its partial artifacts are diagnostic only and are not part of canonical history.
 
-Observed encrypted-shard outcomes are:
+The workflow does not trust editable dispatch inputs as the canonicality decision. `run_ids` and `expected_task_count` must exactly match the repository-reviewed target in `artifacts/H3.9.2-STATUS.json`; otherwise it fails before artifact acquisition.
 
-- promoted: **34**
-- pending adjudication: **103**
-- skipped/rejected primary opportunities: **31**
+Raw successful-shard accounting across the four admitted campaign runs is:
 
-The workflow must reproduce these counts from the decrypted, provenance-bound evidence. They are not accepted merely because they appear in documentation.
+- promoted: **40**
+- adjudication: **129**
+- skipped/rejected primary opportunities: **41**
+
+These are **pre-consolidation counts only**. The workflow must reconstruct the authoritative cumulative ledger, normalize adjudication reasons, and derive replacement eligibility from decrypted provenance-bound evidence. No cumulative count is accepted merely because it appears in documentation or campaign summaries.
 
 ## First canonical consolidation result
 
@@ -126,22 +129,23 @@ Eligibility does **not** activate reserve reconciliation. The manifest explicitl
 
 The normal campaign workflow and `factory-reconcile` therefore remain primary-only until a later reviewed protocol change consumes the eligibility binding.
 
-## Why consolidation precedes offsets 168..209
+## Why the second cumulative consolidation is required now
 
-After 168 primary opportunities, 31 are already terminally unusable. Even under the optimistic assumption that all 103 pending adjudications are eventually accepted and all remaining 42 primaries succeed:
+The first cumulative consolidation proved the exact prefix `0..167` and identified **31 replacement-eligible terminal primaries** at that boundary.
+
+The final primary batch has now completed successfully in run `37426135905`, covering `168..209` exactly. Primary execution for `external-critical-commentary` is therefore complete at **210/210 primary opportunities**.
+
+The new 42-task batch contributed raw outcomes of:
 
 ```text
-34 promoted
-+ 103 adjudication
-+ 42 remaining primary opportunities
-= 179 maximum primary-derived reviewed records
+6 promoted
+26 adjudication
+10 skipped
 ```
 
-The exact `external-critical-commentary` non-holdout quota is 210, so at least 31 reserve replacements are unavoidable.
+Combined with the first 168 tasks, raw campaign accounting is `40 promoted / 129 adjudication / 41 skipped`. Those totals are intentionally not treated as the authoritative cumulative result because consolidation replays Factory reconciliation semantics, normalizes pre-Verifier blindness cases, revalidates source grounding, and derives replacement eligibility from the exact cumulative ledger.
 
-The first cumulative consolidation is now verified. The next live collection step is therefore exactly the remaining primary surface `168..209` (**42 tasks**), executed with the existing primary-only campaign workflow.
-
-After that batch succeeds, its run ID must first be admitted into the repository-reviewed canonical history and the expected cumulative prefix advanced from 168 to 210. A second cumulative consolidation over the exact `0..209` prefix must succeed before any reserve activation protocol is designed or enabled. Reserve execution remains a separate later step.
+The immediate live step is therefore the second cumulative consolidation over the exact canonical run list and `expected_task_count=210`. Reserve execution remains disabled until that consolidation succeeds, its evidence is reviewed and frozen, and a separate reserve-activation protocol is approved.
 
 ## Security boundary
 
