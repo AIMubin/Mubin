@@ -51,6 +51,8 @@ def build_reserve_activation_manifest(
     source_manifest = load_json(manifest_path)
     if source_manifest.get("campaign_id") != "H3.9.2":
         raise ValueError("unexpected cumulative campaign_id")
+    if source_manifest.get("kind") != "cumulative_non_holdout_primary_evidence":
+        raise ValueError("unexpected cumulative evidence kind")
     if int(source_manifest.get("freeze_schema_version", 0)) != SOURCE_CUMULATIVE_FREEZE_SCHEMA:
         raise ValueError("activation requires schema-25 cumulative evidence")
     if source_manifest.get("cumulative_ledger_sha256") != actual_ledger_sha:
@@ -80,8 +82,14 @@ def build_reserve_activation_manifest(
         raise ValueError("source cumulative evidence must not already enable reserves")
 
     _plan, plan_sha, slots = _factory_plan_binding(root)
+    if source_manifest.get("factory_plan_sha256") != plan_sha:
+        raise ValueError("cumulative manifest factory-plan binding mismatch")
     if eligibility.get("factory_plan_sha256") != plan_sha:
         raise ValueError("replacement eligibility factory-plan binding mismatch")
+    if int(source_manifest.get("replacement_eligible_primary_count", -1)) != int(
+        eligibility.get("eligible_primary_count", -2)
+    ):
+        raise ValueError("cumulative manifest replacement-eligible count mismatch")
 
     ledger_rows = load_jsonl(ledger_path)
     ledger_by_task = {str(row.get("task_id", "")): row for row in ledger_rows}
@@ -122,6 +130,12 @@ def build_reserve_activation_manifest(
             raise ValueError(f"eligible primary ledger row is not replacement eligible: {primary_task_id}")
         if ledger.get("outcome") != "skipped":
             raise ValueError(f"only terminal skipped primaries may activate reserve slots: {primary_task_id}")
+        if row.get("primary_outcome") != ledger.get("outcome"):
+            raise ValueError(f"eligible primary outcome differs from cumulative ledger: {primary_task_id}")
+        if row.get("eligibility_reason") != ledger.get("canonical_reason"):
+            raise ValueError(f"eligible primary reason differs from cumulative ledger: {primary_task_id}")
+        if row.get("primary_offset") != ledger.get("primary_offset"):
+            raise ValueError(f"eligible primary offset differs from cumulative ledger: {primary_task_id}")
         if row.get("primary_task_fingerprint") != ledger.get("task_fingerprint"):
             raise ValueError(f"eligible primary task fingerprint mismatch: {primary_task_id}")
         if row.get("cumulative_ledger_sha256") != actual_ledger_sha:
@@ -195,6 +209,15 @@ def validate_reserve_activation(
         raise ValueError("unexpected reserve activation campaign_id")
     if int(activation.get("protocol_freeze_schema", 0)) != FREEZE_SCHEMA_VERSION:
         raise ValueError("reserve activation protocol freeze schema mismatch")
+    if int(activation.get("source_cumulative_freeze_schema", 0)) != SOURCE_CUMULATIVE_FREEZE_SCHEMA:
+        raise ValueError("reserve activation source cumulative schema mismatch")
+    policy = activation.get("policy")
+    if not isinstance(policy, dict):
+        raise ValueError("reserve activation policy missing")
+    if policy.get("pending_adjudication_is_activatable") is not False:
+        raise ValueError("pending adjudication must not be activatable")
+    if policy.get("promoted_primary_is_activatable") is not False:
+        raise ValueError("promoted primary must not be activatable")
     if activation.get("reserve_reconciliation_authorized") is not True:
         raise ValueError("reserve activation manifest does not authorize reconciliation")
     if activation.get("requires_repository_approval") is not True:
@@ -240,6 +263,14 @@ def validate_reserve_activation(
 
     if int(activation.get("activated_reserve_slot_count", -1)) != len(allowed):
         raise ValueError("reserve activation slot count mismatch")
+    activated_primary_ids = {
+        str(row.get("replacement_for_slot_id", ""))
+        for row in activated_rows
+    }
+    if "" in activated_primary_ids:
+        raise ValueError("reserve activation contains empty primary linkage")
+    if int(activation.get("eligible_primary_count", -1)) != len(activated_primary_ids):
+        raise ValueError("reserve activation eligible-primary count mismatch")
 
     for task in task_rows:
         if task.get("candidate_slot_kind") != "reserve":
