@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "campaign_id": "H3.9.2",
+  "evidence_kind": "cumulative_non_holdout_primary_consolidation",
+  "canonical_main_evidence": true,
+  "runner_commit": "e1422b3262ee308084ce2212a2f2825fdc737032",
+  "workflow": {
+    "path": ".github/workflows/h392-cumulative-consolidation.yml",
+    "run_id": 37471731102,
+    "run_attempt": 1,
+    "event": "workflow_dispatch",
+    "conclusion": "success"
+  },
+  "artifact": {
+    "id": 11416657955,
+    "name": "h392-cumulative-primary-evidence",
+    "digest": "sha256:b8fea5f254790fc7cd51e740349a169b470e18e3ee2730b8aba7bbfcd7073ced",
+    "size_bytes": 124400,
+    "redacted_summary_sha256": "2131f6358cf773b37a7abffa13aefe1dc7be5ebfb8111279fe13e458693bce69",
+    "encrypted_bundle_sha256": "c6b5afa771a2aeba2f5017264d2fb98af56882baee0c6fe0109104678651c9f4",
+    "redacted": true,
+    "source_bearing_payload_encrypted": true
+  },
+  "canonical_input": {
+    "campaign_run_ids": [
+      37280971913,
+      37295517184,
+      37326459365,
+      37426135905
+    ],
+    "input_run_count": 4,
+    "input_artifact_count": 27,
+    "expected_primary_task_count": 210,
+    "benchmark_id": "external-critical-commentary",
+    "primary_offset_start": 0,
+    "primary_offset_end_inclusive": 209,
+    "exact_zero_based_prefix": true
+  },
+  "result": {
+    "task_count": 210,
+    "promoted": 40,
+    "pending_adjudication": 129,
+    "skipped": 41,
+    "replacement_eligible_primary_count": 41,
+    "reviewed_record_count": 40,
+    "canonical_reason_counts": {
+      "candidate_input_blindness": 3,
+      "curator_no_candidate": 4,
+      "curator_rejection:adapter:contract_support_not_verbatim": 35,
+      "curator_rejection:adapter:model_output_invalid_json": 1,
+      "curator_rejection:adapter:model_output_unbalanced_json": 1,
+      "curator_requested_adjudication": 84,
+      "gold_disagreement": 34,
+      "verifier_rejection:adapter:contract_support_not_verbatim": 7,
+      "verifier_support_not_in_curator_provenance": 1
+    },
+    "outcome_by_anchor_source": {
+      "openiti:0279Tirmidhi.Sunan": {
+        "adjudication": 21,
+        "promoted": 13,
+        "skipped": 1
+      },
+      "openiti:0458Bayhaqi.SunanKubra": {
+        "adjudication": 20,
+        "promoted": 6,
+        "skipped": 9
+      },
+      "openiti:0751IbnQayyimJawziyya.ZadMacad": {
+        "adjudication": 22,
+        "promoted": 5,
+        "skipped": 8
+      },
+      "openiti:0762IbnYusufZaylaci.NasbRaya": {
+        "adjudication": 22,
+        "promoted": 3,
+        "skipped": 10
+      },
+      "openiti:0774IbnKathir.TafsirQuran": {
+        "adjudication": 18,
+        "promoted": 9,
+        "skipped": 8
+      },
+      "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi": {
+        "adjudication": 26,
+        "promoted": 4,
+        "skipped": 5
+      }
+    }
+  },
+  "bindings": {
+    "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+    "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee"
+  },
+  "artifact_policy": {
+    "contains_source_text": false,
+    "contains_gold_payloads": false,
+    "contains_model_identity": false,
+    "plaintext_cumulative_ledger_committed": false,
+    "plaintext_adjudication_committed": false,
+    "plaintext_reviewed_records_committed": false,
+    "persisted_evidence_contains_only_hashes_counts_and_identifiers": true
+  },
+  "reserve_policy": {
+    "reserve_reconciliation_enabled": false,
+    "pending_adjudication_is_replacement_eligible": false,
+    "replacement_eligible_primary_count": 41,
+    "activation_requires_separate_reviewed_protocol": true
+  },
+  "qualification_effect": {
+    "curation_completed_cases_committed": 0,
+    "benchmark_population_complete": false,
+    "benchmark_gate_passed": false,
+    "architecture_gate_passed": false,
+    "h4_development_allowed": true,
+    "h4_qualification_allowed": false,
+    "h4_release_allowed": false,
+    "note": "This evidence proves the authoritative cumulative primary ledger boundary, normalized adjudication accounting, and replacement eligibility for external-critical-commentary primary offsets 0..209. It does not commit source-bearing reviewed records, resolve pending adjudications, or activate reserves."
+  },
+  "next_action": {
+    "purpose": "Design and review the post-consolidation protocol for the 129 pending adjudications and the 41 hash-bound replacement-eligible reserve slots before any reserve execution or benchmark assembly.",
+    "reserve_reconciliation_enabled": false
+  }
+}

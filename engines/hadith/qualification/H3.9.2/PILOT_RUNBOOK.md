@@ -247,21 +247,19 @@ h4_release_allowed = false
 The real 1,280-case population, benchmark freeze, system/model lock, one-shot holdout evaluation, and architecture gate remain required before H4 qualification or release.
 
 
-## Canonical primary prefix 0..209 and second consolidation gate
+## Canonical primary prefix 0..209 and post-consolidation gate
 
-The first three canonical campaign runs covered offsets `0..167`, after which schema-25 cumulative run `37409931064` proved an exact 168-task ledger with 34 promoted, 103 adjudication, 31 skipped, and 31 replacement-eligible terminal primaries.
+The four admitted campaign runs cover the exact external-critical-commentary primary prefix `0..209`. Schema-25 cumulative run `37471731102` on main SHA `e1422b3262ee308084ce2212a2f2825fdc737032` has now reconstructed and provenance-bound all **210 primary tasks**.
 
-Campaign run `37426135905` subsequently completed the remaining primary offsets `168..209` successfully on main SHA `fe55559fd97d1731204264341cfa6ddb1b28821d`. Its exact 42-task surface produced 6 promoted, 26 adjudication, and 10 skipped outcomes. The earlier failed run `37412193331` is diagnostic only and is not canonical.
-
-Across the four admitted successful campaign runs, raw primary accounting is now:
+The authoritative cumulative result is:
 
 - 40 promoted;
-- 129 adjudication;
+- 129 pending adjudication;
 - 41 skipped/rejected;
-- 210 total primary opportunities, covering `0..209` with no gaps.
+- 41 replacement-eligible terminal primaries.
 
-These totals are **not yet the authoritative cumulative result**. Before any reserve activation decision, run `.github/workflows/h392-cumulative-consolidation.yml` with the repository-reviewed four-run history and `expected_task_count=210`. The consolidation stage must reconstruct Factory reconciliation, normalize adjudication reasons, revalidate source grounding, and derive the replacement-eligibility manifest from the exact cumulative ledger.
+The evidence is permanently recorded in `artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json`. The 129 pending adjudications remain replacement-ineligible. Reserve reconciliation remains disabled.
 
-Do not activate reserve reconciliation before that 210-primary cumulative artifact succeeds, is reviewed, and is frozen into repository evidence.
+The next live work is no longer primary collection or cumulative consolidation. It is a reviewed post-consolidation protocol that resolves adjudications and, separately, consumes the hash-bound eligibility manifest to activate only the 41 linked reserve slots currently proven eligible. Do not execute reserve tasks before that protocol is merged.
 
 Freeze schema 25 is the protocol revision that implements this cumulative consolidation gate. Historical canonical runs from freeze schemas 23 and 24 remain admissible inputs only because the primary task prefix and fingerprints were preserved; every decrypted task is revalidated against the current frozen plan. Reserve promotion remains disabled after consolidation.
