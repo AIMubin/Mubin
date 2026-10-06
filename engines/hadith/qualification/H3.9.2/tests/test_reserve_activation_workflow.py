@@ -88,8 +88,10 @@ class ReserveActivationWorkflowTests(unittest.TestCase):
             "- name: Reconfirm main before publishing activation evidence", 1
         )[0]
         self.assertIn('files != ["RESERVE_ACTIVATION.json"]', section)
+        self.assertIn("reserve_reconciliation_authorized", section)
+        self.assertIn("requires_repository_approval", section)
+        self.assertIn("expected_activated_reserve_slot_count", section)
         self.assertIn("activated_reserve_slot_count", section)
-        self.assertIn("!= 41", section)
         for forbidden in ("source_refs", "excerpt", "payload", "gold", "model_ref", "model_family"):
             self.assertIn(forbidden, section)
         upload = self.workflow.split("- name: Upload reserve activation evidence", 1)[1]
