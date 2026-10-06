@@ -108,9 +108,12 @@ class PostConsolidationTests(unittest.TestCase):
         )
         _write_json(self.cumulative / "CUMULATIVE_MANIFEST.json", {
             "campaign_id": "H3.9.2",
+            "kind": "cumulative_non_holdout_primary_evidence",
             "freeze_schema_version": 25,
+            "factory_plan_sha256": self.plan_sha,
             "cumulative_ledger_sha256": self.ledger_sha,
             "replacement_eligibility_sha256": self.eligibility_sha,
+            "replacement_eligible_primary_count": 1,
         })
 
     def tearDown(self):
@@ -159,6 +162,30 @@ class PostConsolidationTests(unittest.TestCase):
             self.eligibility_sha,
         )
         self.assertTrue(out.exists())
+
+    def test_build_activation_rejects_eligibility_semantics_that_drift_from_ledger(self):
+        eligibility_path = self.cumulative / "REPLACEMENT_ELIGIBILITY.json"
+        eligibility = json.loads(eligibility_path.read_text(encoding="utf-8"))
+        eligibility["eligible"][0]["eligibility_reason"] = "different_reason"
+        _write_json(eligibility_path, eligibility)
+        eligibility_sha = sha256_file(eligibility_path)
+        manifest_path = self.cumulative / "CUMULATIVE_MANIFEST.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["replacement_eligibility_sha256"] = eligibility_sha
+        _write_json(manifest_path, manifest)
+
+        with patch(
+            "benchmark_campaign.post_consolidation.build_factory_plan",
+            return_value=self.plan,
+        ):
+            with self.assertRaisesRegex(ValueError, "reason differs from cumulative ledger"):
+                build_reserve_activation_manifest(
+                    self.root,
+                    self.cumulative,
+                    Path(self.tmp.name) / "bad-reason.json",
+                    expected_cumulative_ledger_sha256=self.ledger_sha,
+                    expected_replacement_eligibility_sha256=eligibility_sha,
+                )
 
     def test_build_activation_rejects_repository_binding_mismatch(self):
         with patch(
