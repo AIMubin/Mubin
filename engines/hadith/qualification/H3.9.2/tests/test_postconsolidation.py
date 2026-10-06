@@ -370,6 +370,29 @@ class PostConsolidationTests(unittest.TestCase):
                 second["adjudication_commitment_set_sha256"],
             )
 
+    def test_public_and_private_output_paths_must_not_overlap(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            plan, cumulative, control = self._fixture(root)
+            public = root / "output"
+            private = public / "private"
+            with patch(
+                "benchmark_campaign.postconsolidation.build_factory_plan",
+                return_value=plan,
+            ):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "public and private output directories must not overlap",
+                ):
+                    prepare_postconsolidation_bindings(
+                        root,
+                        cumulative,
+                        control,
+                        public,
+                        private,
+                        commitment_secret="test-secret",
+                    )
+
     def test_tampered_eligibility_binding_fails_closed(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
