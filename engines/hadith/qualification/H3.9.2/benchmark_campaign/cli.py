@@ -7,6 +7,7 @@ from pathlib import Path
 from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
 from .consolidation import consolidate_primary_evidence
+from .post_consolidation import build_post_consolidation_plan
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -135,6 +136,15 @@ def main(argv: list[str] | None = None) -> int:
     cp.add_argument("--out-dir", type=Path, required=True)
     cp.add_argument("--source-cache-dir", type=Path, required=True)
     cp.add_argument("--expected-task-count", type=int)
+
+    pc = sub.add_parser("plan-post-consolidation")
+    pc.add_argument("--cumulative-dir", type=Path, required=True)
+    pc.add_argument("--out-dir", type=Path, required=True)
+    pc.add_argument(
+        "--evidence",
+        type=Path,
+        default=Path("artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json"),
+    )
 
     prep = sub.add_parser("prepare-manifests")
     prep.add_argument("--spec", type=Path)
@@ -357,6 +367,20 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             expected_task_count=args.expected_task_count,
             source_cache_dir=source_cache_dir,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "plan-post-consolidation":
+        cumulative_dir = _resolve(root, args.cumulative_dir)
+        out_dir = _resolve(root, args.out_dir)
+        evidence = _resolve(root, args.evidence)
+        assert cumulative_dir is not None and out_dir is not None and evidence is not None
+        report = build_post_consolidation_plan(
+            root,
+            cumulative_dir,
+            out_dir,
+            evidence,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
