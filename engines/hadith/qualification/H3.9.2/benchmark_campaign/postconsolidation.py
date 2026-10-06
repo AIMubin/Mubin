@@ -135,8 +135,16 @@ def prepare_postconsolidation_bindings(
         raise ValueError("cumulative control does not assert exact zero-based coverage")
     if result.get("task_count") != 210:
         raise ValueError("cumulative control task_count mismatch")
-    if workflow.get("run_id") != 37471731102 or workflow.get("conclusion") != "success":
-        raise ValueError("unexpected authoritative cumulative workflow binding")
+    if workflow.get("path") != ".github/workflows/h392-cumulative-consolidation.yml":
+        raise ValueError("cumulative control workflow path mismatch")
+    if workflow.get("run_attempt") != 1:
+        raise ValueError("cumulative control must bind workflow attempt 1")
+    if workflow.get("event") != "workflow_dispatch":
+        raise ValueError("cumulative control must bind a manual workflow dispatch")
+    if workflow.get("conclusion") != "success":
+        raise ValueError("cumulative control workflow did not succeed")
+    if status.get("freeze_schema_version") != FREEZE_SCHEMA_VERSION:
+        raise ValueError("repository status freeze schema differs from active protocol")
 
     ledger_sha = _require_sha256(bindings.get("cumulative_ledger_sha256"), "cumulative_ledger_sha256")
     eligibility_sha = _require_sha256(
@@ -152,6 +160,22 @@ def prepare_postconsolidation_bindings(
         raise ValueError("status last-completed evidence path differs from control record")
     if completed.get("successful_run_id") != workflow.get("run_id"):
         raise ValueError("status last-completed run differs from control record")
+    if completed.get("runner_commit") != control.get("runner_commit"):
+        raise ValueError("status runner commit differs from control record")
+    if completed.get("source_run_ids") != canonical.get("campaign_run_ids"):
+        raise ValueError("status source run list differs from control record")
+    if completed.get("expected_primary_tasks") != canonical.get("expected_primary_task_count"):
+        raise ValueError("status cumulative task count differs from control record")
+    if completed.get("artifact_id") != artifact.get("id"):
+        raise ValueError("status cumulative artifact ID differs from control record")
+    if completed.get("artifact_digest") != artifact.get("digest"):
+        raise ValueError("status cumulative artifact digest differs from control record")
+    if completed.get("summary_sha256") != artifact.get("redacted_summary_sha256"):
+        raise ValueError("status cumulative summary hash differs from control record")
+    if completed.get("encrypted_bundle_sha256") != artifact.get("encrypted_bundle_sha256"):
+        raise ValueError("status cumulative encrypted-bundle hash differs from control record")
+    if artifact.get("redacted") is not True or artifact.get("source_bearing_payload_encrypted") is not True:
+        raise ValueError("cumulative control artifact policy is not redacted/encrypted")
     if completed.get("cumulative_ledger_sha256") != ledger_sha:
         raise ValueError("status cumulative ledger hash differs from control record")
     if completed.get("replacement_eligibility_sha256") != eligibility_sha:
@@ -185,6 +209,18 @@ def prepare_postconsolidation_bindings(
         raise ValueError("cumulative manifest must originate from freeze schema 25")
     if manifest.get("task_count") != 210 or manifest.get("coverage_ranges") != [{"start": 0, "end": 210}]:
         raise ValueError("cumulative manifest does not bind exact 0..209 coverage")
+    if manifest.get("input_run_ids") != canonical.get("campaign_run_ids"):
+        raise ValueError("cumulative manifest run list differs from frozen control")
+    if manifest.get("input_run_count") != canonical.get("input_run_count"):
+        raise ValueError("cumulative manifest run count differs from frozen control")
+    if manifest.get("input_artifact_count") != canonical.get("input_artifact_count"):
+        raise ValueError("cumulative manifest artifact count differs from frozen control")
+    if manifest.get("reviewed_record_count") != result.get("reviewed_record_count"):
+        raise ValueError("cumulative manifest reviewed count differs from frozen control")
+    if manifest.get("adjudication_count") != result.get("pending_adjudication"):
+        raise ValueError("cumulative manifest adjudication count differs from frozen control")
+    if manifest.get("replacement_eligible_primary_count") != result.get("replacement_eligible_primary_count"):
+        raise ValueError("cumulative manifest replacement count differs from frozen control")
     if manifest.get("cumulative_ledger_sha256") != ledger_sha:
         raise ValueError("cumulative manifest ledger hash mismatch")
     if manifest.get("replacement_eligibility_sha256") != eligibility_sha:
@@ -222,17 +258,44 @@ def prepare_postconsolidation_bindings(
         raise ValueError("source eligibility artifact unexpectedly enables reserves")
 
     slots = {str(slot["slot_id"]): slot for slot in plan["slots"]}
+    primary_non_holdout = [
+        slot for slot in plan["slots"]
+        if slot.get("partition") == "non_holdout"
+        and slot.get("candidate_slot_kind") != "reserve"
+    ]
+    offset_by_primary_slot = {
+        str(slot["slot_id"]): offset
+        for offset, slot in enumerate(primary_non_holdout)
+    }
+
     ledger_by_task: dict[str, dict[str, Any]] = {}
     ledger_by_slot: dict[str, dict[str, Any]] = {}
+    observed_offsets: list[int] = []
+    benchmark_id = str(canonical.get("benchmark_id", ""))
     for row in ledger_rows:
         tid = str(row.get("task_id", ""))
         sid = str(row.get("slot_id", ""))
         if not tid or not sid or tid in ledger_by_task or sid in ledger_by_slot:
             raise ValueError("cumulative ledger contains missing/duplicate task or slot IDs")
+        slot = slots.get(sid)
+        if slot is None or slot.get("candidate_slot_kind") == "reserve":
+            raise ValueError("cumulative ledger references an unknown/reserve slot")
+        if slot.get("partition") != "non_holdout" or slot.get("benchmark_id") != benchmark_id:
+            raise ValueError("cumulative ledger escapes frozen benchmark/partition")
+        expected_offset = offset_by_primary_slot.get(sid)
+        if expected_offset is None or row.get("primary_offset") != expected_offset:
+            raise ValueError("cumulative ledger primary offset differs from frozen Factory order")
+        if row.get("benchmark_id") != benchmark_id:
+            raise ValueError("cumulative ledger benchmark differs from frozen control")
+        if row.get("anchor_source_id") != slot.get("anchor_source_id"):
+            raise ValueError("cumulative ledger anchor source differs from frozen slot")
+        observed_offsets.append(expected_offset)
         ledger_by_task[tid] = row
         ledger_by_slot[sid] = row
     if len(ledger_rows) != 210:
         raise ValueError("cumulative ledger must contain exactly 210 rows")
+    if sorted(observed_offsets) != list(range(210)):
+        raise ValueError("cumulative ledger does not contain the exact 0..209 primary prefix")
 
     eligible = eligibility.get("eligible")
     if not isinstance(eligible, list):
@@ -245,8 +308,6 @@ def prepare_postconsolidation_bindings(
     reserve_leaves: list[str] = []
     seen_primary: set[str] = set()
     seen_reserve: set[str] = set()
-    benchmark_id = str(canonical.get("benchmark_id", ""))
-
     for row in eligible:
         if not isinstance(row, dict):
             raise ValueError("replacement eligibility row must be an object")
