@@ -42,9 +42,9 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical cumulative primary-evidence run 37471731102 on main commit e1422b3262ee308084ce2212a2f2825fdc737032 successfully reconstructed the exact external-critical-commentary primary prefix 0..209 from four admitted campaign runs. The authoritative schema-25 cumulative result is 210 primary tasks: 40 promoted, 129 pending adjudication, and 41 skipped; all 41 skipped primaries are replacement eligible under the cumulative rules, while all 129 pending adjudications remain replacement-ineligible. The cumulative ledger and replacement-eligibility manifest are hash-bound and permanently referenced by artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json. Reserve reconciliation remains disabled and no source-bearing reviewed/adjudication plaintext is committed.",
-  "next_action": "Design and review the post-consolidation protocol that consumes cumulative ledger SHA-256 36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d and replacement-eligibility SHA-256 21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee. The protocol must address the 129 pending adjudications and may activate only the 41 currently hash-bound eligible reserve slots. Do not execute reserves or assemble final benchmark records before that reviewed protocol exists.",
-  "freeze_schema_version": 25,
+  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical cumulative primary-evidence run 37471731102 on main commit e1422b3262ee308084ce2212a2f2825fdc737032 remains the authoritative schema-25 cumulative boundary for external-critical-commentary: 210 primary tasks, 40 promoted, 129 pending adjudication, and 41 replacement-eligible terminal primaries. Freeze schema 26 adds a post-consolidation planning gate that can decrypt and revalidate that frozen cumulative artifact, derive an exact pending-adjudication plan and an exact hash-bound reserve activation plan, and publish only redacted identifiers/hashes. It does not adjudicate cases, execute reserves, enable reserve reconciliation, or commit source-bearing reviewed records.",
+  "next_action": "After freeze-schema-26 review and merge, dispatch .github/workflows/h392-post-consolidation-plan.yml once on current main. The workflow must reproduce exactly 129 pending adjudications and 41 linked eligible reserve tasks from cumulative ledger SHA-256 36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d and replacement-eligibility SHA-256 21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee. Freeze that planning artifact before implementing adjudication decisions or reserve execution.",
+  "freeze_schema_version": 26,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
   "factory_candidate_slot_count": 2560,
@@ -59,7 +59,8 @@
     "protocol_freeze_schemas": [
       23,
       24,
-      25
+      25,
+      26
     ],
     "primary_tasks_executed": 210,
     "promoted_in_encrypted_shards": 40,
@@ -81,7 +82,7 @@
     "cumulative_evidence_verified": true
   },
   "reserve_reconciliation_enabled": false,
-  "reserve_reconciliation_reason": "Schema-25 cumulative run 37471731102 proves 41 replacement-eligible terminal primary slots, but reserve promotion remains fail-closed until a separate reviewed post-consolidation protocol consumes the exact cumulative-ledger and replacement-eligibility bindings. The 129 pending adjudications remain ineligible.",
+  "reserve_reconciliation_reason": "Schema-25 cumulative run 37471731102 proves 41 replacement-eligible terminal primary slots. Freeze schema 26 only derives a content-addressed post-consolidation plan from that evidence; reserve execution and reserve reconciliation remain disabled until a later reviewed activation revision consumes the frozen plan. The 129 pending adjudications remain replacement-ineligible.",
   "candidate_reserve_policy_version": 1,
   "candidate_reserve_capacity_guarantees_quota": false,
   "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory.",
@@ -171,5 +172,23 @@
       "reviewed_record_count": 40,
       "evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json"
     }
-  ]
+  ],
+  "post_consolidation_protocol": {
+    "version": 1,
+    "freeze_schema_version": 26,
+    "planner": "benchmark_campaign/post_consolidation.py",
+    "workflow": ".github/workflows/h392-post-consolidation-plan.yml",
+    "source_cumulative_run_id": 37471731102,
+    "source_cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json",
+    "source_cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+    "source_replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+    "expected_pending_adjudication_count": 129,
+    "expected_eligible_primary_count": 41,
+    "expected_reserve_task_count": 41,
+    "planning_ready": true,
+    "planning_completed": false,
+    "adjudication_execution_enabled": false,
+    "reserve_execution_enabled": false,
+    "reserve_reconciliation_enabled": false
+  }
 }
