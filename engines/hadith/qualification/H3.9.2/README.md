@@ -98,4 +98,4 @@ python -m unittest discover -s tests -v
 
 ## Cumulative curation evidence
 
-See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate and `POST_CONSOLIDATION.md` for the schema-26 reserve-activation and adjudication sequencing contract. Reserve reconciliation remains disabled until the activation artifact itself is reviewed and frozen.
+See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate and `POST_CONSOLIDATION.md` for the schema-26 reserve-activation and adjudication sequencing contract. Reserve reconciliation is enabled only for the exact repository-approved 41-slot activation manifest; the 129 pending adjudications remain non-replaceable.
