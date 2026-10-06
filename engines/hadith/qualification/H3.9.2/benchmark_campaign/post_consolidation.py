@@ -12,6 +12,27 @@ ACTIVATION_SCHEMA_VERSION = 1
 SOURCE_CUMULATIVE_FREEZE_SCHEMA = 25
 
 
+def _repository_evidence_file(root: Path, value: Any) -> Path:
+    if not isinstance(value, str) or not value:
+        raise ValueError("repository-approved reserve activation evidence_path missing")
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("repository-approved reserve activation evidence_path must stay inside repository")
+    candidate = root / relative
+    if candidate.is_symlink():
+        raise ValueError("repository-approved reserve activation evidence_path must be a regular repository file")
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root.resolve())
+    except (FileNotFoundError, ValueError) as exc:
+        raise ValueError(
+            "repository-approved reserve activation evidence_path must resolve inside repository"
+        ) from exc
+    if not resolved.is_file():
+        raise ValueError("repository-approved reserve activation evidence_path must be a regular repository file")
+    return resolved
+
+
 def _factory_plan_binding(root: Path) -> tuple[dict[str, Any], str, dict[str, dict[str, Any]]]:
     plan = build_factory_plan(root)
     plan_sha = sha256_bytes(canonical_json_bytes(plan))
@@ -235,12 +256,7 @@ def validate_reserve_activation(
     activation_sha = sha256_file(activation_path)
     if approved.get("manifest_sha256") != activation_sha:
         raise ValueError("reserve activation manifest SHA-256 differs from repository-approved binding")
-    evidence_rel = approved.get("evidence_path")
-    if not isinstance(evidence_rel, str) or not evidence_rel:
-        raise ValueError("repository-approved reserve activation evidence_path missing")
-    approved_path = root / evidence_rel
-    if not approved_path.exists():
-        raise ValueError("repository-approved reserve activation evidence file missing")
+    approved_path = _repository_evidence_file(root, approved.get("evidence_path"))
     if sha256_file(approved_path) != activation_sha:
         raise ValueError("runtime activation differs from committed repository-approved evidence")
     if approved.get("cumulative_ledger_sha256") != activation.get("cumulative_ledger_sha256"):
