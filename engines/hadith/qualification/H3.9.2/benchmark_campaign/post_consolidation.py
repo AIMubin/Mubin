@@ -64,6 +64,33 @@ def build_post_consolidation_plan(
     except ValueError as exc:
         raise ValueError("post-consolidation evidence path must be inside campaign root") from exc
     evidence = load_json(evidence_path)
+
+    status_path = root / "artifacts" / "H3.9.2-STATUS.json"
+    if not status_path.is_file():
+        raise FileNotFoundError(status_path)
+    status = load_json(status_path)
+    if int(status.get("freeze_schema_version", 0)) != 26:
+        raise ValueError("post-consolidation planner requires repository freeze schema 26")
+    protocol = status.get("post_consolidation_protocol")
+    completed = status.get("last_completed_cumulative_consolidation")
+    if not isinstance(protocol, dict) or not isinstance(completed, dict):
+        raise ValueError("post-consolidation repository state is incomplete")
+    if protocol.get("planning_ready") is not True or protocol.get("planning_completed") is not False:
+        raise ValueError("post-consolidation planning target is not open")
+    for key in (
+        "adjudication_execution_enabled",
+        "reserve_execution_enabled",
+        "reserve_reconciliation_enabled",
+    ):
+        if protocol.get(key) is not False:
+            raise ValueError(f"post-consolidation {key} must remain disabled")
+    if status.get("reserve_reconciliation_enabled") is not False:
+        raise ValueError("repository reserve reconciliation must remain disabled")
+    if protocol.get("source_cumulative_evidence_path") != evidence_rel:
+        raise ValueError("evidence path is not the reviewed post-consolidation source")
+    if completed.get("evidence_path") != evidence_rel:
+        raise ValueError("evidence path is not the last completed cumulative checkpoint")
+
     if evidence.get("campaign_id") != "H3.9.2":
         raise ValueError("post-consolidation evidence campaign mismatch")
     if evidence.get("evidence_kind") != "cumulative_non_holdout_primary_consolidation":
@@ -83,6 +110,26 @@ def build_post_consolidation_plan(
         evidence.get("bindings", {}).get("replacement_eligibility_sha256"),
         "evidence replacement_eligibility_sha256",
     )
+
+    evidence_run_id = int(evidence.get("workflow", {}).get("run_id", 0))
+    if evidence_run_id != int(protocol.get("source_cumulative_run_id", -1)):
+        raise ValueError("evidence run is not the reviewed post-consolidation source")
+    if evidence_run_id != int(completed.get("successful_run_id", -1)):
+        raise ValueError("evidence run is not the last completed cumulative run")
+    if evidence.get("runner_commit") != completed.get("runner_commit"):
+        raise ValueError("evidence runner commit differs from completed cumulative state")
+    if evidence.get("artifact", {}).get("id") != completed.get("artifact_id"):
+        raise ValueError("evidence artifact ID differs from completed cumulative state")
+    if evidence.get("artifact", {}).get("digest") != completed.get("artifact_digest"):
+        raise ValueError("evidence artifact digest differs from completed cumulative state")
+    if expected_ledger_sha != protocol.get("source_cumulative_ledger_sha256"):
+        raise ValueError("evidence ledger hash differs from reviewed planning source")
+    if expected_ledger_sha != completed.get("cumulative_ledger_sha256"):
+        raise ValueError("evidence ledger hash differs from completed cumulative state")
+    if expected_eligibility_sha != protocol.get("source_replacement_eligibility_sha256"):
+        raise ValueError("evidence eligibility hash differs from reviewed planning source")
+    if expected_eligibility_sha != completed.get("replacement_eligibility_sha256"):
+        raise ValueError("evidence eligibility hash differs from completed cumulative state")
 
     manifest_path = cumulative_dir / "CUMULATIVE_MANIFEST.json"
     ledger_path = cumulative_dir / "CUMULATIVE_LEDGER.jsonl"
@@ -126,6 +173,23 @@ def build_post_consolidation_plan(
     expected_reviewed_count = int(result.get("reviewed_record_count", -1))
     if expected_task_count < 1:
         raise ValueError("frozen evidence expected task count is invalid")
+
+    if expected_adjudication_count != int(protocol.get("expected_pending_adjudication_count", -1)):
+        raise ValueError("evidence adjudication count differs from reviewed planning target")
+    if expected_eligible_count != int(protocol.get("expected_eligible_primary_count", -1)):
+        raise ValueError("evidence eligibility count differs from reviewed planning target")
+    if expected_eligible_count != int(protocol.get("expected_reserve_task_count", -1)):
+        raise ValueError("evidence reserve-task count differs from reviewed planning target")
+    if expected_task_count != int(completed.get("expected_primary_tasks", -1)):
+        raise ValueError("evidence task count differs from completed cumulative state")
+    if canonical.get("campaign_run_ids") != completed.get("source_run_ids"):
+        raise ValueError("evidence run history differs from completed cumulative state")
+    if expected_adjudication_count != int(completed.get("pending_adjudication_count", -1)):
+        raise ValueError("evidence adjudication count differs from completed cumulative state")
+    if expected_eligible_count != int(completed.get("replacement_eligible_primary_count", -1)):
+        raise ValueError("evidence eligibility count differs from completed cumulative state")
+    if expected_reviewed_count != int(completed.get("reviewed_record_count", -1)):
+        raise ValueError("evidence reviewed count differs from completed cumulative state")
 
     if int(manifest.get("task_count", -1)) != expected_task_count:
         raise ValueError("cumulative manifest task count differs from frozen evidence")
