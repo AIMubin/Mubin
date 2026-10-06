@@ -123,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     fr.add_argument("--ledger-out", type=Path, required=True)
     fr.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
     fr.add_argument("--custodian-holdout", action="store_true")
+    fr.add_argument("--reserve-activation", type=Path)
 
     fs = sub.add_parser("factory-status")
     fs.add_argument("--plan", type=Path, default=Path("factory-work/plan.json"))
@@ -330,10 +331,12 @@ def main(argv: list[str] | None = None) -> int:
         reviewed_dir = _resolve(root, args.reviewed_dir)
         adjudication = _resolve(root, args.adjudication_out)
         ledger = _resolve(root, args.ledger_out)
+        reserve_activation = _resolve(root, args.reserve_activation)
         assert all(x is not None for x in (tasks, curator, verifier, cache_dir, reviewed_dir, adjudication, ledger))
         report = reconcile_factory(
             root, tasks, curator, verifier, cache_dir, reviewed_dir, adjudication,
-            ledger, custodian_mode=args.custodian_holdout, partition=args.partition
+            ledger, custodian_mode=args.custodian_holdout, partition=args.partition,
+            reserve_activation_path=reserve_activation,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
