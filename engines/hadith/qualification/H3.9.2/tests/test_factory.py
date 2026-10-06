@@ -428,6 +428,124 @@ class FactoryTests(unittest.TestCase):
                     False,
                 )
 
+    def test_approved_reserve_reconciliation_promotes_with_activation_binding(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "campaign"
+            root.mkdir()
+            cache, _ = self._fixture(root)
+            quotas_path = root / "config" / "curation-quotas.json"
+            quotas = load_json(quotas_path)
+            quotas["candidate_reserve_policy"] = {
+                "policy_version": 1,
+                "reserve_slots_per_primary": 1,
+                "rule": "one reserve",
+                "primary_slot_prefix_preserved": True,
+            }
+            quotas["total_candidate_slots"] = 4
+            write_json(quotas_path, quotas)
+
+            index = root / "factory-work" / "index"
+            build_source_index(root, cache, index, "non_holdout", False, 512, 64)
+            plan_path = root / "factory-work" / "plan.json"
+            plan = build_factory_plan(root, plan_path)
+            tasks_path = root / "factory-work" / "tasks.jsonl"
+            build_factory_tasks(root, plan_path, index, tasks_path, "non_holdout", False)
+            reserve = next(
+                row for row in load_jsonl(tasks_path)
+                if row.get("candidate_slot_kind") == "reserve"
+            )
+
+            activation_path = root / "artifacts" / "RESERVE_ACTIVATION_TEST.json"
+            reserve_slot = next(
+                row for row in plan["slots"] if row["slot_id"] == reserve["slot_id"]
+            )
+            activation = {
+                "schema_version": 1,
+                "campaign_id": "H3.9.2",
+                "kind": "reserve_activation_manifest",
+                "protocol_freeze_schema": 26,
+                "source_cumulative_freeze_schema": 25,
+                "factory_plan_sha256": sha256_bytes(canonical_json_bytes(plan)),
+                "cumulative_ledger_sha256": "b" * 64,
+                "replacement_eligibility_sha256": "c" * 64,
+                "eligible_primary_count": 1,
+                "activated_reserve_slot_count": 1,
+                "reserve_reconciliation_authorized": True,
+                "requires_repository_approval": True,
+                "policy": {
+                    "pending_adjudication_is_activatable": False,
+                    "promoted_primary_is_activatable": False,
+                    "activation_scope": "test",
+                },
+                "activated": [{
+                    "reserve_slot_id": reserve["slot_id"],
+                    "reserve_slot_binding_sha256": sha256_bytes(
+                        canonical_json_bytes(reserve_slot)
+                    ),
+                    "replacement_for_slot_id": reserve["replacement_for_slot_id"],
+                    "primary_task_id": reserve["replacement_for_slot_id"],
+                    "primary_task_fingerprint": "d" * 64,
+                    "primary_offset": 0,
+                    "eligibility_reason": "curator_no_candidate",
+                }],
+            }
+            write_json(activation_path, activation)
+            activation_sha = hashlib.sha256(activation_path.read_bytes()).hexdigest()
+            write_json(root / "artifacts" / "H3.9.2-STATUS.json", {
+                "reserve_activation": {
+                    "enabled": True,
+                    "evidence_path": "artifacts/RESERVE_ACTIVATION_TEST.json",
+                    "manifest_sha256": activation_sha,
+                    "cumulative_ledger_sha256": "b" * 64,
+                    "replacement_eligibility_sha256": "c" * 64,
+                }
+            })
+
+            excerpt = reserve["anchor_segment"]["text"]
+            curator, verifier = self._responses(reserve, excerpt)
+            locator = reserve["anchor_segment"]["locator"]
+            curator["candidate"]["source_refs"][0]["locator"] = locator
+            verifier["answer"]["supports"][0]["locator"] = locator
+            self._refresh_raw_response_hash(curator)
+            self._refresh_raw_response_hash(verifier)
+
+            task_file = root / "factory-work" / "reserve-reconcile.jsonl"
+            curator_file = root / "factory-work" / "reserve-curator.jsonl"
+            verifier_file = root / "factory-work" / "reserve-verifier.jsonl"
+            dump_jsonl(task_file, [reserve])
+            dump_jsonl(curator_file, [curator])
+            dump_jsonl(verifier_file, [verifier])
+            reviewed = root / "staging"
+            adjudication = root / "factory-work" / "reserve-adjudication.jsonl"
+            ledger = root / "factory-work" / "reserve-ledger.jsonl"
+
+            report = reconcile_factory(
+                root,
+                task_file,
+                curator_file,
+                verifier_file,
+                cache,
+                reviewed,
+                adjudication,
+                ledger,
+                False,
+                "non_holdout",
+                activation_path,
+            )
+            self.assertEqual(report["promoted_count"], 1)
+            record = load_jsonl(reviewed / "b1" / "reviewed.jsonl")[0]
+            binding = record["factory_verification"]["reserve_activation"]
+            self.assertEqual(binding["activation_manifest_sha256"], activation_sha)
+            self.assertEqual(
+                binding["replacement_for_slot_id"],
+                reserve["replacement_for_slot_id"],
+            )
+            self.assertEqual(binding["reserve_attempt"], 1)
+            self.assertEqual(
+                _validate_factory_reserve_policy(root, record, "b1"),
+                [],
+            )
+
     def test_source_index_verifies_pinned_bytes_and_builds_segments(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "campaign"
