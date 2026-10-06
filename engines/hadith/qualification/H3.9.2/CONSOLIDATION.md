@@ -41,6 +41,26 @@ The published redacted/encrypted artifact is permanently referenced in `artifact
 
 The result proves **31 replacement-eligible terminal primaries**. The **103 pending adjudications remain replacement-ineligible**, and reserve reconciliation remains disabled.
 
+## Second canonical consolidation result
+
+Workflow run `37471731102` executed on main commit `e1422b3262ee308084ce2212a2f2825fdc737032` and completed successfully. It reconstructed the exact zero-based primary prefix `0..209` from the four repository-admitted campaign runs and reproduced the full 210-task accounting:
+
+- promoted: **40**;
+- pending adjudication: **129**;
+- skipped: **41**;
+- replacement eligible: **41**;
+- reviewed records: **40**.
+
+The redacted/encrypted result is permanently referenced in `artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json`. The compact evidence binds:
+
+- GitHub artifact digest `sha256:b8fea5f254790fc7cd51e740349a169b470e18e3ee2730b8aba7bbfcd7073ced`;
+- redacted-summary SHA-256 `2131f6358cf773b37a7abffa13aefe1dc7be5ebfb8111279fe13e458693bce69`;
+- encrypted cumulative bundle SHA-256 `c6b5afa771a2aeba2f5017264d2fb98af56882baee0c6fe0109104678651c9f4`;
+- cumulative-ledger SHA-256 `36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d`;
+- replacement-eligibility SHA-256 `21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee`.
+
+The 41 replacement-eligible rows are exactly the terminal skipped primaries under the current schema-25 eligibility rules. The 129 pending adjudications remain ineligible. This result establishes evidence; it does **not** activate reserves, resolve adjudications, or commit source-bearing reviewed records as plaintext.
+
 ## Workflow
 
 Use:
@@ -129,23 +149,16 @@ Eligibility does **not** activate reserve reconciliation. The manifest explicitl
 
 The normal campaign workflow and `factory-reconcile` therefore remain primary-only until a later reviewed protocol change consumes the eligibility binding.
 
-## Why the second cumulative consolidation is required now
+## Post-consolidation gate
 
-The first cumulative consolidation proved the exact prefix `0..167` and identified **31 replacement-eligible terminal primaries** at that boundary.
+The second cumulative consolidation is complete and now supersedes the raw campaign summaries as the authoritative primary-evidence boundary for `external-critical-commentary`.
 
-The final primary batch has now completed successfully in run `37426135905`, covering `168..209` exactly. Primary execution for `external-critical-commentary` is therefore complete at **210/210 primary opportunities**.
+The next protocol revision must consume the exact cumulative-ledger and replacement-eligibility bindings above. It must explicitly address both unresolved surfaces:
 
-The new 42-task batch contributed raw outcomes of:
+- **129 pending adjudications**, none of which is currently replacement eligible;
+- **41 replacement-eligible terminal primary slots**, whose linked reserves remain disabled until a separate reviewed activation mechanism binds to the schema-25 evidence.
 
-```text
-6 promoted
-26 adjudication
-10 skipped
-```
-
-Combined with the first 168 tasks, raw campaign accounting is `40 promoted / 129 adjudication / 41 skipped`. Those totals are intentionally not treated as the authoritative cumulative result because consolidation replays Factory reconciliation semantics, normalizes pre-Verifier blindness cases, revalidates source grounding, and derives replacement eligibility from the exact cumulative ledger.
-
-The immediate live step is therefore the second cumulative consolidation over the exact canonical run list and `expected_task_count=210`. Reserve execution remains disabled until that consolidation succeeds, its evidence is reviewed and frozen, and a separate reserve-activation protocol is approved.
+No reserve task should be executed merely because the count 41 appears in documentation. Any activation must be hash-bound to the frozen 210-primary evidence and remain limited to the eligible linked reserve slots. Final benchmark assembly remains blocked until adjudication and replacement handling produce enough qualified reviewed records under the frozen 210-record non-holdout quota.
 
 ## Security boundary
 
