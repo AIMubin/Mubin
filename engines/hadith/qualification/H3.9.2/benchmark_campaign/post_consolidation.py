@@ -167,7 +167,8 @@ def build_reserve_activation_manifest(
         "replacement_eligibility_sha256": actual_eligibility_sha,
         "eligible_primary_count": len(eligible_rows),
         "activated_reserve_slot_count": len(activated),
-        "reserve_reconciliation_enabled": True,
+        "reserve_reconciliation_authorized": True,
+        "requires_repository_approval": True,
         "activated": activated,
         "policy": {
             "pending_adjudication_is_activatable": False,
@@ -194,8 +195,10 @@ def validate_reserve_activation(
         raise ValueError("unexpected reserve activation campaign_id")
     if int(activation.get("protocol_freeze_schema", 0)) != FREEZE_SCHEMA_VERSION:
         raise ValueError("reserve activation protocol freeze schema mismatch")
-    if activation.get("reserve_reconciliation_enabled") is not True:
-        raise ValueError("reserve activation manifest does not enable reconciliation")
+    if activation.get("reserve_reconciliation_authorized") is not True:
+        raise ValueError("reserve activation manifest does not authorize reconciliation")
+    if activation.get("requires_repository_approval") is not True:
+        raise ValueError("reserve activation manifest must require repository approval")
 
     status_path = root / "artifacts" / "H3.9.2-STATUS.json"
     if not status_path.exists():
