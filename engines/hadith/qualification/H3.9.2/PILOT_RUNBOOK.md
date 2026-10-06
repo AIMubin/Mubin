@@ -260,6 +260,6 @@ The authoritative cumulative result is:
 
 The evidence is permanently recorded in `artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json`. The 129 pending adjudications remain replacement-ineligible. Reserve reconciliation remains disabled.
 
-The next live work is no longer primary collection or cumulative consolidation. It is a reviewed post-consolidation protocol that resolves adjudications and, separately, consumes the hash-bound eligibility manifest to activate only the 41 linked reserve slots currently proven eligible. Do not execute reserve tasks before that protocol is merged.
+The next live work is no longer primary collection or cumulative consolidation. Freeze schema 26 introduces a planning-only post-consolidation gate. After that revision is merged, dispatch `.github/workflows/h392-post-consolidation-plan.yml` once to derive the exact 129-item adjudication plan and 41-item reserve activation plan from the frozen cumulative bundle. Both plans remain execution-disabled. Do not adjudicate or execute reserve tasks until the resulting planning artifact is reviewed and frozen into repository evidence.
 
 Freeze schema 25 is the protocol revision that implements this cumulative consolidation gate. Historical canonical runs from freeze schemas 23 and 24 remain admissible inputs only because the primary task prefix and fingerprints were preserved; every decrypted task is revalidated against the current frozen plan. Reserve promotion remains disabled after consolidation.
