@@ -43,7 +43,7 @@
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
   "reason": "The authoritative schema-25 cumulative primary evidence for external-critical-commentary is frozen at 210 primary tasks: 40 promoted, 129 pending adjudication, and 41 terminal skipped primaries. Freeze schema 26 has now frozen a repository-approved activation manifest for exactly those 41 replacement-eligible linked reserve slots. Reserve reconciliation is enabled only for that exact hash-bound set. The 129 pending adjudications remain non-replaceable and require a separate human/authority adjudication decision path; an adjudication rejection may become replaceable only through a later evidence-bound eligibility update.",
-  "next_action": "Execute only the 41 repository-approved non-holdout reserve slots in the committed activation manifest, preserving exact activation-manifest, cumulative-ledger, replacement-eligibility, and Factory-plan bindings. Resolve the 129 pending adjudications separately through human/authority review. Re-consolidate evidence before any further reserve eligibility expansion.",
+  "next_action": "Dispatch .github/workflows/h392-reserve-campaign.yml from current main. The workflow must execute exactly the 41 repository-approved non-holdout reserve slots bound to activation manifest SHA-256 ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c. Review the redacted campaign summary and freeze the resulting reserve execution evidence before changing any further eligibility or resolving the separate 129 pending adjudications.",
   "freeze_schema_version": 26,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -181,7 +181,8 @@
     "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
     "current_replacement_eligible_primary_count": 41,
     "pending_adjudication_count": 129,
-    "adjudication_policy": "Pending adjudications are not reserve eligible. Acceptance requires human/authority review consistent with CURATION.md; rejection does not silently activate a reserve and must be incorporated by a later evidence-bound eligibility update."
+    "adjudication_policy": "Pending adjudications are not reserve eligible. Acceptance requires human/authority review consistent with CURATION.md; rejection does not silently activate a reserve and must be incorporated by a later evidence-bound eligibility update.",
+    "reserve_execution_workflow": ".github/workflows/h392-reserve-campaign.yml"
   },
   "reserve_activation_target": {
     "ready": false,
@@ -210,5 +211,17 @@
     "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
     "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
     "activated_reserve_slot_count": 41
+  },
+  "reserve_execution_workflow": ".github/workflows/h392-reserve-campaign.yml",
+  "reserve_execution_target": {
+    "ready": true,
+    "completed": false,
+    "workflow": ".github/workflows/h392-reserve-campaign.yml",
+    "task_scope": "approved_reserve",
+    "expected_task_count": 41,
+    "activation_manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
+    "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+    "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+    "execution_policy": "exact activated reserve set only; one pass per listed reserve slot; source-bearing outputs encrypted; redacted aggregate only"
   }
 }
