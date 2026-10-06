@@ -261,6 +261,27 @@ class PostConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "repository-approved status binding"):
                 validate_reserve_activation(self.root, out, [listed])
 
+    def test_validate_activation_rejects_approved_evidence_outside_repository(self):
+        out, result = self._build()
+        self._approve(out, result)
+        listed = {
+            **self.reserve,
+            "task_id": self.reserve["slot_id"],
+        }
+        status_path = self.root / "artifacts" / "H3.9.2-STATUS.json"
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+
+        for malicious_path in (str(out), "../RESERVE_ACTIVATION.json"):
+            with self.subTest(evidence_path=malicious_path):
+                status["reserve_activation"]["evidence_path"] = malicious_path
+                _write_json(status_path, status)
+                with patch(
+                    "benchmark_campaign.post_consolidation.build_factory_plan",
+                    return_value=self.plan,
+                ):
+                    with self.assertRaisesRegex(ValueError, "inside repository"):
+                        validate_reserve_activation(self.root, out, [listed])
+
     def test_validate_activation_rejects_unlisted_reserve_task(self):
         out, result = self._build()
         self._approve(out, result)
