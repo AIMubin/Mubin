@@ -149,6 +149,19 @@ class ConsolidationWorkflowTests(unittest.TestCase):
             'status.get("reserve_reconciliation_enabled") is not False',
             self.workflow,
         )
+        self.assertIn('status["non_holdout_execution_evidence"]', self.workflow)
+        self.assertIn(
+            "canonical target run IDs disagree with execution evidence",
+            self.workflow,
+        )
+        self.assertIn(
+            "canonical target count disagrees with execution evidence",
+            self.workflow,
+        )
+        self.assertIn(
+            "canonical target prefix disagrees with execution evidence",
+            self.workflow,
+        )
 
     def test_main_is_reconfirmed_before_consolidation_and_publication(self):
         self.assertGreaterEqual(
