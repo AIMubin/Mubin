@@ -352,12 +352,14 @@ class FactoryTests(unittest.TestCase):
             })
             activation_sha = hashlib.sha256(activation_path.read_bytes()).hexdigest()
             write_json(root / "artifacts" / "H3.9.2-STATUS.json", {
+                "reserve_reconciliation_enabled": True,
                 "reserve_activation": {
                     "enabled": True,
                     "evidence_path": "artifacts/RESERVE_ACTIVATION_TEST.json",
                     "manifest_sha256": activation_sha,
                     "cumulative_ledger_sha256": "b" * 64,
                     "replacement_eligibility_sha256": "c" * 64,
+                    "activated_reserve_slot_count": 1,
                 }
             })
             activated_record = {
@@ -492,12 +494,14 @@ class FactoryTests(unittest.TestCase):
             write_json(activation_path, activation)
             activation_sha = hashlib.sha256(activation_path.read_bytes()).hexdigest()
             write_json(root / "artifacts" / "H3.9.2-STATUS.json", {
+                "reserve_reconciliation_enabled": True,
                 "reserve_activation": {
                     "enabled": True,
                     "evidence_path": "artifacts/RESERVE_ACTIVATION_TEST.json",
                     "manifest_sha256": activation_sha,
                     "cumulative_ledger_sha256": "b" * 64,
                     "replacement_eligibility_sha256": "c" * 64,
+                    "activated_reserve_slot_count": 1,
                 }
             })
 
