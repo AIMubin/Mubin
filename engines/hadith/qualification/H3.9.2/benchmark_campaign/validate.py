@@ -4,7 +4,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-from .core import SPLITS, Violation, canonical_json_bytes, load_json, load_jsonl, sha256_bytes
+from .core import SPLITS, Violation, canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file
 from .normalization import fingerprint_payload
 from .source_registry import load_source_registry, source_map
 from .holdout_seal import validate_public_seal_binding
