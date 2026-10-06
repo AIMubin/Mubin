@@ -189,6 +189,45 @@ class PostConsolidationPlannerTests(unittest.TestCase):
             },
         })
 
+        evidence = json.loads(self.evidence_path.read_text(encoding="utf-8"))
+        eligibility_sha = evidence["bindings"]["replacement_eligibility_sha256"]
+        self.status_path = self.root / "artifacts" / "H3.9.2-STATUS.json"
+        write_json(self.status_path, {
+            "campaign_id": "H3.9.2",
+            "freeze_schema_version": 26,
+            "reserve_reconciliation_enabled": False,
+            "post_consolidation_protocol": {
+                "version": 1,
+                "freeze_schema_version": 26,
+                "source_cumulative_run_id": 99,
+                "source_cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json",
+                "source_cumulative_ledger_sha256": ledger_sha,
+                "source_replacement_eligibility_sha256": eligibility_sha,
+                "expected_pending_adjudication_count": 1,
+                "expected_eligible_primary_count": 1,
+                "expected_reserve_task_count": 1,
+                "planning_ready": True,
+                "planning_completed": False,
+                "adjudication_execution_enabled": False,
+                "reserve_execution_enabled": False,
+                "reserve_reconciliation_enabled": False,
+            },
+            "last_completed_cumulative_consolidation": {
+                "expected_primary_tasks": 3,
+                "source_run_ids": [10, 11],
+                "successful_run_id": 99,
+                "runner_commit": "f" * 40,
+                "artifact_id": 100,
+                "artifact_digest": "sha256:" + "a" * 64,
+                "cumulative_ledger_sha256": ledger_sha,
+                "replacement_eligibility_sha256": eligibility_sha,
+                "pending_adjudication_count": 1,
+                "replacement_eligible_primary_count": 1,
+                "reviewed_record_count": 1,
+                "evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json",
+            },
+        })
+
     def tearDown(self):
         self.tmp.cleanup()
 
@@ -213,7 +252,17 @@ class PostConsolidationPlannerTests(unittest.TestCase):
             "primary_offset": offset,
         }
 
-    def _run(self):
+    def _rebind_status(self, *, ledger_sha=None, eligibility_sha=None):
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        if ledger_sha is not None:
+            status["post_consolidation_protocol"]["source_cumulative_ledger_sha256"] = ledger_sha
+            status["last_completed_cumulative_consolidation"]["cumulative_ledger_sha256"] = ledger_sha
+        if eligibility_sha is not None:
+            status["post_consolidation_protocol"]["source_replacement_eligibility_sha256"] = eligibility_sha
+            status["last_completed_cumulative_consolidation"]["replacement_eligibility_sha256"] = eligibility_sha
+        write_json(self.status_path, status)
+
+    def _run(self, evidence_path=None):
         with patch(
             "benchmark_campaign.post_consolidation.build_factory_plan",
             return_value=self.plan,
@@ -222,7 +271,7 @@ class PostConsolidationPlannerTests(unittest.TestCase):
                 self.root,
                 self.cumulative,
                 self.out,
-                self.evidence_path,
+                evidence_path or self.evidence_path,
             )
 
     def test_planner_derives_exact_fail_closed_control_plane(self):
@@ -291,6 +340,7 @@ class PostConsolidationPlannerTests(unittest.TestCase):
         write_json(self.cumulative / "CUMULATIVE_MANIFEST.json", manifest)
         evidence["bindings"]["replacement_eligibility_sha256"] = new_elig_sha
         write_json(self.evidence_path, evidence)
+        self._rebind_status(ledger_sha=new_sha, eligibility_sha=new_elig_sha)
 
         with self.assertRaisesRegex(ValueError, "replacement eligibility set differs"):
             self._run()
@@ -310,9 +360,19 @@ class PostConsolidationPlannerTests(unittest.TestCase):
         evidence = json.loads(self.evidence_path.read_text(encoding="utf-8"))
         evidence["bindings"]["replacement_eligibility_sha256"] = new_sha
         write_json(self.evidence_path, evidence)
+        self._rebind_status(eligibility_sha=new_sha)
 
         with self.assertRaisesRegex(ValueError, "not a frozen reserve"):
             self._run()
+
+    def test_superseded_cumulative_checkpoint_is_rejected_even_if_canonical(self):
+        superseded = self.root / "artifacts" / "CUMULATIVE_PRIMARY_EVIDENCE_168.json"
+        superseded.write_bytes(self.evidence_path.read_bytes())
+        with self.assertRaisesRegex(
+            ValueError,
+            "evidence path is not the reviewed post-consolidation source",
+        ):
+            self._run(superseded)
 
     def test_nonempty_output_directory_fails_closed(self):
         self.out.mkdir()
