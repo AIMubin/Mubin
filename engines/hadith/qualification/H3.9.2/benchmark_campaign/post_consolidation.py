@@ -233,6 +233,14 @@ def validate_reserve_activation(
     activation_sha = sha256_file(activation_path)
     if approved.get("manifest_sha256") != activation_sha:
         raise ValueError("reserve activation manifest SHA-256 differs from repository-approved binding")
+    evidence_rel = approved.get("evidence_path")
+    if not isinstance(evidence_rel, str) or not evidence_rel:
+        raise ValueError("repository-approved reserve activation evidence_path missing")
+    approved_path = root / evidence_rel
+    if not approved_path.exists():
+        raise ValueError("repository-approved reserve activation evidence file missing")
+    if sha256_file(approved_path) != activation_sha:
+        raise ValueError("runtime activation differs from committed repository-approved evidence")
     if approved.get("cumulative_ledger_sha256") != activation.get("cumulative_ledger_sha256"):
         raise ValueError("reserve activation cumulative-ledger binding differs from repository status")
     if approved.get("replacement_eligibility_sha256") != activation.get("replacement_eligibility_sha256"):
