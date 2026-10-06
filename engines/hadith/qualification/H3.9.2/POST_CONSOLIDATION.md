@@ -104,14 +104,15 @@ For the currently frozen cumulative evidence, the expected activation is exactly
 
 A successful activation workflow is still not enough to execute reserves.
 
-The resulting activation artifact must first be:
+The activation artifact from workflow run `37524604933` has now passed the second evidence-freeze review boundary:
 
-- independently checked;
-- permanently referenced by artifact ID/digest and manifest SHA-256;
-- merged into repository status as the approved activation;
-- used to set `reserve_reconciliation_enabled=true`.
+- workflow head: `69f288d515fd8b65747eba9cedabade9f3cc123a`;
+- artifact ID: `11442200728`;
+- artifact ZIP digest: `sha256:7c4001c1a90caae84b9eeb7944da2b1dab2e5dd534c4a8e2530241989fcdfd32`;
+- manifest SHA-256: `ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c`;
+- activated reserve slots: exactly **41**.
 
-Until that second evidence-freeze step occurs, the validator and Factory remain fail-closed for reserve-derived benchmark records.
+The byte-identical activation manifest is committed under `artifacts/` and repository status binds runtime authorization to that exact file and hash. This approval authorizes only those 41 listed reserve slots; it does not authorize any pending adjudication, promoted primary, unlisted reserve, or additional reserve attempt.
 
 ## Factory reconciliation after approval
 
@@ -163,10 +164,10 @@ At schema-26 protocol introduction:
 cumulative_primary_evidence_complete = true
 pending_adjudication_count           = 129
 replacement_eligible_primary_count   = 41
-reserve_activation_evidence_frozen   = false
-reserve_reconciliation_enabled       = false
+reserve_activation_evidence_frozen   = true
+reserve_reconciliation_enabled       = true
 benchmark_population_complete        = false
 benchmark_gate_passed                = false
 ```
 
-The immediate next operation after this protocol is merged is to generate the 41-slot activation artifact. No reserve task should run before that artifact is independently reviewed and frozen.
+The immediate next operation is to execute only the 41 repository-approved non-holdout reserve slots bound by the frozen activation manifest. The 129 pending adjudications remain a separate human/authority review surface and cannot authorize reserves.
