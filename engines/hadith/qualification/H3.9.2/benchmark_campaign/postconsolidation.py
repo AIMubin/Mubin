@@ -404,6 +404,7 @@ def prepare_postconsolidation_bindings(
             "eligibility_reason": row["eligibility_reason"],
         }))
         nonce = nonce_deriver(commitment_secret, "reserve", identity_binding)
+        _require_sha256(nonce, "reserve authorization nonce")
         leaf = _commitment_leaf(
             domain="reserve",
             identity_binding=identity_binding,
@@ -463,6 +464,7 @@ def prepare_postconsolidation_bindings(
             "canonical_reason": ledger_row["canonical_reason"],
         }))
         nonce = nonce_deriver(commitment_secret, "adjudication", identity_binding)
+        _require_sha256(nonce, "adjudication nonce")
         leaf = _commitment_leaf(
             domain="adjudication",
             identity_binding=identity_binding,
