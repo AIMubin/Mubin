@@ -153,12 +153,12 @@ The normal campaign workflow and `factory-reconcile` therefore remain primary-on
 
 The second cumulative consolidation is complete and now supersedes the raw campaign summaries as the authoritative primary-evidence boundary for `external-critical-commentary`.
 
-The next protocol revision must consume the exact cumulative-ledger and replacement-eligibility bindings above. It must explicitly address both unresolved surfaces:
+Freeze schema 26, specified in `POST_CONSOLIDATION.md`, consumes the exact cumulative-ledger and replacement-eligibility bindings above. It must explicitly address both unresolved surfaces:
 
 - **129 pending adjudications**, none of which is currently replacement eligible;
 - **41 replacement-eligible terminal primary slots**, whose linked reserves remain disabled until a separate reviewed activation mechanism binds to the schema-25 evidence.
 
-No reserve task should be executed merely because the count 41 appears in documentation. Any activation must be hash-bound to the frozen 210-primary evidence and remain limited to the eligible linked reserve slots. Final benchmark assembly remains blocked until adjudication and replacement handling produce enough qualified reviewed records under the frozen 210-record non-holdout quota.
+No reserve task should be executed merely because the count 41 appears in documentation. Schema 26 requires a hash-bound activation artifact derived from the frozen 210-primary evidence and limited to the eligible linked reserve slots; that artifact must itself be reviewed and frozen before reserve execution. Final benchmark assembly remains blocked until adjudication and replacement handling produce enough qualified reviewed records under the frozen 210-record non-holdout quota.
 
 ## Security boundary
 
