@@ -131,6 +131,16 @@ class PostConsolidationTests(unittest.TestCase):
             )
         return out, result
 
+    def _approve(self, out: Path, result: dict) -> None:
+        _write_json(self.root / "artifacts" / "H3.9.2-STATUS.json", {
+            "reserve_activation": {
+                "enabled": True,
+                "manifest_sha256": sha256_file(out),
+                "cumulative_ledger_sha256": result["cumulative_ledger_sha256"],
+                "replacement_eligibility_sha256": result["replacement_eligibility_sha256"],
+            }
+        })
+
     def test_build_activation_binds_only_hash_verified_terminal_reserve(self):
         out, result = self._build()
         self.assertEqual(result["protocol_freeze_schema"], 26)
@@ -204,8 +214,22 @@ class PostConsolidationTests(unittest.TestCase):
                     expected_replacement_eligibility_sha256=eligibility_sha,
                 )
 
-    def test_validate_activation_rejects_unlisted_reserve_task(self):
+    def test_validate_activation_requires_repository_approval(self):
         out, _result = self._build()
+        listed = {
+            **self.reserve,
+            "task_id": self.reserve["slot_id"],
+        }
+        with patch(
+            "benchmark_campaign.post_consolidation.build_factory_plan",
+            return_value=self.plan,
+        ):
+            with self.assertRaisesRegex(ValueError, "repository-approved status binding"):
+                validate_reserve_activation(self.root, out, [listed])
+
+    def test_validate_activation_rejects_unlisted_reserve_task(self):
+        out, result = self._build()
+        self._approve(out, result)
         unlisted = {
             **self.reserve,
             "slot_id": "b1:non_holdout:s1:9999:reserve:01",
