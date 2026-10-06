@@ -344,11 +344,36 @@ def _validate_factory_reserve_policy(
             benchmark_id,
             cid,
         )]
-    activation_path = root / evidence_rel
-    if not activation_path.exists():
+    relative = Path(evidence_rel)
+    if relative.is_absolute() or ".." in relative.parts:
         return [Violation(
-            "qualification.reserve_activation_evidence_missing",
-            "approved reserve activation evidence file is missing",
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must stay inside repository",
+            benchmark_id,
+            cid,
+        )]
+    candidate = root / relative
+    if candidate.is_symlink():
+        return [Violation(
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must be a regular repository file",
+            benchmark_id,
+            cid,
+        )]
+    try:
+        activation_path = candidate.resolve(strict=True)
+        activation_path.relative_to(root.resolve())
+    except (FileNotFoundError, ValueError):
+        return [Violation(
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must resolve inside repository",
+            benchmark_id,
+            cid,
+        )]
+    if not activation_path.is_file():
+        return [Violation(
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must be a regular repository file",
             benchmark_id,
             cid,
         )]
