@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from .audit import emit_pre_m4_audit
@@ -138,7 +139,8 @@ def main(argv: list[str] | None = None) -> int:
     cp.add_argument("--expected-task-count", type=int)
 
     pc = sub.add_parser("plan-post-consolidation")
-    pc.add_argument("--cumulative-dir", type=Path, required=True)
+    pc.add_argument("--encrypted-bundle", type=Path, required=True)
+    pc.add_argument("--passphrase-env", required=True)
     pc.add_argument("--out-dir", type=Path, required=True)
     pc.add_argument(
         "--evidence",
@@ -372,15 +374,21 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "plan-post-consolidation":
-        cumulative_dir = _resolve(root, args.cumulative_dir)
+        encrypted_bundle = _resolve(root, args.encrypted_bundle)
         out_dir = _resolve(root, args.out_dir)
         evidence = _resolve(root, args.evidence)
-        assert cumulative_dir is not None and out_dir is not None and evidence is not None
+        assert encrypted_bundle is not None and out_dir is not None and evidence is not None
+        passphrase = os.environ.get(args.passphrase_env)
+        if passphrase is None:
+            raise ValueError(
+                f"required passphrase environment variable is unset: {args.passphrase_env}"
+            )
         report = build_post_consolidation_plan(
             root,
-            cumulative_dir,
+            encrypted_bundle,
             out_dir,
             evidence,
+            passphrase,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
