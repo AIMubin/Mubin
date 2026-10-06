@@ -145,7 +145,8 @@ class PostConsolidationTests(unittest.TestCase):
         out, result = self._build()
         self.assertEqual(result["protocol_freeze_schema"], 26)
         self.assertEqual(result["source_cumulative_freeze_schema"], 25)
-        self.assertTrue(result["reserve_reconciliation_enabled"])
+        self.assertTrue(result["reserve_reconciliation_authorized"])
+        self.assertTrue(result["requires_repository_approval"])
         self.assertEqual(result["eligible_primary_count"], 1)
         self.assertEqual(result["activated_reserve_slot_count"], 1)
         self.assertEqual(
