@@ -288,7 +288,7 @@ def _validate_factory_reserve_policy(
     record: dict[str, Any],
     benchmark_id: str,
 ) -> list[Violation]:
-    """Freeze-24 reserve candidates are preregistered but not qualification-enabled."""
+    """Reserve-derived records require a repository-approved activation binding."""
     slot_id = record.get("factory_slot_id")
     if not isinstance(slot_id, str) or not slot_id:
         return []
@@ -308,16 +308,52 @@ def _validate_factory_reserve_policy(
     slot = slots.get(slot_id)
     if slot is None or slot.get("candidate_slot_kind") != "reserve":
         return []
-    return [Violation(
-        "qualification.reserve_slot_not_eligible",
-        (
-            "freeze schema 24 preregisters reserve candidate slots but does not "
-            "permit reserve-derived benchmark records before cumulative replacement "
-            "eligibility is explicitly bound"
-        ),
-        benchmark_id,
-        record.get("case_id"),
-    )]
+
+    status_path = root / "artifacts" / "H3.9.2-STATUS.json"
+    if not status_path.exists():
+        return [Violation(
+            "qualification.reserve_activation_missing",
+            "reserve-derived record requires repository-approved activation evidence",
+            benchmark_id,
+            record.get("case_id"),
+        )]
+    status = load_json(status_path)
+    approved = status.get("reserve_activation")
+    if not isinstance(approved, dict) or approved.get("enabled") is not True:
+        return [Violation(
+            "qualification.reserve_slot_not_activated",
+            "reserve reconciliation remains disabled until activation evidence is reviewed and frozen",
+            benchmark_id,
+            record.get("case_id"),
+        )]
+
+    fv = record.get("factory_verification")
+    activation = fv.get("reserve_activation") if isinstance(fv, dict) else None
+    if not isinstance(activation, dict):
+        return [Violation(
+            "qualification.reserve_activation_binding_missing",
+            "reserve-derived record lacks factory_verification.reserve_activation",
+            benchmark_id,
+            record.get("case_id"),
+        )]
+
+    out: list[Violation] = []
+    checks = {
+        "activation_manifest_sha256": approved.get("manifest_sha256"),
+        "cumulative_ledger_sha256": approved.get("cumulative_ledger_sha256"),
+        "replacement_eligibility_sha256": approved.get("replacement_eligibility_sha256"),
+        "replacement_for_slot_id": slot.get("replacement_for_slot_id"),
+        "reserve_attempt": slot.get("reserve_attempt"),
+    }
+    for field, expected in checks.items():
+        if activation.get(field) != expected:
+            out.append(Violation(
+                f"qualification.reserve_activation_{field}",
+                f"reserve activation {field} does not match reviewed activation/status binding",
+                benchmark_id,
+                record.get("case_id"),
+            ))
+    return out
 
 
 def _validate_factory_slot_binding(root: Path, record: dict[str, Any],
