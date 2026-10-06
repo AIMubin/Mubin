@@ -1,0 +1,265 @@
+name: H3.9.2 post-consolidation plan
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+    env:
+      SOURCE_RUN_ID: "37471731102"
+      SOURCE_ARTIFACT_ID: "11416657955"
+      WORK_ROOT: /tmp/h392-post-consolidation
+      CUMULATIVE_DIR: /tmp/h392-post-consolidation/cumulative
+      PLAN_DIR: /tmp/h392-post-consolidation/plan
+      REDACTED_DIR: /tmp/h392-post-consolidation/redacted
+
+    steps:
+      - name: Checkout Mubin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Refuse stale or non-main dispatch
+        run: |
+          set -eu
+          if [ "${GITHUB_REF_NAME:-}" != "main" ]; then
+            echo "Post-consolidation planning must be dispatched from main." >&2
+            exit 1
+          fi
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          test "$current" = "$latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+
+      - name: Install campaign dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate reviewed planning target and GitHub metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          test -n "$ARTIFACT_KEY"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import urllib.request
+
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          protocol = status["post_consolidation_protocol"]
+          completed = status["last_completed_cumulative_consolidation"]
+          evidence = json.loads(Path(completed["evidence_path"]).read_text(encoding="utf-8"))
+
+          if int(status.get("freeze_schema_version", 0)) != 26:
+              raise SystemExit("post-consolidation planning requires freeze schema 26")
+          if protocol.get("planning_ready") is not True or protocol.get("planning_completed") is not False:
+              raise SystemExit("post-consolidation planning target state is invalid")
+          for key in ("adjudication_execution_enabled", "reserve_execution_enabled", "reserve_reconciliation_enabled"):
+              if protocol.get(key) is not False:
+                  raise SystemExit(f"{key} must remain disabled")
+          if status.get("reserve_reconciliation_enabled") is not False:
+              raise SystemExit("repository reserve reconciliation must remain disabled")
+
+          run_id = int(os.environ["SOURCE_RUN_ID"])
+          artifact_id = int(os.environ["SOURCE_ARTIFACT_ID"])
+          if run_id != int(completed["successful_run_id"]) or run_id != int(protocol["source_cumulative_run_id"]):
+              raise SystemExit("source run is not repository-bound")
+          if artifact_id != int(completed["artifact_id"]):
+              raise SystemExit("source artifact is not repository-bound")
+          if protocol["source_cumulative_evidence_path"] != completed["evidence_path"]:
+              raise SystemExit("source evidence path mismatch")
+          if protocol["source_cumulative_ledger_sha256"] != completed["cumulative_ledger_sha256"]:
+              raise SystemExit("source ledger binding mismatch")
+          if protocol["source_replacement_eligibility_sha256"] != completed["replacement_eligibility_sha256"]:
+              raise SystemExit("source eligibility binding mismatch")
+          if int(protocol["expected_pending_adjudication_count"]) != 129:
+              raise SystemExit("reviewed adjudication count must be 129")
+          if int(protocol["expected_eligible_primary_count"]) != 41:
+              raise SystemExit("reviewed eligible-primary count must be 41")
+          if int(protocol["expected_reserve_task_count"]) != 41:
+              raise SystemExit("reviewed reserve-task count must be 41")
+
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "mubin-h392-post-consolidation",
+          }
+          def api(path):
+              req = urllib.request.Request(f"https://api.github.com/repos/{repo}/{path}", headers=headers)
+              with urllib.request.urlopen(req, timeout=120) as response:
+                  return json.load(response)
+
+          run = api(f"actions/runs/{run_id}")
+          if run.get("status") != "completed" or run.get("conclusion") != "success":
+              raise SystemExit("source cumulative run is not completed/success")
+          if int(run.get("run_attempt", 0)) != 1 or run.get("head_branch") != "main":
+              raise SystemExit("source cumulative run attempt/branch mismatch")
+          if run.get("path") != ".github/workflows/h392-cumulative-consolidation.yml":
+              raise SystemExit("source workflow path mismatch")
+          if run.get("event") != "workflow_dispatch":
+              raise SystemExit("source cumulative run event mismatch")
+          if run.get("head_sha") != evidence.get("runner_commit"):
+              raise SystemExit("source cumulative run SHA mismatch")
+
+          artifact = api(f"actions/artifacts/{artifact_id}")
+          if artifact.get("expired") is True:
+              raise SystemExit("source cumulative artifact is expired")
+          if artifact.get("name") != "h392-cumulative-primary-evidence":
+              raise SystemExit("source cumulative artifact name mismatch")
+          if artifact.get("digest") != completed["artifact_digest"]:
+              raise SystemExit("source cumulative artifact digest mismatch")
+          PY
+
+      - name: Download exact authoritative cumulative artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          artifact-ids: 11416657955
+          path: /tmp/h392-post-consolidation/raw
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 37471731102
+
+      - name: Verify downloaded artifact payload
+        run: |
+          set -eu
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          completed = status["last_completed_cumulative_consolidation"]
+          root = Path("/tmp/h392-post-consolidation/raw")
+          summaries = list(root.rglob("CUMULATIVE_SUMMARY.json"))
+          bundles = list(root.rglob("h392-cumulative-source-bearing.tar.gz.aesgcm"))
+          hashes = list(root.rglob("ENCRYPTED_CUMULATIVE_BUNDLE_SHA256.txt"))
+          if len(summaries) != 1 or len(bundles) != 1 or len(hashes) != 1:
+              raise SystemExit("downloaded cumulative artifact layout is unexpected")
+          summary_sha = hashlib.sha256(summaries[0].read_bytes()).hexdigest()
+          bundle_sha = hashlib.sha256(bundles[0].read_bytes()).hexdigest()
+          declared = hashes[0].read_text(encoding="utf-8").strip()
+          if summary_sha != completed["summary_sha256"]:
+              raise SystemExit("downloaded cumulative summary digest mismatch")
+          if bundle_sha != completed["encrypted_bundle_sha256"] or declared != bundle_sha:
+              raise SystemExit("downloaded cumulative bundle digest mismatch")
+          Path("/tmp/h392-post-consolidation/source.aesgcm").write_bytes(bundles[0].read_bytes())
+          PY
+
+      - name: Decrypt authoritative cumulative bundle
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import tarfile
+          from benchmark_campaign.artifact_crypto import decrypt_file
+
+          root = Path("/tmp/h392-post-consolidation")
+          archive = root / "cumulative.tar.gz"
+          target = root / "cumulative"
+          decrypt_file(root / "source.aesgcm", archive, os.environ["ARTIFACT_KEY"])
+          target.mkdir(parents=True)
+          with tarfile.open(archive, "r:gz") as tf:
+              members = tf.getmembers()
+              for member in members:
+                  p = Path(member.name)
+                  if p.is_absolute() or ".." in p.parts or member.issym() or member.islnk() or member.isdev():
+                      raise SystemExit(f"unsafe cumulative tar member: {member.name}")
+              tf.extractall(target, members=members, filter="data")
+          archive.unlink()
+          (root / "source.aesgcm").unlink()
+          PY
+
+      - name: Reconfirm main before planning
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          test "$current" = "$latest"
+
+      - name: Build exact post-consolidation plans
+        run: |
+          set -eu
+          mkdir -p "$PLAN_DIR" "$REDACTED_DIR"
+          python -m benchmark_campaign plan-post-consolidation             --cumulative-dir "$CUMULATIVE_DIR"             --out-dir "$PLAN_DIR"             --evidence artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json             > "$REDACTED_DIR/POST_CONSOLIDATION_SUMMARY.json"
+          cp "$PLAN_DIR/ADJUDICATION_PLAN.json" "$REDACTED_DIR/"
+          cp "$PLAN_DIR/RESERVE_ACTIVATION_PLAN.json" "$REDACTED_DIR/"
+          cp "$PLAN_DIR/POST_CONSOLIDATION_MANIFEST.json" "$REDACTED_DIR/"
+
+      - name: Remove decrypted evidence and prove redacted control plane
+        run: |
+          set -eu
+          rm -rf "$CUMULATIVE_DIR" "$PLAN_DIR" "$WORK_ROOT/raw"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("/tmp/h392-post-consolidation/redacted")
+          allowed = {
+              "POST_CONSOLIDATION_SUMMARY.json",
+              "ADJUDICATION_PLAN.json",
+              "RESERVE_ACTIVATION_PLAN.json",
+              "POST_CONSOLIDATION_MANIFEST.json",
+          }
+          actual = {p.name for p in root.iterdir() if p.is_file()}
+          if actual != allowed:
+              raise SystemExit(f"unexpected post-consolidation upload files: {sorted(actual)}")
+          summary = json.loads((root / "POST_CONSOLIDATION_SUMMARY.json").read_text(encoding="utf-8"))
+          for key in ("contains_source_text", "contains_gold_payloads", "contains_model_identity",
+                      "adjudication_execution_enabled", "reserve_execution_enabled",
+                      "reserve_reconciliation_enabled"):
+              if summary.get(key) is not False:
+                  raise SystemExit(f"{key} must remain false")
+          if int(summary.get("pending_adjudication_count", -1)) != 129:
+              raise SystemExit("planned adjudication count mismatch")
+          if int(summary.get("reserve_task_count", -1)) != 41:
+              raise SystemExit("planned reserve-task count mismatch")
+          PY
+
+      - name: Publish planning summary
+        run: |
+          {
+            echo '### H3.9.2 post-consolidation planning'
+            echo '~~~json'
+            cat "$REDACTED_DIR/POST_CONSOLIDATION_SUMMARY.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Reconfirm main before publication
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          test "$current" = "$latest"
+
+      - name: Upload redacted post-consolidation plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: h392-post-consolidation-plan
+          path: /tmp/h392-post-consolidation/redacted
+          if-no-files-found: error
+          retention-days: 30
