@@ -18,7 +18,7 @@ Total reviewed qualification target: **1,280 cases**.
 
 R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 preserves the exact **1,280 reviewed-record target** and its original primary slot surface, then preregisters one deterministic reserve candidate opportunity per primary after the first 104 non-holdout primary tasks demonstrated that one candidate opportunity per required record could not reach exact cardinality.
 
-The candidate plan therefore contains **1,280 primary + 1,280 reserve = 2,560 candidate slots**, while benchmark cardinalities remain exactly 1,280 records. Primary IDs, ordering, task fingerprints, source partitions, labels, and thresholds are preserved. Reserve slots were introduced in freeze schema 24. Freeze schema 25 adds the cumulative, provenance-bound replacement-eligibility protocol; reviewed collection and reconciliation still remain primary-only, so reserve promotion is not activated by this revision. Pending adjudication is never treated as replaceable.
+The candidate plan therefore contains **1,280 primary + 1,280 reserve = 2,560 candidate slots**, while benchmark cardinalities remain exactly 1,280 records. Primary IDs, ordering, task fingerprints, source partitions, labels, and thresholds are preserved. Reserve slots were introduced in freeze schema 24. Freeze schema 25 adds the cumulative, provenance-bound replacement-eligibility protocol. Freeze schema 26 adds a privacy-preserving post-consolidation commitment layer that binds the exact eligible-reserve and pending-adjudication identity sets without publishing their deterministic slot/task IDs. Reserve execution and reserve reconciliation remain disabled; pending adjudication is never treated as replaceable.
 
 The full operational contract is in [FACTORY.md](FACTORY.md). The first live Curator/Verifier execution is documented in [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md). AI agreement is never authority by itself: automatic promotion is limited to source-attributed cases with literal human-authored support and independent evidence verification.
 
@@ -98,4 +98,4 @@ python -m unittest discover -s tests -v
 
 ## Cumulative curation evidence
 
-See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate, adjudication accounting, and hash-bound reserve replacement eligibility. Reserve reconciliation remains disabled until a later reviewed protocol change.
+See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate and `POST_CONSOLIDATION.md` for the schema-26 opaque identity-binding preparation stage. The authoritative 210-primary result is frozen, but reserve reconciliation and adjudication execution remain disabled until later reviewed protocols consume the schema-26 commitments.
