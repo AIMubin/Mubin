@@ -18,7 +18,6 @@ jobs:
       SOURCE_RUN_ID: "37471731102"
       SOURCE_ARTIFACT_ID: "11416657955"
       WORK_ROOT: /tmp/h392-post-consolidation
-      CUMULATIVE_DIR: /tmp/h392-post-consolidation/cumulative
       PLAN_DIR: /tmp/h392-post-consolidation/plan
       REDACTED_DIR: /tmp/h392-post-consolidation/redacted
 
@@ -166,33 +165,6 @@ jobs:
           Path("/tmp/h392-post-consolidation/source.aesgcm").write_bytes(bundles[0].read_bytes())
           PY
 
-      - name: Decrypt authoritative cumulative bundle
-        env:
-          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
-        run: |
-          set -eu
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          import tarfile
-          from benchmark_campaign.artifact_crypto import decrypt_file
-
-          root = Path("/tmp/h392-post-consolidation")
-          archive = root / "cumulative.tar.gz"
-          target = root / "cumulative"
-          decrypt_file(root / "source.aesgcm", archive, os.environ["ARTIFACT_KEY"])
-          target.mkdir(parents=True)
-          with tarfile.open(archive, "r:gz") as tf:
-              members = tf.getmembers()
-              for member in members:
-                  p = Path(member.name)
-                  if p.is_absolute() or ".." in p.parts or member.issym() or member.islnk() or member.isdev():
-                      raise SystemExit(f"unsafe cumulative tar member: {member.name}")
-              tf.extractall(target, members=members, filter="data")
-          archive.unlink()
-          (root / "source.aesgcm").unlink()
-          PY
-
       - name: Reconfirm main before planning
         run: |
           set -eu
@@ -202,10 +174,17 @@ jobs:
           test "$current" = "$latest"
 
       - name: Build exact post-consolidation plans
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
         run: |
           set -eu
           mkdir -p "$PLAN_DIR" "$REDACTED_DIR"
-          python -m benchmark_campaign plan-post-consolidation             --cumulative-dir "$CUMULATIVE_DIR"             --out-dir "$PLAN_DIR"             --evidence artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json             > "$REDACTED_DIR/POST_CONSOLIDATION_SUMMARY.json"
+          python -m benchmark_campaign plan-post-consolidation \
+            --encrypted-bundle "$WORK_ROOT/source.aesgcm" \
+            --passphrase-env ARTIFACT_KEY \
+            --out-dir "$PLAN_DIR" \
+            --evidence artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json \
+            > "$REDACTED_DIR/POST_CONSOLIDATION_SUMMARY.json"
           cp "$PLAN_DIR/ADJUDICATION_PLAN.json" "$REDACTED_DIR/"
           cp "$PLAN_DIR/RESERVE_ACTIVATION_PLAN.json" "$REDACTED_DIR/"
           cp "$PLAN_DIR/POST_CONSOLIDATION_MANIFEST.json" "$REDACTED_DIR/"
@@ -213,7 +192,8 @@ jobs:
       - name: Remove decrypted evidence and prove redacted control plane
         run: |
           set -eu
-          rm -rf "$CUMULATIVE_DIR" "$PLAN_DIR" "$WORK_ROOT/raw"
+          rm -rf "$PLAN_DIR" "$WORK_ROOT/raw"
+          rm -f "$WORK_ROOT/source.aesgcm"
           python - <<'PY'
           import json
           from pathlib import Path
