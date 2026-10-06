@@ -63,6 +63,7 @@ class CampaignTests(unittest.TestCase):
             "benchmark_campaign/consolidation.py",
             "benchmark_campaign/postconsolidation.py",
             "AGENT_EXECUTION.md",
+            "POST_CONSOLIDATION.md",
             "adapters/chat_completions.py",
         ]:
             dst = self.root / rel
