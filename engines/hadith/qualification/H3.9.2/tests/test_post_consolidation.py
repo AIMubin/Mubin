@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+import tarfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -14,6 +15,7 @@ from benchmark_campaign.core import (
     write_json,
 )
 from benchmark_campaign.post_consolidation import build_post_consolidation_plan
+from benchmark_campaign.artifact_crypto import encrypt_file
 
 
 class PostConsolidationPlannerTests(unittest.TestCase):
@@ -191,7 +193,12 @@ class PostConsolidationPlannerTests(unittest.TestCase):
             },
         })
 
+        self.passphrase = "test-post-consolidation-passphrase-0123456789"
+        self.encrypted_bundle = Path(self.tmp.name) / "cumulative.aesgcm"
+        bundle_sha = self._write_encrypted_bundle()
         evidence = json.loads(self.evidence_path.read_text(encoding="utf-8"))
+        evidence["artifact"]["encrypted_bundle_sha256"] = bundle_sha
+        write_json(self.evidence_path, evidence)
         eligibility_sha = evidence["bindings"]["replacement_eligibility_sha256"]
         self.status_path = self.root / "artifacts" / "H3.9.2-STATUS.json"
         write_json(self.status_path, {
@@ -205,6 +212,7 @@ class PostConsolidationPlannerTests(unittest.TestCase):
                 "source_cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json",
                 "source_cumulative_ledger_sha256": ledger_sha,
                 "source_replacement_eligibility_sha256": eligibility_sha,
+                "source_encrypted_bundle_sha256": bundle_sha,
                 "expected_pending_adjudication_count": 1,
                 "expected_eligible_primary_count": 1,
                 "expected_reserve_task_count": 1,
@@ -223,6 +231,7 @@ class PostConsolidationPlannerTests(unittest.TestCase):
                 "artifact_digest": "sha256:" + "a" * 64,
                 "cumulative_ledger_sha256": ledger_sha,
                 "replacement_eligibility_sha256": eligibility_sha,
+                "encrypted_bundle_sha256": bundle_sha,
                 "pending_adjudication_count": 1,
                 "replacement_eligible_primary_count": 1,
                 "reviewed_record_count": 1,
@@ -254,6 +263,28 @@ class PostConsolidationPlannerTests(unittest.TestCase):
             "primary_offset": offset,
         }
 
+    def _write_encrypted_bundle(self):
+        archive = Path(self.tmp.name) / "cumulative.tar.gz"
+        if archive.exists():
+            archive.unlink()
+        with tarfile.open(archive, "w:gz") as tf:
+            for path in sorted(p for p in self.cumulative.rglob("*") if p.is_file()):
+                tf.add(path, arcname=str(path.relative_to(self.cumulative)))
+        encrypt_file(archive, self.encrypted_bundle, self.passphrase)
+        archive.unlink()
+        return sha256_file(self.encrypted_bundle)
+
+    def _rebind_bundle(self):
+        bundle_sha = self._write_encrypted_bundle()
+        evidence = json.loads(self.evidence_path.read_text(encoding="utf-8"))
+        evidence["artifact"]["encrypted_bundle_sha256"] = bundle_sha
+        write_json(self.evidence_path, evidence)
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        status["post_consolidation_protocol"]["source_encrypted_bundle_sha256"] = bundle_sha
+        status["last_completed_cumulative_consolidation"]["encrypted_bundle_sha256"] = bundle_sha
+        write_json(self.status_path, status)
+        return bundle_sha
+
     def _rebind_status(self, *, ledger_sha=None, eligibility_sha=None):
         status = json.loads(self.status_path.read_text(encoding="utf-8"))
         if ledger_sha is not None:
@@ -271,9 +302,10 @@ class PostConsolidationPlannerTests(unittest.TestCase):
         ):
             return build_post_consolidation_plan(
                 self.root,
-                self.cumulative,
+                self.encrypted_bundle,
                 self.out,
                 evidence_path or self.evidence_path,
+                self.passphrase,
             )
 
     def test_planner_derives_exact_fail_closed_control_plane(self):
@@ -320,13 +352,23 @@ class PostConsolidationPlannerTests(unittest.TestCase):
         self.assertFalse(reserve["execution_enabled"])
         self.assertFalse(reserve["reconciliation_enabled"])
 
-    def test_tampered_eligibility_fails_repository_evidence_binding(self):
-        eligibility = json.loads(
-            (self.cumulative / "REPLACEMENT_ELIGIBILITY.json").read_text(encoding="utf-8")
+    def test_reencrypted_tampered_bundle_fails_repository_ciphertext_binding(self):
+        adjudication_path = self.cumulative / "CUMULATIVE_ADJUDICATION.jsonl"
+        rows = [json.loads(line) for line in adjudication_path.read_text(encoding="utf-8").splitlines()]
+        rows[0]["reason"] = "tampered-source-bearing-evidence"
+        dump_jsonl(adjudication_path, rows)
+        manifest = json.loads(
+            (self.cumulative / "CUMULATIVE_MANIFEST.json").read_text(encoding="utf-8")
         )
-        eligibility["eligible"][0]["eligibility_reason"] = "tampered"
-        write_json(self.cumulative / "REPLACEMENT_ELIGIBILITY.json", eligibility)
-        with self.assertRaisesRegex(ValueError, "replacement eligibility differs"):
+        manifest["cumulative_adjudication_sha256"] = sha256_file(adjudication_path)
+        write_json(self.cumulative / "CUMULATIVE_MANIFEST.json", manifest)
+
+        # Re-encrypt internally self-consistent but non-authoritative plaintext.
+        self._write_encrypted_bundle()
+        with self.assertRaisesRegex(
+            ValueError,
+            "encrypted cumulative bundle differs from frozen repository evidence",
+        ):
             self._run()
 
     def test_pending_adjudication_cannot_be_replacement_eligible(self):
@@ -354,6 +396,7 @@ class PostConsolidationPlannerTests(unittest.TestCase):
         evidence["bindings"]["replacement_eligibility_sha256"] = new_elig_sha
         write_json(self.evidence_path, evidence)
         self._rebind_status(ledger_sha=new_sha, eligibility_sha=new_elig_sha)
+        self._rebind_bundle()
 
         with self.assertRaisesRegex(ValueError, "replacement eligibility set differs"):
             self._run()
@@ -374,6 +417,7 @@ class PostConsolidationPlannerTests(unittest.TestCase):
         evidence["bindings"]["replacement_eligibility_sha256"] = new_sha
         write_json(self.evidence_path, evidence)
         self._rebind_status(eligibility_sha=new_sha)
+        self._rebind_bundle()
 
         with self.assertRaisesRegex(ValueError, "not a frozen reserve"):
             self._run()
