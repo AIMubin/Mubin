@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aimubin.org/schemas/h3.9.2-benchmark-record-v9.schema.json",
+  "$id": "https://aimubin.org/schemas/h3.9.2-benchmark-record-v10.schema.json",
   "title": "Mubin H3.9.2 qualification benchmark record",
   "type": "object",
   "required": [
@@ -475,6 +475,39 @@
             }
           },
           "additionalProperties": true
+        },
+        "reserve_activation": {
+          "type": "object",
+          "required": [
+            "activation_manifest_sha256",
+            "cumulative_ledger_sha256",
+            "replacement_eligibility_sha256",
+            "replacement_for_slot_id",
+            "reserve_attempt"
+          ],
+          "properties": {
+            "activation_manifest_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "cumulative_ledger_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "replacement_eligibility_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "replacement_for_slot_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "reserve_attempt": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": true
