@@ -74,6 +74,8 @@ class PostConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn("downloaded cumulative artifact ZIP digest mismatch", self.workflow)
         self.assertIn("frozen cumulative summary digest mismatch", self.workflow)
         self.assertIn("frozen cumulative encrypted-bundle digest mismatch", self.workflow)
+        self.assertIn("frozen cumulative artifact is not owned by the bound run", self.workflow)
+        self.assertIn("frozen cumulative artifact head SHA differs from the bound run", self.workflow)
         self.assertIn(
             'len([p for p in extracted.rglob("*") if p.is_file()]) != 3',
             self.workflow,
@@ -107,7 +109,11 @@ class PostConsolidationWorkflowTests(unittest.TestCase):
         ):
             self.assertIn(name, self.workflow)
         self.assertIn(
-            'find "$PUBLIC_DIR" -maxdepth 1 -type f | wc -l)" -eq 4',
+            'find "$PUBLIC_DIR" -mindepth 1 -maxdepth 1 | wc -l)" -eq 4',
+            self.workflow,
+        )
+        self.assertIn(
+            'find "$PUBLIC_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l)" -eq 4',
             self.workflow,
         )
         self.assertIn('test ! -e "$PUBLIC_DIR/PRIVATE_MANIFEST.json"', self.workflow)
