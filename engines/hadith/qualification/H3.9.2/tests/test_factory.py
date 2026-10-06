@@ -337,11 +337,23 @@ class FactoryTests(unittest.TestCase):
 
             activation_path = root / "artifacts" / "RESERVE_ACTIVATION_TEST.json"
             write_json(activation_path, {
+                "schema_version": 1,
+                "campaign_id": "H3.9.2",
                 "kind": "reserve_activation_manifest",
-                "reserve_reconciliation_authorized": True,
-                "requires_repository_approval": True,
+                "protocol_freeze_schema": 26,
+                "source_cumulative_freeze_schema": 25,
+                "factory_plan_sha256": sha256_bytes(canonical_json_bytes(plan)),
                 "cumulative_ledger_sha256": "b" * 64,
                 "replacement_eligibility_sha256": "c" * 64,
+                "eligible_primary_count": 1,
+                "activated_reserve_slot_count": 1,
+                "reserve_reconciliation_authorized": True,
+                "requires_repository_approval": True,
+                "policy": {
+                    "pending_adjudication_is_activatable": False,
+                    "promoted_primary_is_activatable": False,
+                    "activation_scope": "test",
+                },
                 "activated": [{
                     "reserve_slot_id": reserve["slot_id"],
                     "reserve_slot_binding_sha256": sha256_bytes(
