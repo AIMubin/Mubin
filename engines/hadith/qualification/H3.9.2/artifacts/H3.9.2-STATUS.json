@@ -1,6 +1,6 @@
 {
   "campaign_id": "H3.9.2",
-  "release": "3.9.2-r5",
+  "release": "3.9.2-r6",
   "scope": "Hadith Benchmark Expansion Campaign only",
   "ci_authoritative": true,
   "ci_workflow": ".github/workflows/hadith-h392.yml",
@@ -42,9 +42,9 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Pinned non-holdout sources remain verified and indexed into 24,212 deterministic segments. Canonical cumulative primary-evidence run 37471731102 on main commit e1422b3262ee308084ce2212a2f2825fdc737032 successfully reconstructed the exact external-critical-commentary primary prefix 0..209 from four admitted campaign runs. The authoritative schema-25 cumulative result is 210 primary tasks: 40 promoted, 129 pending adjudication, and 41 skipped; all 41 skipped primaries are replacement eligible under the cumulative rules, while all 129 pending adjudications remain replacement-ineligible. The cumulative ledger and replacement-eligibility manifest are hash-bound and permanently referenced by artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json. Reserve reconciliation remains disabled and no source-bearing reviewed/adjudication plaintext is committed.",
-  "next_action": "Design and review the post-consolidation protocol that consumes cumulative ledger SHA-256 36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d and replacement-eligibility SHA-256 21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee. The protocol must address the 129 pending adjudications and may activate only the 41 currently hash-bound eligible reserve slots. Do not execute reserves or assemble final benchmark records before that reviewed protocol exists.",
-  "freeze_schema_version": 25,
+  "reason": "The authoritative schema-25 cumulative primary evidence for external-critical-commentary is frozen at 210 primary tasks: 40 promoted, 129 pending adjudication, 41 skipped, and 41 currently replacement-eligible terminal primaries. Freeze schema 26 adds a post-consolidation protocol that can derive a reserve-activation manifest only from the exact reviewed cumulative-ledger and replacement-eligibility hashes. Reserve execution remains disabled until that activation evidence itself is generated, reviewed, and frozen. Pending adjudications remain non-replaceable and require a separate human/authority adjudication decision path; an adjudication rejection may only become replaceable through a later evidence-bound eligibility update.",
+  "next_action": "After schema-26 protocol review/merge, dispatch .github/workflows/h392-reserve-activation.yml on main. Verify that it reproduces exactly 41 activated reserve slots from cumulative ledger SHA-256 36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d and replacement-eligibility SHA-256 21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee. Freeze the resulting activation artifact before setting reserve_reconciliation_enabled=true or executing any reserve task.",
+  "freeze_schema_version": 26,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
   "factory_candidate_slot_count": 2560,
@@ -81,7 +81,7 @@
     "cumulative_evidence_verified": true
   },
   "reserve_reconciliation_enabled": false,
-  "reserve_reconciliation_reason": "Schema-25 cumulative run 37471731102 proves 41 replacement-eligible terminal primary slots, but reserve promotion remains fail-closed until a separate reviewed post-consolidation protocol consumes the exact cumulative-ledger and replacement-eligibility bindings. The 129 pending adjudications remain ineligible.",
+  "reserve_reconciliation_reason": "Freeze schema 26 defines the hash-bound activation mechanism, but no activation artifact has yet been generated and frozen. The current 41 eligible slots are evidence only, not execution authority.",
   "candidate_reserve_policy_version": 1,
   "candidate_reserve_capacity_guarantees_quota": false,
   "candidate_reserve_capacity_note": "One reserve per primary removes the demonstrated one-opportunity ceiling but does not guarantee that enough candidates will qualify; exact quota validation remains mandatory.",
@@ -171,5 +171,25 @@
       "reviewed_record_count": 40,
       "evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json"
     }
-  ]
+  ],
+  "post_consolidation_protocol": {
+    "freeze_schema_version": 26,
+    "reserve_activation_workflow": ".github/workflows/h392-reserve-activation.yml",
+    "source_cumulative_run_id": 37471731102,
+    "source_cumulative_evidence_path": "artifacts/CUMULATIVE_PRIMARY_EVIDENCE_210.json",
+    "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+    "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+    "current_replacement_eligible_primary_count": 41,
+    "pending_adjudication_count": 129,
+    "adjudication_policy": "Pending adjudications are not reserve eligible. Acceptance requires human/authority review consistent with CURATION.md; rejection does not silently activate a reserve and must be incorporated by a later evidence-bound eligibility update."
+  },
+  "reserve_activation_target": {
+    "ready": true,
+    "completed": false,
+    "source_cumulative_run_id": 37471731102,
+    "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+    "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+    "expected_eligible_primary_count": 41,
+    "expected_activated_reserve_slot_count": 41
+  }
 }

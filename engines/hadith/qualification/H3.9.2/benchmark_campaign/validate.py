@@ -4,7 +4,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-from .core import SPLITS, Violation, canonical_json_bytes, load_json, load_jsonl, sha256_bytes
+from .core import SPLITS, Violation, canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file
 from .normalization import fingerprint_payload
 from .source_registry import load_source_registry, source_map
 from .holdout_seal import validate_public_seal_binding
@@ -288,15 +288,16 @@ def _validate_factory_reserve_policy(
     record: dict[str, Any],
     benchmark_id: str,
 ) -> list[Violation]:
-    """Freeze-24 reserve candidates are preregistered but not qualification-enabled."""
+    """Reserve-derived records require an exact repository-approved activation row."""
     slot_id = record.get("factory_slot_id")
     if not isinstance(slot_id, str) or not slot_id:
         return []
     try:
         from .factory import build_factory_plan
+        factory_plan = build_factory_plan(root)
         slots = {
             str(slot["slot_id"]): slot
-            for slot in build_factory_plan(root).get("slots", [])
+            for slot in factory_plan.get("slots", [])
         }
     except Exception as exc:
         return [Violation(
@@ -308,16 +309,206 @@ def _validate_factory_reserve_policy(
     slot = slots.get(slot_id)
     if slot is None or slot.get("candidate_slot_kind") != "reserve":
         return []
-    return [Violation(
-        "qualification.reserve_slot_not_eligible",
-        (
-            "freeze schema 24 preregisters reserve candidate slots but does not "
-            "permit reserve-derived benchmark records before cumulative replacement "
-            "eligibility is explicitly bound"
-        ),
-        benchmark_id,
-        record.get("case_id"),
-    )]
+
+    cid = record.get("case_id")
+    status_path = root / "artifacts" / "H3.9.2-STATUS.json"
+    if not status_path.exists():
+        return [Violation(
+            "qualification.reserve_activation_missing",
+            "reserve-derived record requires repository-approved activation evidence",
+            benchmark_id,
+            cid,
+        )]
+    status = load_json(status_path)
+    if status.get("reserve_reconciliation_enabled") is not True:
+        return [Violation(
+            "qualification.reserve_reconciliation_disabled",
+            "reserve reconciliation is not enabled in repository status",
+            benchmark_id,
+            cid,
+        )]
+    approved = status.get("reserve_activation")
+    if not isinstance(approved, dict) or approved.get("enabled") is not True:
+        return [Violation(
+            "qualification.reserve_slot_not_activated",
+            "reserve reconciliation remains disabled until activation evidence is reviewed and frozen",
+            benchmark_id,
+            cid,
+        )]
+
+    evidence_rel = approved.get("evidence_path")
+    if not isinstance(evidence_rel, str) or not evidence_rel:
+        return [Violation(
+            "qualification.reserve_activation_evidence_missing",
+            "approved reserve activation requires a committed evidence_path",
+            benchmark_id,
+            cid,
+        )]
+    relative = Path(evidence_rel)
+    if relative.is_absolute() or ".." in relative.parts:
+        return [Violation(
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must stay inside repository",
+            benchmark_id,
+            cid,
+        )]
+    candidate = root / relative
+    if candidate.is_symlink():
+        return [Violation(
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must be a regular repository file",
+            benchmark_id,
+            cid,
+        )]
+    try:
+        activation_path = candidate.resolve(strict=True)
+        activation_path.relative_to(root.resolve())
+    except (FileNotFoundError, ValueError):
+        return [Violation(
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must resolve inside repository",
+            benchmark_id,
+            cid,
+        )]
+    if not activation_path.is_file():
+        return [Violation(
+            "qualification.reserve_activation_evidence_path",
+            "approved reserve activation evidence_path must be a regular repository file",
+            benchmark_id,
+            cid,
+        )]
+    if sha256_file(activation_path) != approved.get("manifest_sha256"):
+        return [Violation(
+            "qualification.reserve_activation_evidence_hash",
+            "committed reserve activation evidence differs from approved manifest SHA-256",
+            benchmark_id,
+            cid,
+        )]
+
+    activation_manifest = load_json(activation_path)
+    policy = activation_manifest.get("policy")
+    if (
+        activation_manifest.get("campaign_id") != "H3.9.2"
+        or activation_manifest.get("kind") != "reserve_activation_manifest"
+        or int(activation_manifest.get("protocol_freeze_schema", 0)) != 26
+        or int(activation_manifest.get("source_cumulative_freeze_schema", 0)) != 25
+        or activation_manifest.get("reserve_reconciliation_authorized") is not True
+        or activation_manifest.get("requires_repository_approval") is not True
+        or not isinstance(policy, dict)
+        or policy.get("pending_adjudication_is_activatable") is not False
+        or policy.get("promoted_primary_is_activatable") is not False
+        or activation_manifest.get("factory_plan_sha256")
+            != sha256_bytes(canonical_json_bytes(factory_plan))
+    ):
+        return [Violation(
+            "qualification.reserve_activation_evidence_contract",
+            "committed reserve activation evidence has an invalid activation contract",
+            benchmark_id,
+            cid,
+        )]
+    if activation_manifest.get("cumulative_ledger_sha256") != approved.get("cumulative_ledger_sha256"):
+        return [Violation(
+            "qualification.reserve_activation_ledger_binding",
+            "committed reserve activation cumulative-ledger binding differs from approved status",
+            benchmark_id,
+            cid,
+        )]
+    if activation_manifest.get("replacement_eligibility_sha256") != approved.get("replacement_eligibility_sha256"):
+        return [Violation(
+            "qualification.reserve_activation_eligibility_binding",
+            "committed reserve activation eligibility binding differs from approved status",
+            benchmark_id,
+            cid,
+        )]
+
+    activated_rows = activation_manifest.get("activated")
+    if not isinstance(activated_rows, list):
+        return [Violation(
+            "qualification.reserve_activation_evidence_contract",
+            "committed reserve activation has no activated row set",
+            benchmark_id,
+            cid,
+        )]
+    if int(activation_manifest.get("activated_reserve_slot_count", -1)) != len(activated_rows):
+        return [Violation(
+            "qualification.reserve_activation_count",
+            "committed reserve activation slot count is inconsistent",
+            benchmark_id,
+            cid,
+        )]
+    if int(approved.get("activated_reserve_slot_count", -1)) != len(activated_rows):
+        return [Violation(
+            "qualification.reserve_activation_approved_count",
+            "approved reserve activation slot count differs from committed evidence",
+            benchmark_id,
+            cid,
+        )]
+    reserve_ids = [
+        str(row.get("reserve_slot_id", ""))
+        for row in activated_rows if isinstance(row, dict)
+    ]
+    if len(reserve_ids) != len(set(reserve_ids)) or any(not rid for rid in reserve_ids):
+        return [Violation(
+            "qualification.reserve_activation_duplicate_slot",
+            "committed reserve activation contains duplicate or empty reserve slot IDs",
+            benchmark_id,
+            cid,
+        )]
+    matches = [
+        row for row in activated_rows
+        if isinstance(row, dict) and row.get("reserve_slot_id") == slot_id
+    ]
+    if len(matches) != 1:
+        return [Violation(
+            "qualification.reserve_slot_not_in_activation",
+            "reserve-derived record slot is not uniquely present in approved activation evidence",
+            benchmark_id,
+            cid,
+        )]
+    approved_row = matches[0]
+    expected_slot_binding = sha256_bytes(canonical_json_bytes(slot))
+    if approved_row.get("reserve_slot_binding_sha256") != expected_slot_binding:
+        return [Violation(
+            "qualification.reserve_activation_slot_binding",
+            "approved activation reserve-slot binding differs from frozen Factory slot",
+            benchmark_id,
+            cid,
+        )]
+
+    fv = record.get("factory_verification")
+    activation = fv.get("reserve_activation") if isinstance(fv, dict) else None
+    if not isinstance(activation, dict):
+        return [Violation(
+            "qualification.reserve_activation_binding_missing",
+            "reserve-derived record lacks factory_verification.reserve_activation",
+            benchmark_id,
+            cid,
+        )]
+
+    out: list[Violation] = []
+    checks = {
+        "activation_manifest_sha256": approved.get("manifest_sha256"),
+        "cumulative_ledger_sha256": approved.get("cumulative_ledger_sha256"),
+        "replacement_eligibility_sha256": approved.get("replacement_eligibility_sha256"),
+        "replacement_for_slot_id": slot.get("replacement_for_slot_id"),
+        "reserve_attempt": slot.get("reserve_attempt"),
+    }
+    for field, expected in checks.items():
+        if activation.get(field) != expected:
+            out.append(Violation(
+                f"qualification.reserve_activation_{field}",
+                f"reserve activation {field} does not match reviewed activation/status binding",
+                benchmark_id,
+                cid,
+            ))
+    if approved_row.get("replacement_for_slot_id") != slot.get("replacement_for_slot_id"):
+        out.append(Violation(
+            "qualification.reserve_activation_primary_linkage",
+            "approved activation primary linkage differs from frozen reserve slot",
+            benchmark_id,
+            cid,
+        ))
+    return out
 
 
 def _validate_factory_slot_binding(root: Path, record: dict[str, Any],

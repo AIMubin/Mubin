@@ -1,4 +1,4 @@
-# Mubin H3.9.2 — Benchmark Expansion Campaign R5
+# Mubin H3.9.2 — Benchmark Expansion Campaign R6
 
 This package implements **only H3.9.2**, the qualification campaign between H3.9.1 and H4.0. It does not add H4 features or change the H3.5–H3.9 reasoning architecture.
 
@@ -14,11 +14,11 @@ This package implements **only H3.9.2**, the qualification campaign between H3.9
 
 Total reviewed qualification target: **1,280 cases**.
 
-## R5 benchmark factory
+## R6 benchmark factory
 
-R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 preserves the exact **1,280 reviewed-record target** and its original primary slot surface, then preregisters one deterministic reserve candidate opportunity per primary after the first 104 non-holdout primary tasks demonstrated that one candidate opportunity per required record could not reach exact cardinality.
+R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 introduced the reserve-capacity plan. R6 preserves the exact **1,280 reviewed-record target** and its original primary slot surface, then preregisters one deterministic reserve candidate opportunity per primary after the first 104 non-holdout primary tasks demonstrated that one candidate opportunity per required record could not reach exact cardinality.
 
-The candidate plan therefore contains **1,280 primary + 1,280 reserve = 2,560 candidate slots**, while benchmark cardinalities remain exactly 1,280 records. Primary IDs, ordering, task fingerprints, source partitions, labels, and thresholds are preserved. Reserve slots were introduced in freeze schema 24. Freeze schema 25 adds the cumulative, provenance-bound replacement-eligibility protocol; reviewed collection and reconciliation still remain primary-only, so reserve promotion is not activated by this revision. Pending adjudication is never treated as replaceable.
+The candidate plan therefore contains **1,280 primary + 1,280 reserve = 2,560 candidate slots**, while benchmark cardinalities remain exactly 1,280 records. Primary IDs, ordering, task fingerprints, source partitions, labels, and thresholds are preserved. Reserve slots were introduced in freeze schema 24. Freeze schema 25 adds the cumulative, provenance-bound replacement-eligibility protocol. Freeze schema 26 adds the post-consolidation activation protocol: reserve reconciliation can only be authorized by a reviewed manifest derived from the exact cumulative-ledger and replacement-eligibility hashes. Pending adjudication is never treated as replaceable.
 
 The full operational contract is in [FACTORY.md](FACTORY.md). The first live Curator/Verifier execution is documented in [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md). AI agreement is never authority by itself: automatic promotion is limited to source-attributed cases with literal human-authored support and independent evidence verification.
 
@@ -98,4 +98,4 @@ python -m unittest discover -s tests -v
 
 ## Cumulative curation evidence
 
-See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate, adjudication accounting, and hash-bound reserve replacement eligibility. Reserve reconciliation remains disabled until a later reviewed protocol change.
+See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate and `POST_CONSOLIDATION.md` for the schema-26 reserve-activation and adjudication sequencing contract. Reserve reconciliation remains disabled until the activation artifact itself is reviewed and frozen.

@@ -52,7 +52,7 @@ Auto-promotion still requires literal source support, an exact `gitblob:<sha>#ch
 
 Freeze schema 24 separates **record quota** from **candidate-discovery capacity**. The original 1,280 primary slots remain the exact record-quota surface and retain their IDs/order/task fingerprints. One reserve candidate slot is preregistered for each primary, giving 2,560 candidate slots total while leaving the record target at 1,280. Reserve tasks are linked by `replacement_for_slot_id` and must use a source window distinct from their linked primary.
 
-Reserve promotion is intentionally **disabled** in schema 24. The standard reviewed workflows remain bounded to the 896 non-holdout primary tasks, reconciliation fails closed if a reserve task is supplied, and campaign validation rejects records that carry reserve factory-slot IDs. A later protocol revision must bind reserve use to cumulative evidence that the linked primary is terminally replaceable; unresolved adjudication is not replacement eligibility.
+Freeze schema 24 preregistered reserve capacity but left it disabled. Schema 25 established cumulative replacement eligibility. Schema 26 adds a second binding layer: reserve reconciliation requires a reviewed `RESERVE_ACTIVATION.json`, and final validation separately requires that the record's activation hash match the repository-approved activation in `H3.9.2-STATUS.json`. Unresolved adjudication is never replacement eligibility.
 
 ## Non-holdout workflow
 
@@ -105,7 +105,7 @@ On the non-holdout collection surface, a Curator candidate whose `payload.input`
 
 The full preregistered `allowed_labels` vocabulary is public task metadata, not a selected answer. An exact duplicate inside `payload.input` is therefore permitted; a subset or modified list is rejected.
 
-No disagreement is silently discarded or rewritten into agreement. Reserve tasks are also fail-closed at reconciliation until an explicit cumulative replacement-eligibility binding is implemented.
+No disagreement is silently discarded or rewritten into agreement. Reserve tasks are fail-closed unless `factory-reconcile` receives a schema-26 activation manifest that authorizes each exact reserve slot.
 
 ## Orchestration trust boundary
 
@@ -131,3 +131,30 @@ A primary is replacement eligible only when the cumulative evidence proves a ter
 ### Freeze schema 25: cumulative evidence binding
 
 Freeze schema 25 adds `benchmark_campaign/consolidation.py` to the frozen protocol surface and introduces provenance-bound cumulative primary accounting. It does not alter the schema-24 primary/reserve candidate plan. The cumulative artifact binds the exact zero-based primary prefix, source workflow/artifact digests, reviewed/adjudication outcomes, the current Factory-plan hash, and replacement-eligible primary/reserve slot bindings. Reserve reconciliation remains disabled.
+
+
+## Freeze schema 26: reserve activation binding
+
+The authoritative schema-25 cumulative result for the first completed non-holdout benchmark surface proves 41 terminal replacement-eligible primaries. Schema 26 does not treat that count as execution authority.
+
+Use `benchmark_campaign post-consolidation` via the `build-reserve-activation` CLI to derive a redacted activation manifest from the decrypted cumulative bundle:
+
+```bash
+python -m benchmark_campaign build-reserve-activation \
+  --cumulative-dir /protected/cumulative \
+  --out /protected/RESERVE_ACTIVATION.json \
+  --expected-cumulative-ledger-sha256 <reviewed-ledger-sha256> \
+  --expected-replacement-eligibility-sha256 <reviewed-eligibility-sha256>
+```
+
+The builder re-derives the Factory plan, validates the schema-25 eligibility rules, requires each eligible primary to be a terminal skipped row in the cumulative ledger, and rechecks every primary/reserve slot-binding hash. The emitted manifest contains only identifiers, bounded reason classes, and hashes.
+
+After an activation artifact is independently reviewed and frozen, reserve reconciliation uses:
+
+```bash
+python -m benchmark_campaign factory-reconcile \
+  ... \
+  --reserve-activation /protected/RESERVE_ACTIVATION.json
+```
+
+Primary-only reconciliation must not receive this flag. A reserve task absent from the activation manifest fails closed. See `POST_CONSOLIDATION.md` for the full adjudication and activation sequence.

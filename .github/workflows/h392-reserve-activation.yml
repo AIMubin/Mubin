@@ -1,0 +1,307 @@
+name: H3.9.2 reserve activation evidence
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+    env:
+      WORK_ROOT: /tmp/h392-post-consolidation
+      CUMULATIVE_DIR: /tmp/h392-post-consolidation/cumulative
+      REDACTED_DIR: /tmp/h392-post-consolidation/redacted
+
+    steps:
+      - name: Checkout Mubin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Refuse stale or non-main dispatch
+        shell: bash
+        run: |
+          set -eu
+          test "${GITHUB_REF_NAME:-}" = "main"
+          remote="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          local="$(git rev-parse HEAD)"
+          test -n "$remote"
+          if [ "$remote" != "$local" ]; then
+            echo "Refusing stale workflow execution: checkout=$local main=$remote" >&2
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+
+      - name: Install campaign dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Validate reviewed activation target
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          test -n "$ARTIFACT_KEY"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          if int(status.get("freeze_schema_version", 0)) != 26:
+              raise SystemExit("reserve activation requires freeze schema 26")
+          if status.get("reserve_reconciliation_enabled") is not False:
+              raise SystemExit("reserve reconciliation must remain disabled before activation evidence is frozen")
+          target = status.get("reserve_activation_target")
+          if not isinstance(target, dict):
+              raise SystemExit("reserve activation target missing")
+          if target.get("ready") is not True or target.get("completed") is not False:
+              raise SystemExit("reserve activation target is not ready")
+          completed = status["last_completed_cumulative_consolidation"]
+          checks = {
+              "source_cumulative_run_id": completed["successful_run_id"],
+              "cumulative_ledger_sha256": completed["cumulative_ledger_sha256"],
+              "replacement_eligibility_sha256": completed["replacement_eligibility_sha256"],
+              "expected_eligible_primary_count": completed["replacement_eligible_primary_count"],
+          }
+          for key, expected in checks.items():
+              if target.get(key) != expected:
+                  raise SystemExit(f"reserve activation target {key} differs from completed cumulative evidence")
+          PY
+
+      - name: Fetch and verify frozen cumulative artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          rm -rf "$WORK_ROOT"
+          mkdir -p "$WORK_ROOT/raw" "$CUMULATIVE_DIR" "$REDACTED_DIR"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import stat
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import zipfile
+
+          root = Path(os.environ["WORK_ROOT"])
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          completed = status["last_completed_cumulative_consolidation"]
+          run_id = int(completed["successful_run_id"])
+          artifact_id = int(completed["artifact_id"])
+          expected_digest = str(completed["artifact_digest"])
+          expected_head = str(completed["runner_commit"])
+
+          def api_json(url):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "mubin-h392-reserve-activation",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=120) as response:
+                  return json.load(response)
+
+          run = api_json(f"https://api.github.com/repos/{repo}/actions/runs/{run_id}")
+          if run.get("status") != "completed" or run.get("conclusion") != "success":
+              raise SystemExit("source cumulative run is not completed/success")
+          if int(run.get("run_attempt", 0)) != 1:
+              raise SystemExit("source cumulative run must be attempt 1")
+          if run.get("head_branch") != "main" or run.get("head_sha") != expected_head:
+              raise SystemExit("source cumulative run main/SHA binding mismatch")
+          if run.get("path") != ".github/workflows/h392-cumulative-consolidation.yml":
+              raise SystemExit("source run is not the cumulative workflow")
+          if run.get("event") != "workflow_dispatch":
+              raise SystemExit("source cumulative run was not manually dispatched")
+
+          artifacts = api_json(
+              f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100"
+          ).get("artifacts", [])
+          matches = [a for a in artifacts if int(a.get("id", -1)) == artifact_id]
+          if len(matches) != 1:
+              raise SystemExit("reviewed cumulative artifact ID not found exactly once")
+          artifact = matches[0]
+          if artifact.get("name") != "h392-cumulative-primary-evidence":
+              raise SystemExit("unexpected cumulative artifact name")
+          if artifact.get("expired") is True:
+              raise SystemExit("reviewed cumulative artifact is expired")
+          if artifact.get("digest") != expected_digest:
+              raise SystemExit("GitHub cumulative artifact digest differs from reviewed status")
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          req = urllib.request.Request(
+              str(artifact["archive_download_url"]),
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+                  "User-Agent": "mubin-h392-reserve-activation",
+              },
+          )
+          opener = urllib.request.build_opener(NoRedirect)
+          try:
+              opener.open(req, timeout=120)
+              raise SystemExit("artifact endpoint unexpectedly returned body")
+          except urllib.error.HTTPError as exc:
+              if exc.code not in {301, 302, 303, 307, 308}:
+                  raise
+              location = exc.headers.get("Location")
+          parsed = urllib.parse.urlparse(location or "")
+          if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+              raise SystemExit("unsafe artifact download redirect")
+
+          archive = root / "cumulative.zip"
+          unauthenticated = urllib.request.Request(
+              location, headers={"User-Agent": "mubin-h392-reserve-activation"}
+          )
+          with urllib.request.urlopen(unauthenticated, timeout=120) as response:
+              archive.write_bytes(response.read())
+          actual = hashlib.sha256(archive.read_bytes()).hexdigest()
+          if expected_digest != f"sha256:{actual}":
+              raise SystemExit("downloaded cumulative ZIP digest mismatch")
+
+          raw = root / "raw"
+          with zipfile.ZipFile(archive) as zf:
+              for info in zf.infolist():
+                  p = Path(info.filename)
+                  mode = (info.external_attr >> 16) & 0xFFFF
+                  if p.is_absolute() or ".." in p.parts or stat.S_ISLNK(mode):
+                      raise SystemExit(f"unsafe artifact ZIP member: {info.filename}")
+              zf.extractall(raw)
+
+          names = sorted(p.name for p in raw.iterdir() if p.is_file())
+          expected = sorted([
+              "CUMULATIVE_SUMMARY.json",
+              "ENCRYPTED_CUMULATIVE_BUNDLE_SHA256.txt",
+              "h392-cumulative-source-bearing.tar.gz.aesgcm",
+          ])
+          if names != expected:
+              raise SystemExit(f"unexpected cumulative artifact layout: {names}")
+
+          summary = json.loads((raw / "CUMULATIVE_SUMMARY.json").read_text(encoding="utf-8"))
+          if summary.get("task_count") != 210:
+              raise SystemExit("cumulative summary task count mismatch")
+          if summary.get("cumulative_ledger_sha256") != completed["cumulative_ledger_sha256"]:
+              raise SystemExit("cumulative summary ledger binding mismatch")
+          if summary.get("replacement_eligibility_sha256") != completed["replacement_eligibility_sha256"]:
+              raise SystemExit("cumulative summary eligibility binding mismatch")
+          if summary.get("replacement_eligible_primary_count") != completed["replacement_eligible_primary_count"]:
+              raise SystemExit("cumulative summary eligibility count mismatch")
+          if summary.get("reserve_reconciliation_enabled") is not False:
+              raise SystemExit("source cumulative summary unexpectedly enables reserves")
+
+          bundle = raw / "h392-cumulative-source-bearing.tar.gz.aesgcm"
+          actual_bundle = hashlib.sha256(bundle.read_bytes()).hexdigest()
+          declared_bundle = (raw / "ENCRYPTED_CUMULATIVE_BUNDLE_SHA256.txt").read_text(
+              encoding="utf-8"
+          ).strip()
+          if actual_bundle != declared_bundle or actual_bundle != completed["encrypted_bundle_sha256"]:
+              raise SystemExit("encrypted cumulative bundle digest mismatch")
+          PY
+
+      - name: Decrypt cumulative evidence ephemerally
+        env:
+          H392_CURATION_ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          python -m benchmark_campaign.artifact_crypto decrypt             --in "$WORK_ROOT/raw/h392-cumulative-source-bearing.tar.gz.aesgcm"             --out "$WORK_ROOT/cumulative.tar.gz"             --key-env H392_CURATION_ARTIFACT_KEY
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import tarfile
+
+          archive = Path(os.environ["WORK_ROOT"]) / "cumulative.tar.gz"
+          dest = Path(os.environ["CUMULATIVE_DIR"])
+          with tarfile.open(archive, "r:gz") as tf:
+              for member in tf.getmembers():
+                  p = Path(member.name)
+                  if p.is_absolute() or ".." in p.parts:
+                      raise SystemExit(f"unsafe tar member: {member.name}")
+                  if member.issym() or member.islnk() or member.isdev():
+                      raise SystemExit(f"unsafe tar member type: {member.name}")
+              tf.extractall(dest, filter="data")
+          PY
+
+      - name: Build hash-bound reserve activation manifest
+        run: |
+          set -eu
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          completed = status["last_completed_cumulative_consolidation"]
+          Path("/tmp/h392-post-consolidation/expected-ledger.txt").write_text(
+              completed["cumulative_ledger_sha256"], encoding="utf-8"
+          )
+          Path("/tmp/h392-post-consolidation/expected-eligibility.txt").write_text(
+              completed["replacement_eligibility_sha256"], encoding="utf-8"
+          )
+          PY
+          python -m benchmark_campaign build-reserve-activation             --cumulative-dir "$CUMULATIVE_DIR"             --out "$REDACTED_DIR/RESERVE_ACTIVATION.json"             --expected-cumulative-ledger-sha256 "$(cat "$WORK_ROOT/expected-ledger.txt")"             --expected-replacement-eligibility-sha256 "$(cat "$WORK_ROOT/expected-eligibility.txt")"
+
+      - name: Prove activation upload is redacted and remove plaintext cumulative evidence
+        run: |
+          set -eu
+          rm -rf "$CUMULATIVE_DIR" "$WORK_ROOT/raw" "$WORK_ROOT/cumulative.tar.gz"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          redacted = Path(os.environ["REDACTED_DIR"])
+          files = sorted(p.name for p in redacted.iterdir() if p.is_file())
+          if files != ["RESERVE_ACTIVATION.json"]:
+              raise SystemExit(f"unexpected activation upload surface: {files}")
+          obj = json.loads((redacted / "RESERVE_ACTIVATION.json").read_text(encoding="utf-8"))
+          if obj.get("reserve_reconciliation_authorized") is not True:
+              raise SystemExit("activation manifest does not authorize reserve reconciliation")
+          if obj.get("requires_repository_approval") is not True:
+              raise SystemExit("activation manifest must require repository approval")
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          expected = int(status["reserve_activation_target"]["expected_activated_reserve_slot_count"])
+          if int(obj.get("activated_reserve_slot_count", -1)) != expected:
+              raise SystemExit("activation manifest reserve-slot count differs from reviewed target")
+          serialized = json.dumps(obj, ensure_ascii=False)
+          for forbidden in ("source_refs", "excerpt", "payload", "gold", "model_ref", "model_family"):
+              if f'"{forbidden}"' in serialized:
+                  raise SystemExit(f"redacted activation unexpectedly contains {forbidden}")
+          PY
+
+      - name: Reconfirm main before publishing activation evidence
+        shell: bash
+        run: |
+          set -eu
+          remote="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          local="$(git rev-parse HEAD)"
+          test "$remote" = "$local" || {
+            echo "Main advanced before reserve activation publication" >&2
+            exit 1
+          }
+
+      - name: Upload reserve activation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: h392-reserve-activation-evidence
+          path: /tmp/h392-post-consolidation/redacted
+          if-no-files-found: error
+          retention-days: 30
