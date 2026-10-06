@@ -98,4 +98,4 @@ python -m unittest discover -s tests -v
 
 ## Cumulative curation evidence
 
-See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate, adjudication accounting, and hash-bound reserve replacement eligibility. Reserve reconciliation remains disabled until a later reviewed protocol change.
+See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate and `POST_CONSOLIDATION.md` for the schema-26 planning gate. Schema 26 derives exact redacted plans for the 129 pending adjudications and 41 hash-bound reserve opportunities; it does not execute either surface. Reserve reconciliation remains disabled until a later reviewed activation change.
