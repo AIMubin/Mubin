@@ -294,9 +294,10 @@ def _validate_factory_reserve_policy(
         return []
     try:
         from .factory import build_factory_plan
+        factory_plan = build_factory_plan(root)
         slots = {
             str(slot["slot_id"]): slot
-            for slot in build_factory_plan(root).get("slots", [])
+            for slot in factory_plan.get("slots", [])
         }
     except Exception as exc:
         return [Violation(
@@ -319,6 +320,13 @@ def _validate_factory_reserve_policy(
             cid,
         )]
     status = load_json(status_path)
+    if status.get("reserve_reconciliation_enabled") is not True:
+        return [Violation(
+            "qualification.reserve_reconciliation_disabled",
+            "reserve reconciliation is not enabled in repository status",
+            benchmark_id,
+            cid,
+        )]
     approved = status.get("reserve_activation")
     if not isinstance(approved, dict) or approved.get("enabled") is not True:
         return [Violation(
@@ -353,10 +361,19 @@ def _validate_factory_reserve_policy(
         )]
 
     activation_manifest = load_json(activation_path)
+    policy = activation_manifest.get("policy")
     if (
-        activation_manifest.get("kind") != "reserve_activation_manifest"
+        activation_manifest.get("campaign_id") != "H3.9.2"
+        or activation_manifest.get("kind") != "reserve_activation_manifest"
+        or int(activation_manifest.get("protocol_freeze_schema", 0)) != 26
+        or int(activation_manifest.get("source_cumulative_freeze_schema", 0)) != 25
         or activation_manifest.get("reserve_reconciliation_authorized") is not True
         or activation_manifest.get("requires_repository_approval") is not True
+        or not isinstance(policy, dict)
+        or policy.get("pending_adjudication_is_activatable") is not False
+        or policy.get("promoted_primary_is_activatable") is not False
+        or activation_manifest.get("factory_plan_sha256")
+            != sha256_bytes(canonical_json_bytes(factory_plan))
     ):
         return [Violation(
             "qualification.reserve_activation_evidence_contract",
@@ -384,6 +401,31 @@ def _validate_factory_reserve_policy(
         return [Violation(
             "qualification.reserve_activation_evidence_contract",
             "committed reserve activation has no activated row set",
+            benchmark_id,
+            cid,
+        )]
+    if int(activation_manifest.get("activated_reserve_slot_count", -1)) != len(activated_rows):
+        return [Violation(
+            "qualification.reserve_activation_count",
+            "committed reserve activation slot count is inconsistent",
+            benchmark_id,
+            cid,
+        )]
+    if int(approved.get("activated_reserve_slot_count", -1)) != len(activated_rows):
+        return [Violation(
+            "qualification.reserve_activation_approved_count",
+            "approved reserve activation slot count differs from committed evidence",
+            benchmark_id,
+            cid,
+        )]
+    reserve_ids = [
+        str(row.get("reserve_slot_id", ""))
+        for row in activated_rows if isinstance(row, dict)
+    ]
+    if len(reserve_ids) != len(set(reserve_ids)) or any(not rid for rid in reserve_ids):
+        return [Violation(
+            "qualification.reserve_activation_duplicate_slot",
+            "committed reserve activation contains duplicate or empty reserve slot IDs",
             benchmark_id,
             cid,
         )]
