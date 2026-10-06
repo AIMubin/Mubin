@@ -273,10 +273,14 @@ jobs:
           if files != ["RESERVE_ACTIVATION.json"]:
               raise SystemExit(f"unexpected activation upload surface: {files}")
           obj = json.loads((redacted / "RESERVE_ACTIVATION.json").read_text(encoding="utf-8"))
-          if obj.get("reserve_reconciliation_enabled") is not True:
-              raise SystemExit("activation manifest does not enable reserve reconciliation")
-          if int(obj.get("activated_reserve_slot_count", -1)) != 41:
-              raise SystemExit("activation manifest must contain exactly 41 current eligible reserve slots")
+          if obj.get("reserve_reconciliation_authorized") is not True:
+              raise SystemExit("activation manifest does not authorize reserve reconciliation")
+          if obj.get("requires_repository_approval") is not True:
+              raise SystemExit("activation manifest must require repository approval")
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          expected = int(status["reserve_activation_target"]["expected_activated_reserve_slot_count"])
+          if int(obj.get("activated_reserve_slot_count", -1)) != expected:
+              raise SystemExit("activation manifest reserve-slot count differs from reviewed target")
           serialized = json.dumps(obj, ensure_ascii=False)
           for forbidden in ("source_refs", "excerpt", "payload", "gold", "model_ref", "model_family"):
               if f'"{forbidden}"' in serialized:
