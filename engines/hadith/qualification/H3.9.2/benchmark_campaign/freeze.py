@@ -55,6 +55,7 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "benchmark_campaign" / "consolidation.py",
         root / "benchmark_campaign" / "postconsolidation.py",
         root / "AGENT_EXECUTION.md",
+        root / "POST_CONSOLIDATION.md",
         root / "adapters" / "chat_completions.py",
     ]
     for rel in ("config/curation-plan.json", "config/curation-quotas.json"):
