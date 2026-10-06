@@ -304,5 +304,44 @@ class PostConsolidationTests(unittest.TestCase):
                 validate_reserve_activation(self.root, out, [unlisted])
 
 
+class RepositoryApprovedActivationTests(unittest.TestCase):
+    def test_repository_approved_activation_is_hash_and_plan_bound(self):
+        root = Path(__file__).resolve().parents[1]
+        status = json.loads(
+            (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+        )
+        self.assertTrue(status["reserve_reconciliation_enabled"])
+        approved = status["reserve_activation"]
+        self.assertTrue(approved["enabled"])
+        evidence = root / approved["evidence_path"]
+        self.assertEqual(sha256_file(evidence), approved["manifest_sha256"])
+
+        activation = validate_reserve_activation(root, evidence, [])
+        self.assertEqual(activation["eligible_primary_count"], 41)
+        self.assertEqual(activation["activated_reserve_slot_count"], 41)
+        self.assertEqual(len(activation["activated"]), 41)
+        self.assertEqual(
+            activation["cumulative_ledger_sha256"],
+            "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+        )
+        self.assertEqual(
+            activation["replacement_eligibility_sha256"],
+            "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+        )
+        self.assertEqual(
+            activation["factory_plan_sha256"],
+            "8f7824f26c7db3124d6fc8b521195fe1189bf2897d28687153821d44d6ea4f6f",
+        )
+        self.assertEqual(
+            len({row["reserve_slot_id"] for row in activation["activated"]}),
+            41,
+        )
+        self.assertEqual(
+            len({row["replacement_for_slot_id"] for row in activation["activated"]}),
+            41,
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()
