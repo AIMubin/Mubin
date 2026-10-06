@@ -6,7 +6,7 @@ This directory contains **tracked preregistration, baseline state, and compact c
 
 - Test/CI status: GitHub Actions workflow `.github/workflows/hadith-h392.yml`.
 - Non-holdout source acquisition/index readiness: `NONHOLDOUT_ACQUISITION_EVIDENCE.json`, derived from the successful main acquisition workflow and containing hashes/counts only.
-- Cumulative non-holdout primary evidence: `CUMULATIVE_PRIMARY_EVIDENCE.json`, derived from the successful schema-25 cumulative workflow and permanently binding the canonical primary prefix, outcome counts, cumulative-ledger hash, replacement-eligibility hash, and encrypted artifact identity.
+- Cumulative non-holdout primary evidence: `CUMULATIVE_PRIMARY_EVIDENCE_168.json`, derived from the successful schema-25 cumulative workflow and permanently binding the canonical primary prefix, outcome counts, cumulative-ledger hash, replacement-eligibility hash, and encrypted artifact identity.
 - Dataset qualification: regenerate `validation-report.json` with `python -m benchmark_campaign validate`.
 - Freeze evidence: generated only after the real 1,280-case population qualifies.
 - Final evaluation evidence: generated only after model lock and one-shot sealed-holdout evaluation.
