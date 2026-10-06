@@ -87,6 +87,8 @@ class PostConsolidationPlannerTests(unittest.TestCase):
             "source_run_id": 11,
             "source_sha": "1" * 40,
             "canonical_reason": "gold_disagreement",
+            "curator_model_family": "sensitive-family-a",
+            "verifier_model_family": "sensitive-family-b",
         }]
         dump_jsonl(self.cumulative / "CUMULATIVE_ADJUDICATION.jsonl", adjudication)
 
@@ -291,6 +293,17 @@ class PostConsolidationPlannerTests(unittest.TestCase):
         self.assertEqual(adjudication["items"][0]["primary_offset"], 1)
         self.assertEqual(adjudication["items"][0]["canonical_reason"], "gold_disagreement")
         self.assertFalse(adjudication["execution_enabled"])
+        adjudication_text = (self.out / "ADJUDICATION_PLAN.json").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("sensitive-family-a", adjudication_text)
+        self.assertNotIn("sensitive-family-b", adjudication_text)
+        self.assertNotIn("adjudication_evidence_sha256", adjudication_text)
+
+        manifest_text = (self.out / "POST_CONSOLIDATION_MANIFEST.json").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("cumulative_adjudication_sha256", manifest_text)
 
         reserve = json.loads(
             (self.out / "RESERVE_ACTIVATION_PLAN.json").read_text(encoding="utf-8")
