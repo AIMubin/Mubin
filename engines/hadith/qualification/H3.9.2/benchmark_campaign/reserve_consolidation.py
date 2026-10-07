@@ -53,12 +53,32 @@ def _load_repository_target(root: Path) -> tuple[dict[str, Any], dict[str, Any]]
     execution = status.get("reserve_execution_target")
     if not isinstance(execution, dict):
         raise ValueError("reserve execution target missing from repository status")
+    if execution.get("ready") is not False:
+        raise ValueError("reserve execution target must be closed against redispatch")
     if execution.get("completed") is not False:
         raise ValueError("reserve execution target must remain uncommitted until consolidation")
+    if execution.get("execution_succeeded") is not True:
+        raise ValueError("reserve execution target has no successful execution evidence")
+    if execution.get("consolidation_pending") is not True:
+        raise ValueError("reserve execution target is not awaiting consolidation")
     if int(execution.get("expected_task_count", -1)) != int(target.get("expected_task_count", -2)):
         raise ValueError("reserve execution/consolidation task counts differ")
     if execution.get("activation_manifest_sha256") != target.get("activation_manifest_sha256"):
         raise ValueError("reserve execution/consolidation activation bindings differ")
+    if int(execution.get("successful_run_id", 0)) != int(target.get("source_run_id", -1)):
+        raise ValueError("reserve execution/consolidation run bindings differ")
+    if int(execution.get("successful_run_final_attempt", 0)) != int(
+        target.get("source_run_final_attempt", -1)
+    ):
+        raise ValueError("reserve execution/consolidation attempt bindings differ")
+    if execution.get("runner_commit") != target.get("source_head_sha"):
+        raise ValueError("reserve execution/consolidation head SHA bindings differ")
+    if execution.get("aggregate_artifact_id") != target.get("aggregate_artifact_id"):
+        raise ValueError("reserve execution/consolidation aggregate artifact bindings differ")
+    if execution.get("aggregate_artifact_digest") != target.get("aggregate_artifact_digest"):
+        raise ValueError("reserve execution/consolidation aggregate digest bindings differ")
+    if execution.get("aggregate_summary_sha256") != target.get("aggregate_summary_sha256"):
+        raise ValueError("reserve execution/consolidation aggregate summary bindings differ")
     return status, target
 
 
