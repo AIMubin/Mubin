@@ -1,4 +1,4 @@
-# Mubin H3.9.2 — Benchmark Expansion Campaign R7
+# Mubin H3.9.2 — Benchmark Expansion Campaign R8
 
 This package implements **only H3.9.2**, the qualification campaign between H3.9.1 and H4.0. It does not add H4 features or change the H3.5–H3.9 reasoning architecture.
 
@@ -14,9 +14,9 @@ This package implements **only H3.9.2**, the qualification campaign between H3.9
 
 Total reviewed qualification target: **1,280 cases**.
 
-## R7 benchmark factory and capacity overlay
+## R8 benchmark factory and reserve2 execution overlay
 
-R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 introduced the reserve-capacity plan. R6 preserved the exact **1,280 reviewed-record target** and preregistered one deterministic reserve candidate opportunity per primary. R7 preserves that schema-26 base plan unchanged and adds only a reviewed, append-only capacity-extension proposal surface for the 10 slots now proven exhausted after `reserve:01`.
+R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 introduced the reserve-capacity plan. R6 preserved the exact **1,280 reviewed-record target** and preregistered one deterministic reserve candidate opportunity per primary. R7 froze a reviewed, append-only ten-slot `reserve:02` capacity overlay for the schema-26 exhausted primaries. R8 authorizes execution of exactly that committed overlay while leaving the schema-26 base Factory plan unchanged.
 
 The candidate plan therefore contains **1,280 primary + 1,280 reserve = 2,560 candidate slots**, while benchmark cardinalities remain exactly 1,280 records. Primary IDs, ordering, task fingerprints, source partitions, labels, and thresholds are preserved. Reserve slots were introduced in freeze schema 24. Freeze schema 25 adds the cumulative, provenance-bound replacement-eligibility protocol. Freeze schema 26 adds the post-consolidation activation protocol: reserve reconciliation can only be authorized by a reviewed manifest derived from the exact cumulative-ledger and replacement-eligibility hashes. Pending adjudication is never treated as replaceable.
 
@@ -98,4 +98,4 @@ python -m unittest discover -s tests -v
 
 ## Cumulative curation evidence
 
-See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate, `POST_CONSOLIDATION.md` for the schema-26 reserve activation/execution/consolidation chain, and `CAPACITY_EXTENSION.md` for the schema-27 response to the canonical 10-slot shortfall. Reserve consolidation run `37578659973` made the 41 reserve outcomes canonical: 7 promoted replacements, 24 pending reserve adjudications, and 10 exhausted slots. Capacity proposal run `37588897387` then produced the exact reviewed ten-slot `:reserve:02` overlay, frozen in `artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json`. The proposal remains non-executable; the base schema-26 Factory plan is unchanged and a separate reviewed execution-enablement protocol is still required.
+See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate, `POST_CONSOLIDATION.md` for the schema-26 reserve activation/execution/consolidation chain, and `CAPACITY_EXTENSION.md` for the schema-27 response to the canonical 10-slot shortfall. Reserve consolidation run `37578659973` made the 41 reserve outcomes canonical: 7 promoted replacements, 24 pending reserve adjudications, and 10 exhausted slots. Capacity proposal run `37588897387` then produced the exact reviewed ten-slot `:reserve:02` overlay, frozen in `artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json`. Schema 28 now enables execution only through `.github/workflows/h392-reserve2-campaign.yml`; the manifest itself remains a non-executable schema-27 proposal artifact, the base schema-26 Factory plan is unchanged, and the 153 adjudications remain outside the reserve2 execution set.
