@@ -113,6 +113,7 @@ class ReserveConsolidationTests(unittest.TestCase):
                 "summary_sha256": summary_sha,
                 "encrypted_bundle_sha256": str(offset + 4) * 64,
             }
+            _write_json(evidence / "ORIGIN.json", origin)
             self.artifacts.append({
                 "task_offset": offset,
                 "task_limit": 1,
