@@ -403,6 +403,7 @@ def build_factory_tasks(
     partition: str = "non_holdout",
     custodian_mode: bool = False,
     capacity_extension_path: Path | None = None,
+    require_capacity_execution: bool = True,
 ) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
         raise ValueError("factory tasks are built one partition at a time")
@@ -420,7 +421,7 @@ def build_factory_tasks(
         extension = validate_frozen_capacity_extension(
             root,
             capacity_extension_path,
-            require_execution_enabled=True,
+            require_execution_enabled=require_capacity_execution,
         )
         plan = json.loads(json.dumps(plan, ensure_ascii=False))
         existing_ids = {str(slot["slot_id"]) for slot in plan["slots"]}
