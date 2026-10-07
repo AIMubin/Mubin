@@ -1,6 +1,6 @@
 {
   "campaign_id": "H3.9.2",
-  "release": "3.9.2-r7",
+  "release": "3.9.2-r8",
   "scope": "Hadith Benchmark Expansion Campaign only",
   "ci_authoritative": true,
   "ci_workflow": ".github/workflows/hadith-h392.yml",
@@ -42,9 +42,9 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Schema-27 capacity extension proposal run 37588897387 completed successfully on main commit 174da564ff8158c86898575e3097d15394a2ffae. The reviewed artifact contains exactly 10 deterministic reserve:02 overlay slots, one for each canonical schema-26 exhausted primary. The proposal remains non-executable: execution_authorized=false and requires_repository_approval=true. The base schema-26 Factory plan is unchanged, the 153 pending adjudications remain separate, and benchmark/H4 qualification gates remain closed.",
-  "next_action": "Treat the committed schema-27 capacity-extension manifest as the only reviewed reserve:02 overlay. The next protocol change must add execution/task-generation/reconciliation support that consumes exactly this committed manifest and no other reserve:02 slots. Do not dispatch any reserve:02 execution until that later enablement is reviewed and merged. The 153-case adjudication packet protocol remains a separate track.",
-  "freeze_schema_version": 27,
+  "reason": "Schema-27 froze exactly ten reserve:02 overlay slots for the ten canonical schema-26 exhausted primaries. Schema 28 authorizes execution of only that committed overlay, without modifying the historical schema-26 Factory plan or broadening eligibility. The 153 pending adjudications remain a separate human/authority review surface.",
+  "next_action": "Dispatch .github/workflows/h392-reserve2-campaign.yml from current main. It may execute only the ten reserve:02 tasks in the committed schema-27 capacity-extension manifest. Preserve existing bounded collection semantics, encrypted source-bearing evidence, and redacted aggregation. After execution, consolidate/freeze the reserve:02 evidence before changing benchmark population state. Do not treat any of the 153 pending adjudications as reserve2-eligible.",
+  "freeze_schema_version": 28,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
   "factory_candidate_slot_count": 2560,
@@ -195,9 +195,9 @@
     "combined_pending_adjudication_count": 153,
     "minimum_capacity_shortfall": 10,
     "automatic_second_reserve_authorized": false,
-    "current_protocol_freeze_schema": 27,
+    "current_protocol_freeze_schema": 28,
     "capacity_extension_workflow": ".github/workflows/h392-capacity-extension.yml",
-    "capacity_extension_enabled": false,
+    "capacity_extension_enabled": true,
     "capacity_extension_expected_slot_count": 10,
     "capacity_extension_new_reserve_attempt": 2,
     "adjudication_review_case_count": 153,
@@ -205,7 +205,10 @@
     "capacity_extension_proposal_run_id": 37588897387,
     "capacity_extension_proposal_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
     "capacity_extension_proposal_evidence_path": "artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json",
-    "capacity_extension_execution_authorized": false
+    "capacity_extension_execution_authorized": false,
+    "reserve2_execution_workflow": ".github/workflows/h392-reserve2-campaign.yml",
+    "reserve2_execution_expected_task_count": 10,
+    "reserve2_execution_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce"
   },
   "reserve_activation_target": {
     "ready": false,
@@ -408,7 +411,7 @@
     "minimum_capacity_shortfall": 10,
     "evidence_path": "artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json"
   },
-  "capacity_extension_enabled": false,
+  "capacity_extension_enabled": true,
   "capacity_extension_workflow": ".github/workflows/h392-capacity-extension.yml",
   "capacity_extension_target": {
     "ready": false,
@@ -457,7 +460,7 @@
   "capacity_extension_proposal_frozen": true,
   "capacity_extension_proposal": {
     "frozen": true,
-    "enabled_for_execution": false,
+    "enabled_for_execution": true,
     "protocol_freeze_schema": 27,
     "workflow_run_id": 37588897387,
     "run_attempt": 1,
@@ -477,6 +480,30 @@
     "exhausted_slots_sha256": "7140e7b110d4be44d3685b20649bcd4df04b69d1cd561eb4afa69c3ba1c75490",
     "source_reserve_consolidation_run_id": 37578659973,
     "source_reserve_consolidation_artifact_id": 11464000900,
-    "source_reserve_consolidation_artifact_digest": "sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e"
+    "source_reserve_consolidation_artifact_digest": "sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e",
+    "execution_authority": "schema-28 repository status only; the schema-27 proposal artifact itself remains non-executable"
+  },
+  "reserve2_execution_workflow": ".github/workflows/h392-reserve2-campaign.yml",
+  "reserve2_execution_target": {
+    "ready": true,
+    "completed": false,
+    "workflow": ".github/workflows/h392-reserve2-campaign.yml",
+    "task_scope": "approved_capacity_extension",
+    "protocol_freeze_schema": 28,
+    "source_capacity_extension_freeze_schema": 27,
+    "expected_task_count": 10,
+    "expected_shards": 5,
+    "shard_size": 2,
+    "capacity_extension_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+    "capacity_extension_evidence_path": "artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json",
+    "capacity_extension_proposal_run_id": 37588897387,
+    "capacity_extension_proposal_artifact_id": 11467766861,
+    "capacity_extension_proposal_artifact_digest": "sha256:2b36aef77dfa885a01f271377d4f6164698c9d6cd56adb1c59aaba906c045115",
+    "base_factory_plan_sha256": "8f7824f26c7db3124d6fc8b521195fe1189bf2897d28687153821d44d6ea4f6f",
+    "activation_manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
+    "reserve_ledger_sha256": "f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012",
+    "exhausted_slots_sha256": "7140e7b110d4be44d3685b20649bcd4df04b69d1cd561eb4afa69c3ba1c75490",
+    "execution_policy": "exact committed reserve:02 overlay only; no regenerated or additional slots; non-holdout only; existing bounded transport-retry semantics unchanged; source-bearing outputs encrypted; redacted aggregate only",
+    "adjudication_cases_eligible": false
   }
 }
