@@ -275,16 +275,8 @@ class Reserve2ConsolidationTests(unittest.TestCase):
             "schema_version": 1,
             "campaign_id": "H3.9.2",
             "kind": "canonical_prior_promoted_case_id_set",
-            "primary": {
-                key: value
-                for key, value in self.primary_prior_binding.items()
-                if key != "workflow" and key != "artifact_name"
-            },
-            "reserve": {
-                key: value
-                for key, value in self.reserve_prior_binding.items()
-                if key != "workflow" and key != "artifact_name"
-            },
+            "primary": dict(self.primary_prior_binding),
+            "reserve": dict(self.reserve_prior_binding),
             "promoted_case_id_count": len(case_ids),
             "promoted_case_ids": sorted(case_ids),
         }
