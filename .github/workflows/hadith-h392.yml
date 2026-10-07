@@ -12,8 +12,10 @@ on:
       - ".github/workflows/h392-reserve-activation.yml"
       - ".github/workflows/h392-reserve-campaign.yml"
       - ".github/workflows/h392-reserve-consolidation.yml"
+      - ".github/workflows/h392-capacity-extension.yml"
       - ".github/workflows/h392-reserve-campaign.yml"
       - ".github/workflows/h392-reserve-consolidation.yml"
+      - ".github/workflows/h392-capacity-extension.yml"
   push:
     branches: [main, "bootstrap/**", "h392/**"]
     paths:
