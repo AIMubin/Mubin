@@ -19,6 +19,7 @@ jobs:
       CONSOLIDATED_DIR: /tmp/h392-reserve2-consolidation/source-bearing
       SOURCE_CACHE_DIR: /tmp/h392-reserve2-consolidation/source-cache
       REDACTED_DIR: /tmp/h392-reserve2-consolidation/redacted
+      PRIOR_PROMOTED_CASE_IDS: /tmp/h392-reserve2-consolidation/evidence/PRIOR_PROMOTED_CASE_IDS.json
 
     steps:
       - name: Checkout Mubin
@@ -489,6 +490,276 @@ jobs:
               encrypted.unlink()
           PY
 
+      - name: Reconstruct exact prior canonical promoted case-ID set
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import stat
+          import tarfile
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import zipfile
+
+          from benchmark_campaign.artifact_crypto import decrypt_file
+
+          root = Path.cwd()
+          status = json.loads(
+              (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+          )
+          target = status["reserve2_consolidation_target"]
+          surface = target.get("prior_promoted_case_id_surface")
+          if not isinstance(surface, dict):
+              raise SystemExit("prior promoted case-ID surface missing")
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          passphrase = os.environ["ARTIFACT_KEY"]
+          output = Path(os.environ["PRIOR_PROMOTED_CASE_IDS"])
+          scratch = Path(os.environ["RUNNER_TEMP"]) / "h392-prior-promoted"
+          scratch.mkdir(parents=True, exist_ok=False)
+
+          def request(url):
+              return urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "mubin-h392-prior-promoted-case-ids",
+                  },
+              )
+
+          def api_json(url):
+              with urllib.request.urlopen(request(url), timeout=120) as response:
+                  return json.load(response)
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          def download_artifact(meta, archive):
+              opener = urllib.request.build_opener(NoRedirect)
+              try:
+                  with opener.open(request(meta["archive_download_url"]), timeout=120):
+                      raise SystemExit("artifact endpoint unexpectedly returned a body")
+              except urllib.error.HTTPError as exc:
+                  if exc.code not in {301, 302, 303, 307, 308}:
+                      raise
+                  location = exc.headers.get("Location")
+              if not location:
+                  raise SystemExit("artifact download redirect missing")
+              parsed = urllib.parse.urlparse(location)
+              if (
+                  parsed.scheme != "https"
+                  or not parsed.hostname
+                  or parsed.username
+                  or parsed.password
+              ):
+                  raise SystemExit("unsafe artifact redirect")
+              req = urllib.request.Request(
+                  location,
+                  headers={"User-Agent": "mubin-h392-prior-promoted-case-ids"},
+              )
+              with urllib.request.urlopen(req, timeout=120) as response:
+                  archive.write_bytes(response.read())
+
+          def safe_unzip(archive, dest):
+              dest.mkdir(parents=True, exist_ok=True)
+              with zipfile.ZipFile(archive) as zf:
+                  for info in zf.infolist():
+                      path = Path(info.filename)
+                      mode = (info.external_attr >> 16) & 0xFFFF
+                      if path.is_absolute() or ".." in path.parts or stat.S_ISLNK(mode):
+                          raise SystemExit(f"unsafe prior artifact ZIP member: {info.filename}")
+                  zf.extractall(dest)
+
+          def safe_untar(archive, dest):
+              dest.mkdir(parents=True, exist_ok=True)
+              with tarfile.open(archive, "r:gz") as tf:
+                  members = tf.getmembers()
+                  for member in members:
+                      path = Path(member.name)
+                      if (
+                          path.is_absolute()
+                          or ".." in path.parts
+                          or member.issym()
+                          or member.islnk()
+                          or member.isdev()
+                      ):
+                          raise SystemExit(
+                              f"unsafe prior consolidated member: {member.name}"
+                          )
+                  tf.extractall(dest, members=members, filter="data")
+
+          def digest_hex(value):
+              if not isinstance(value, str) or not value.startswith("sha256:"):
+                  raise SystemExit("prior artifact digest invalid")
+              digest = value.split(":", 1)[1]
+              if len(digest) != 64:
+                  raise SystemExit("prior artifact digest length invalid")
+              return digest
+
+          specs = {
+              "primary": {
+                  "summary_name": "CUMULATIVE_SUMMARY.json",
+                  "encrypted_name": "h392-cumulative-source-bearing.tar.gz.aesgcm",
+                  "declaration_name": "ENCRYPTED_CUMULATIVE_BUNDLE_SHA256.txt",
+                  "ledger_name": "CUMULATIVE_LEDGER.jsonl",
+              },
+              "reserve": {
+                  "summary_name": "RESERVE_CONSOLIDATION_SUMMARY.json",
+                  "encrypted_name": "h392-reserve-consolidated-source-bearing.tar.gz.aesgcm",
+                  "declaration_name": "ENCRYPTED_RESERVE_CONSOLIDATED_BUNDLE_SHA256.txt",
+                  "ledger_name": "RESERVE_LEDGER.jsonl",
+              },
+          }
+
+          all_case_ids = []
+          result_bindings = {}
+          for name in ("primary", "reserve"):
+              bound = surface.get(name)
+              if not isinstance(bound, dict):
+                  raise SystemExit(f"prior {name} binding missing")
+              spec = specs[name]
+              run_id = int(bound["source_run_id"])
+              run = api_json(
+                  f"https://api.github.com/repos/{repo}/actions/runs/{run_id}"
+              )
+              if (
+                  run.get("status") != "completed"
+                  or run.get("conclusion") != "success"
+                  or int(run.get("run_attempt", 0)) != int(bound["source_run_attempt"])
+                  or run.get("head_branch") != "main"
+                  or run.get("head_sha") != bound["source_head_sha"]
+                  or run.get("path") != bound["workflow"]
+                  or run.get("event") != "workflow_dispatch"
+              ):
+                  raise SystemExit(f"prior {name} workflow provenance mismatch")
+
+              artifact_id = int(bound["artifact_id"])
+              artifact = api_json(
+                  f"https://api.github.com/repos/{repo}/actions/artifacts/{artifact_id}"
+              )
+              if (
+                  artifact.get("expired") is True
+                  or artifact.get("name") != bound["artifact_name"]
+                  or artifact.get("digest") != bound["artifact_digest"]
+                  or int(artifact.get("workflow_run", {}).get("id", 0)) != run_id
+                  or artifact.get("workflow_run", {}).get("head_sha")
+                      != bound["source_head_sha"]
+              ):
+                  raise SystemExit(f"prior {name} artifact metadata mismatch")
+
+              work = scratch / name
+              work.mkdir()
+              artifact_zip = work / "artifact.zip"
+              download_artifact(artifact, artifact_zip)
+              if hashlib.sha256(artifact_zip.read_bytes()).hexdigest() != digest_hex(
+                  bound["artifact_digest"]
+              ):
+                  raise SystemExit(f"prior {name} artifact ZIP hash mismatch")
+
+              extracted = work / "artifact"
+              safe_unzip(artifact_zip, extracted)
+              files = {p.name: p for p in extracted.iterdir() if p.is_file()}
+              expected_names = {
+                  spec["summary_name"],
+                  spec["encrypted_name"],
+                  spec["declaration_name"],
+              }
+              if set(files) != expected_names:
+                  raise SystemExit(
+                      f"prior {name} artifact layout mismatch: {sorted(files)}"
+                  )
+              if hashlib.sha256(files[spec["summary_name"]].read_bytes()).hexdigest() != bound[
+                  "summary_sha256"
+              ]:
+                  raise SystemExit(f"prior {name} summary hash mismatch")
+              encrypted_sha = hashlib.sha256(
+                  files[spec["encrypted_name"]].read_bytes()
+              ).hexdigest()
+              if (
+                  encrypted_sha != bound["encrypted_bundle_sha256"]
+                  or files[spec["declaration_name"]].read_text(encoding="utf-8").strip()
+                      != encrypted_sha
+              ):
+                  raise SystemExit(f"prior {name} encrypted bundle hash mismatch")
+
+              decrypted_tar = work / "source-bearing.tar.gz"
+              decrypt_file(files[spec["encrypted_name"]], decrypted_tar, passphrase)
+              decrypted = work / "source-bearing"
+              safe_untar(decrypted_tar, decrypted)
+              ledger_matches = list(decrypted.rglob(spec["ledger_name"]))
+              if len(ledger_matches) != 1:
+                  raise SystemExit(f"prior {name} ledger layout mismatch")
+              ledger = ledger_matches[0]
+              if hashlib.sha256(ledger.read_bytes()).hexdigest() != bound["ledger_sha256"]:
+                  raise SystemExit(f"prior {name} ledger hash mismatch")
+
+              case_ids = []
+              with ledger.open(encoding="utf-8") as fh:
+                  for raw in fh:
+                      if not raw.strip():
+                          continue
+                      row = json.loads(raw)
+                      if row.get("outcome") != "promoted":
+                          continue
+                      case_id = row.get("case_id")
+                      if not isinstance(case_id, str) or not case_id.strip():
+                          raise SystemExit(f"prior {name} promoted row lacks case_id")
+                      case_ids.append(case_id)
+              if (
+                  len(case_ids) != int(bound["promoted_count"])
+                  or len(case_ids) != len(set(case_ids))
+              ):
+                  raise SystemExit(f"prior {name} promoted case-ID accounting mismatch")
+              all_case_ids.extend(case_ids)
+              result_bindings[name] = {
+                  key: bound[key]
+                  for key in (
+                      "source_run_id",
+                      "source_run_attempt",
+                      "source_head_sha",
+                      "artifact_id",
+                      "artifact_digest",
+                      "summary_sha256",
+                      "encrypted_bundle_sha256",
+                      "ledger_sha256",
+                      "promoted_count",
+                  )
+              }
+
+          expected_count = int(surface["expected_promoted_case_id_count"])
+          if (
+              len(all_case_ids) != expected_count
+              or len(all_case_ids) != len(set(all_case_ids))
+          ):
+              raise SystemExit("combined prior promoted case-ID set is not exact/unique")
+
+          payload = {
+              "schema_version": 1,
+              "campaign_id": "H3.9.2",
+              "kind": "canonical_prior_promoted_case_id_set",
+              "primary": result_bindings["primary"],
+              "reserve": result_bindings["reserve"],
+              "promoted_case_id_count": expected_count,
+              "promoted_case_ids": sorted(all_case_ids),
+          }
+          output.write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          shutil.rmtree(scratch)
+          PY
+
       - name: Reconfirm main before reserve consolidation
         run: |
           set -eu
@@ -518,6 +789,7 @@ jobs:
             --out-dir "$CONSOLIDATED_DIR" \
             --source-cache-dir "$SOURCE_CACHE_DIR" \
             --capacity-extension "$extension_path" \
+            --prior-promoted-case-ids "$PRIOR_PROMOTED_CASE_IDS" \
             > "$REDACTED_DIR/RESERVE2_CONSOLIDATION_SUMMARY.json"
           {
             echo '### H3.9.2 reserve2 evidence consolidation'
