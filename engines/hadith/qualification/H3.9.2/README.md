@@ -1,4 +1,4 @@
-# Mubin H3.9.2 — Benchmark Expansion Campaign R9
+# Mubin H3.9.2 — Benchmark Expansion Campaign R10
 
 This package implements **only H3.9.2**, the qualification campaign between H3.9.1 and H4.0. It does not add H4 features or change the H3.5–H3.9 reasoning architecture.
 
@@ -14,9 +14,9 @@ This package implements **only H3.9.2**, the qualification campaign between H3.9
 
 Total reviewed qualification target: **1,280 cases**.
 
-## R9 benchmark factory and reserve2 evidence consolidation
+## R10 benchmark factory and human/authority adjudication packet
 
-R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 introduced the reserve-capacity plan. R6 preserved the exact **1,280 reviewed-record target** and preregistered one deterministic reserve candidate opportunity per primary. R7 froze a reviewed, append-only ten-slot `reserve:02` capacity overlay for the schema-26 exhausted primaries. R8 authorized execution of exactly that committed overlay while leaving the schema-26 base Factory plan unchanged. R9 closes reserve2 redispatch, consolidates the exact successful reserve2 execution evidence, and freezes the canonical result: 3 promoted reserve:02 replacements, 5 additional pending adjudications, and 2 remaining exhausted slots.
+R4 introduced the executable, provider-neutral Benchmark Factory for source-grounded AI curation. R5 introduced the reserve-capacity plan. R6 preserved the exact **1,280 reviewed-record target** and preregistered one deterministic reserve candidate opportunity per primary. R7 froze a reviewed, append-only ten-slot `reserve:02` capacity overlay for the schema-26 exhausted primaries. R8 authorized execution of exactly that committed overlay while leaving the schema-26 base Factory plan unchanged. R9 consolidated the exact reserve2 evidence and froze the canonical result at 50 validated promoted records, 158 pending adjudications, and 2 exhausted slots. R10 prepares the exact 158-case source-bearing packet for human/authority adjudication without allowing AI to decide cases or implicitly create `reserve:03`.
 
 The candidate plan therefore contains **1,280 primary + 1,280 reserve = 2,560 candidate slots**, while benchmark cardinalities remain exactly 1,280 records. Primary IDs, ordering, task fingerprints, source partitions, labels, and thresholds are preserved. Reserve slots were introduced in freeze schema 24. Freeze schema 25 adds the cumulative, provenance-bound replacement-eligibility protocol. Freeze schema 26 adds the post-consolidation activation protocol: reserve reconciliation can only be authorized by a reviewed manifest derived from the exact cumulative-ledger and replacement-eligibility hashes. Pending adjudication is never treated as replaceable.
 
@@ -98,4 +98,4 @@ python -m unittest discover -s tests -v
 
 ## Cumulative curation evidence
 
-See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate, `POST_CONSOLIDATION.md` for the reserve activation/execution/consolidation chain, and `CAPACITY_EXTENSION.md` for the reviewed reserve:02 overlay. Reserve2 consolidation run `37673850809` revalidated the exact five encrypted reserve2 shard artifacts, prior canonical promoted-case-ID surface, pinned sources, and reserve:02 reconciliation. Its canonical result is 3 promoted replacements, 5 pending reserve:02 adjudications, and 2 exhausted slots. Combined state is now **50 validated promoted records**, **158 pending adjudications**, and a canonical **2-slot minimum capacity shortfall**. The compact evidence is `artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json`. No `reserve:03` capacity is authorized.
+See `CONSOLIDATION.md` for the schema-25 cumulative primary-evidence gate, `POST_CONSOLIDATION.md` for the reserve activation/execution/consolidation chain, and `CAPACITY_EXTENSION.md` for the reviewed reserve:02 overlay. Reserve2 consolidation run `37673850809` revalidated the exact five encrypted reserve2 shard artifacts, prior canonical promoted-case-ID surface, pinned sources, and reserve:02 reconciliation. Its canonical result is 3 promoted replacements, 5 pending reserve:02 adjudications, and 2 exhausted slots. Combined state is now **50 validated promoted records**, **158 pending adjudications**, and a canonical **2-slot minimum capacity shortfall**. The compact evidence is `artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json`. No `reserve:03` capacity is authorized. Schema 30 is specified in [ADJUDICATION.md](ADJUDICATION.md): it reconstructs the exact 158 pending cases from the canonical encrypted evidence chain and emits an encrypted human/authority review packet. Decisions are not made by the packet workflow.
