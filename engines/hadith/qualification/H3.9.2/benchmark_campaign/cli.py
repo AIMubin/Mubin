@@ -11,6 +11,7 @@ from .post_consolidation import build_reserve_activation_manifest
 from .reserve_consolidation import consolidate_reserve_evidence
 from .reserve2_consolidation import consolidate_reserve2_evidence
 from .capacity_extension import build_capacity_extension_manifest
+from .adjudication import build_adjudication_packet, derive_adjudication_source_target
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -163,6 +164,18 @@ def main(argv: list[str] | None = None) -> int:
     r2c.add_argument("--source-cache-dir", type=Path, required=True)
     r2c.add_argument("--capacity-extension", type=Path, required=True)
     r2c.add_argument("--prior-promoted-case-ids", type=Path, required=True)
+
+    at = sub.add_parser("derive-adjudication-target")
+    at.add_argument("--canonical-root", type=Path, required=True)
+    at.add_argument("--out", type=Path, required=True)
+
+    ap = sub.add_parser("build-adjudication-packet")
+    ap.add_argument("--canonical-root", type=Path, required=True)
+    ap.add_argument("--evidence-root", type=Path, required=True)
+    ap.add_argument("--source-cache-dir", type=Path, required=True)
+    ap.add_argument("--out-dir", type=Path, required=True)
+    ap.add_argument("--activation", type=Path, required=True)
+    ap.add_argument("--capacity-extension", type=Path, required=True)
 
     ce = sub.add_parser("build-capacity-extension")
     ce.add_argument("--reserve-dir", type=Path, required=True)
@@ -485,6 +498,45 @@ def main(argv: list[str] | None = None) -> int:
             source_cache_dir=source_cache_dir,
             capacity_extension_path=capacity_extension,
             prior_promoted_case_ids_path=prior_promoted_case_ids,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "derive-adjudication-target":
+        canonical_root = _resolve(root, args.canonical_root)
+        out = _resolve(root, args.out)
+        assert canonical_root is not None and out is not None
+        report = derive_adjudication_source_target(root, canonical_root)
+        write_json(out, report)
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "build-adjudication-packet":
+        canonical_root = _resolve(root, args.canonical_root)
+        evidence_root = _resolve(root, args.evidence_root)
+        source_cache_dir = _resolve(root, args.source_cache_dir)
+        out_dir = _resolve(root, args.out_dir)
+        activation = _resolve(root, args.activation)
+        capacity_extension = _resolve(root, args.capacity_extension)
+        assert all(
+            path is not None
+            for path in (
+                canonical_root,
+                evidence_root,
+                source_cache_dir,
+                out_dir,
+                activation,
+                capacity_extension,
+            )
+        )
+        report = build_adjudication_packet(
+            root,
+            canonical_root,
+            evidence_root,
+            source_cache_dir,
+            out_dir,
+            activation_path=activation,
+            capacity_extension_path=capacity_extension,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
