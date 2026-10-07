@@ -9,6 +9,7 @@ from .core import load_json, write_json
 from .consolidation import consolidate_primary_evidence
 from .post_consolidation import build_reserve_activation_manifest
 from .reserve_consolidation import consolidate_reserve_evidence
+from .capacity_extension import build_capacity_extension_manifest
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -150,6 +151,13 @@ def main(argv: list[str] | None = None) -> int:
     rc.add_argument("--out-dir", type=Path, required=True)
     rc.add_argument("--source-cache-dir", type=Path, required=True)
     rc.add_argument("--activation", type=Path, required=True)
+
+    ce = sub.add_parser("build-capacity-extension")
+    ce.add_argument("--reserve-dir", type=Path, required=True)
+    ce.add_argument("--out", type=Path, required=True)
+    ce.add_argument("--expected-reserve-ledger-sha256", required=True)
+    ce.add_argument("--expected-exhausted-slots-sha256", required=True)
+    ce.add_argument("--expected-exhausted-slot-count", type=int, required=True)
 
     prep = sub.add_parser("prepare-manifests")
     prep.add_argument("--spec", type=Path)
@@ -407,6 +415,21 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             source_cache_dir=source_cache_dir,
             activation_path=activation,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "build-capacity-extension":
+        reserve_dir = _resolve(root, args.reserve_dir)
+        out = _resolve(root, args.out)
+        assert reserve_dir is not None and out is not None
+        report = build_capacity_extension_manifest(
+            root,
+            reserve_dir,
+            out,
+            expected_reserve_ledger_sha256=args.expected_reserve_ledger_sha256,
+            expected_exhausted_slots_sha256=args.expected_exhausted_slots_sha256,
+            expected_exhausted_slot_count=args.expected_exhausted_slot_count,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
