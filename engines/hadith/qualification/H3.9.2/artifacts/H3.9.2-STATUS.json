@@ -437,8 +437,8 @@
     "reserve_pending_case_count": 24,
     "human_or_authority_decision_required": true,
     "ai_may_prepare_evidence_packets": true,
-    "ai_may_not_self_authorize_acceptance": true,
     "source_evidence_boundary": "primary adjudications are bound to the canonical schema-25 cumulative encrypted evidence; reserve adjudications are bound to the canonical schema-26 reserve encrypted evidence; packet preparation must reacquire and verify pinned sources and preserve original task/response provenance",
-    "automatic_replacement_from_rejection": false
+    "automatic_replacement_from_rejection": false,
+    "ai_may_self_authorize_acceptance": false
   }
 }
