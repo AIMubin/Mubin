@@ -363,9 +363,13 @@ class RepositoryReserve2ConsolidationTargetTests(unittest.TestCase):
 
         execution = status["reserve2_execution_target"]
         self.assertFalse(execution["ready"])
-        self.assertFalse(execution["completed"])
+        self.assertTrue(execution["completed"])
         self.assertTrue(execution["execution_succeeded"])
-        self.assertTrue(execution["consolidation_pending"])
+        self.assertFalse(execution["consolidation_pending"])
+        self.assertEqual(
+            execution["canonical_evidence_path"],
+            "artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json",
+        )
         self.assertEqual(execution["successful_run_id"], 37613354755)
         self.assertEqual(execution["successful_run_attempt"], 1)
         self.assertEqual(
@@ -374,8 +378,8 @@ class RepositoryReserve2ConsolidationTargetTests(unittest.TestCase):
         )
 
         target = status["reserve2_consolidation_target"]
-        self.assertTrue(target["ready"])
-        self.assertFalse(target["completed"])
+        self.assertFalse(target["ready"])
+        self.assertTrue(target["completed"])
         self.assertEqual(target["expected_task_count"], 10)
         self.assertEqual(target["expected_shards"], 5)
         self.assertEqual(
@@ -402,6 +406,59 @@ class RepositoryReserve2ConsolidationTargetTests(unittest.TestCase):
             [11479539417, 11478512577, 11479629639, 11479158705, 11479910101],
         )
         self.assertEqual(len({row["source_job_id"] for row in artifacts}), 5)
+        self.assertEqual(target["successful_run_id"], 37673850809)
+        self.assertEqual(
+            target["runner_commit"],
+            "f01b6a15bf3a2f270bbb524a85519a2a3a4994f4",
+        )
+        self.assertEqual(target["artifact_id"], 11506885302)
+        self.assertEqual(
+            target["artifact_digest"],
+            "sha256:d671e473fd5011af7908d05c3aa26246477a7b6af6bde7363ad91f14aab13191",
+        )
+        self.assertEqual(
+            target["summary_sha256"],
+            "bc6549c0dff231a56c3c2a4cc51c66cf3547a2d65943628b01a43ba9f2954459",
+        )
+        self.assertEqual(
+            target["encrypted_bundle_sha256"],
+            "9290c795b632bb40bc529176998b8adfe5c15698fbc7438c28271279796a1326",
+        )
+
+    def test_repository_frozen_reserve2_evidence_matches_completed_status(self):
+        root = Path(__file__).resolve().parents[1]
+        status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
+        completed = status["last_completed_reserve2_consolidation"]
+        evidence = load_json(root / completed["evidence_path"])
+        self.assertTrue(evidence["canonical_main_evidence"])
+        self.assertEqual(evidence["protocol_freeze_schema"], 29)
+        self.assertEqual(evidence["workflow"]["run_id"], completed["successful_run_id"])
+        self.assertEqual(evidence["runner_commit"], completed["runner_commit"])
+        self.assertEqual(evidence["artifact"]["id"], completed["artifact_id"])
+        self.assertEqual(evidence["artifact"]["digest"], completed["artifact_digest"])
+        self.assertEqual(
+            evidence["artifact"]["redacted_summary_sha256"],
+            completed["summary_sha256"],
+        )
+        self.assertEqual(
+            evidence["artifact"]["encrypted_bundle_sha256"],
+            completed["encrypted_bundle_sha256"],
+        )
+        self.assertEqual(
+            evidence["bindings"]["reserve2_ledger_sha256"],
+            completed["reserve2_ledger_sha256"],
+        )
+        self.assertEqual(
+            evidence["bindings"]["reserve2_exhausted_slots_sha256"],
+            completed["exhausted_slots_sha256"],
+        )
+        self.assertEqual(evidence["result"]["promoted"], 3)
+        self.assertEqual(evidence["result"]["pending_reserve2_adjudication"], 5)
+        self.assertEqual(evidence["result"]["exhausted"], 2)
+        self.assertEqual(evidence["result"]["validated_promoted_record_count"], 50)
+        self.assertEqual(evidence["result"]["total_pending_adjudication_count"], 158)
+        self.assertEqual(evidence["result"]["minimum_capacity_shortfall"], 2)
+        self.assertFalse(evidence["next_action"]["automatic_reserve3_authorized"])
 
 
 if __name__ == "__main__":
