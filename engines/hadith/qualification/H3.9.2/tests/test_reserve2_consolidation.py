@@ -459,6 +459,14 @@ class RepositoryReserve2ConsolidationTargetTests(unittest.TestCase):
         self.assertEqual(evidence["result"]["total_pending_adjudication_count"], 158)
         self.assertEqual(evidence["result"]["minimum_capacity_shortfall"], 2)
         self.assertFalse(evidence["next_action"]["automatic_reserve3_authorized"])
+        self.assertEqual(
+            status["post_consolidation_protocol"]["adjudication_review_case_count"],
+            158,
+        )
+        self.assertEqual(
+            status["adjudication_review_surface"]["combined_pending_case_count"],
+            158,
+        )
 
 
 if __name__ == "__main__":
