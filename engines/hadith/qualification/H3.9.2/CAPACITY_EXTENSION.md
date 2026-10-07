@@ -183,19 +183,37 @@ The exact reviewed proposal is committed as:
 
 The committed file must remain byte-identical to the reviewed artifact payload.
 
-## Current schema-27 gate
+## Schema-28 execution enablement
 
-The proposal is now frozen, but it is still **not execution authority**:
+Schema 28 supplies the separate execution authority that schema 27 deliberately withheld. The authority is repository state, not a mutation of the schema-27 proposal artifact: `CAPACITY_EXTENSION.json` continues to record `execution_authorized=false`.
+
+The executable set is exactly the ten committed rows in:
+
+`artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json`
+
+The reusable pilot accepts the internal task scope `approved_capacity_extension` only through `workflow_call`; direct manual pilot dispatch remains primary-only. For this scope, Factory task construction appends the frozen `reserve:02` slots in memory after the complete schema-26 base plan. This preserves every historical primary and `reserve:01` slot, offset, task fingerprint, and Factory-plan hash. Because the overlay is appended after the base plan, the deterministic source-window allocator sees each primary and `reserve:01` predecessor first and requires a distinct segment for `reserve:02`.
+
+Curator execution, verifier-task preparation, and reconciliation all require the exact committed capacity-extension path. Reconciliation rejects mixed reserve attempts and stores a dedicated `factory_verification.capacity_extension` binding rather than pretending that `reserve:02` was part of the schema-26 activation.
+
+Execution uses:
+
+`.github/workflows/h392-reserve2-campaign.yml`
+
+The workflow has no task-count, task-ID, task-scope, offset, or reserve-attempt inputs. It validates schema 28, the exact manifest SHA-256, and the exact ten-slot execution target; performs one centralized readiness gate; and delegates five deterministic two-task shards to the reusable pilot. Source-bearing outputs remain AES-GCM encrypted. Only redacted shard summaries and a redacted aggregate are public artifacts.
+
+The current gate is:
 
 ```ini
+freeze_schema_version               = 28
 capacity_extension_proposal_frozen  = true
-capacity_extension_enabled          = false
-capacity_extension_target.ready     = false
-capacity_extension_target.completed = true
-reserve_attempt_2_execution         = unauthorized
+capacity_extension_enabled          = true
+reserve2_execution_target.ready     = true
+reserve2_execution_target.completed = false
+reserve2_expected_tasks             = 10
+reserve2_expected_shards            = 5
 benchmark_population_complete       = false
 benchmark_gate_passed               = false
 h4_qualification_allowed            = false
 ```
 
-The next change must introduce a separate execution-enablement protocol that consumes exactly the committed ten-slot manifest. It must not regenerate, broaden, or reinterpret the extension set. Only after that execution boundary is independently reviewed may `reserve:02` tasks be built or reconciled.
+The 153 pending adjudications are not eligible for this execution. A successful reserve2 campaign is still execution evidence, not an automatic benchmark-population mutation; it must be consolidated and frozen before canonical population state changes.
