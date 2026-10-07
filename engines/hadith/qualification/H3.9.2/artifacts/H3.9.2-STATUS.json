@@ -200,7 +200,7 @@
     "capacity_extension_enabled": true,
     "capacity_extension_expected_slot_count": 10,
     "capacity_extension_new_reserve_attempt": 2,
-    "adjudication_review_case_count": 153,
+    "adjudication_review_case_count": 158,
     "capacity_extension_proposal_frozen": true,
     "capacity_extension_proposal_run_id": 37588897387,
     "capacity_extension_proposal_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
