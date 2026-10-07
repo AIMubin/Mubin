@@ -48,7 +48,7 @@ class Reserve2ConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn('"successful_run_attempt", "source_run_attempt"', self.workflow)
         self.assertIn("validate_frozen_capacity_extension", self.workflow)
         self.assertIn("require_execution_enabled=False", self.workflow)
-        self.assertIn("reserve2 expected outcome accounting mismatch", self.workflow)
+        self.assertIn("reserve2 reviewed outcome accounting mismatch", self.workflow)
 
     def test_artifact_acquisition_is_id_hash_and_job_bound(self):
         self.assertIn('actions/artifacts/{aggregate_id}', self.workflow)
