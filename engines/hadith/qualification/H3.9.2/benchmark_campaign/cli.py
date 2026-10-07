@@ -162,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
     r2c.add_argument("--out-dir", type=Path, required=True)
     r2c.add_argument("--source-cache-dir", type=Path, required=True)
     r2c.add_argument("--capacity-extension", type=Path, required=True)
+    r2c.add_argument("--prior-promoted-case-ids", type=Path, required=True)
 
     ce = sub.add_parser("build-capacity-extension")
     ce.add_argument("--reserve-dir", type=Path, required=True)
@@ -466,9 +467,16 @@ def main(argv: list[str] | None = None) -> int:
         out_dir = _resolve(root, args.out_dir)
         source_cache_dir = _resolve(root, args.source_cache_dir)
         capacity_extension = _resolve(root, args.capacity_extension)
+        prior_promoted_case_ids = _resolve(root, args.prior_promoted_case_ids)
         assert all(
             path is not None
-            for path in (evidence_root, out_dir, source_cache_dir, capacity_extension)
+            for path in (
+                evidence_root,
+                out_dir,
+                source_cache_dir,
+                capacity_extension,
+                prior_promoted_case_ids,
+            )
         )
         report = consolidate_reserve2_evidence(
             root,
@@ -476,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             source_cache_dir=source_cache_dir,
             capacity_extension_path=capacity_extension,
+            prior_promoted_case_ids_path=prior_promoted_case_ids,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
