@@ -939,7 +939,7 @@ def reconcile_factory(
                 )
             if reserve_activation_path is None:
                 raise ValueError(
-                    "reserve:01 reconciliation requires a reviewed activation manifest"
+                    "reserve candidate reconciliation requires a reviewed activation manifest"
                 )
             from .post_consolidation import validate_reserve_activation
 
