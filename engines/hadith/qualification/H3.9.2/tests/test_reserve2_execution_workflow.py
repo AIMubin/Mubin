@@ -24,7 +24,7 @@ class Reserve2ExecutionWorkflowTests(unittest.TestCase):
         )
 
     def test_repository_target_is_exactly_ten_executed_reserve2_slots(self):
-        self.assertEqual(self.status["freeze_schema_version"], 29)
+        self.assertEqual(self.status["freeze_schema_version"], 30)
         self.assertTrue(self.status["capacity_extension_enabled"])
         target = self.status["reserve2_execution_target"]
         self.assertFalse(target["ready"])
