@@ -182,6 +182,12 @@ class ReserveConsolidationTests(unittest.TestCase):
                 "consolidation_pending": True,
                 "expected_task_count": 2,
                 "activation_manifest_sha256": self.activation_sha,
+                "successful_run_id": 99,
+                "successful_run_final_attempt": 2,
+                "runner_commit": "c" * 40,
+                "aggregate_artifact_id": 500,
+                "aggregate_artifact_digest": "sha256:" + "f" * 64,
+                "aggregate_summary_sha256": "9" * 64,
             },
             "reserve_consolidation_target": {
                 "ready": True,
