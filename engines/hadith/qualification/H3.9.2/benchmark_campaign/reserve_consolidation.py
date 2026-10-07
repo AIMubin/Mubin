@@ -397,7 +397,14 @@ def consolidate_reserve_evidence(
 
     reserve_promoted = outcome_counts.get("promoted", 0)
     reserve_pending = outcome_counts.get("adjudication", 0)
+    reserve_skipped = outcome_counts.get("skipped", 0)
     exhausted_count = len(exhausted_rows)
+    if reviewed_count != reserve_promoted:
+        raise ValueError("reserve reviewed-record count differs from promoted outcome count")
+    if len(adjudication_rows) != reserve_pending:
+        raise ValueError("reserve adjudication rows differ from adjudication outcome count")
+    if exhausted_count != reserve_skipped:
+        raise ValueError("reserve exhausted rows differ from skipped outcome count")
     if reserve_promoted + reserve_pending + exhausted_count != primary_skipped:
         raise ValueError("reserve outcomes do not close terminal-primary replacement surface")
 
