@@ -141,6 +141,80 @@ Every shard persists source-bearing tasks, model responses, reviewed records, ad
 
 A successful execution run is still evidence, not a mutation of the canonical benchmark population. Its run/artifact provenance and source-bearing outcomes must be consolidated and frozen before repository status marks the execution target complete or any later eligibility expansion is considered.
 
+### Completed reserve execution observation
+
+Reserve execution run `37532437191` was dispatched from main commit `5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7`.
+
+Attempt 1 failed only in shard `0..7` when Verifier AI-B hit an executor timeout. The workflow correctly failed closed. GitHub's failed-job rerun was then used rather than replaying all 41 stochastic tasks. Final run attempt 2 completed successfully, preserving the five successful attempt-1 shard artifacts and generating a new `0..7` artifact.
+
+The successful redacted aggregate artifact is:
+
+- artifact ID: `11460611920`;
+- artifact ZIP digest: `sha256:f00b363321838289034388af9953cb11fde6709acf4780c210acd931bb3003a9`;
+- `RESERVE_CAMPAIGN_SUMMARY.json` SHA-256: `8638a50d177ea716fa429fe0f5cc356203a2ff081072212c3edaf47e05b394d0`;
+- exact activated coverage: **41/41**, ranges `0..7`, `8..15`, `16..23`, `24..31`, `32..39`, `40`;
+- redacted outcome accounting: **7 promoted, 24 adjudication, 10 skipped**.
+
+Those counts are an execution observation only. They become canonical evidence only if reserve consolidation decrypts and independently revalidates every source-bearing shard.
+
+The source artifact lineage is intentionally mixed-attempt and must be preserved exactly:
+
+- `0..7`: run attempt 2, job `112616768431`, artifact `11459534901`;
+- `8..15`: run attempt 1, job `112505599674`, artifact `11447747202`;
+- `16..23`: run attempt 1, job `112505599470`, artifact `11447791580`;
+- `24..31`: run attempt 1, job `112505599580`, artifact `11447431400`;
+- `32..39`: run attempt 1, job `112521204424`, artifact `11449199919`;
+- `40`: run attempt 1, job `112525032628`, artifact `11447543077`.
+
+Treating every artifact as "attempt 2" would erase the provenance of the five preserved successful shards and is prohibited by the repository-reviewed consolidation target.
+
+## Reserve execution consolidation
+
+Use:
+
+`.github/workflows/h392-reserve-consolidation.yml`
+
+The workflow has no editable run-ID, artifact-ID, count, or outcome inputs. The complete acquisition target is frozen in `artifacts/H3.9.2-STATUS.json`.
+
+It must:
+
+1. verify the final reserve run is successful on the exact reviewed main commit and final attempt;
+2. verify the successful redacted aggregate artifact by exact artifact ID, GitHub digest, summary hash, activation hash, coverage, and outcome accounting;
+3. fetch only the six repository-reviewed shard artifact IDs;
+4. bind every shard artifact to its exact source job ID and actual run attempt, including the mixed attempt-1/attempt-2 history;
+5. verify artifact ZIP, redacted-summary, and encrypted-bundle SHA-256 values before decryption;
+6. reacquire and verify the current pinned non-holdout source bytes;
+7. decrypt source-bearing evidence only in the ephemeral runner;
+8. revalidate every reserve task against the frozen Factory plan and the exact repository-approved activation manifest;
+9. reconstruct Curator/Verifier response bindings, deterministic reconciliation, promoted records, adjudication rows, and exact source grounding;
+10. emit one 41-row reserve ledger in activation order;
+11. mark a skipped reserve as **exhausted** only when the frozen plan proves that linked primary has no unconsumed preregistered reserve capacity;
+12. re-encrypt all source-bearing consolidated material and delete plaintext before publication;
+13. upload only a redacted consolidation summary and the authenticated encrypted consolidated bundle.
+
+The source-bearing consolidated bundle contains:
+
+- `RESERVE_LEDGER.jsonl`;
+- `RESERVE_ADJUDICATION.jsonl`;
+- promoted reviewed records grouped by benchmark;
+- `EXHAUSTED_SLOTS.json`;
+- `RESERVE_MANIFEST.json`.
+
+The redacted summary may expose counts, identifiers, hashes, and bounded reason classes, but never source text, gold payloads, model identity, or hidden reasoning.
+
+If decrypted validation reproduces the observed **7 promoted / 24 adjudication / 10 skipped** result, the 210-slot primary surface will have:
+
+```text
+40 promoted primaries
+129 pending primary adjudications
+7 promoted reserve replacements
+24 pending reserve adjudications
+10 exhausted slots
+= 210 original required slots
+```
+
+Under the current one-reserve-per-primary freeze, the maximum fillable population before any new capacity is therefore `47 + 153 = 200`. The **minimum capacity shortfall is 10** even if every pending adjudication is eventually accepted. That shortfall must be reported; a second reserve attempt requires a later reviewed protocol/capacity extension and cannot be created implicitly by consolidation.
+
 ## Adjudication sequencing
 
 Reserve activation for the current 41 terminal failures may proceed independently of adjudication because those 41 primaries are already final.
@@ -170,16 +244,21 @@ It must not contain source excerpts, gold payloads, credentials, model identity,
 
 ## Current state
 
-After repository approval of activation run `37524604933`:
+After successful reserve execution run `37532437191` final attempt 2:
 
 ```ini
-cumulative_primary_evidence_complete = true
-pending_adjudication_count           = 129
-replacement_eligible_primary_count   = 41
-reserve_activation_evidence_frozen   = true
-reserve_reconciliation_enabled       = true
-benchmark_population_complete        = false
-benchmark_gate_passed                = false
+cumulative_primary_evidence_complete     = true
+primary_pending_adjudication_count       = 129
+replacement_eligible_primary_count       = 41
+reserve_activation_evidence_frozen       = true
+reserve_reconciliation_enabled           = true
+reserve_execution_succeeded              = true
+reserve_execution_consolidation_pending  = true
+observed_reserve_promoted                = 7
+observed_reserve_adjudication             = 24
+observed_reserve_skipped                  = 10
+benchmark_population_complete            = false
+benchmark_gate_passed                    = false
 ```
 
-The immediate next operation is to execute only the 41 repository-approved non-holdout reserve slots bound by the frozen activation manifest. The 129 pending adjudications remain a separate human/authority review surface and cannot authorize reserves.
+The execution target is closed against redispatch but remains `completed=false` until its six encrypted shard artifacts pass reserve consolidation. The immediate next operation is to dispatch `.github/workflows/h392-reserve-consolidation.yml` from current main. The original 129 pending adjudications remain non-replaceable; the 24 reserve adjudications become part of the canonical adjudication surface only after successful consolidation.
