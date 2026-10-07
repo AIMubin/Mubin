@@ -210,10 +210,21 @@ def _verifier_task_fingerprint(row: dict[str, Any]) -> str:
     return sha256_bytes(canonical_json_bytes(unsigned))
 
 
-def _load_execution_tasks(root: Path, path: Path, role: str) -> list[dict[str, Any]]:
+def _load_execution_tasks(
+    root: Path,
+    path: Path,
+    role: str,
+    *,
+    capacity_extension_path: Path | None = None,
+) -> list[dict[str, Any]]:
     if role == "curator":
         rows = _task_rows(path)
-        _validate_tasks_against_frozen_plan(root, rows)
+        _validate_tasks_against_frozen_plan(
+            root,
+            rows,
+            capacity_extension_path=capacity_extension_path,
+            require_capacity_execution=capacity_extension_path is not None,
+        )
         return rows
 
     rows = load_jsonl(path)
@@ -440,15 +451,29 @@ def _manifest_identity(root: Path, role: str, partition: str, cfg: dict[str, Any
     }
 
 
-def run_agent_execution(root: Path, role: str, tasks_path: Path, index_dir: Path,
-                        config_path: Path, output_path: Path, manifest_path: Path,
-                        partition: str = "non_holdout", custodian_mode: bool = False,
-                        resume: bool = False,
-                        independent_from_manifest: Path | None = None) -> dict[str, Any]:
+def run_agent_execution(
+    root: Path,
+    role: str,
+    tasks_path: Path,
+    index_dir: Path,
+    config_path: Path,
+    output_path: Path,
+    manifest_path: Path,
+    partition: str = "non_holdout",
+    custodian_mode: bool = False,
+    resume: bool = False,
+    independent_from_manifest: Path | None = None,
+    capacity_extension_path: Path | None = None,
+) -> dict[str, Any]:
     if role not in {"curator", "verifier"}:
         raise ValueError("role must be curator or verifier")
     cfg = load_agent_execution_config(config_path, role)
-    tasks = _load_execution_tasks(root, tasks_path, role)
+    tasks = _load_execution_tasks(
+        root,
+        tasks_path,
+        role,
+        capacity_extension_path=capacity_extension_path,
+    )
     actual_partition = _task_partition(tasks)
     if actual_partition != partition:
         raise ValueError(f"task partition {actual_partition} does not match requested {partition}")
