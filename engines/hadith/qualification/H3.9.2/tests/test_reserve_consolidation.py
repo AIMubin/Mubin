@@ -218,12 +218,14 @@ class ReserveConsolidationTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def _run(self, plan=None):
+    def _run(self, plan=None, activation=None):
         def fake_validate(_root, evidence, _activation, source_cache_dir=None):
             return self.validated[str(evidence)]
 
         with patch.object(
-            reserve_consolidation, "validate_reserve_activation", return_value=self.activation
+            reserve_consolidation,
+            "validate_reserve_activation",
+            return_value=activation or self.activation,
         ), patch.object(
             reserve_consolidation, "build_factory_plan", return_value=plan or self.plan
         ), patch.object(
@@ -270,8 +272,10 @@ class ReserveConsolidationTests(unittest.TestCase):
             **self.plan,
             "slots": [*self.plan["slots"], extra],
         }
+        activation = dict(self.activation)
+        activation["factory_plan_sha256"] = sha256_bytes(canonical_json_bytes(plan))
         with self.assertRaisesRegex(ValueError, "unconsumed preregistered reserve capacity"):
-            self._run(plan=plan)
+            self._run(plan=plan, activation=activation)
 
 
 class RepositoryReserveConsolidationTargetTests(unittest.TestCase):
