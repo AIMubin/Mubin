@@ -304,7 +304,7 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
         self.assertFalse(target["execution_authorized"])
         self.assertFalse(target["base_factory_plan_mutated"])
         adjudication = status["adjudication_review_surface"]
-        self.assertEqual(adjudication["combined_pending_case_count"], 153)
+        self.assertEqual(adjudication["combined_pending_case_count"], 158)
         self.assertTrue(adjudication["human_or_authority_decision_required"])
         self.assertFalse(adjudication["ai_may_self_authorize_acceptance"])
         self.assertTrue(status["capacity_extension_proposal_frozen"])
@@ -338,9 +338,9 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
         self.assertTrue(status["capacity_extension_enabled"])
         execution = status["reserve2_execution_target"]
         self.assertFalse(execution["ready"])
-        self.assertFalse(execution["completed"])
+        self.assertTrue(execution["completed"])
         self.assertTrue(execution["execution_succeeded"])
-        self.assertTrue(execution["consolidation_pending"])
+        self.assertFalse(execution["consolidation_pending"])
         self.assertEqual(execution["task_scope"], "approved_capacity_extension")
         with self.assertRaisesRegex(ValueError, "execution target is not open"):
             capacity_extension.validate_frozen_capacity_extension(

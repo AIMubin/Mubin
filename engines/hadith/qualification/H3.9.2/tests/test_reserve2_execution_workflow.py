@@ -28,14 +28,18 @@ class Reserve2ExecutionWorkflowTests(unittest.TestCase):
         self.assertTrue(self.status["capacity_extension_enabled"])
         target = self.status["reserve2_execution_target"]
         self.assertFalse(target["ready"])
-        self.assertFalse(target["completed"])
+        self.assertTrue(target["completed"])
         self.assertTrue(target["execution_succeeded"])
-        self.assertTrue(target["consolidation_pending"])
+        self.assertFalse(target["consolidation_pending"])
         self.assertEqual(target["successful_run_id"], 37613354755)
         self.assertEqual(target["successful_run_attempt"], 1)
         self.assertEqual(
             target["runner_commit"],
             "d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b",
+        )
+        self.assertEqual(
+            target["canonical_evidence_path"],
+            "artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json",
         )
         self.assertEqual(target["workflow"], ".github/workflows/h392-reserve2-campaign.yml")
         self.assertEqual(target["task_scope"], "approved_capacity_extension")

@@ -42,8 +42,8 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Schema-28 reserve:02 execution run 37613354755 completed successfully on main commit d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b with exact 10/10 coverage in five two-task shards. Redacted accounting is 3 promoted, 5 adjudication, and 2 skipped. Schema 29 closes reserve:02 redispatch and opens source-bearing reserve:02 consolidation against the exact reviewed run/artifact set. Canonical population counts remain unchanged until consolidation succeeds and is frozen.",
-  "next_action": "Dispatch .github/workflows/h392-reserve2-consolidation.yml from current main. It must fetch only the five reviewed shard artifacts from run 37613354755 plus the exact aggregate artifact, verify every GitHub/job/hash binding, decrypt source-bearing evidence only ephemerally, reacquire pinned sources, reconstruct the exact ten reserve:02 outcomes against the frozen schema-27 capacity manifest, and publish only a redacted summary plus encrypted consolidated bundle. Do not rerun reserve:02 execution and do not update canonical population counts before consolidation/freeze.",
+  "reason": "Schema-29 reserve:02 consolidation run 37673850809 completed successfully on main commit f01b6a15bf3a2f270bbb524a85519a2a3a4994f4. The exact five encrypted reserve:02 shard artifacts, prior 47 canonical promoted case IDs, pinned source bytes, reserve:02 reconciliation, and promoted-record provenance were revalidated. The canonical ten-slot reserve:02 result is now 3 promoted, 5 pending adjudication, and 2 exhausted. Combined canonical non-holdout state is 50 validated promoted records, 158 pending adjudications, and a minimum two-slot capacity shortfall.",
+  "next_action": "Do not rerun reserve:02 and do not create reserve:03 implicitly. Freeze and execute a reviewed human/authority adjudication protocol for the 158 pending cases, and separately design any additional capacity-extension protocol required for the 2 canonically exhausted slots. Benchmark population and H4 qualification gates remain closed.",
   "freeze_schema_version": 29,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -192,15 +192,15 @@
     "canonical_reserve_promoted_count": 7,
     "canonical_reserve_pending_adjudication_count": 24,
     "exhausted_slot_count": 10,
-    "combined_pending_adjudication_count": 153,
-    "minimum_capacity_shortfall": 10,
+    "combined_pending_adjudication_count": 158,
+    "minimum_capacity_shortfall": 2,
     "automatic_second_reserve_authorized": false,
     "current_protocol_freeze_schema": 29,
     "capacity_extension_workflow": ".github/workflows/h392-capacity-extension.yml",
     "capacity_extension_enabled": true,
     "capacity_extension_expected_slot_count": 10,
     "capacity_extension_new_reserve_attempt": 2,
-    "adjudication_review_case_count": 153,
+    "adjudication_review_case_count": 158,
     "capacity_extension_proposal_frozen": true,
     "capacity_extension_proposal_run_id": 37588897387,
     "capacity_extension_proposal_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
@@ -216,7 +216,15 @@
     "reserve2_consolidation_expected_task_count": 10,
     "reserve2_observed_promoted": 3,
     "reserve2_observed_adjudication": 5,
-    "reserve2_observed_skipped": 2
+    "reserve2_observed_skipped": 2,
+    "reserve2_consolidation_successful_run_id": 37673850809,
+    "reserve2_consolidation_evidence_path": "artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json",
+    "canonical_reserve2_promoted_count": 3,
+    "canonical_reserve2_pending_adjudication_count": 5,
+    "canonical_reserve2_exhausted_slot_count": 2,
+    "combined_validated_promoted_record_count": 50,
+    "maximum_fillable_slots_under_current_capacity": 208,
+    "automatic_reserve3_authorized": false
   },
   "reserve_activation_target": {
     "ready": false,
@@ -456,14 +464,15 @@
   },
   "adjudication_review_surface": {
     "protocol_state": "design_required",
-    "combined_pending_case_count": 153,
+    "combined_pending_case_count": 158,
     "primary_pending_case_count": 129,
     "reserve_pending_case_count": 24,
     "human_or_authority_decision_required": true,
     "ai_may_prepare_evidence_packets": true,
-    "source_evidence_boundary": "primary adjudications are bound to the canonical schema-25 cumulative encrypted evidence; reserve adjudications are bound to the canonical schema-26 reserve encrypted evidence; packet preparation must reacquire and verify pinned sources and preserve original task/response provenance",
+    "source_evidence_boundary": "primary adjudications are bound to canonical schema-25 cumulative encrypted evidence; reserve:01 adjudications are bound to canonical schema-26 reserve encrypted evidence; reserve:02 adjudications are bound to canonical schema-29 reserve2 encrypted evidence. Packet preparation must reacquire and verify pinned sources and preserve original task/response provenance.",
     "automatic_replacement_from_rejection": false,
-    "ai_may_self_authorize_acceptance": false
+    "ai_may_self_authorize_acceptance": false,
+    "reserve2_pending_case_count": 5
   },
   "capacity_extension_proposal_frozen": true,
   "capacity_extension_proposal": {
@@ -494,7 +503,7 @@
   "reserve2_execution_workflow": ".github/workflows/h392-reserve2-campaign.yml",
   "reserve2_execution_target": {
     "ready": false,
-    "completed": false,
+    "completed": true,
     "workflow": ".github/workflows/h392-reserve2-campaign.yml",
     "task_scope": "approved_capacity_extension",
     "protocol_freeze_schema": 28,
@@ -514,7 +523,7 @@
     "execution_policy": "exact committed reserve:02 overlay only; no regenerated or additional slots; non-holdout only; existing bounded transport-retry semantics unchanged; source-bearing outputs encrypted; redacted aggregate only",
     "adjudication_cases_eligible": false,
     "execution_succeeded": true,
-    "consolidation_pending": true,
+    "consolidation_pending": false,
     "successful_run_id": 37613354755,
     "successful_run_attempt": 1,
     "runner_commit": "d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b",
@@ -526,10 +535,11 @@
       "promoted": 3,
       "adjudication": 5,
       "skipped": 2
-    }
+    },
+    "canonical_evidence_path": "artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json"
   },
   "reserve2_execution_observation": {
-    "authoritative_after_consolidation": false,
+    "authoritative_after_consolidation": true,
     "workflow_run_id": 37613354755,
     "run_attempt": 1,
     "head_sha": "d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b",
@@ -540,12 +550,12 @@
     "promoted": 3,
     "adjudication": 5,
     "skipped": 2,
-    "note": "Execution observation only until schema-29 source-bearing consolidation succeeds and is frozen."
+    "note": "Canonical after successful reserve2 consolidation run 37673850809; exact source-bearing evidence remains encrypted and hash-bound."
   },
   "reserve2_consolidation_workflow": ".github/workflows/h392-reserve2-consolidation.yml",
   "reserve2_consolidation_target": {
-    "ready": true,
-    "completed": false,
+    "ready": false,
+    "completed": true,
     "workflow": ".github/workflows/h392-reserve2-consolidation.yml",
     "protocol_freeze_schema": 29,
     "source_execution_freeze_schema": 28,
@@ -658,6 +668,45 @@
         "promoted_count": 7
       },
       "policy": "derive the exact prior 47 promoted case IDs only from the two canonical encrypted consolidated ledgers; reject any reserve:02 promotion whose case_id collides with that set"
-    }
+    },
+    "successful_run_id": 37673850809,
+    "runner_commit": "f01b6a15bf3a2f270bbb524a85519a2a3a4994f4",
+    "artifact_id": 11506885302,
+    "artifact_name": "h392-reserve2-consolidated-evidence",
+    "artifact_digest": "sha256:d671e473fd5011af7908d05c3aa26246477a7b6af6bde7363ad91f14aab13191",
+    "summary_sha256": "bc6549c0dff231a56c3c2a4cc51c66cf3547a2d65943628b01a43ba9f2954459",
+    "encrypted_bundle_sha256": "9290c795b632bb40bc529176998b8adfe5c15698fbc7438c28271279796a1326",
+    "prior_promoted_case_ids_sha256": "d5779bb65909e9a6ce7662fcaf3e35dd8dd18f5d4286154d8cf021e3bff0174b",
+    "reserve2_ledger_sha256": "3ee73bec54dd6dd76542f52510d189e612c3fb2020c8d79ceea0ea2b488953b3",
+    "exhausted_slots_sha256": "d43b90aaa55bf43d5e6e7d02d1657fac6d3b597caa1a53cde94311ae8f6ea58d",
+    "evidence_path": "artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json"
+  },
+  "last_completed_reserve2_consolidation": {
+    "successful_run_id": 37673850809,
+    "runner_commit": "f01b6a15bf3a2f270bbb524a85519a2a3a4994f4",
+    "source_execution_run_id": 37613354755,
+    "source_execution_attempt": 1,
+    "source_execution_head_sha": "d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b",
+    "artifact_id": 11506885302,
+    "artifact_digest": "sha256:d671e473fd5011af7908d05c3aa26246477a7b6af6bde7363ad91f14aab13191",
+    "summary_sha256": "bc6549c0dff231a56c3c2a4cc51c66cf3547a2d65943628b01a43ba9f2954459",
+    "encrypted_bundle_sha256": "9290c795b632bb40bc529176998b8adfe5c15698fbc7438c28271279796a1326",
+    "capacity_extension_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+    "prior_promoted_case_id_count": 47,
+    "prior_promoted_case_ids_sha256": "d5779bb65909e9a6ce7662fcaf3e35dd8dd18f5d4286154d8cf021e3bff0174b",
+    "reserve2_ledger_sha256": "3ee73bec54dd6dd76542f52510d189e612c3fb2020c8d79ceea0ea2b488953b3",
+    "exhausted_slots_sha256": "d43b90aaa55bf43d5e6e7d02d1657fac6d3b597caa1a53cde94311ae8f6ea58d",
+    "reserve2_task_count": 10,
+    "promoted_reserve2_count": 3,
+    "pending_reserve2_adjudication_count": 5,
+    "exhausted_slot_count": 2,
+    "prior_validated_promoted_record_count": 47,
+    "prior_pending_adjudication_count": 153,
+    "validated_promoted_record_count": 50,
+    "total_pending_adjudication_count": 158,
+    "record_quota": 210,
+    "maximum_fillable_slots_under_current_capacity": 208,
+    "minimum_capacity_shortfall": 2,
+    "evidence_path": "artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json"
   }
 }

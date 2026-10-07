@@ -342,3 +342,59 @@ The consolidator re-runs the same Curator/Verifier identity, blindness, source-g
 
 If source-bearing validation reproduces the observed 3/5/2 outcome, the resulting evidence-level state will be 50 validated promoted records, 158 pending adjudications, and 2 remaining exhausted slots, with a maximum fillable population of 208/210 and a minimum capacity shortfall of 2. Those figures remain non-canonical until the consolidation artifact itself is independently reviewed and frozen. No `reserve:03` capacity is authorized by schema 29.
 
+## Canonical reserve2 consolidation result
+
+Reserve2 consolidation workflow run `37673850809` completed successfully on main commit `f01b6a15bf3a2f270bbb524a85519a2a3a4994f4`.
+
+The published artifact is:
+
+- artifact ID: `11506885302`;
+- artifact ZIP digest: `sha256:d671e473fd5011af7908d05c3aa26246477a7b6af6bde7363ad91f14aab13191`;
+- redacted summary SHA-256: `bc6549c0dff231a56c3c2a4cc51c66cf3547a2d65943628b01a43ba9f2954459`;
+- encrypted consolidated bundle SHA-256: `9290c795b632bb40bc529176998b8adfe5c15698fbc7438c28271279796a1326`;
+- reserve2-ledger SHA-256: `3ee73bec54dd6dd76542f52510d189e612c3fb2020c8d79ceea0ea2b488953b3`;
+- reserve2 exhausted-slots SHA-256: `d43b90aaa55bf43d5e6e7d02d1657fac6d3b597caa1a53cde94311ae8f6ea58d`;
+- prior 47 promoted-case-ID set SHA-256: `d5779bb65909e9a6ce7662fcaf3e35dd8dd18f5d4286154d8cf021e3bff0174b`.
+
+The artifact ZIP contains exactly the redacted summary, the encrypted source-bearing bundle, and its SHA-256 declaration. Source-bearing material was decrypted only in the ephemeral runner. The workflow reacquired and verified pinned sources, revalidated the exact five reserve2 execution shards and their GitHub job/artifact provenance, reconstructed the prior canonical 47 promoted case IDs from the schema-25/schema-26 encrypted consolidation artifacts, rejected duplicate-case risk, and reproduced the reserve2 execution aggregate exactly:
+
+```text
+3 promoted reserve:02 replacements
+5 pending reserve:02 adjudications
+2 exhausted slots
+= 10 reserve:02 tasks
+```
+
+The canonical non-holdout 210-slot surface is therefore:
+
+```text
+47 previously validated promoted records
+153 previously pending adjudications
+3 promoted reserve:02 replacements
+5 pending reserve:02 adjudications
+2 exhausted slots
+= 210 required slots
+```
+
+This yields **50 validated promoted records**, **158 pending adjudications**, and **2 exhausted slots**. Even if every pending adjudication is eventually accepted, current reviewed capacity can fill at most **208/210** slots, so the canonical minimum capacity shortfall is **2**.
+
+The compact repository evidence is `artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json`. Schema 29 does not authorize `reserve:03`.
+
+## Current canonical state after reserve2 consolidation
+
+```ini
+validated_promoted_record_count              = 50
+combined_pending_adjudication_count          = 158
+canonical_reserve2_promoted                  = 3
+canonical_reserve2_pending_adjudication       = 5
+canonical_exhausted_slots_after_reserve2      = 2
+maximum_fillable_under_current_capacity      = 208
+minimum_capacity_shortfall                   = 2
+automatic_reserve3_authorized                = false
+benchmark_population_complete                = false
+benchmark_gate_passed                        = false
+h4_qualification_allowed                     = false
+```
+
+The next work remains split into two reviewed surfaces: the 158-case human/authority adjudication campaign, and any separately reviewed capacity extension for the two exhausted slots. Consolidation itself does not create `reserve:03`.
+
