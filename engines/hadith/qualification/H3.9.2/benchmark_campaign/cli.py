@@ -8,6 +8,7 @@ from .audit import emit_pre_m4_audit
 from .core import load_json, write_json
 from .consolidation import consolidate_primary_evidence
 from .post_consolidation import build_reserve_activation_manifest
+from .reserve_consolidation import consolidate_reserve_evidence
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -143,6 +144,12 @@ def main(argv: list[str] | None = None) -> int:
     ra.add_argument("--out", type=Path, required=True)
     ra.add_argument("--expected-cumulative-ledger-sha256", required=True)
     ra.add_argument("--expected-replacement-eligibility-sha256", required=True)
+
+    rc = sub.add_parser("consolidate-reserve")
+    rc.add_argument("--evidence-root", type=Path, required=True)
+    rc.add_argument("--out-dir", type=Path, required=True)
+    rc.add_argument("--source-cache-dir", type=Path, required=True)
+    rc.add_argument("--activation", type=Path, required=True)
 
     prep = sub.add_parser("prepare-manifests")
     prep.add_argument("--spec", type=Path)
@@ -381,6 +388,25 @@ def main(argv: list[str] | None = None) -> int:
             out,
             expected_cumulative_ledger_sha256=args.expected_cumulative_ledger_sha256,
             expected_replacement_eligibility_sha256=args.expected_replacement_eligibility_sha256,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "consolidate-reserve":
+        evidence_root = _resolve(root, args.evidence_root)
+        out_dir = _resolve(root, args.out_dir)
+        source_cache_dir = _resolve(root, args.source_cache_dir)
+        activation = _resolve(root, args.activation)
+        assert all(
+            path is not None
+            for path in (evidence_root, out_dir, source_cache_dir, activation)
+        )
+        report = consolidate_reserve_evidence(
+            root,
+            evidence_root,
+            out_dir,
+            source_cache_dir=source_cache_dir,
+            activation_path=activation,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
