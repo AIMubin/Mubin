@@ -54,6 +54,7 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "benchmark_campaign" / "readiness.py",
         root / "benchmark_campaign" / "consolidation.py",
         root / "benchmark_campaign" / "post_consolidation.py",
+        root / "benchmark_campaign" / "reserve_consolidation.py",
         root / "AGENT_EXECUTION.md",
         root / "adapters" / "chat_completions.py",
     ]
