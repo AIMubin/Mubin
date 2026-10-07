@@ -14,11 +14,11 @@ from .core import (
     write_json,
 )
 from .factory import build_factory_plan
-from .freeze import FREEZE_SCHEMA_VERSION
 from .post_consolidation import validate_reserve_activation
 
 
 RESERVE_CONSOLIDATION_SCHEMA_VERSION = 1
+RESERVE_CONSOLIDATION_PROTOCOL_FREEZE_SCHEMA = 26
 
 
 def _compress_offsets(offsets: list[int]) -> list[dict[str, int]]:
@@ -45,9 +45,9 @@ def _load_repository_target(root: Path) -> tuple[dict[str, Any], dict[str, Any]]
         raise ValueError("reserve consolidation target is not open")
     if target.get("workflow") != ".github/workflows/h392-reserve-consolidation.yml":
         raise ValueError("reserve consolidation target workflow mismatch")
-    if int(status.get("freeze_schema_version", 0)) != FREEZE_SCHEMA_VERSION:
-        raise ValueError("reserve consolidation freeze schema mismatch")
-    if int(target.get("protocol_freeze_schema", 0)) != FREEZE_SCHEMA_VERSION:
+    if int(status.get("freeze_schema_version", 0)) < RESERVE_CONSOLIDATION_PROTOCOL_FREEZE_SCHEMA:
+        raise ValueError("repository schema is older than the reserve consolidation protocol")
+    if int(target.get("protocol_freeze_schema", 0)) != RESERVE_CONSOLIDATION_PROTOCOL_FREEZE_SCHEMA:
         raise ValueError("reserve consolidation target protocol schema mismatch")
 
     execution = status.get("reserve_execution_target")
@@ -390,7 +390,7 @@ def consolidate_reserve_evidence(
         "schema_version": RESERVE_CONSOLIDATION_SCHEMA_VERSION,
         "campaign_id": "H3.9.2",
         "kind": "exhausted_non_holdout_slots",
-        "protocol_freeze_schema": FREEZE_SCHEMA_VERSION,
+        "protocol_freeze_schema": RESERVE_CONSOLIDATION_PROTOCOL_FREEZE_SCHEMA,
         "activation_manifest_sha256": activation_sha,
         "reserve_ledger_sha256": ledger_sha,
         "exhausted_slot_count": len(exhausted_rows),
@@ -443,7 +443,7 @@ def consolidate_reserve_evidence(
         "schema_version": RESERVE_CONSOLIDATION_SCHEMA_VERSION,
         "campaign_id": "H3.9.2",
         "kind": "consolidated_approved_non_holdout_reserve_evidence",
-        "protocol_freeze_schema": FREEZE_SCHEMA_VERSION,
+        "protocol_freeze_schema": RESERVE_CONSOLIDATION_PROTOCOL_FREEZE_SCHEMA,
         "factory_plan_sha256": plan_sha,
         "activation_manifest_sha256": activation_sha,
         "cumulative_ledger_sha256": activation["cumulative_ledger_sha256"],
@@ -480,7 +480,7 @@ def consolidate_reserve_evidence(
         "schema_version": RESERVE_CONSOLIDATION_SCHEMA_VERSION,
         "campaign_id": "H3.9.2",
         "kind": "redacted_consolidated_approved_non_holdout_reserve_summary",
-        "protocol_freeze_schema": FREEZE_SCHEMA_VERSION,
+        "protocol_freeze_schema": RESERVE_CONSOLIDATION_PROTOCOL_FREEZE_SCHEMA,
         "source_run_id": target["source_run_id"],
         "source_run_final_attempt": target["source_run_final_attempt"],
         "source_head_sha": target["source_head_sha"],
