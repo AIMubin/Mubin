@@ -95,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
     ft.add_argument("--out", type=Path, default=Path("factory-work/curator-tasks.jsonl"))
     ft.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
     ft.add_argument("--custodian-holdout", action="store_true")
+    ft.add_argument("--capacity-extension", type=Path)
 
     fv = sub.add_parser("factory-prepare-verifier")
     fv.add_argument("--tasks", type=Path, required=True)
@@ -102,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     fv.add_argument("--out", type=Path, required=True)
     fv.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
     fv.add_argument("--custodian-holdout", action="store_true")
+    fv.add_argument("--capacity-extension", type=Path)
 
     fa = sub.add_parser("factory-run-agent")
     fa.add_argument("--role", choices=["curator", "verifier"], required=True)
@@ -114,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
     fa.add_argument("--custodian-holdout", action="store_true")
     fa.add_argument("--resume", action="store_true")
     fa.add_argument("--independent-from-manifest", type=Path)
+    fa.add_argument("--capacity-extension", type=Path)
 
     fr = sub.add_parser("factory-reconcile")
     fr.add_argument("--tasks", type=Path, required=True)
@@ -126,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     fr.add_argument("--partition", choices=["non_holdout", "holdout"], default="non_holdout")
     fr.add_argument("--custodian-holdout", action="store_true")
     fr.add_argument("--reserve-activation", type=Path)
+    fr.add_argument("--capacity-extension", type=Path)
 
     fs = sub.add_parser("factory-status")
     fs.add_argument("--plan", type=Path, default=Path("factory-work/plan.json"))
@@ -301,9 +305,16 @@ def main(argv: list[str] | None = None) -> int:
         plan = _resolve(root, args.plan)
         index_dir = _resolve(root, args.index_dir)
         out = _resolve(root, args.out)
+        capacity_extension = _resolve(root, args.capacity_extension)
         assert plan is not None and index_dir is not None and out is not None
         report = build_factory_tasks(
-            root, plan, index_dir, out, args.partition, args.custodian_holdout
+            root,
+            plan,
+            index_dir,
+            out,
+            args.partition,
+            args.custodian_holdout,
+            capacity_extension_path=capacity_extension,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
@@ -312,10 +323,16 @@ def main(argv: list[str] | None = None) -> int:
         tasks = _resolve(root, args.tasks)
         curator = _resolve(root, args.curator_responses)
         out = _resolve(root, args.out)
+        capacity_extension = _resolve(root, args.capacity_extension)
         assert tasks is not None and curator is not None and out is not None
         report = prepare_verifier_tasks(
-            root, tasks, curator, out,
-            partition=args.partition, custodian_mode=args.custodian_holdout
+            root,
+            tasks,
+            curator,
+            out,
+            partition=args.partition,
+            custodian_mode=args.custodian_holdout,
+            capacity_extension_path=capacity_extension,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
@@ -327,13 +344,21 @@ def main(argv: list[str] | None = None) -> int:
         out = _resolve(root, args.out)
         manifest = _resolve(root, args.manifest)
         independent = _resolve(root, args.independent_from_manifest)
+        capacity_extension = _resolve(root, args.capacity_extension)
         assert tasks is not None and index_dir is not None and config is not None and out is not None and manifest is not None
         report = run_agent_execution(
-            root, args.role, tasks, index_dir, config, out, manifest,
+            root,
+            args.role,
+            tasks,
+            index_dir,
+            config,
+            out,
+            manifest,
             partition=args.partition,
             custodian_mode=args.custodian_holdout,
             resume=args.resume,
             independent_from_manifest=independent,
+            capacity_extension_path=capacity_extension,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
@@ -347,11 +372,21 @@ def main(argv: list[str] | None = None) -> int:
         adjudication = _resolve(root, args.adjudication_out)
         ledger = _resolve(root, args.ledger_out)
         reserve_activation = _resolve(root, args.reserve_activation)
+        capacity_extension = _resolve(root, args.capacity_extension)
         assert all(x is not None for x in (tasks, curator, verifier, cache_dir, reviewed_dir, adjudication, ledger))
         report = reconcile_factory(
-            root, tasks, curator, verifier, cache_dir, reviewed_dir, adjudication,
-            ledger, custodian_mode=args.custodian_holdout, partition=args.partition,
+            root,
+            tasks,
+            curator,
+            verifier,
+            cache_dir,
+            reviewed_dir,
+            adjudication,
+            ledger,
+            custodian_mode=args.custodian_holdout,
+            partition=args.partition,
             reserve_activation_path=reserve_activation,
+            capacity_extension_path=capacity_extension,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
