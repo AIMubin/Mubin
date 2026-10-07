@@ -86,8 +86,11 @@ def _load_repository_target(root: Path) -> tuple[dict[str, Any], dict[str, Any]]
         raise ValueError("canonical prior consolidation status missing")
     expected_primary = {
         "source_run_id": primary.get("successful_run_id"),
+        "source_run_attempt": 1,
         "source_head_sha": primary.get("runner_commit"),
+        "workflow": ".github/workflows/h392-cumulative-consolidation.yml",
         "artifact_id": primary.get("artifact_id"),
+        "artifact_name": "h392-cumulative-primary-evidence",
         "artifact_digest": primary.get("artifact_digest"),
         "summary_sha256": primary.get("summary_sha256"),
         "encrypted_bundle_sha256": primary.get("encrypted_bundle_sha256"),
@@ -96,8 +99,11 @@ def _load_repository_target(root: Path) -> tuple[dict[str, Any], dict[str, Any]]
     }
     expected_reserve = {
         "source_run_id": reserve.get("successful_run_id"),
+        "source_run_attempt": 1,
         "source_head_sha": reserve.get("runner_commit"),
+        "workflow": ".github/workflows/h392-reserve-consolidation.yml",
         "artifact_id": reserve.get("artifact_id"),
+        "artifact_name": "h392-reserve-consolidated-evidence",
         "artifact_digest": reserve.get("artifact_digest"),
         "summary_sha256": reserve.get("summary_sha256"),
         "encrypted_bundle_sha256": reserve.get("encrypted_bundle_sha256"),
@@ -145,7 +151,9 @@ def _load_prior_promoted_case_ids(
             "source_run_id",
             "source_run_attempt",
             "source_head_sha",
+            "workflow",
             "artifact_id",
+            "artifact_name",
             "artifact_digest",
             "summary_sha256",
             "encrypted_bundle_sha256",
