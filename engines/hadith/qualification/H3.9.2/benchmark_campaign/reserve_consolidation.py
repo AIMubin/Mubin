@@ -408,15 +408,6 @@ def consolidate_reserve_evidence(
     if minimum_shortfall != exhausted_count:
         raise ValueError("capacity shortfall does not equal exhausted slot count")
 
-    input_artifacts.sort(key=lambda row: int(offset_by_slot[
-        str(load_json(evidence_root / (
-            f"run-{row['github_run_id']}-artifact-{row['artifact_id']}"
-        ) / "CURATION_RUN_SUMMARY.json").get("task_offset", -1))
-    ]) if False else int(next(
-        expected_artifacts[row["artifact_id"]]["task_offset"]
-        for _ in [0]
-    )))
-    # The sort above is deliberately based on the repository-reviewed offsets.
     input_artifacts.sort(
         key=lambda row: int(expected_artifacts[int(row["artifact_id"])]["task_offset"])
     )
