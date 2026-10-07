@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "campaign_id": "H3.9.2",
+  "evidence_kind": "approved_non_holdout_reserve2_consolidation",
+  "canonical_main_evidence": true,
+  "protocol_freeze_schema": 29,
+  "runner_commit": "f01b6a15bf3a2f270bbb524a85519a2a3a4994f4",
+  "workflow": {
+    "path": ".github/workflows/h392-reserve2-consolidation.yml",
+    "run_id": 37673850809,
+    "run_attempt": 1,
+    "event": "workflow_dispatch",
+    "head_branch": "main",
+    "conclusion": "success"
+  },
+  "artifact": {
+    "id": 11506885302,
+    "name": "h392-reserve2-consolidated-evidence",
+    "digest": "sha256:d671e473fd5011af7908d05c3aa26246477a7b6af6bde7363ad91f14aab13191",
+    "size_bytes": 14391,
+    "redacted_summary_sha256": "bc6549c0dff231a56c3c2a4cc51c66cf3547a2d65943628b01a43ba9f2954459",
+    "encrypted_bundle_sha256": "9290c795b632bb40bc529176998b8adfe5c15698fbc7438c28271279796a1326",
+    "redacted": true,
+    "source_bearing_payload_encrypted": true
+  },
+  "canonical_input": {
+    "reserve2_execution_run_id": 37613354755,
+    "reserve2_execution_attempt": 1,
+    "reserve2_execution_head_sha": "d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b",
+    "input_artifact_count": 5,
+    "reserve2_task_count": 10,
+    "capacity_extension_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+    "prior_promoted_case_id_count": 47,
+    "prior_promoted_case_ids_sha256": "d5779bb65909e9a6ce7662fcaf3e35dd8dd18f5d4286154d8cf021e3bff0174b",
+    "exact_overlay_coverage": true
+  },
+  "result": {
+    "task_count": 10,
+    "promoted": 3,
+    "pending_reserve2_adjudication": 5,
+    "exhausted": 2,
+    "reviewed_record_count": 3,
+    "prior_validated_promoted_record_count": 47,
+    "prior_pending_adjudication_count": 153,
+    "validated_promoted_record_count": 50,
+    "total_pending_adjudication_count": 158,
+    "record_quota": 210,
+    "maximum_fillable_slots_under_current_capacity": 208,
+    "minimum_capacity_shortfall": 2,
+    "canonical_reason_counts": {
+      "curator_rejection:adapter:contract_support_not_verbatim": 2,
+      "curator_requested_adjudication": 2,
+      "gold_disagreement": 3
+    }
+  },
+  "bindings": {
+    "reserve2_ledger_sha256": "3ee73bec54dd6dd76542f52510d189e612c3fb2020c8d79ceea0ea2b488953b3",
+    "reserve2_exhausted_slots_sha256": "d43b90aaa55bf43d5e6e7d02d1657fac6d3b597caa1a53cde94311ae8f6ea58d"
+  },
+  "artifact_policy": {
+    "contains_source_text": false,
+    "contains_gold_payloads": false,
+    "contains_model_identity": false,
+    "plaintext_reserve2_ledger_committed": false,
+    "plaintext_adjudication_committed": false,
+    "plaintext_reviewed_records_committed": false,
+    "persisted_evidence_contains_only_hashes_counts_and_identifiers": true
+  },
+  "qualification_effect": {
+    "curation_completed_cases_committed": 0,
+    "benchmark_population_complete": false,
+    "benchmark_gate_passed": false,
+    "architecture_gate_passed": false,
+    "h4_development_allowed": true,
+    "h4_qualification_allowed": false,
+    "h4_release_allowed": false,
+    "note": "This evidence makes the ten-slot reserve:02 execution outcome canonical: 3 validated promoted replacements, 5 pending reserve:02 adjudications, and 2 exhausted slots. Combined canonical non-holdout state is 50 validated promoted records, 158 pending adjudications, and 2 exhausted slots. It does not resolve adjudications, authorize reserve:03, assemble the benchmark population, or open H4 qualification."
+  },
+  "next_action": {
+    "purpose": "Freeze and execute the 158-case human/authority adjudication surface, and separately design any reviewed reserve:03 capacity extension for the 2 canonically exhausted slots. No reserve:03 attempt is authorized by this evidence.",
+    "automatic_reserve3_authorized": false
+  }
+}
