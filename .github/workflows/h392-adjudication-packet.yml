@@ -365,7 +365,7 @@ jobs:
       - name: Remove plaintext and prove public surface is redacted
         run: |
           set -eu
-          rm -rf "$CANONICAL_ROOT" "$SOURCE_EVIDENCE_ROOT" "$SOURCE_CACHE_DIR" "$PACKET_DIR"
+          rm -rf "$CANONICAL_ROOT" "$SOURCE_EVIDENCE_ROOT" "$SOURCE_CACHE_DIR" "$PACKET_DIR" "$SOURCE_TARGET"
           python - <<'PY'
           import json,os
           from pathlib import Path
