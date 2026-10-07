@@ -76,7 +76,102 @@ def _load_repository_target(root: Path) -> tuple[dict[str, Any], dict[str, Any]]
             raise ValueError(f"reserve2 execution/consolidation binding mismatch: {execution_key}")
     if int(execution.get("expected_task_count", -1)) != int(target.get("expected_task_count", -2)):
         raise ValueError("reserve2 execution/consolidation task counts differ")
+
+    prior_surface = target.get("prior_promoted_case_id_surface")
+    if not isinstance(prior_surface, dict):
+        raise ValueError("reserve2 prior promoted case-ID surface missing")
+    primary = status.get("last_completed_cumulative_consolidation")
+    reserve = status.get("last_completed_reserve_consolidation")
+    if not isinstance(primary, dict) or not isinstance(reserve, dict):
+        raise ValueError("canonical prior consolidation status missing")
+    expected_primary = {
+        "source_run_id": primary.get("successful_run_id"),
+        "source_head_sha": primary.get("runner_commit"),
+        "artifact_id": primary.get("artifact_id"),
+        "artifact_digest": primary.get("artifact_digest"),
+        "summary_sha256": primary.get("summary_sha256"),
+        "encrypted_bundle_sha256": primary.get("encrypted_bundle_sha256"),
+        "ledger_sha256": primary.get("cumulative_ledger_sha256"),
+        "promoted_count": primary.get("promoted_primary_count"),
+    }
+    expected_reserve = {
+        "source_run_id": reserve.get("successful_run_id"),
+        "source_head_sha": reserve.get("runner_commit"),
+        "artifact_id": reserve.get("artifact_id"),
+        "artifact_digest": reserve.get("artifact_digest"),
+        "summary_sha256": reserve.get("summary_sha256"),
+        "encrypted_bundle_sha256": reserve.get("encrypted_bundle_sha256"),
+        "ledger_sha256": reserve.get("reserve_ledger_sha256"),
+        "promoted_count": reserve.get("promoted_reserve_count"),
+    }
+    for name, expected in (("primary", expected_primary), ("reserve", expected_reserve)):
+        bound = prior_surface.get(name)
+        if not isinstance(bound, dict):
+            raise ValueError(f"reserve2 prior {name} promoted surface missing")
+        for field, value in expected.items():
+            if bound.get(field) != value:
+                raise ValueError(
+                    f"reserve2 prior {name} promoted binding mismatch: {field}"
+                )
+    expected_prior_count = int(prior_surface.get("expected_promoted_case_id_count", -1))
+    if (
+        expected_prior_count
+        != int(expected_primary["promoted_count"]) + int(expected_reserve["promoted_count"])
+        or expected_prior_count != int(reserve.get("validated_promoted_record_count", -1))
+    ):
+        raise ValueError("reserve2 prior promoted count differs from canonical status")
     return status, target
+
+
+def _load_prior_promoted_case_ids(
+    path: Path,
+    target: dict[str, Any],
+) -> tuple[set[str], str]:
+    obj = load_json(path)
+    if (
+        not isinstance(obj, dict)
+        or obj.get("schema_version") != 1
+        or obj.get("campaign_id") != "H3.9.2"
+        or obj.get("kind") != "canonical_prior_promoted_case_id_set"
+    ):
+        raise ValueError("prior promoted case-ID manifest contract invalid")
+    surface = target["prior_promoted_case_id_surface"]
+    for name in ("primary", "reserve"):
+        expected = surface[name]
+        actual = obj.get(name)
+        if not isinstance(actual, dict):
+            raise ValueError(f"prior promoted case-ID {name} binding missing")
+        for field in (
+            "source_run_id",
+            "source_run_attempt",
+            "source_head_sha",
+            "artifact_id",
+            "artifact_digest",
+            "summary_sha256",
+            "encrypted_bundle_sha256",
+            "ledger_sha256",
+            "promoted_count",
+        ):
+            if actual.get(field) != expected.get(field):
+                raise ValueError(
+                    f"prior promoted case-ID {name} binding mismatch: {field}"
+                )
+    ids = obj.get("promoted_case_ids")
+    if not isinstance(ids, list) or any(
+        not isinstance(case_id, str) or not case_id.strip() for case_id in ids
+    ):
+        raise ValueError("prior promoted case IDs must be non-empty strings")
+    if ids != sorted(ids) or len(ids) != len(set(ids)):
+        raise ValueError("prior promoted case IDs must be sorted and unique")
+    expected_count = int(surface["expected_promoted_case_id_count"])
+    if (
+        obj.get("promoted_case_id_count") != expected_count
+        or len(ids) != expected_count
+        or sum(int(obj[name]["promoted_count"]) for name in ("primary", "reserve"))
+            != expected_count
+    ):
+        raise ValueError("prior promoted case-ID count mismatch")
+    return set(ids), sha256_file(path)
 
 
 def consolidate_reserve2_evidence(
@@ -86,10 +181,14 @@ def consolidate_reserve2_evidence(
     *,
     source_cache_dir: Path,
     capacity_extension_path: Path,
+    prior_promoted_case_ids_path: Path,
 ) -> dict[str, Any]:
     """Consolidate the exact repository-reviewed reserve:02 execution evidence."""
 
     status, target = _load_repository_target(root)
+    prior_promoted_case_ids, prior_promoted_case_ids_sha256 = (
+        _load_prior_promoted_case_ids(prior_promoted_case_ids_path, target)
+    )
     extension = validate_frozen_capacity_extension(
         root,
         capacity_extension_path,
@@ -145,7 +244,7 @@ def consolidate_reserve2_evidence(
     adjudication_rows: list[dict[str, Any]] = []
     input_artifacts: list[dict[str, Any]] = []
     seen_tasks: set[str] = set()
-    seen_case_ids: set[str] = set()
+    seen_current_case_ids: set[str] = set()
     seen_artifacts: set[int] = set()
 
     for evidence_dir in evidence_dirs:
@@ -258,8 +357,16 @@ def consolidate_reserve2_evidence(
 
         for task_id, record in validated["reviewed"].items():
             case_id = str(record.get("case_id", ""))
-            if not case_id or case_id in seen_case_ids:
-                raise ValueError(f"duplicate/empty reserve2 promoted case_id: {case_id}")
+            if not case_id:
+                raise ValueError("empty reserve2 promoted case_id")
+            if case_id in prior_promoted_case_ids:
+                raise ValueError(
+                    f"reserve2 promoted case_id collides with prior canonical record: {case_id}"
+                )
+            if case_id in seen_current_case_ids:
+                raise ValueError(
+                    f"duplicate reserve2 promoted case_id across current evidence: {case_id}"
+                )
             row = extension_by_id.get(str(record.get("factory_slot_id", "")))
             if row is None:
                 raise ValueError(f"reserve2 reviewed record references unapproved slot: {task_id}")
@@ -271,7 +378,7 @@ def consolidate_reserve2_evidence(
                 != sha256_bytes(canonical_json_bytes(slot))
             ):
                 raise ValueError(f"reserve2 reviewed frozen slot binding mismatch: {task_id}")
-            seen_case_ids.add(case_id)
+            seen_current_case_ids.add(case_id)
             reviewed_by_benchmark[str(record["benchmark_id"])].append(record)
 
         ledger_by_task = {
@@ -428,6 +535,8 @@ def consolidate_reserve2_evidence(
         "aggregate_summary_sha256": target["aggregate_summary_sha256"],
         "input_artifacts": input_artifacts,
         "input_artifact_count": len(input_artifacts),
+        "prior_promoted_case_id_count": len(prior_promoted_case_ids),
+        "prior_promoted_case_ids_sha256": prior_promoted_case_ids_sha256,
         "task_count": len(ledger_rows),
         "coverage_ranges": _compress_offsets(offsets),
         "reserve2_ledger_sha256": ledger_sha,
@@ -460,6 +569,8 @@ def consolidate_reserve2_evidence(
         "source_head_sha": target["source_head_sha"],
         "capacity_extension_manifest_sha256": extension_sha,
         "input_artifact_count": len(input_artifacts),
+        "prior_promoted_case_id_count": len(prior_promoted_case_ids),
+        "prior_promoted_case_ids_sha256": prior_promoted_case_ids_sha256,
         "task_count": len(ledger_rows),
         "coverage_ranges": _compress_offsets(offsets),
         "outcomes": dict(sorted(outcome_counts.items())),
