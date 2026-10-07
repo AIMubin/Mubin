@@ -628,6 +628,36 @@
         "encrypted_bundle_sha256": "7b16299bdb557ee0608c7ce6939a5b850221c7af4e65dd9d67650d609cfca0db"
       }
     ],
-    "security_boundary": "decrypt only in ephemeral runner; reacquire and verify pinned non-holdout sources; upload only redacted summary plus authenticated encrypted reserve2 consolidated bundle"
+    "security_boundary": "decrypt only in ephemeral runner; reacquire and verify pinned non-holdout sources; upload only redacted summary plus authenticated encrypted reserve2 consolidated bundle",
+    "prior_promoted_case_id_surface": {
+      "expected_promoted_case_id_count": 47,
+      "primary": {
+        "source_run_id": 37471731102,
+        "source_run_attempt": 1,
+        "source_head_sha": "e1422b3262ee308084ce2212a2f2825fdc737032",
+        "workflow": ".github/workflows/h392-cumulative-consolidation.yml",
+        "artifact_id": 11416657955,
+        "artifact_name": "h392-cumulative-primary-evidence",
+        "artifact_digest": "sha256:b8fea5f254790fc7cd51e740349a169b470e18e3ee2730b8aba7bbfcd7073ced",
+        "summary_sha256": "2131f6358cf773b37a7abffa13aefe1dc7be5ebfb8111279fe13e458693bce69",
+        "encrypted_bundle_sha256": "c6b5afa771a2aeba2f5017264d2fb98af56882baee0c6fe0109104678651c9f4",
+        "ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+        "promoted_count": 40
+      },
+      "reserve": {
+        "source_run_id": 37578659973,
+        "source_run_attempt": 1,
+        "source_head_sha": "b3888b24b20571884465b349c9764c669b0e66f9",
+        "workflow": ".github/workflows/h392-reserve-consolidation.yml",
+        "artifact_id": 11464000900,
+        "artifact_name": "h392-reserve-consolidated-evidence",
+        "artifact_digest": "sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e",
+        "summary_sha256": "13ccc3f3ae985fb2f577fb05e2f5e9b5bbddcbf87d41d1263e1a4fa07a87bd67",
+        "encrypted_bundle_sha256": "f73a1e1dc170af9a8fa4dde6c47348e85690fe4df712bda573b001c66b39dc19",
+        "ledger_sha256": "f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012",
+        "promoted_count": 7
+      },
+      "policy": "derive the exact prior 47 promoted case IDs only from the two canonical encrypted consolidated ledgers; reject any reserve:02 promotion whose case_id collides with that set"
+    }
   }
 }
