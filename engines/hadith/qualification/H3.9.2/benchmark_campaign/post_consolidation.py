@@ -5,11 +5,11 @@ from typing import Any
 
 from .core import canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file, write_json
 from .factory import build_factory_plan
-from .freeze import FREEZE_SCHEMA_VERSION
 
 
 ACTIVATION_SCHEMA_VERSION = 1
 SOURCE_CUMULATIVE_FREEZE_SCHEMA = 25
+RESERVE_ACTIVATION_PROTOCOL_FREEZE_SCHEMA = 26
 
 
 def _repository_evidence_file(root: Path, value: Any) -> Path:
@@ -195,7 +195,7 @@ def build_reserve_activation_manifest(
         "schema_version": ACTIVATION_SCHEMA_VERSION,
         "campaign_id": "H3.9.2",
         "kind": "reserve_activation_manifest",
-        "protocol_freeze_schema": FREEZE_SCHEMA_VERSION,
+        "protocol_freeze_schema": RESERVE_ACTIVATION_PROTOCOL_FREEZE_SCHEMA,
         "source_cumulative_freeze_schema": SOURCE_CUMULATIVE_FREEZE_SCHEMA,
         "factory_plan_sha256": plan_sha,
         "cumulative_ledger_sha256": actual_ledger_sha,
@@ -228,7 +228,7 @@ def validate_reserve_activation(
         raise ValueError("unexpected reserve activation kind")
     if activation.get("campaign_id") != "H3.9.2":
         raise ValueError("unexpected reserve activation campaign_id")
-    if int(activation.get("protocol_freeze_schema", 0)) != FREEZE_SCHEMA_VERSION:
+    if int(activation.get("protocol_freeze_schema", 0)) != RESERVE_ACTIVATION_PROTOCOL_FREEZE_SCHEMA:
         raise ValueError("reserve activation protocol freeze schema mismatch")
     if int(activation.get("source_cumulative_freeze_schema", 0)) != SOURCE_CUMULATIVE_FREEZE_SCHEMA:
         raise ValueError("reserve activation source cumulative schema mismatch")
