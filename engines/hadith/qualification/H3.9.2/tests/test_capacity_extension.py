@@ -292,8 +292,8 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
         self.assertEqual(status["freeze_schema_version"], 27)
         self.assertFalse(status["capacity_extension_enabled"])
         target = status["capacity_extension_target"]
-        self.assertTrue(target["ready"])
-        self.assertFalse(target["completed"])
+        self.assertFalse(target["ready"])
+        self.assertTrue(target["completed"])
         self.assertEqual(target["protocol_freeze_schema"], 27)
         self.assertEqual(target["source_reserve_consolidation_freeze_schema"], 26)
         self.assertEqual(target["source_reserve_consolidation_run_id"], 37578659973)
@@ -307,6 +307,66 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
         self.assertEqual(adjudication["combined_pending_case_count"], 153)
         self.assertTrue(adjudication["human_or_authority_decision_required"])
         self.assertFalse(adjudication["ai_may_self_authorize_acceptance"])
+        self.assertTrue(status["capacity_extension_proposal_frozen"])
+        proposal = status["capacity_extension_proposal"]
+        self.assertTrue(proposal["frozen"])
+        self.assertFalse(proposal["enabled_for_execution"])
+        self.assertFalse(proposal["execution_authorized"])
+        self.assertTrue(proposal["requires_repository_approval"])
+        self.assertEqual(proposal["workflow_run_id"], 37588897387)
+        self.assertEqual(proposal["artifact_id"], 11467766861)
+        self.assertEqual(
+            proposal["artifact_digest"],
+            "sha256:2b36aef77dfa885a01f271377d4f6164698c9d6cd56adb1c59aaba906c045115",
+        )
+        self.assertEqual(
+            proposal["manifest_sha256"],
+            "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+        )
+
+    def test_committed_capacity_proposal_is_exact_artifact_payload(self):
+        root = Path(__file__).resolve().parents[1]
+        status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
+        proposal = status["capacity_extension_proposal"]
+        path = root / proposal["evidence_path"]
+        self.assertEqual(sha256_file(path), proposal["manifest_sha256"])
+        obj = load_json(path)
+        self.assertEqual(obj["kind"], "selective_reserve_capacity_extension_manifest")
+        self.assertEqual(obj["protocol_freeze_schema"], 27)
+        self.assertEqual(obj["extended_primary_count"], 10)
+        self.assertEqual(obj["new_reserve_slot_count"], 10)
+        self.assertEqual(obj["new_reserve_attempt"], 2)
+        self.assertFalse(obj["execution_authorized"])
+        self.assertTrue(obj["requires_repository_approval"])
+        self.assertFalse(obj["policy"]["base_factory_plan_is_mutated"])
+        self.assertTrue(obj["policy"]["extension_is_append_only_overlay"])
+        rows = obj["extensions"]
+        self.assertEqual(len(rows), 10)
+        self.assertEqual(
+            [row["prior_reserve_offset"] for row in rows],
+            [0, 1, 2, 3, 4, 5, 13, 20, 21, 32],
+        )
+        self.assertEqual(len({row["primary_slot_id"] for row in rows}), 10)
+        self.assertEqual(len({row["prior_reserve_slot_id"] for row in rows}), 10)
+        self.assertEqual(len({row["new_reserve_slot_id"] for row in rows}), 10)
+        for row in rows:
+            self.assertEqual(
+                row["new_reserve_slot_id"],
+                row["primary_slot_id"] + ":reserve:02",
+            )
+            self.assertEqual(
+                row["prior_reserve_slot_id"],
+                row["primary_slot_id"] + ":reserve:01",
+            )
+            self.assertEqual(row["new_reserve_attempt"], 2)
+            self.assertEqual(
+                row["new_reserve_slot_binding_sha256"],
+                sha256_bytes(canonical_json_bytes(row["new_reserve_slot"])),
+            )
+            self.assertEqual(
+                row["prior_reserve_terminal_reason"],
+                "curator_rejection:adapter:contract_support_not_verbatim",
+            )
 
 
 if __name__ == "__main__":
