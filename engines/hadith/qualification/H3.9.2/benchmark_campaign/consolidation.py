@@ -39,7 +39,12 @@ def _require_sha256(value: Any, field: str) -> str:
     return value
 
 
-def _load_origin(path: Path) -> dict[str, Any]:
+def _load_origin(
+    path: Path,
+    *,
+    expected_workflow_path: str = ".github/workflows/h392-curation-campaign.yml",
+    expected_run_attempt: int | None = 1,
+) -> dict[str, Any]:
     row = load_json(path)
     if not isinstance(row, dict):
         raise ValueError(f"origin manifest must be an object: {path}")
@@ -47,9 +52,16 @@ def _load_origin(path: Path) -> dict[str, Any]:
     if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id < 1:
         raise ValueError(f"origin github_run_id invalid: {path}")
     run_attempt = row.get("github_run_attempt")
-    if run_attempt != 1:
+    if (
+        not isinstance(run_attempt, int)
+        or isinstance(run_attempt, bool)
+        or run_attempt < 1
+    ):
+        raise ValueError(f"origin github_run_attempt invalid: {run_id}")
+    if expected_run_attempt is not None and run_attempt != expected_run_attempt:
         raise ValueError(
-            f"origin github_run_attempt must be exactly 1 for canonical evidence: {run_id}"
+            f"origin github_run_attempt must be exactly {expected_run_attempt} "
+            f"for canonical evidence: {run_id}"
         )
     if row.get("conclusion") != "success":
         raise ValueError(f"origin workflow run is not successful: {run_id}")
@@ -61,7 +73,7 @@ def _load_origin(path: Path) -> dict[str, Any]:
     artifact_id = row.get("artifact_id")
     if not isinstance(artifact_id, int) or isinstance(artifact_id, bool) or artifact_id < 1:
         raise ValueError(f"origin artifact_id invalid: {run_id}")
-    if row.get("workflow_path") != ".github/workflows/h392-curation-campaign.yml":
+    if row.get("workflow_path") != expected_workflow_path:
         raise ValueError(f"origin workflow_path invalid: {run_id}")
     artifact_name = row.get("artifact_name")
     if not isinstance(artifact_name, str) or re.fullmatch(r"h392-curation-chunk-(\d+)-(\d+)", artifact_name) is None:
@@ -504,6 +516,9 @@ def _validate_reviewed_record_binding(
     record: dict[str, Any],
     curator: dict[str, Any],
     verifier: dict[str, Any],
+    *,
+    reserve_activation: dict[str, Any] | None = None,
+    reserve_activation_sha256: str | None = None,
 ) -> None:
     candidate = curator.get("candidate")
     if not isinstance(candidate, dict):
@@ -718,6 +733,32 @@ def _validate_reviewed_record_binding(
     for field, expected in expected_fields.items():
         if canonical_json_bytes(fv.get(field)) != canonical_json_bytes(expected):
             raise ValueError(f"reviewed factory verification {field} mismatch: {task_id}")
+
+    is_reserve = task.get("candidate_slot_kind") == "reserve"
+    expected_reserve_activation: dict[str, Any] | None = None
+    if is_reserve:
+        if reserve_activation is None or reserve_activation_sha256 is None:
+            raise ValueError(
+                f"reserve reviewed record lacks consolidation activation context: {task_id}"
+            )
+        expected_reserve_activation = {
+            "activation_manifest_sha256": reserve_activation_sha256,
+            "cumulative_ledger_sha256": reserve_activation["cumulative_ledger_sha256"],
+            "replacement_eligibility_sha256": reserve_activation["replacement_eligibility_sha256"],
+            "replacement_for_slot_id": task["replacement_for_slot_id"],
+            "reserve_attempt": task["reserve_attempt"],
+        }
+        if canonical_json_bytes(fv.get("reserve_activation")) != canonical_json_bytes(
+            expected_reserve_activation
+        ):
+            raise ValueError(
+                f"reviewed factory reserve activation binding mismatch: {task_id}"
+            )
+    elif "reserve_activation" in fv:
+        raise ValueError(
+            f"primary reviewed record unexpectedly carries reserve activation: {task_id}"
+        )
+
     if not isinstance(fv.get("factory_version"), int) or fv["factory_version"] < 1:
         raise ValueError(f"reviewed factory version invalid: {task_id}")
     if not isinstance(fv.get("slot_binding_sha256"), str) or _SHA256_RE.fullmatch(
@@ -772,6 +813,10 @@ def _validate_reviewed_record_binding(
         "agreement": "exact_gold_match",
         "task_fingerprint": task["task_fingerprint"],
     }
+    if expected_reserve_activation is not None:
+        expected_candidate["factory_verification"]["reserve_activation"] = (
+            expected_reserve_activation
+        )
     try:
         expected_record = seal_reviewed_record(
             root, expected_candidate, source_cache_dir
@@ -812,10 +857,30 @@ def validate_primary_run_evidence(
     root: Path,
     evidence_dir: Path,
     source_cache_dir: Path | None = None,
+    *,
+    task_scope: str = "primary",
+    reserve_activation_path: Path | None = None,
+    expected_workflow_path: str = ".github/workflows/h392-curation-campaign.yml",
+    expected_run_attempt: int | None = 1,
 ) -> dict[str, Any]:
-    """Validate one decrypted canonical non-holdout primary curation artifact."""
+    """Validate one decrypted canonical non-holdout curation artifact.
 
-    origin = _load_origin(evidence_dir / "ORIGIN.json")
+    Primary validation is the default. Reserve validation is deliberately
+    opt-in and requires the exact repository-approved activation manifest.
+    """
+
+    if task_scope not in {"primary", "approved_reserve"}:
+        raise ValueError(f"unsupported consolidation task_scope: {task_scope}")
+    if task_scope == "primary" and reserve_activation_path is not None:
+        raise ValueError("primary consolidation must not supply reserve activation")
+    if task_scope == "approved_reserve" and reserve_activation_path is None:
+        raise ValueError("reserve consolidation requires reserve activation")
+
+    origin = _load_origin(
+        evidence_dir / "ORIGIN.json",
+        expected_workflow_path=expected_workflow_path,
+        expected_run_attempt=expected_run_attempt,
+    )
     summary = _load_summary(evidence_dir / "CURATION_RUN_SUMMARY.json")
     bundle = evidence_dir / "source-bearing"
     if not bundle.is_dir():
@@ -825,6 +890,19 @@ def validate_primary_run_evidence(
         raise ValueError("run summary github_run_id differs from origin")
     if summary.get("github_sha") != origin["head_sha"]:
         raise ValueError("run summary github_sha differs from origin")
+
+    reserve_activation: dict[str, Any] | None = None
+    reserve_activation_sha256: str | None = None
+    if task_scope == "approved_reserve":
+        if summary.get("task_scope") != "approved_reserve":
+            raise ValueError("reserve run summary task_scope mismatch")
+        assert reserve_activation_path is not None
+        reserve_activation_sha256 = sha256_file(reserve_activation_path)
+        if summary.get("reserve_activation_sha256") != reserve_activation_sha256:
+            raise ValueError("reserve run summary activation SHA-256 mismatch")
+    elif summary.get("task_scope") not in {None, "primary"}:
+        raise ValueError("primary run summary unexpectedly declares reserve task scope")
+
     try:
         task_offset = int(summary.get("task_offset"))
         task_limit = int(summary.get("task_limit"))
@@ -862,9 +940,18 @@ def validate_primary_run_evidence(
     tasks = _task_rows(tasks_path)
     _validate_tasks_against_frozen_plan(root, tasks)
     if any(task.get("partition") != "non_holdout" for task in tasks):
-        raise ValueError("cumulative primary evidence must be non-holdout only")
-    if any(task.get("candidate_slot_kind") == "reserve" for task in tasks):
-        raise ValueError("cumulative primary evidence must not contain reserve tasks")
+        raise ValueError("cumulative evidence must be non-holdout only")
+    if task_scope == "primary":
+        if any(task.get("candidate_slot_kind") == "reserve" for task in tasks):
+            raise ValueError("cumulative primary evidence must not contain reserve tasks")
+    else:
+        if any(task.get("candidate_slot_kind") != "reserve" for task in tasks):
+            raise ValueError("reserve consolidation evidence must contain reserve tasks only")
+        assert reserve_activation_path is not None
+        from .post_consolidation import validate_reserve_activation
+        reserve_activation = validate_reserve_activation(
+            root, reserve_activation_path, tasks
+        )
     if len(tasks) != int(summary["selected_task_count"]):
         raise ValueError("run summary selected_task_count differs from decrypted tasks")
     _require_sha256(summary.get("selected_tasks_sha256"), "selected_tasks_sha256")
@@ -1061,7 +1148,15 @@ def validate_primary_run_evidence(
         verifier = verifier_responses.get(tid)
         assert isinstance(curator, dict) and isinstance(verifier, dict)
         _validate_reviewed_record_binding(
-            root, source_cache_dir, tid, task, record, curator, verifier
+            root,
+            source_cache_dir,
+            tid,
+            task,
+            record,
+            curator,
+            verifier,
+            reserve_activation=reserve_activation,
+            reserve_activation_sha256=reserve_activation_sha256,
         )
 
     for tid, row in adjudication.items():
@@ -1103,7 +1198,7 @@ def validate_primary_run_evidence(
         else:
             canonical_reason = "promoted"
 
-        rows.append({
+        row = {
             "task_id": tid,
             "slot_id": task["slot_id"],
             "task_fingerprint": task["task_fingerprint"],
@@ -1113,14 +1208,23 @@ def validate_primary_run_evidence(
             "reconcile_reason": reconcile_reason,
             "canonical_reason": canonical_reason,
             "case_id": entry.get("case_id"),
-            "replacement_eligible": bool(eligible),
+            "replacement_eligible": bool(eligible) if task_scope == "primary" else False,
             "source_run_id": origin["github_run_id"],
             "source_run_attempt": origin["github_run_attempt"],
             "source_sha": origin["head_sha"],
             "source_artifact_id": origin["artifact_id"],
             "source_artifact_sha256": origin["artifact_sha256"],
             "source_encrypted_bundle_sha256": origin["encrypted_bundle_sha256"],
-        })
+        }
+        if task_scope == "approved_reserve":
+            row.update({
+                "candidate_slot_kind": "reserve",
+                "replacement_for_slot_id": task["replacement_for_slot_id"],
+                "reserve_attempt": task["reserve_attempt"],
+                "reserve_activation_sha256": reserve_activation_sha256,
+                "terminal_failure": bool(eligible) if outcome == "skipped" else False,
+            })
+        rows.append(row)
 
     return {
         "origin": origin,
@@ -1129,7 +1233,27 @@ def validate_primary_run_evidence(
         "ledger_rows": rows,
         "reviewed": reviewed,
         "adjudication": adjudication,
+        "reserve_activation": reserve_activation,
+        "reserve_activation_sha256": reserve_activation_sha256,
     }
+
+
+def validate_reserve_run_evidence(
+    root: Path,
+    evidence_dir: Path,
+    activation_path: Path,
+    source_cache_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Validate one decrypted approved-reserve curation artifact."""
+    return validate_primary_run_evidence(
+        root,
+        evidence_dir,
+        source_cache_dir,
+        task_scope="approved_reserve",
+        reserve_activation_path=activation_path,
+        expected_workflow_path=".github/workflows/h392-reserve-campaign.yml",
+        expected_run_attempt=None,
+    )
 
 
 def _compress_offsets(offsets: list[int]) -> list[dict[str, int]]:

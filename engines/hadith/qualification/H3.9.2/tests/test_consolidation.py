@@ -659,6 +659,61 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must be exactly 1"):
                 consolidation.validate_primary_run_evidence(self.root, evidence, self.source_cache)
 
+    def test_reserve_run_evidence_accepts_bound_rerun_attempt_and_marks_terminal_failure(self):
+        task = _task("r0")
+        task.update({
+            "candidate_slot_kind": "reserve",
+            "replacement_for_slot_id": "p0",
+            "reserve_attempt": 1,
+        })
+        task.pop("task_fingerprint")
+        task["task_fingerprint"] = sha256_bytes(canonical_json_bytes(task))
+        evidence = self._evidence(
+            "reserve-rerun",
+            [task],
+            {"r0": ("skipped", "no_curator_candidate")},
+            run_id=99,
+        )
+        origin_path = evidence / "ORIGIN.json"
+        origin = load_json(origin_path)
+        origin["github_run_attempt"] = 2
+        origin["workflow_path"] = ".github/workflows/h392-reserve-campaign.yml"
+        _write_json(origin_path, origin)
+
+        activation_path = self.root / "artifacts" / "RESERVE_ACTIVATION.json"
+        _write_json(activation_path, {"kind": "test"})
+        activation_sha = sha256_file(activation_path)
+        summary_path = evidence / "CURATION_RUN_SUMMARY.json"
+        summary = load_json(summary_path)
+        summary["task_scope"] = "approved_reserve"
+        summary["reserve_activation_sha256"] = activation_sha
+        _write_json(summary_path, summary)
+
+        activation = {
+            "cumulative_ledger_sha256": "a" * 64,
+            "replacement_eligibility_sha256": "b" * 64,
+        }
+        with patch.object(
+            consolidation, "_validate_tasks_against_frozen_plan"
+        ), patch(
+            "benchmark_campaign.post_consolidation.validate_reserve_activation",
+            return_value=activation,
+        ):
+            validated = consolidation.validate_reserve_run_evidence(
+                self.root,
+                evidence,
+                activation_path,
+                source_cache_dir=self.source_cache,
+            )
+        row = validated["ledger_rows"][0]
+        self.assertEqual(row["candidate_slot_kind"], "reserve")
+        self.assertEqual(row["replacement_for_slot_id"], "p0")
+        self.assertEqual(row["reserve_attempt"], 1)
+        self.assertEqual(row["reserve_activation_sha256"], activation_sha)
+        self.assertTrue(row["terminal_failure"])
+        self.assertFalse(row["replacement_eligible"])
+        self.assertEqual(row["source_run_attempt"], 2)
+
     def test_rehashed_verifier_task_projection_tamper_fails_closed(self):
         task = _task("p0")
         evidence = self._evidence(

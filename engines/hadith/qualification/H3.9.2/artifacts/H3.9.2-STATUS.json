@@ -42,8 +42,8 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "The authoritative schema-25 cumulative primary evidence for external-critical-commentary is frozen at 210 primary tasks: 40 promoted, 129 pending adjudication, and 41 terminal skipped primaries. Freeze schema 26 has now frozen a repository-approved activation manifest for exactly those 41 replacement-eligible linked reserve slots. Reserve reconciliation is enabled only for that exact hash-bound set. The 129 pending adjudications remain non-replaceable and require a separate human/authority adjudication decision path; an adjudication rejection may become replaceable only through a later evidence-bound eligibility update.",
-  "next_action": "Dispatch .github/workflows/h392-reserve-campaign.yml from current main. The workflow must execute exactly the 41 repository-approved non-holdout reserve slots bound to activation manifest SHA-256 ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c. Review the redacted campaign summary and freeze the resulting reserve execution evidence before changing any further eligibility or resolving the separate 129 pending adjudications.",
+  "reason": "The authoritative schema-25 cumulative primary evidence is frozen at 210 primary tasks: 40 promoted, 129 pending adjudication, and 41 terminal skipped primaries. Freeze schema 26 activated exactly those 41 linked reserves. Reserve execution run 37532437191 completed successfully after a bounded failed-job rerun, with redacted aggregate accounting of 7 promoted, 24 adjudication, and 10 skipped reserve outcomes. Those counts remain execution evidence, not canonical population state, until the exact six source-bearing shard artifacts are decrypted, provenance-validated, consolidated, and frozen.",
+  "next_action": "Dispatch .github/workflows/h392-reserve-consolidation.yml from current main. It must consume only the six repository-reviewed shard artifacts from reserve execution run 37532437191, preserve their true attempt/job provenance, validate all 41 decrypted reserve outcomes against the frozen activation and source evidence, and publish only a redacted summary plus encrypted consolidated reserve evidence.",
   "freeze_schema_version": 26,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -182,7 +182,11 @@
     "current_replacement_eligible_primary_count": 41,
     "pending_adjudication_count": 129,
     "adjudication_policy": "Pending adjudications are not reserve eligible. Acceptance requires human/authority review consistent with CURATION.md; rejection does not silently activate a reserve and must be incorporated by a later evidence-bound eligibility update.",
-    "reserve_execution_workflow": ".github/workflows/h392-reserve-campaign.yml"
+    "reserve_execution_workflow": ".github/workflows/h392-reserve-campaign.yml",
+    "reserve_consolidation_workflow": ".github/workflows/h392-reserve-consolidation.yml",
+    "reserve_execution_run_id": 37532437191,
+    "reserve_execution_final_attempt": 2,
+    "reserve_execution_head_sha": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7"
   },
   "reserve_activation_target": {
     "ready": false,
@@ -214,7 +218,7 @@
   },
   "reserve_execution_workflow": ".github/workflows/h392-reserve-campaign.yml",
   "reserve_execution_target": {
-    "ready": true,
+    "ready": false,
     "completed": false,
     "workflow": ".github/workflows/h392-reserve-campaign.yml",
     "task_scope": "approved_reserve",
@@ -222,6 +226,132 @@
     "activation_manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
     "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
     "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
-    "execution_policy": "exact activated reserve set only; one candidate task identity per listed reserve slot; existing bounded transport-retry semantics unchanged; source-bearing outputs encrypted; redacted aggregate only"
+    "execution_policy": "exact activated reserve set only; one candidate task identity per listed reserve slot; existing bounded transport-retry semantics unchanged; source-bearing outputs encrypted; redacted aggregate only",
+    "execution_succeeded": true,
+    "consolidation_pending": true,
+    "successful_run_id": 37532437191,
+    "successful_run_final_attempt": 2,
+    "runner_commit": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7",
+    "aggregate_artifact_id": 11460611920,
+    "aggregate_artifact_digest": "sha256:f00b363321838289034388af9953cb11fde6709acf4780c210acd931bb3003a9",
+    "aggregate_summary_sha256": "8638a50d177ea716fa429fe0f5cc356203a2ff081072212c3edaf47e05b394d0",
+    "observed_outcomes": {
+      "promoted": 7,
+      "adjudication": 24,
+      "skipped": 10
+    }
+  },
+  "reserve_execution_observation": {
+    "authoritative_after_consolidation": false,
+    "workflow_run_id": 37532437191,
+    "final_run_attempt": 2,
+    "head_sha": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7",
+    "aggregate_artifact_id": 11460611920,
+    "aggregate_artifact_digest": "sha256:f00b363321838289034388af9953cb11fde6709acf4780c210acd931bb3003a9",
+    "aggregate_summary_sha256": "8638a50d177ea716fa429fe0f5cc356203a2ff081072212c3edaf47e05b394d0",
+    "activated_reserve_task_count": 41,
+    "promoted": 7,
+    "adjudication": 24,
+    "skipped": 10,
+    "note": "Redacted execution accounting only. Source-bearing outcomes must pass reserve consolidation before these counts become canonical evidence."
+  },
+  "reserve_consolidation_workflow": ".github/workflows/h392-reserve-consolidation.yml",
+  "reserve_consolidation_target": {
+    "ready": true,
+    "completed": false,
+    "workflow": ".github/workflows/h392-reserve-consolidation.yml",
+    "protocol_freeze_schema": 26,
+    "source_run_id": 37532437191,
+    "source_run_final_attempt": 2,
+    "source_head_sha": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7",
+    "expected_task_count": 41,
+    "expected_shards": 6,
+    "activation_manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
+    "cumulative_ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+    "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
+    "aggregate_artifact_id": 11460611920,
+    "aggregate_artifact_name": "h392-approved-reserve-campaign-summary",
+    "aggregate_artifact_digest": "sha256:f00b363321838289034388af9953cb11fde6709acf4780c210acd931bb3003a9",
+    "aggregate_summary_sha256": "8638a50d177ea716fa429fe0f5cc356203a2ff081072212c3edaf47e05b394d0",
+    "expected_outcomes": {
+      "promoted": 7,
+      "adjudication": 24,
+      "skipped": 10
+    },
+    "source_artifacts": [
+      {
+        "task_offset": 0,
+        "task_limit": 8,
+        "run_attempt": 2,
+        "source_job_id": 112616768431,
+        "artifact_id": 11459534901,
+        "artifact_name": "h392-curation-chunk-0-8",
+        "artifact_created_at": "2026-10-07T04:14:30Z",
+        "artifact_digest": "sha256:79c3c17b5c8903a7d503ab1a270389c043286a29a62267cfc4a2918de16d9d98",
+        "summary_sha256": "5f9de861175c37f9233a09c292de9dbbe12b4d718e4a863008b26edde90c6a2f",
+        "encrypted_bundle_sha256": "4eb0cd93a5f56f33e8719a3511e5d7c90bb74b56a1c6872d1c4515548b996b4d"
+      },
+      {
+        "task_offset": 8,
+        "task_limit": 8,
+        "run_attempt": 1,
+        "source_job_id": 112505599674,
+        "artifact_id": 11447747202,
+        "artifact_name": "h392-curation-chunk-8-8",
+        "artifact_created_at": "2026-10-06T22:13:23Z",
+        "artifact_digest": "sha256:f3c02afa55b1cbab4c2f21ca41f80c9d5034e78d0979e38df8aa4339ad98ac38",
+        "summary_sha256": "981c12800ff2b24239097cb85a7413484e3b16e023aeec848d1eb76c230fb818",
+        "encrypted_bundle_sha256": "b0765abfca36b5c339ff7d27801ba0cd15245e8a5aafaae06cf554fbcde0a27d"
+      },
+      {
+        "task_offset": 16,
+        "task_limit": 8,
+        "run_attempt": 1,
+        "source_job_id": 112505599470,
+        "artifact_id": 11447791580,
+        "artifact_name": "h392-curation-chunk-16-8",
+        "artifact_created_at": "2026-10-06T22:09:30Z",
+        "artifact_digest": "sha256:526be789f50235d3abc404b9b7c5c39a36f2d8824d6d14b3588e7226e8e83a64",
+        "summary_sha256": "57ea2219115c690b3be3530bea485a0f1b83fb3c4188938519ed9931f82f2c6d",
+        "encrypted_bundle_sha256": "b31ddc83a9b9f2ffe9d5b7b66c61985199571477dbc3340888df0fb1848b0561"
+      },
+      {
+        "task_offset": 24,
+        "task_limit": 8,
+        "run_attempt": 1,
+        "source_job_id": 112505599580,
+        "artifact_id": 11447431400,
+        "artifact_name": "h392-curation-chunk-24-8",
+        "artifact_created_at": "2026-10-06T22:05:50Z",
+        "artifact_digest": "sha256:80690117e8b3a6118d41067f82ac3212a742ab8703ea759fe5e40e477bd0aea3",
+        "summary_sha256": "25d6fccd80694d967ee803770145e3d81735667dbcccd8320f3da590797d703e",
+        "encrypted_bundle_sha256": "62fdb4a177b1ce7d39a8723c3105461c4fad402b7039a7c385c11b2872ead6c7"
+      },
+      {
+        "task_offset": 32,
+        "task_limit": 8,
+        "run_attempt": 1,
+        "source_job_id": 112521204424,
+        "artifact_id": 11449199919,
+        "artifact_name": "h392-curation-chunk-32-8",
+        "artifact_created_at": "2026-10-06T23:06:31Z",
+        "artifact_digest": "sha256:127c88f38d3ca4536e777b3bf9ab3e5bda42c0a54f7933d74a196738548a5c2d",
+        "summary_sha256": "8ffc45162b7dacb8228bd7ee63d140951bf5fd029dd6cbfb687d840724293e43",
+        "encrypted_bundle_sha256": "b07f52e7b53eaf477f9d086312a9c1f5df88236769ac0857cbb087edf8f4d0f5"
+      },
+      {
+        "task_offset": 40,
+        "task_limit": 1,
+        "run_attempt": 1,
+        "source_job_id": 112525032628,
+        "artifact_id": 11447543077,
+        "artifact_name": "h392-curation-chunk-40-1",
+        "artifact_created_at": "2026-10-06T22:17:02Z",
+        "artifact_digest": "sha256:5a07ef9e7b284c4c07a899f05857d16d3790d89a6db96b80534938a472ec20dc",
+        "summary_sha256": "67d6ee232aab8f7baf5c22712bfb907a6ec139120f9ac1ea883f15d5e0841b88",
+        "encrypted_bundle_sha256": "6e12f9140d0074580c752e22eba9426018070f74248e69c5df471f6ddeeadcaf"
+      }
+    ],
+    "security_boundary": "decrypt only in ephemeral runner; reacquire and verify pinned non-holdout sources; upload only redacted summary plus authenticated encrypted consolidated bundle"
   }
 }
