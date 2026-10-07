@@ -191,7 +191,7 @@ class Reserve2FactoryOverlayTests(unittest.TestCase):
                 False,
                 capacity_extension_path=self.extension_path,
             )
-            reserve2_task = [row for row in load_jsonl(self.tasks_path) if row["reserve_attempt"] == 2]
+            reserve2_task = [row for row in load_jsonl(self.tasks_path) if row.get("reserve_attempt") == 2]
             with patch.object(
                 factory, "load_source_registry", return_value=[]
             ), patch.object(
