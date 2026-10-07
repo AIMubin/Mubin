@@ -87,6 +87,22 @@ class AdjudicationPacketTests(unittest.TestCase):
             _write_jsonl(d / ledger_name, ledger)
             _write_jsonl(d / adjudication_name, adj)
             manifest = {
+                "campaign_id": "H3.9.2",
+                "kind": {
+                    "primary": "cumulative_non_holdout_primary_evidence",
+                    "reserve01": "consolidated_approved_non_holdout_reserve_evidence",
+                    "reserve02": "consolidated_approved_non_holdout_reserve2_evidence",
+                }[layer],
+                ({
+                    "primary": "freeze_schema_version",
+                    "reserve01": "protocol_freeze_schema",
+                    "reserve02": "protocol_freeze_schema",
+                }[layer]): {
+                    "primary": 25,
+                    "reserve01": 26,
+                    "reserve02": 29,
+                }[layer],
+                "adjudication_count": count,
                 ledger_field: sha256_file(d / ledger_name),
                 adjudication_field: sha256_file(d / adjudication_name),
             }
@@ -158,6 +174,22 @@ class AdjudicationPacketTests(unittest.TestCase):
         unsigned = dict(target)
         stored = unsigned.pop("target_sha256")
         self.assertEqual(stored, sha256_bytes(canonical_json_bytes(unsigned)))
+
+    def test_missing_canonical_adjudication_row_fails_closed(self):
+        path = self.canonical / "reserve02" / "RESERVE2_ADJUDICATION.jsonl"
+        rows = load_jsonl(path)
+        _write_jsonl(path, rows[:-1])
+        manifest_path = self.canonical / "reserve02" / "RESERVE2_MANIFEST.json"
+        manifest = load_json(manifest_path)
+        manifest["reserve2_adjudication_sha256"] = sha256_file(path)
+        manifest["adjudication_count"] = len(rows) - 1
+        _write_json(manifest_path, manifest)
+        with self.assertRaisesRegex(
+            ValueError, "not the exact ledger adjudication set"
+        ):
+            adjudication.derive_adjudication_source_target(
+                self.root, self.canonical
+            )
 
     def test_ai_self_authority_fails_closed(self):
         path = self.root / "artifacts" / "H3.9.2-STATUS.json"
