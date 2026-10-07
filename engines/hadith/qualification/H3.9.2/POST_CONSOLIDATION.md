@@ -242,23 +242,59 @@ Public/persisted post-consolidation evidence may contain:
 
 It must not contain source excerpts, gold payloads, credentials, model identity, or hidden reasoning.
 
-## Current state
+## Canonical reserve consolidation result
 
-After successful reserve execution run `37532437191` final attempt 2:
+Reserve consolidation workflow run `37578659973` completed successfully on main commit `b3888b24b20571884465b349c9764c669b0e66f9`.
 
-```ini
-cumulative_primary_evidence_complete     = true
-primary_pending_adjudication_count       = 129
-replacement_eligible_primary_count       = 41
-reserve_activation_evidence_frozen       = true
-reserve_reconciliation_enabled           = true
-reserve_execution_succeeded              = true
-reserve_execution_consolidation_pending  = true
-observed_reserve_promoted                = 7
-observed_reserve_adjudication             = 24
-observed_reserve_skipped                  = 10
-benchmark_population_complete            = false
-benchmark_gate_passed                    = false
+The published artifact is:
+
+- artifact ID: `11464000900`;
+- artifact ZIP digest: `sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e`;
+- redacted summary SHA-256: `13ccc3f3ae985fb2f577fb05e2f5e9b5bbddcbf87d41d1263e1a4fa07a87bd67`;
+- encrypted consolidated bundle SHA-256: `f73a1e1dc170af9a8fa4dde6c47348e85690fe4df712bda573b001c66b39dc19`;
+- reserve-ledger SHA-256: `f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012`;
+- exhausted-slots SHA-256: `7140e7b110d4be44d3685b20649bcd4df04b69d1cd561eb4afa69c3ba1c75490`.
+
+The workflow revalidated the exact six mixed-attempt source artifacts, decrypted them only in the ephemeral runner, reacquired and verified pinned source bytes, reconstructed all 41 reserve outcomes, and reproduced the execution aggregate exactly:
+
+```text
+7 promoted reserve replacements
+24 pending reserve adjudications
+10 exhausted slots
+= 41 activated reserves
 ```
 
-The execution target is closed against redispatch but remains `completed=false` until its six encrypted shard artifacts pass reserve consolidation. The immediate next operation is to dispatch `.github/workflows/h392-reserve-consolidation.yml` from current main. The original 129 pending adjudications remain non-replaceable; the 24 reserve adjudications become part of the canonical adjudication surface only after successful consolidation.
+The canonical 210-slot surface is therefore:
+
+```text
+40 promoted primaries
+129 pending primary adjudications
+7 promoted reserve replacements
+24 pending reserve adjudications
+10 exhausted slots
+= 210 required slots
+```
+
+This yields **47 validated promoted records**, **153 pending adjudications**, and **10 exhausted slots**. Under the frozen one-reserve-per-primary capacity, even accepting every pending adjudication can fill at most **200/210** slots, so the minimum capacity shortfall is now canonically **10**.
+
+The compact repository evidence is `artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json`. No second reserve attempt is authorized by schema 26.
+
+## Current state
+
+```ini
+cumulative_primary_evidence_complete       = true
+primary_pending_adjudication_count         = 129
+reserve_consolidation_complete             = true
+canonical_reserve_promoted                 = 7
+canonical_reserve_pending_adjudication      = 24
+canonical_exhausted_slots                  = 10
+validated_promoted_record_count            = 47
+combined_pending_adjudication_count        = 153
+maximum_fillable_under_current_capacity    = 200
+minimum_capacity_shortfall                 = 10
+automatic_second_reserve_authorized        = false
+benchmark_population_complete              = false
+benchmark_gate_passed                      = false
+```
+
+The next work must remain split into two reviewed surfaces: adjudicate the 153 pending cases under the human/authority policy, and separately define any capacity extension needed for the 10 exhausted slots. A capacity extension is a new protocol decision; consolidation itself does not create reserve attempt 2.

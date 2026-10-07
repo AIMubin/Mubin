@@ -35,17 +35,21 @@ class ReserveExecutionWorkflowTests(unittest.TestCase):
         self.assertNotIn("actions/download-artifact@v", self.workflow)
         self.assertNotIn("actions/upload-artifact@v", self.workflow)
 
-    def test_execution_target_is_closed_after_success_and_awaits_consolidation(self):
+    def test_execution_target_is_closed_after_successful_consolidation(self):
         target = self.status["reserve_execution_target"]
         self.assertFalse(target["ready"])
-        self.assertFalse(target["completed"])
+        self.assertTrue(target["completed"])
         self.assertTrue(target["execution_succeeded"])
-        self.assertTrue(target["consolidation_pending"])
+        self.assertFalse(target["consolidation_pending"])
         self.assertEqual(target["workflow"], ".github/workflows/h392-reserve-campaign.yml")
         self.assertEqual(target["task_scope"], "approved_reserve")
         self.assertEqual(target["expected_task_count"], 41)
         self.assertEqual(target["successful_run_id"], 37532437191)
         self.assertEqual(target["successful_run_final_attempt"], 2)
+        self.assertEqual(
+            target["canonical_evidence_path"],
+            "artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json",
+        )
         self.assertEqual(target["activation_manifest_sha256"], self.status["reserve_activation"]["manifest_sha256"])
         self.assertEqual(target["cumulative_ledger_sha256"], self.status["reserve_activation"]["cumulative_ledger_sha256"])
         self.assertEqual(target["replacement_eligibility_sha256"], self.status["reserve_activation"]["replacement_eligibility_sha256"])
