@@ -42,8 +42,8 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Schema-26 reserve consolidation is canonical: 40 primary promotions + 7 reserve promotions = 47 validated promoted records; 129 primary adjudications + 24 reserve adjudications = 153 pending adjudications; 10 linked primary slots are exhausted after reserve attempt 1. Because the current one-reserve-per-primary plan can fill at most 200/210 slots even if every pending adjudication is accepted, schema 27 introduces a selective, append-only capacity-extension proposal for exactly those 10 exhausted non-holdout slots. The base schema-26 Factory plan remains unchanged, and no reserve attempt 2 is executable until a generated extension manifest is independently reviewed and frozen.",
-  "next_action": "After schema-27 protocol review/merge, dispatch .github/workflows/h392-capacity-extension.yml from current main. It must decrypt only the canonical reserve-consolidation bundle, validate the exact reserve-ledger/exhausted-slot hashes, and emit a redacted 10-slot reserve-attempt-2 proposal. Do not execute reserve attempt 2 before that proposal is reviewed and committed. In parallel, design the human/authority adjudication packet protocol for the 153 pending cases.",
+  "reason": "Schema-27 capacity extension proposal run 37588897387 completed successfully on main commit 174da564ff8158c86898575e3097d15394a2ffae. The reviewed artifact contains exactly 10 deterministic reserve:02 overlay slots, one for each canonical schema-26 exhausted primary. The proposal remains non-executable: execution_authorized=false and requires_repository_approval=true. The base schema-26 Factory plan is unchanged, the 153 pending adjudications remain separate, and benchmark/H4 qualification gates remain closed.",
+  "next_action": "Treat the committed schema-27 capacity-extension manifest as the only reviewed reserve:02 overlay. The next protocol change must add execution/task-generation/reconciliation support that consumes exactly this committed manifest and no other reserve:02 slots. Do not dispatch any reserve:02 execution until that later enablement is reviewed and merged. The 153-case adjudication packet protocol remains a separate track.",
   "freeze_schema_version": 27,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -200,7 +200,12 @@
     "capacity_extension_enabled": false,
     "capacity_extension_expected_slot_count": 10,
     "capacity_extension_new_reserve_attempt": 2,
-    "adjudication_review_case_count": 153
+    "adjudication_review_case_count": 153,
+    "capacity_extension_proposal_frozen": true,
+    "capacity_extension_proposal_run_id": 37588897387,
+    "capacity_extension_proposal_manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+    "capacity_extension_proposal_evidence_path": "artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json",
+    "capacity_extension_execution_authorized": false
   },
   "reserve_activation_target": {
     "ready": false,
@@ -406,8 +411,8 @@
   "capacity_extension_enabled": false,
   "capacity_extension_workflow": ".github/workflows/h392-capacity-extension.yml",
   "capacity_extension_target": {
-    "ready": true,
-    "completed": false,
+    "ready": false,
+    "completed": true,
     "workflow": ".github/workflows/h392-capacity-extension.yml",
     "protocol_freeze_schema": 27,
     "source_reserve_consolidation_freeze_schema": 26,
@@ -428,7 +433,15 @@
     "expected_new_reserve_slot_count": 10,
     "execution_authorized": false,
     "base_factory_plan_mutated": false,
-    "policy": "derive exactly one reserve:02 slot for each canonical schema-26 exhausted slot; append-only overlay; pending adjudications and promoted slots are excluded; generated proposal requires a separate repository-review freeze before execution"
+    "policy": "derive exactly one reserve:02 slot for each canonical schema-26 exhausted slot; append-only overlay; pending adjudications and promoted slots are excluded; generated proposal requires a separate repository-review freeze before execution",
+    "successful_run_id": 37588897387,
+    "run_attempt": 1,
+    "runner_commit": "174da564ff8158c86898575e3097d15394a2ffae",
+    "artifact_id": 11467766861,
+    "artifact_name": "h392-capacity-extension-proposal",
+    "artifact_digest": "sha256:2b36aef77dfa885a01f271377d4f6164698c9d6cd56adb1c59aaba906c045115",
+    "manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+    "evidence_path": "artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json"
   },
   "adjudication_review_surface": {
     "protocol_state": "design_required",
@@ -440,5 +453,30 @@
     "source_evidence_boundary": "primary adjudications are bound to the canonical schema-25 cumulative encrypted evidence; reserve adjudications are bound to the canonical schema-26 reserve encrypted evidence; packet preparation must reacquire and verify pinned sources and preserve original task/response provenance",
     "automatic_replacement_from_rejection": false,
     "ai_may_self_authorize_acceptance": false
+  },
+  "capacity_extension_proposal_frozen": true,
+  "capacity_extension_proposal": {
+    "frozen": true,
+    "enabled_for_execution": false,
+    "protocol_freeze_schema": 27,
+    "workflow_run_id": 37588897387,
+    "run_attempt": 1,
+    "runner_commit": "174da564ff8158c86898575e3097d15394a2ffae",
+    "artifact_id": 11467766861,
+    "artifact_digest": "sha256:2b36aef77dfa885a01f271377d4f6164698c9d6cd56adb1c59aaba906c045115",
+    "manifest_sha256": "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+    "evidence_path": "artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json",
+    "extended_primary_count": 10,
+    "new_reserve_slot_count": 10,
+    "new_reserve_attempt": 2,
+    "execution_authorized": false,
+    "requires_repository_approval": true,
+    "base_factory_plan_sha256": "8f7824f26c7db3124d6fc8b521195fe1189bf2897d28687153821d44d6ea4f6f",
+    "activation_manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
+    "reserve_ledger_sha256": "f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012",
+    "exhausted_slots_sha256": "7140e7b110d4be44d3685b20649bcd4df04b69d1cd561eb4afa69c3ba1c75490",
+    "source_reserve_consolidation_run_id": 37578659973,
+    "source_reserve_consolidation_artifact_id": 11464000900,
+    "source_reserve_consolidation_artifact_digest": "sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e"
   }
 }

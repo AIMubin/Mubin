@@ -49,6 +49,8 @@ class CapacityExtensionWorkflowTests(unittest.TestCase):
 
     def test_target_is_exactly_canonical_schema26_consolidation(self):
         target = self.status["capacity_extension_target"]
+        self.assertFalse(target["ready"])
+        self.assertTrue(target["completed"])
         self.assertEqual(target["protocol_freeze_schema"], 27)
         self.assertEqual(target["source_reserve_consolidation_freeze_schema"], 26)
         self.assertEqual(target["source_reserve_consolidation_run_id"], 37578659973)
@@ -66,6 +68,21 @@ class CapacityExtensionWorkflowTests(unittest.TestCase):
         self.assertEqual(target["new_reserve_attempt"], 2)
         self.assertFalse(target["execution_authorized"])
         self.assertFalse(target["base_factory_plan_mutated"])
+        self.assertEqual(target["successful_run_id"], 37588897387)
+        self.assertEqual(target["run_attempt"], 1)
+        self.assertEqual(
+            target["runner_commit"],
+            "174da564ff8158c86898575e3097d15394a2ffae",
+        )
+        self.assertEqual(target["artifact_id"], 11467766861)
+        self.assertEqual(
+            target["artifact_digest"],
+            "sha256:2b36aef77dfa885a01f271377d4f6164698c9d6cd56adb1c59aaba906c045115",
+        )
+        self.assertEqual(
+            target["manifest_sha256"],
+            "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+        )
 
     def test_workflow_fetches_exact_artifact_and_verifies_all_hashes(self):
         self.assertIn('actions/artifacts/{artifact_id}', self.workflow)

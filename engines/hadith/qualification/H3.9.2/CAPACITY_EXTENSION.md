@@ -159,16 +159,43 @@ AI may prepare evidence packets, verify source locations, compare Curator/Verifi
 
 A future terminal adjudication rejection also does not automatically create further reserve capacity. Any new candidate opportunity arising from adjudication outcomes requires its own evidence-bound reviewed update.
 
+## Frozen schema-27 proposal
+
+Capacity extension proposal run `37588897387` completed successfully on main commit `174da564ff8158c86898575e3097d15394a2ffae`.
+
+The reviewed GitHub artifact is:
+
+- artifact ID: `11467766861`;
+- artifact digest: `sha256:2b36aef77dfa885a01f271377d4f6164698c9d6cd56adb1c59aaba906c045115`;
+- proposal manifest SHA-256: `9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce`.
+
+The artifact contained exactly one file, `CAPACITY_EXTENSION.json`, and exactly ten extension rows. Independent maintainer review rechecked all ten row bindings, including the primary-slot binding, prior `reserve:01` binding, and proposed `reserve:02` binding. The exact canonical exhausted offsets are:
+
+```text
+0, 1, 2, 3, 4, 5, 13, 20, 21, 32
+```
+
+All ten exhausted predecessors terminate with the canonical reason `curator_rejection:adapter:contract_support_not_verbatim`. No source text, gold payload, model identity, Curator/Verifier payload, excerpt, or support text is present in the proposal.
+
+The exact reviewed proposal is committed as:
+
+`artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json`
+
+The committed file must remain byte-identical to the reviewed artifact payload.
+
 ## Current schema-27 gate
 
-Until the generated proposal is reviewed and frozen:
+The proposal is now frozen, but it is still **not execution authority**:
 
 ```ini
+capacity_extension_proposal_frozen  = true
 capacity_extension_enabled          = false
-capacity_extension_target.ready     = true
-capacity_extension_target.completed = false
+capacity_extension_target.ready     = false
+capacity_extension_target.completed = true
 reserve_attempt_2_execution         = unauthorized
 benchmark_population_complete       = false
 benchmark_gate_passed               = false
 h4_qualification_allowed            = false
 ```
+
+The next change must introduce a separate execution-enablement protocol that consumes exactly the committed ten-slot manifest. It must not regenerate, broaden, or reinterpret the extension set. Only after that execution boundary is independently reviewed may `reserve:02` tasks be built or reconciled.
