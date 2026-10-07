@@ -185,6 +185,7 @@ jobs:
 
           from benchmark_campaign.factory import build_factory_plan
           from benchmark_campaign.post_consolidation import validate_reserve_activation
+          from benchmark_campaign.capacity_extension import validate_frozen_capacity_extension
 
           root = Path(".").resolve()
           plan = build_factory_plan(root)
@@ -210,8 +211,27 @@ jobs:
               if available != int(approved["activated_reserve_slot_count"]):
                   raise SystemExit("approved reserve count differs from activation evidence")
               bound_name = "repository-approved reserve activation"
+          elif scope == "approved_capacity_extension":
+              status = json.loads(
+                  (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+              )
+              approved = status.get("capacity_extension_proposal")
+              if not isinstance(approved, dict) or approved.get("frozen") is not True:
+                  raise SystemExit("repository-frozen capacity extension is missing")
+              extension_path = root / approved["evidence_path"]
+              extension = validate_frozen_capacity_extension(
+                  root,
+                  extension_path,
+                  require_execution_enabled=True,
+              )
+              available = int(extension["new_reserve_slot_count"])
+              if available != int(approved["new_reserve_slot_count"]):
+                  raise SystemExit("approved capacity-extension count differs from manifest")
+              bound_name = "repository-approved reserve:02 capacity extension"
           else:
-              raise SystemExit("TASK_SCOPE must be primary or approved_reserve")
+              raise SystemExit(
+                  "TASK_SCOPE must be primary, approved_reserve, or approved_capacity_extension"
+              )
 
           if offset < 0 or offset >= available:
               raise SystemExit(f"TASK_OFFSET must be in [0, {available - 1}]")
@@ -322,11 +342,25 @@ jobs:
           python -m benchmark_campaign factory-plan \
             --out "$RUN_DIR/factory-plan.json" \
             > /dev/null
+          extra=()
+          if [ "$TASK_SCOPE" = "approved_capacity_extension" ]; then
+            extension_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads(
+              (Path("artifacts") / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+          )
+          print(status["capacity_extension_proposal"]["evidence_path"])
+          PY
+          )"
+            extra+=(--capacity-extension "$extension_path")
+          fi
           python -m benchmark_campaign factory-build-tasks \
             --partition non_holdout \
             --plan "$RUN_DIR/factory-plan.json" \
             --index-dir "$INDEX_DIR" \
             --out "$RUN_DIR/all-curator-tasks.jsonl" \
+            "${extra[@]}" \
             > "$REDACTED_DIR/task-build-report.json"
 
       - name: Select deterministic task chunk
@@ -339,6 +373,7 @@ jobs:
 
           from benchmark_campaign.core import sha256_file
           from benchmark_campaign.post_consolidation import validate_reserve_activation
+          from benchmark_campaign.capacity_extension import validate_frozen_capacity_extension
 
           root = Path(".").resolve()
           run = Path(os.environ["RUN_DIR"])
@@ -351,6 +386,7 @@ jobs:
           limit = int(os.environ["TASK_LIMIT"])
           scope = os.environ["TASK_SCOPE"]
           activation_sha256 = None
+          capacity_extension_sha256 = None
 
           if scope == "primary":
               selected = rows[offset:offset + limit]
@@ -376,8 +412,50 @@ jobs:
                   raise SystemExit(f"activated reserve tasks missing from Factory output: {missing}")
               selected = [by_id[task_id] for task_id in selected_ids]
               validate_reserve_activation(root, activation_path, selected)
-              if any(row.get("candidate_slot_kind") != "reserve" for row in selected):
-                  raise SystemExit("approved reserve selection contains a non-reserve task")
+              if any(
+                  row.get("candidate_slot_kind") != "reserve"
+                  or row.get("reserve_attempt") != 1
+                  for row in selected
+              ):
+                  raise SystemExit("approved reserve selection contains non-reserve:01 task")
+          elif scope == "approved_capacity_extension":
+              status = json.loads(
+                  (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+              )
+              approved = status["capacity_extension_proposal"]
+              extension_path = root / approved["evidence_path"]
+              extension = validate_frozen_capacity_extension(
+                  root,
+                  extension_path,
+                  require_execution_enabled=True,
+              )
+              capacity_extension_sha256 = sha256_file(extension_path)
+              approved_ids = [
+                  str(row["new_reserve_slot_id"])
+                  for row in extension["extensions"]
+              ]
+              selected_ids = approved_ids[offset:offset + limit]
+              by_id = {str(row["task_id"]): row for row in rows}
+              if len(by_id) != len(rows):
+                  raise SystemExit("factory task set contains duplicate task IDs")
+              missing = [task_id for task_id in selected_ids if task_id not in by_id]
+              if missing:
+                  raise SystemExit(
+                      f"approved reserve:02 tasks missing from Factory overlay output: {missing}"
+                  )
+              selected = [by_id[task_id] for task_id in selected_ids]
+              validate_frozen_capacity_extension(
+                  root,
+                  extension_path,
+                  selected,
+                  require_execution_enabled=True,
+              )
+              if any(
+                  row.get("candidate_slot_kind") != "reserve"
+                  or row.get("reserve_attempt") != 2
+                  for row in selected
+              ):
+                  raise SystemExit("capacity-extension selection contains non-reserve:02 task")
           else:
               raise SystemExit("unsupported TASK_SCOPE")
 
@@ -395,6 +473,7 @@ jobs:
               "selected_task_count": len(selected),
               "selected_tasks_sha256": hashlib.sha256(out.read_bytes()).hexdigest(),
               "reserve_activation_sha256": activation_sha256,
+              "capacity_extension_sha256": capacity_extension_sha256,
           }
           (Path(os.environ["REDACTED_DIR"]) / "chunk.json").write_text(
               json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -476,6 +555,17 @@ jobs:
         env:
           MUBIN_MODEL_API_KEY: ${{ secrets.H392_CURATOR_API_KEY }}
         run: |
+          extra=()
+          if [ "$TASK_SCOPE" = "approved_capacity_extension" ]; then
+            extension_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads((Path("artifacts") / "H3.9.2-STATUS.json").read_text())
+          print(status["capacity_extension_proposal"]["evidence_path"])
+          PY
+          )"
+            extra+=(--capacity-extension "$extension_path")
+          fi
           python -m benchmark_campaign factory-run-agent \
             --role curator \
             --tasks "$RUN_DIR/curator-tasks.jsonl" \
@@ -483,16 +573,29 @@ jobs:
             --config "$RUN_DIR/curator-config.json" \
             --out "$RUN_DIR/curator-responses.jsonl" \
             --manifest "$RUN_DIR/curator-run.json" \
+            "${extra[@]}" \
             > /dev/null
 
       - name: Prepare structurally blind Verifier tasks
         id: verifier_tasks
         run: |
+          extra=()
+          if [ "$TASK_SCOPE" = "approved_capacity_extension" ]; then
+            extension_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads((Path("artifacts") / "H3.9.2-STATUS.json").read_text())
+          print(status["capacity_extension_proposal"]["evidence_path"])
+          PY
+          )"
+            extra+=(--capacity-extension "$extension_path")
+          fi
           python -m benchmark_campaign factory-prepare-verifier \
             --partition non_holdout \
             --tasks "$RUN_DIR/curator-tasks.jsonl" \
             --curator-responses "$RUN_DIR/curator-responses.jsonl" \
             --out "$RUN_DIR/verifier-tasks.jsonl" \
+            "${extra[@]}" \
             > "$REDACTED_DIR/verifier-task-report.json"
           count="$(python -c 'import json,os; print(json.load(open(os.path.join(os.environ["REDACTED_DIR"],"verifier-task-report.json")))["verifier_tasks"])')"
           echo "count=$count" >> "$GITHUB_OUTPUT"
@@ -533,6 +636,17 @@ jobs:
           PY
           )"
             extra+=(--reserve-activation "$activation_path")
+          elif [ "$TASK_SCOPE" = "approved_capacity_extension" ]; then
+            extension_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          status = json.loads(
+              (Path("artifacts") / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+          )
+          print(status["capacity_extension_proposal"]["evidence_path"])
+          PY
+          )"
+            extra+=(--capacity-extension "$extension_path")
           fi
           python -m benchmark_campaign factory-reconcile \
             --partition non_holdout \

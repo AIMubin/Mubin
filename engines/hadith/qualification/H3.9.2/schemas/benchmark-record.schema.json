@@ -503,8 +503,48 @@
               "minLength": 1
             },
             "reserve_attempt": {
-              "type": "integer",
-              "minimum": 1
+              "const": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "capacity_extension": {
+          "type": "object",
+          "required": [
+            "manifest_sha256",
+            "protocol_freeze_schema",
+            "base_factory_plan_sha256",
+            "reserve_ledger_sha256",
+            "exhausted_slots_sha256",
+            "replacement_for_slot_id",
+            "reserve_attempt"
+          ],
+          "properties": {
+            "manifest_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "protocol_freeze_schema": {
+              "const": 27
+            },
+            "base_factory_plan_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "reserve_ledger_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "exhausted_slots_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "replacement_for_slot_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "reserve_attempt": {
+              "const": 2
             }
           },
           "additionalProperties": false
@@ -635,10 +675,63 @@
           "factory_verification"
         ],
         "properties": {
+          "factory_slot_id": {
+            "type": "string",
+            "pattern": ":reserve:(01|02)$"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "factory_slot_id": {
+            "type": "string",
+            "pattern": ":reserve:01$"
+          }
+        },
+        "required": [
+          "factory_slot_id"
+        ]
+      },
+      "then": {
+        "properties": {
           "factory_verification": {
             "required": [
               "reserve_activation"
-            ]
+            ],
+            "not": {
+              "required": [
+                "capacity_extension"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "factory_slot_id": {
+            "type": "string",
+            "pattern": ":reserve:02$"
+          }
+        },
+        "required": [
+          "factory_slot_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "factory_verification": {
+            "required": [
+              "capacity_extension"
+            ],
+            "not": {
+              "required": [
+                "reserve_activation"
+              ]
+            }
           }
         }
       }

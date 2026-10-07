@@ -292,6 +292,8 @@ def _validate_factory_reserve_policy(
     slot_id = record.get("factory_slot_id")
     if not isinstance(slot_id, str) or not slot_id:
         return []
+    capacity_manifest: dict[str, Any] | None = None
+    capacity_manifest_sha256: str | None = None
     try:
         from .factory import build_factory_plan
         factory_plan = build_factory_plan(root)
@@ -299,10 +301,24 @@ def _validate_factory_reserve_policy(
             str(slot["slot_id"]): slot
             for slot in factory_plan.get("slots", [])
         }
+        status_path = root / "artifacts" / "H3.9.2-STATUS.json"
+        status = load_json(status_path) if status_path.exists() else {}
+        frozen_capacity = status.get("capacity_extension_proposal")
+        if isinstance(frozen_capacity, dict) and frozen_capacity.get("frozen") is True:
+            from .capacity_extension import validate_frozen_capacity_extension
+
+            capacity_path = root / str(frozen_capacity["evidence_path"])
+            capacity_manifest = validate_frozen_capacity_extension(
+                root, capacity_path, require_execution_enabled=False
+            )
+            capacity_manifest_sha256 = sha256_file(capacity_path)
+            for item in capacity_manifest["extensions"]:
+                overlay_slot = item["new_reserve_slot"]
+                slots[str(overlay_slot["slot_id"])] = overlay_slot
     except Exception as exc:
         return [Violation(
             "qualification.factory_plan_unavailable",
-            f"cannot re-derive frozen factory plan: {exc}",
+            f"cannot re-derive frozen factory/capacity plan: {exc}",
             benchmark_id,
             record.get("case_id"),
         )]
@@ -320,6 +336,70 @@ def _validate_factory_reserve_policy(
             cid,
         )]
     status = load_json(status_path)
+    if slot.get("reserve_attempt") == 2:
+        if status.get("capacity_extension_enabled") is not True:
+            return [Violation(
+                "qualification.capacity_extension_execution_disabled",
+                "reserve:02 record requires repository-approved capacity execution enablement",
+                benchmark_id,
+                cid,
+            )]
+        if capacity_manifest is None or capacity_manifest_sha256 is None:
+            return [Violation(
+                "qualification.capacity_extension_missing",
+                "reserve:02 record requires the frozen capacity-extension manifest",
+                benchmark_id,
+                cid,
+            )]
+        matches = [
+            row for row in capacity_manifest.get("extensions", [])
+            if isinstance(row, dict) and row.get("new_reserve_slot_id") == slot_id
+        ]
+        if len(matches) != 1:
+            return [Violation(
+                "qualification.capacity_extension_slot_not_approved",
+                "reserve:02 slot is not uniquely present in the frozen capacity extension",
+                benchmark_id,
+                cid,
+            )]
+        approved_row = matches[0]
+        if approved_row.get("new_reserve_slot_binding_sha256") != sha256_bytes(
+            canonical_json_bytes(slot)
+        ):
+            return [Violation(
+                "qualification.capacity_extension_slot_binding",
+                "reserve:02 slot binding differs from the frozen capacity extension",
+                benchmark_id,
+                cid,
+            )]
+        fv = record.get("factory_verification")
+        binding = fv.get("capacity_extension") if isinstance(fv, dict) else None
+        if not isinstance(binding, dict):
+            return [Violation(
+                "qualification.capacity_extension_binding_missing",
+                "reserve:02 record lacks factory_verification.capacity_extension",
+                benchmark_id,
+                cid,
+            )]
+        expected = {
+            "manifest_sha256": capacity_manifest_sha256,
+            "protocol_freeze_schema": capacity_manifest["protocol_freeze_schema"],
+            "base_factory_plan_sha256": capacity_manifest["base_factory_plan_sha256"],
+            "reserve_ledger_sha256": capacity_manifest["reserve_ledger_sha256"],
+            "exhausted_slots_sha256": capacity_manifest["exhausted_slots_sha256"],
+            "replacement_for_slot_id": slot["replacement_for_slot_id"],
+            "reserve_attempt": 2,
+        }
+        out: list[Violation] = []
+        for field, value in expected.items():
+            if binding.get(field) != value:
+                out.append(Violation(
+                    f"qualification.capacity_extension_{field}",
+                    f"capacity-extension {field} does not match reviewed manifest",
+                    benchmark_id,
+                    cid,
+                ))
+        return out
     if status.get("reserve_reconciliation_enabled") is not True:
         return [Violation(
             "qualification.reserve_reconciliation_disabled",
@@ -520,13 +600,27 @@ def _validate_factory_slot_binding(root: Path, record: dict[str, Any],
     try:
         from .factory import build_factory_plan
         plan = build_factory_plan(root)
+        slots = {str(s["slot_id"]): s for s in plan.get("slots", [])}
+        status_path = root / "artifacts" / "H3.9.2-STATUS.json"
+        if status_path.exists():
+            status = load_json(status_path)
+            frozen_capacity = status.get("capacity_extension_proposal")
+            if isinstance(frozen_capacity, dict) and frozen_capacity.get("frozen") is True:
+                from .capacity_extension import validate_frozen_capacity_extension
+
+                capacity_path = root / str(frozen_capacity["evidence_path"])
+                extension = validate_frozen_capacity_extension(
+                    root, capacity_path, require_execution_enabled=False
+                )
+                for item in extension["extensions"]:
+                    overlay_slot = item["new_reserve_slot"]
+                    slots[str(overlay_slot["slot_id"])] = overlay_slot
     except Exception as exc:
         return [Violation(
             "qualification.factory_plan_unavailable",
-            f"cannot re-derive frozen factory plan: {exc}",
+            f"cannot re-derive frozen factory/capacity plan: {exc}",
             benchmark_id, cid,
         )]
-    slots = {str(s["slot_id"]): s for s in plan.get("slots", [])}
     slot_id = record.get("factory_slot_id")
     task_id = record.get("factory_task_id")
     if not isinstance(slot_id, str) or not slot_id:

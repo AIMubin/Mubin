@@ -309,3 +309,15 @@ The proposal is limited to the exact 10 canonical exhausted slots and defines on
 
 The 153 adjudications remain orthogonal. Their future packet/review protocol must preserve the primary-vs-reserve provenance of each case and require human/authority decisions; schema 27 does not convert them into replacement eligibility.
 
+## Schema-28 reserve2 execution handoff
+
+Schema 27 is now closed as the proposal/freeze stage. Capacity proposal run `37588897387` produced and repository review froze exactly ten `:reserve:02` overlay slots in `artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json`.
+
+Schema 28 authorizes execution of only those ten slots through `.github/workflows/h392-reserve2-campaign.yml`. The schema-27 manifest itself remains `execution_authorized=false`; execution authority comes from the schema-28 repository status and workflow binding. The historical schema-26 Factory plan is not rewritten.
+
+The reusable pilot receives the explicit internal scope `approved_capacity_extension`, and every Factory boundary that can admit Curator output receives the exact capacity manifest: task construction, Curator task validation, verifier-task preparation, and reconciliation. A promoted `reserve:02` record carries a dedicated `factory_verification.capacity_extension` provenance object; it is never represented as a schema-26 `reserve_activation` record.
+
+The campaign is fixed at ten tasks in five two-task shards. This reduces the replay surface if a workflow-level fatal infrastructure failure requires a failed-job rerun while preserving the existing task-local collection semantics.
+
+A successful reserve2 campaign remains execution evidence only. Its encrypted source-bearing shards and redacted aggregate must be consolidated and frozen before the canonical 210-slot population is updated. The existing 153 pending adjudications remain outside the reserve2 execution set.
+

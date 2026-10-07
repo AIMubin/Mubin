@@ -82,9 +82,32 @@ def _task_partition(rows: list[dict[str, Any]]) -> str:
     raise ValueError("do not mix holdout and non-holdout tasks in one factory operation")
 
 
-def _validate_tasks_against_frozen_plan(root: Path, rows: list[dict[str, Any]]) -> None:
+def _validate_tasks_against_frozen_plan(
+    root: Path,
+    rows: list[dict[str, Any]],
+    *,
+    capacity_extension_path: Path | None = None,
+    require_capacity_execution: bool = False,
+) -> None:
     expected_plan = build_factory_plan(root)
     slots = {str(s["slot_id"]): s for s in expected_plan["slots"]}
+    if capacity_extension_path is not None:
+        from .capacity_extension import validate_frozen_capacity_extension
+
+        extension = validate_frozen_capacity_extension(
+            root,
+            capacity_extension_path,
+            rows,
+            require_execution_enabled=require_capacity_execution,
+        )
+        for item in extension["extensions"]:
+            slot = item["new_reserve_slot"]
+            slot_id = str(slot["slot_id"])
+            if slot_id in slots:
+                raise ValueError(
+                    f"capacity extension collides with frozen Factory slot: {slot_id}"
+                )
+            slots[slot_id] = slot
     cplan = _curation_plan(root)
     factory_policy = _policy(root)
     registry = source_map(load_source_registry(root))
@@ -372,8 +395,16 @@ def _segment_score(text: str, keywords: list[str]) -> int:
     return sum(text.count(k) for k in keywords if k)
 
 
-def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: Path,
-                        partition: str = "non_holdout", custodian_mode: bool = False) -> dict[str, Any]:
+def build_factory_tasks(
+    root: Path,
+    plan_path: Path,
+    index_dir: Path,
+    out_path: Path,
+    partition: str = "non_holdout",
+    custodian_mode: bool = False,
+    capacity_extension_path: Path | None = None,
+    require_capacity_execution: bool = True,
+) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
         raise ValueError("factory tasks are built one partition at a time")
     enforce_partition_boundary(root, partition, index_dir, custodian_mode)
@@ -382,6 +413,27 @@ def build_factory_tasks(root: Path, plan_path: Path, index_dir: Path, out_path: 
     expected_plan = build_factory_plan(root)
     if canonical_json_bytes(plan) != canonical_json_bytes(expected_plan):
         raise ValueError("factory plan does not match the frozen quotas/spec/policy")
+    if capacity_extension_path is not None:
+        if partition != "non_holdout":
+            raise ValueError("schema-28 capacity extension is non_holdout only")
+        from .capacity_extension import validate_frozen_capacity_extension
+
+        extension = validate_frozen_capacity_extension(
+            root,
+            capacity_extension_path,
+            require_execution_enabled=require_capacity_execution,
+        )
+        plan = json.loads(json.dumps(plan, ensure_ascii=False))
+        existing_ids = {str(slot["slot_id"]) for slot in plan["slots"]}
+        for item in extension["extensions"]:
+            slot = item["new_reserve_slot"]
+            slot_id = str(slot["slot_id"])
+            if slot_id in existing_ids:
+                raise ValueError(
+                    f"capacity extension collides with frozen candidate plan: {slot_id}"
+                )
+            plan["slots"].append(slot)
+            existing_ids.add(slot_id)
     policy = _policy(root)
     cplan = _curation_plan(root)
     index_manifest_path = index_dir / "INDEX_MANIFEST.json"
@@ -590,8 +642,15 @@ def _verifier_task_from_curator(
     return verifier_task, None
 
 
-def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path: Path, out_path: Path,
-                           partition: str = "non_holdout", custodian_mode: bool = False) -> dict[str, Any]:
+def prepare_verifier_tasks(
+    root: Path,
+    tasks_path: Path,
+    curator_responses_path: Path,
+    out_path: Path,
+    partition: str = "non_holdout",
+    custodian_mode: bool = False,
+    capacity_extension_path: Path | None = None,
+) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
         raise ValueError("partition must be holdout or non_holdout")
     if partition == "holdout":
@@ -601,7 +660,12 @@ def prepare_verifier_tasks(root: Path, tasks_path: Path, curator_responses_path:
     actual_partition = _task_partition(task_rows)
     if actual_partition != partition:
         raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
-    _validate_tasks_against_frozen_plan(root, task_rows)
+    _validate_tasks_against_frozen_plan(
+        root,
+        task_rows,
+        capacity_extension_path=capacity_extension_path,
+        require_capacity_execution=capacity_extension_path is not None,
+    )
     tasks = {str(t["task_id"]): t for t in task_rows}
     responses = load_jsonl(curator_responses_path)
     out: list[dict[str, Any]] = []
@@ -822,11 +886,20 @@ def _verify_supports(root: Path, source_cache_dir: Path, supports: Any, allowed_
     return verified
 
 
-def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path,
-                      verifier_responses_path: Path, source_cache_dir: Path,
-                      reviewed_dir: Path, adjudication_path: Path, ledger_path: Path,
-                      custodian_mode: bool = False, partition: str = "non_holdout",
-                      reserve_activation_path: Path | None = None) -> dict[str, Any]:
+def reconcile_factory(
+    root: Path,
+    tasks_path: Path,
+    curator_responses_path: Path,
+    verifier_responses_path: Path,
+    source_cache_dir: Path,
+    reviewed_dir: Path,
+    adjudication_path: Path,
+    ledger_path: Path,
+    custodian_mode: bool = False,
+    partition: str = "non_holdout",
+    reserve_activation_path: Path | None = None,
+    capacity_extension_path: Path | None = None,
+) -> dict[str, Any]:
     if partition not in {"holdout", "non_holdout"}:
         raise ValueError("partition must be holdout or non_holdout")
     if partition == "holdout":
@@ -839,30 +912,63 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
     actual_partition = _task_partition(task_rows)
     if actual_partition != partition:
         raise ValueError(f"factory task partition {actual_partition} does not match requested {partition}")
-    _validate_tasks_against_frozen_plan(root, task_rows)
+    _validate_tasks_against_frozen_plan(
+        root,
+        task_rows,
+        capacity_extension_path=capacity_extension_path,
+        require_capacity_execution=capacity_extension_path is not None,
+    )
     reserve_tasks = [
         task for task in task_rows
         if task.get("candidate_slot_kind") == "reserve"
     ]
     reserve_activation: dict[str, Any] | None = None
     reserve_activation_sha256: str | None = None
+    capacity_extension: dict[str, Any] | None = None
+    capacity_extension_sha256: str | None = None
     if reserve_tasks:
         if len(reserve_tasks) != len(task_rows):
             raise ValueError("do not mix primary and reserve tasks in one reconciliation")
         if partition != "non_holdout":
-            raise ValueError("schema-26 reserve activation currently supports non_holdout only")
-        if reserve_activation_path is None:
-            raise ValueError(
-                "reserve candidate reconciliation requires a reviewed activation manifest"
-            )
-        from .post_consolidation import validate_reserve_activation
+            raise ValueError("reserve reconciliation currently supports non_holdout only")
+        attempts = {task.get("reserve_attempt") for task in reserve_tasks}
+        if attempts == {1}:
+            if capacity_extension_path is not None:
+                raise ValueError(
+                    "schema-26 reserve:01 reconciliation must not supply capacity extension"
+                )
+            if reserve_activation_path is None:
+                raise ValueError(
+                    "reserve candidate reconciliation requires a reviewed activation manifest"
+                )
+            from .post_consolidation import validate_reserve_activation
 
-        reserve_activation = validate_reserve_activation(
-            root, reserve_activation_path, task_rows
-        )
-        reserve_activation_sha256 = sha256_file(reserve_activation_path)
-    elif reserve_activation_path is not None:
-        raise ValueError("reserve activation manifest supplied for primary-only reconciliation")
+            reserve_activation = validate_reserve_activation(
+                root, reserve_activation_path, task_rows
+            )
+            reserve_activation_sha256 = sha256_file(reserve_activation_path)
+        elif attempts == {2}:
+            if reserve_activation_path is not None:
+                raise ValueError(
+                    "reserve:02 reconciliation must not use schema-26 reserve activation"
+                )
+            if capacity_extension_path is None:
+                raise ValueError(
+                    "reserve:02 reconciliation requires the frozen capacity extension"
+                )
+            from .capacity_extension import validate_frozen_capacity_extension
+
+            capacity_extension = validate_frozen_capacity_extension(
+                root,
+                capacity_extension_path,
+                task_rows,
+                require_execution_enabled=True,
+            )
+            capacity_extension_sha256 = sha256_file(capacity_extension_path)
+        else:
+            raise ValueError("reserve reconciliation requires one supported reserve attempt")
+    elif reserve_activation_path is not None or capacity_extension_path is not None:
+        raise ValueError("reserve authorization supplied for primary-only reconciliation")
     tasks = {str(t["task_id"]): t for t in task_rows}
 
     curators = {str(r["task_id"]): r for r in load_jsonl(curator_responses_path)}
@@ -1042,6 +1148,10 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
         expected_slots = {
             str(s["slot_id"]): s for s in build_factory_plan(root)["slots"]
         }
+        if capacity_extension is not None:
+            for item in capacity_extension["extensions"]:
+                slot = item["new_reserve_slot"]
+                expected_slots[str(slot["slot_id"])] = slot
         expected_slot = expected_slots[task["slot_id"]]
         candidate["factory_verification"] = {
             "factory_version": int(_policy(root).get("factory_version", 0)),
@@ -1060,14 +1170,28 @@ def reconcile_factory(root: Path, tasks_path: Path, curator_responses_path: Path
             "task_fingerprint": task["task_fingerprint"],
         }
         if task.get("candidate_slot_kind") == "reserve":
-            assert reserve_activation is not None and reserve_activation_sha256 is not None
-            candidate["factory_verification"]["reserve_activation"] = {
-                "activation_manifest_sha256": reserve_activation_sha256,
-                "cumulative_ledger_sha256": reserve_activation["cumulative_ledger_sha256"],
-                "replacement_eligibility_sha256": reserve_activation["replacement_eligibility_sha256"],
-                "replacement_for_slot_id": task["replacement_for_slot_id"],
-                "reserve_attempt": task["reserve_attempt"],
-            }
+            if task.get("reserve_attempt") == 1:
+                assert reserve_activation is not None and reserve_activation_sha256 is not None
+                candidate["factory_verification"]["reserve_activation"] = {
+                    "activation_manifest_sha256": reserve_activation_sha256,
+                    "cumulative_ledger_sha256": reserve_activation["cumulative_ledger_sha256"],
+                    "replacement_eligibility_sha256": reserve_activation["replacement_eligibility_sha256"],
+                    "replacement_for_slot_id": task["replacement_for_slot_id"],
+                    "reserve_attempt": task["reserve_attempt"],
+                }
+            elif task.get("reserve_attempt") == 2:
+                assert capacity_extension is not None and capacity_extension_sha256 is not None
+                candidate["factory_verification"]["capacity_extension"] = {
+                    "manifest_sha256": capacity_extension_sha256,
+                    "protocol_freeze_schema": capacity_extension["protocol_freeze_schema"],
+                    "base_factory_plan_sha256": capacity_extension["base_factory_plan_sha256"],
+                    "reserve_ledger_sha256": capacity_extension["reserve_ledger_sha256"],
+                    "exhausted_slots_sha256": capacity_extension["exhausted_slots_sha256"],
+                    "replacement_for_slot_id": task["replacement_for_slot_id"],
+                    "reserve_attempt": task["reserve_attempt"],
+                }
+            else:
+                raise ValueError(f"unsupported reserve attempt: {task.get('reserve_attempt')}")
         try:
             sealed = seal_reviewed_record(root, candidate, source_cache_dir)
         except Exception as exc:

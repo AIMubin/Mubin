@@ -289,8 +289,8 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
     def test_real_target_is_exactly_the_canonical_ten_slot_shortfall(self):
         root = Path(__file__).resolve().parents[1]
         status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
-        self.assertEqual(status["freeze_schema_version"], 27)
-        self.assertFalse(status["capacity_extension_enabled"])
+        self.assertEqual(status["freeze_schema_version"], 28)
+        self.assertTrue(status["capacity_extension_enabled"])
         target = status["capacity_extension_target"]
         self.assertFalse(target["ready"])
         self.assertTrue(target["completed"])
@@ -310,7 +310,7 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
         self.assertTrue(status["capacity_extension_proposal_frozen"])
         proposal = status["capacity_extension_proposal"]
         self.assertTrue(proposal["frozen"])
-        self.assertFalse(proposal["enabled_for_execution"])
+        self.assertTrue(proposal["enabled_for_execution"])
         self.assertFalse(proposal["execution_authorized"])
         self.assertTrue(proposal["requires_repository_approval"])
         self.assertEqual(proposal["workflow_run_id"], 37588897387)
@@ -322,6 +322,27 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
         self.assertEqual(
             proposal["manifest_sha256"],
             "9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce",
+        )
+
+    def test_frozen_capacity_proposal_is_execution_enabled_only_by_schema28_status(self):
+        root = Path(__file__).resolve().parents[1]
+        status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
+        path = root / status["capacity_extension_proposal"]["evidence_path"]
+        manifest = capacity_extension.validate_frozen_capacity_extension(
+            root,
+            path,
+            require_execution_enabled=True,
+        )
+        self.assertEqual(manifest["new_reserve_slot_count"], 10)
+        self.assertFalse(manifest["execution_authorized"])
+        self.assertTrue(status["capacity_extension_enabled"])
+        execution = status["reserve2_execution_target"]
+        self.assertTrue(execution["ready"])
+        self.assertFalse(execution["completed"])
+        self.assertEqual(execution["task_scope"], "approved_capacity_extension")
+        self.assertEqual(
+            execution["capacity_extension_manifest_sha256"],
+            status["capacity_extension_proposal"]["manifest_sha256"],
         )
 
     def test_committed_capacity_proposal_is_exact_artifact_payload(self):
