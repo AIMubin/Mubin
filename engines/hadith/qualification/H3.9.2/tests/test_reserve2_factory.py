@@ -212,5 +212,44 @@ class Reserve2FactoryOverlayTests(unittest.TestCase):
                 p.stop()
 
 
+
+class RepositoryReserve2SchemaTests(unittest.TestCase):
+    def test_benchmark_schema_distinguishes_reserve1_and_reserve2_provenance(self):
+        root = Path(__file__).resolve().parents[1]
+        schema = json.loads(
+            (root / "schemas" / "benchmark-record.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        fv = schema["properties"]["factory_verification"]
+        capacity = fv["properties"]["capacity_extension"]
+        self.assertEqual(capacity["properties"]["protocol_freeze_schema"], {"const": 27})
+        self.assertEqual(capacity["properties"]["reserve_attempt"], {"const": 2})
+        self.assertEqual(
+            fv["properties"]["reserve_activation"]["properties"]["reserve_attempt"],
+            {"const": 1},
+        )
+
+        conditionals = {
+            item["if"]["properties"]["factory_slot_id"]["pattern"]: item["then"]
+            for item in schema["allOf"]
+            if isinstance(item, dict)
+            and isinstance(item.get("if"), dict)
+            and isinstance(item["if"].get("properties"), dict)
+            and isinstance(item["if"]["properties"].get("factory_slot_id"), dict)
+            and "pattern" in item["if"]["properties"]["factory_slot_id"]
+        }
+        reserve1 = conditionals[":reserve:01$"]["properties"]["factory_verification"]
+        reserve2 = conditionals[":reserve:02$"]["properties"]["factory_verification"]
+        self.assertEqual(reserve1["required"], ["reserve_activation"])
+        self.assertEqual(reserve1["not"], {"required": ["capacity_extension"]})
+        self.assertEqual(reserve2["required"], ["capacity_extension"])
+        self.assertEqual(reserve2["not"], {"required": ["reserve_activation"]})
+        self.assertEqual(
+            conditionals[":reserve:[0-9]+$"]["properties"]["factory_slot_id"]["pattern"],
+            ":reserve:(01|02)$",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
