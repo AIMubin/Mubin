@@ -289,8 +289,8 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
     def test_real_target_is_exactly_the_canonical_ten_slot_shortfall(self):
         root = Path(__file__).resolve().parents[1]
         status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
-        self.assertEqual(status["freeze_schema_version"], 27)
-        self.assertFalse(status["capacity_extension_enabled"])
+        self.assertEqual(status["freeze_schema_version"], 28)
+        self.assertTrue(status["capacity_extension_enabled"])
         target = status["capacity_extension_target"]
         self.assertFalse(target["ready"])
         self.assertTrue(target["completed"])
@@ -310,7 +310,7 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
         self.assertTrue(status["capacity_extension_proposal_frozen"])
         proposal = status["capacity_extension_proposal"]
         self.assertTrue(proposal["frozen"])
-        self.assertFalse(proposal["enabled_for_execution"])
+        self.assertTrue(proposal["enabled_for_execution"])
         self.assertFalse(proposal["execution_authorized"])
         self.assertTrue(proposal["requires_repository_approval"])
         self.assertEqual(proposal["workflow_run_id"], 37588897387)
