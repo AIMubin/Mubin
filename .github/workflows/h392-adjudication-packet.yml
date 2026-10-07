@@ -1,0 +1,400 @@
+name: H3.9.2 adjudication packet preparation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+    env:
+      CANONICAL_ROOT: /tmp/h392-adjudication/canonical
+      SOURCE_EVIDENCE_ROOT: /tmp/h392-adjudication/source-evidence
+      SOURCE_CACHE_DIR: /tmp/h392-adjudication/source-cache
+      PACKET_DIR: /tmp/h392-adjudication/packet
+      REDACTED_DIR: /tmp/h392-adjudication/redacted
+      SOURCE_TARGET: /tmp/h392-adjudication/ADJUDICATION_SOURCE_TARGET.json
+
+    steps:
+      - name: Checkout Mubin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Refuse stale or non-main dispatch
+        run: |
+          set -eu
+          test "${GITHUB_REF_NAME:-}" = "main"
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          test "$current" = "$latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+
+      - name: Install campaign dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate schema30 adjudication target
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          test -n "$ARTIFACT_KEY"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          status=json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          if status.get("freeze_schema_version") != 30:
+              raise SystemExit("adjudication packet requires schema 30")
+          target=status.get("adjudication_packet_target")
+          if not isinstance(target,dict) or target.get("ready") is not True or target.get("completed") is not False:
+              raise SystemExit("adjudication packet target is not open")
+          if target.get("workflow") != ".github/workflows/h392-adjudication-packet.yml":
+              raise SystemExit("adjudication workflow binding mismatch")
+          if target.get("expected_case_count") != 158:
+              raise SystemExit("adjudication count must be 158")
+          if target.get("layer_counts") != {"primary":129,"reserve01":24,"reserve02":5}:
+              raise SystemExit("adjudication layer counts mismatch")
+          surface=status.get("adjudication_review_surface",{})
+          if (
+              surface.get("combined_pending_case_count") != 158
+              or surface.get("human_or_authority_decision_required") is not True
+              or surface.get("ai_may_self_authorize_acceptance") is not False
+          ):
+              raise SystemExit("adjudication authority boundary mismatch")
+          if status.get("post_consolidation_protocol",{}).get("automatic_reserve3_authorized") is not False:
+              raise SystemExit("reserve:03 must remain unauthorized")
+          PY
+
+      - name: Acquire and verify pinned non-holdout sources
+        run: |
+          set -eu
+          python -m benchmark_campaign acquire-sources --partition non_holdout --cache-dir "$SOURCE_CACHE_DIR" > "$RUNNER_TEMP/acquire.json"
+          python -m benchmark_campaign verify-source-cache --partition non_holdout --cache-dir "$SOURCE_CACHE_DIR" > "$RUNNER_TEMP/verify.json"
+
+      - name: Fetch and decrypt exact canonical consolidation artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          mkdir -p "$CANONICAL_ROOT"
+          python - <<'PY'
+          import hashlib,json,os,shutil,stat,tarfile,urllib.error,urllib.parse,urllib.request,zipfile
+          from pathlib import Path
+          from benchmark_campaign.artifact_crypto import decrypt_file
+
+          root=Path.cwd()
+          status=json.loads((root/"artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          repo=os.environ["GITHUB_REPOSITORY"]; token=os.environ["GH_TOKEN"]; key=os.environ["ARTIFACT_KEY"]
+          out=Path(os.environ["CANONICAL_ROOT"])
+
+          def request(url):
+              return urllib.request.Request(url,headers={
+                  "Authorization":f"Bearer {token}",
+                  "Accept":"application/vnd.github+json",
+                  "X-GitHub-Api-Version":"2022-11-28",
+                  "User-Agent":"mubin-h392-adjudication",
+              })
+          def api(url):
+              with urllib.request.urlopen(request(url),timeout=120) as r: return json.load(r)
+          class NR(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,req,fp,code,msg,headers,newurl): return None
+          def download(meta,dest):
+              try: urllib.request.build_opener(NR).open(request(meta["archive_download_url"]),timeout=120)
+              except urllib.error.HTTPError as e:
+                  if e.code not in {301,302,303,307,308}: raise
+                  loc=e.headers.get("Location")
+              if not loc: raise SystemExit("artifact redirect missing")
+              p=urllib.parse.urlparse(loc)
+              if p.scheme!="https" or not p.hostname or p.username or p.password: raise SystemExit("unsafe artifact redirect")
+              with urllib.request.urlopen(urllib.request.Request(loc,headers={"User-Agent":"mubin-h392-adjudication"}),timeout=120) as r:
+                  dest.write_bytes(r.read())
+          def unzip(src,dst):
+              dst.mkdir(parents=True,exist_ok=True)
+              with zipfile.ZipFile(src) as z:
+                  for i in z.infolist():
+                      p=Path(i.filename); mode=(i.external_attr>>16)&0xffff
+                      if p.is_absolute() or ".." in p.parts or stat.S_ISLNK(mode): raise SystemExit("unsafe canonical ZIP member")
+                  z.extractall(dst)
+          def untar(src,dst):
+              dst.mkdir(parents=True,exist_ok=True)
+              with tarfile.open(src,"r:gz") as tf:
+                  members=tf.getmembers()
+                  for m in members:
+                      p=Path(m.name)
+                      if p.is_absolute() or ".." in p.parts or m.issym() or m.islnk() or m.isdev(): raise SystemExit("unsafe canonical tar member")
+                  tf.extractall(dst,members=members,filter="data")
+          def hexsha(v):
+              if not isinstance(v,str) or not v.startswith("sha256:"): raise SystemExit("bad artifact digest")
+              return v.split(":",1)[1]
+
+          specs={
+              "primary":{
+                  "status_key":"last_completed_cumulative_consolidation",
+                  "workflow":".github/workflows/h392-cumulative-consolidation.yml",
+                  "artifact_name":"h392-cumulative-primary-evidence",
+                  "summary":"CUMULATIVE_SUMMARY.json",
+                  "encrypted":"h392-cumulative-source-bearing.tar.gz.aesgcm",
+                  "declaration":"ENCRYPTED_CUMULATIVE_BUNDLE_SHA256.txt",
+                  "summary_field":"summary_sha256",
+              },
+              "reserve01":{
+                  "status_key":"last_completed_reserve_consolidation",
+                  "workflow":".github/workflows/h392-reserve-consolidation.yml",
+                  "artifact_name":"h392-reserve-consolidated-evidence",
+                  "summary":"RESERVE_CONSOLIDATION_SUMMARY.json",
+                  "encrypted":"h392-reserve-consolidated-source-bearing.tar.gz.aesgcm",
+                  "declaration":"ENCRYPTED_RESERVE_CONSOLIDATED_BUNDLE_SHA256.txt",
+                  "summary_field":"summary_sha256",
+              },
+              "reserve02":{
+                  "status_key":"last_completed_reserve2_consolidation",
+                  "workflow":".github/workflows/h392-reserve2-consolidation.yml",
+                  "artifact_name":"h392-reserve2-consolidated-evidence",
+                  "summary":"RESERVE2_CONSOLIDATION_SUMMARY.json",
+                  "encrypted":"h392-reserve2-consolidated-source-bearing.tar.gz.aesgcm",
+                  "declaration":"ENCRYPTED_RESERVE2_CONSOLIDATED_BUNDLE_SHA256.txt",
+                  "summary_field":"summary_sha256",
+              },
+          }
+          for layer,spec in specs.items():
+              bound=status[spec["status_key"]]
+              run_id=int(bound["successful_run_id"])
+              run=api(f"https://api.github.com/repos/{repo}/actions/runs/{run_id}")
+              if (
+                  run.get("status")!="completed" or run.get("conclusion")!="success"
+                  or run.get("head_branch")!="main" or run.get("head_sha")!=bound["runner_commit"]
+                  or run.get("path")!=spec["workflow"] or run.get("event")!="workflow_dispatch"
+              ):
+                  raise SystemExit(f"canonical {layer} run provenance mismatch")
+              aid=int(bound["artifact_id"]); meta=api(f"https://api.github.com/repos/{repo}/actions/artifacts/{aid}")
+              if (
+                  meta.get("expired") is True or meta.get("name")!=spec["artifact_name"]
+                  or meta.get("digest")!=bound["artifact_digest"]
+                  or int(meta.get("workflow_run",{}).get("id",0))!=run_id
+                  or meta.get("workflow_run",{}).get("head_sha")!=bound["runner_commit"]
+              ):
+                  raise SystemExit(f"canonical {layer} artifact metadata mismatch")
+              work=Path(os.environ["RUNNER_TEMP"])/f"canonical-{layer}"; work.mkdir()
+              z=work/"artifact.zip"; download(meta,z)
+              if hashlib.sha256(z.read_bytes()).hexdigest()!=hexsha(bound["artifact_digest"]):
+                  raise SystemExit(f"canonical {layer} ZIP digest mismatch")
+              x=work/"artifact"; unzip(z,x); files={p.name:p for p in x.iterdir() if p.is_file()}
+              expected={spec["summary"],spec["encrypted"],spec["declaration"]}
+              if set(files)!=expected: raise SystemExit(f"canonical {layer} layout mismatch")
+              if hashlib.sha256(files[spec["summary"]].read_bytes()).hexdigest()!=bound[spec["summary_field"]]:
+                  raise SystemExit(f"canonical {layer} summary hash mismatch")
+              encsha=hashlib.sha256(files[spec["encrypted"]].read_bytes()).hexdigest()
+              if encsha!=bound["encrypted_bundle_sha256"] or files[spec["declaration"]].read_text().strip()!=encsha:
+                  raise SystemExit(f"canonical {layer} encrypted bundle mismatch")
+              arc=work/"source.tar.gz"; decrypt_file(files[spec["encrypted"]],arc,key)
+              untar(arc,out/layer)
+              shutil.rmtree(work)
+          PY
+
+      - name: Derive exact 158-case source-artifact target
+        run: |
+          set -eu
+          python -m benchmark_campaign derive-adjudication-target \
+            --canonical-root "$CANONICAL_ROOT" \
+            --out "$SOURCE_TARGET" > "$RUNNER_TEMP/adjudication-target.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path(os.environ["SOURCE_TARGET"]); row=json.loads(p.read_text())
+          if row.get("case_count")!=158 or row.get("layer_counts")!={"primary":129,"reserve01":24,"reserve02":5}:
+              raise SystemExit("derived adjudication target mismatch")
+          if not isinstance(row.get("source_artifact_count"),int) or row["source_artifact_count"]<1:
+              raise SystemExit("derived adjudication source artifact count invalid")
+          PY
+
+      - name: Fetch and decrypt exact originating source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          mkdir -p "$SOURCE_EVIDENCE_ROOT"
+          python - <<'PY'
+          import hashlib,json,os,shutil,stat,tarfile,urllib.error,urllib.parse,urllib.request,zipfile,re
+          from pathlib import Path
+          from benchmark_campaign.artifact_crypto import decrypt_file
+
+          target=json.loads(Path(os.environ["SOURCE_TARGET"]).read_text(encoding="utf-8"))
+          repo=os.environ["GITHUB_REPOSITORY"]; token=os.environ["GH_TOKEN"]; key=os.environ["ARTIFACT_KEY"]
+          out=Path(os.environ["SOURCE_EVIDENCE_ROOT"])
+          workflow_by_layer={
+              "primary":".github/workflows/h392-curation-campaign.yml",
+              "reserve01":".github/workflows/h392-reserve-campaign.yml",
+              "reserve02":".github/workflows/h392-reserve2-campaign.yml",
+          }
+          def request(url):
+              return urllib.request.Request(url,headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","User-Agent":"mubin-h392-adjudication"})
+          def api(url):
+              with urllib.request.urlopen(request(url),timeout=120) as r:return json.load(r)
+          class NR(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,req,fp,code,msg,headers,newurl):return None
+          def download(meta,dest):
+              try: urllib.request.build_opener(NR).open(request(meta["archive_download_url"]),timeout=120)
+              except urllib.error.HTTPError as e:
+                  if e.code not in {301,302,303,307,308}:raise
+                  loc=e.headers.get("Location")
+              if not loc:raise SystemExit("source artifact redirect missing")
+              p=urllib.parse.urlparse(loc)
+              if p.scheme!="https" or not p.hostname or p.username or p.password:raise SystemExit("unsafe source artifact redirect")
+              with urllib.request.urlopen(urllib.request.Request(loc,headers={"User-Agent":"mubin-h392-adjudication"}),timeout=120) as r:dest.write_bytes(r.read())
+          def unzip(src,dst):
+              dst.mkdir(parents=True,exist_ok=True)
+              with zipfile.ZipFile(src) as z:
+                  for i in z.infolist():
+                      p=Path(i.filename);mode=(i.external_attr>>16)&0xffff
+                      if p.is_absolute() or ".." in p.parts or stat.S_ISLNK(mode):raise SystemExit("unsafe source ZIP member")
+                  z.extractall(dst)
+          def untar(src,dst):
+              dst.mkdir(parents=True,exist_ok=True)
+              with tarfile.open(src,"r:gz") as tf:
+                  ms=tf.getmembers()
+                  for m in ms:
+                      p=Path(m.name)
+                      if p.is_absolute() or ".." in p.parts or m.issym() or m.islnk() or m.isdev():raise SystemExit("unsafe source tar member")
+                  tf.extractall(dst,members=ms,filter="data")
+
+          for expected in target["source_artifacts"]:
+              layer=str(expected["layer"]); run_id=int(expected["source_run_id"]); aid=int(expected["artifact_id"])
+              run=api(f"https://api.github.com/repos/{repo}/actions/runs/{run_id}")
+              if (
+                  run.get("status")!="completed" or run.get("conclusion")!="success"
+                  or run.get("head_branch")!="main" or run.get("head_sha")!=expected["source_head_sha"]
+                  or run.get("path")!=workflow_by_layer[layer]
+              ):raise SystemExit(f"source run provenance mismatch:{layer}/{run_id}")
+              meta=api(f"https://api.github.com/repos/{repo}/actions/artifacts/{aid}")
+              if (
+                  meta.get("expired") is True
+                  or int(meta.get("workflow_run",{}).get("id",0))!=run_id
+                  or meta.get("workflow_run",{}).get("head_sha")!=expected["source_head_sha"]
+                  or meta.get("digest")!="sha256:"+expected["artifact_sha256"]
+                  or re.fullmatch(r"h392-curation-chunk-\d+-\d+",str(meta.get("name",""))) is None
+              ):raise SystemExit(f"source artifact metadata mismatch:{layer}/{aid}")
+              e=out/f"{layer}-run-{run_id}-artifact-{aid}"; raw=e/"raw"; e.mkdir()
+              z=e/"artifact.zip"; download(meta,z)
+              actual=hashlib.sha256(z.read_bytes()).hexdigest()
+              if actual!=expected["artifact_sha256"]:raise SystemExit("source artifact ZIP digest mismatch")
+              unzip(z,raw)
+              summaries=list(raw.rglob("CURATION_RUN_SUMMARY.json")); bundles=list(raw.rglob("h392-curation-source-bearing.tar.gz.aesgcm")); decls=list(raw.rglob("ENCRYPTED_BUNDLE_SHA256.txt"))
+              if len(summaries)!=1 or len(bundles)!=1 or len(decls)!=1:raise SystemExit("source artifact layout mismatch")
+              encsha=hashlib.sha256(bundles[0].read_bytes()).hexdigest()
+              if encsha!=expected["encrypted_bundle_sha256"] or decls[0].read_text().strip()!=encsha:raise SystemExit("source encrypted bundle mismatch")
+              shutil.copy2(summaries[0],e/"CURATION_RUN_SUMMARY.json")
+              arc=e/"source.tar.gz"; decrypt_file(bundles[0],arc,key); untar(arc,e/"source-bearing"); arc.unlink()
+              (e/"ORIGIN.json").write_text(json.dumps({
+                  "github_run_id":run_id,
+                  "github_run_attempt":int(expected["source_run_attempt"]),
+                  "conclusion":"success",
+                  "head_branch":"main",
+                  "head_sha":expected["source_head_sha"],
+                  "workflow_path":workflow_by_layer[layer],
+                  "artifact_id":aid,
+                  "artifact_name":meta["name"],
+                  "artifact_sha256":actual,
+                  "encrypted_bundle_sha256":encsha,
+                  "adjudication_layer":layer,
+              },indent=2,sort_keys=True)+"\n",encoding="utf-8")
+              shutil.rmtree(raw);z.unlink()
+          PY
+
+      - name: Reconfirm main before adjudication packet construction
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+
+      - name: Build exact human authority adjudication packet
+        run: |
+          set -eu
+          mkdir -p "$PACKET_DIR" "$REDACTED_DIR"
+          activation_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text())
+          print(s["reserve_activation"]["evidence_path"])
+          PY
+          )"
+          extension_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text())
+          print(s["capacity_extension_proposal"]["evidence_path"])
+          PY
+          )"
+          python -m benchmark_campaign build-adjudication-packet \
+            --canonical-root "$CANONICAL_ROOT" \
+            --evidence-root "$SOURCE_EVIDENCE_ROOT" \
+            --source-cache-dir "$SOURCE_CACHE_DIR" \
+            --out-dir "$PACKET_DIR" \
+            --activation "$activation_path" \
+            --capacity-extension "$extension_path" \
+            > "$REDACTED_DIR/ADJUDICATION_PACKET_SUMMARY.json"
+
+      - name: Encrypt adjudication packet
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          tar -C "$PACKET_DIR" -czf /tmp/h392-adjudication-packet-source-bearing.tar.gz .
+          python -m benchmark_campaign.artifact_crypto encrypt \
+            --input /tmp/h392-adjudication-packet-source-bearing.tar.gz \
+            --output "$REDACTED_DIR/h392-adjudication-packet-source-bearing.tar.gz.aesgcm" \
+            --passphrase-env ARTIFACT_KEY
+          sha256sum "$REDACTED_DIR/h392-adjudication-packet-source-bearing.tar.gz.aesgcm" | awk '{print $1}' > "$REDACTED_DIR/ENCRYPTED_ADJUDICATION_PACKET_SHA256.txt"
+          rm -f /tmp/h392-adjudication-packet-source-bearing.tar.gz
+
+      - name: Remove plaintext and prove public surface is redacted
+        run: |
+          set -eu
+          rm -rf "$CANONICAL_ROOT" "$SOURCE_EVIDENCE_ROOT" "$SOURCE_CACHE_DIR" "$PACKET_DIR" "$SOURCE_TARGET"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["REDACTED_DIR"])
+          expected={"ADJUDICATION_PACKET_SUMMARY.json","h392-adjudication-packet-source-bearing.tar.gz.aesgcm","ENCRYPTED_ADJUDICATION_PACKET_SHA256.txt"}
+          actual={p.name for p in root.iterdir() if p.is_file()}
+          if actual!=expected:raise SystemExit(f"unexpected adjudication upload surface:{sorted(actual)}")
+          summary=json.loads((root/"ADJUDICATION_PACKET_SUMMARY.json").read_text())
+          if (
+              summary.get("case_count")!=158
+              or summary.get("layer_counts")!={"primary":129,"reserve01":24,"reserve02":5}
+              or summary.get("contains_source_text") is not False
+              or summary.get("contains_gold_payloads") is not False
+              or summary.get("contains_model_identity") is not False
+              or summary.get("source_bearing_packet_encrypted") is not True
+              or summary.get("human_or_authority_decision_required") is not True
+              or summary.get("ai_may_self_authorize_acceptance") is not False
+          ):raise SystemExit("redacted adjudication summary contract mismatch")
+          PY
+
+      - name: Reconfirm main before publication
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+
+      - name: Upload encrypted adjudication packet and redacted summary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: h392-adjudication-packet
+          path: /tmp/h392-adjudication/redacted
+          if-no-files-found: error
+          retention-days: 30

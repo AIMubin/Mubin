@@ -1,6 +1,6 @@
 {
   "campaign_id": "H3.9.2",
-  "release": "3.9.2-r9",
+  "release": "3.9.2-r10",
   "scope": "Hadith Benchmark Expansion Campaign only",
   "ci_authoritative": true,
   "ci_workflow": ".github/workflows/hadith-h392.yml",
@@ -42,9 +42,9 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Schema-29 reserve:02 consolidation run 37673850809 completed successfully on main commit f01b6a15bf3a2f270bbb524a85519a2a3a4994f4. The exact five encrypted reserve:02 shard artifacts, prior 47 canonical promoted case IDs, pinned source bytes, reserve:02 reconciliation, and promoted-record provenance were revalidated. The canonical ten-slot reserve:02 result is now 3 promoted, 5 pending adjudication, and 2 exhausted. Combined canonical non-holdout state is 50 validated promoted records, 158 pending adjudications, and a minimum two-slot capacity shortfall.",
-  "next_action": "Do not rerun reserve:02 and do not create reserve:03 implicitly. Freeze and execute a reviewed human/authority adjudication protocol for the 158 pending cases, and separately design any additional capacity-extension protocol required for the 2 canonically exhausted slots. Benchmark population and H4 qualification gates remain closed.",
-  "freeze_schema_version": 29,
+  "reason": "Schema-29 reserve:02 consolidation is canonical: 50 validated promoted records, 158 pending adjudications, and 2 exhausted slots. Schema 30 freezes a source-bearing adjudication-packet preparation protocol for exactly those 158 canonical pending cases. It preserves primary / reserve:01 / reserve:02 provenance, revalidates the originating encrypted run artifacts and pinned source bytes, and produces only an encrypted human/authority review packet plus a redacted manifest. AI remains prohibited from self-authorizing acceptance.",
+  "next_action": "Dispatch .github/workflows/h392-adjudication-packet.yml from current main after schema-30 review/merge. The workflow must derive the exact 158-case surface from the three canonical encrypted consolidation artifacts, fetch only the originating source artifacts referenced by those canonical ledgers, revalidate each source-bearing adjudication, and publish an encrypted review packet with a decision template. Human/authority review occurs after packet preparation. Do not authorize reserve:03 yet; final capacity extension should be computed after adjudication outcomes are frozen.",
+  "freeze_schema_version": 30,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
   "factory_candidate_slot_count": 2560,
@@ -195,7 +195,7 @@
     "combined_pending_adjudication_count": 158,
     "minimum_capacity_shortfall": 2,
     "automatic_second_reserve_authorized": false,
-    "current_protocol_freeze_schema": 29,
+    "current_protocol_freeze_schema": 30,
     "capacity_extension_workflow": ".github/workflows/h392-capacity-extension.yml",
     "capacity_extension_enabled": true,
     "capacity_extension_expected_slot_count": 10,
@@ -224,7 +224,15 @@
     "canonical_reserve2_exhausted_slot_count": 2,
     "combined_validated_promoted_record_count": 50,
     "maximum_fillable_slots_under_current_capacity": 208,
-    "automatic_reserve3_authorized": false
+    "automatic_reserve3_authorized": false,
+    "adjudication_packet_workflow": ".github/workflows/h392-adjudication-packet.yml",
+    "adjudication_packet_expected_case_count": 158,
+    "adjudication_packet_layer_counts": {
+      "primary": 129,
+      "reserve01": 24,
+      "reserve02": 5
+    },
+    "automatic_adjudication_acceptance_authorized": false
   },
   "reserve_activation_target": {
     "ready": false,
@@ -472,7 +480,17 @@
     "source_evidence_boundary": "primary adjudications are bound to canonical schema-25 cumulative encrypted evidence; reserve:01 adjudications are bound to canonical schema-26 reserve encrypted evidence; reserve:02 adjudications are bound to canonical schema-29 reserve2 encrypted evidence. Packet preparation must reacquire and verify pinned sources and preserve original task/response provenance.",
     "automatic_replacement_from_rejection": false,
     "ai_may_self_authorize_acceptance": false,
-    "reserve2_pending_case_count": 5
+    "reserve2_pending_case_count": 5,
+    "packet_protocol_freeze_schema": 30,
+    "packet_preparation_ready": true,
+    "packet_preparation_completed": false,
+    "allowed_decisions": [
+      "accepted",
+      "rejected",
+      "deferred"
+    ],
+    "rejected_does_not_auto_authorize_reserve": true,
+    "deferred_remains_nonreplaceable": true
   },
   "capacity_extension_proposal_frozen": true,
   "capacity_extension_proposal": {
@@ -708,5 +726,48 @@
     "maximum_fillable_slots_under_current_capacity": 208,
     "minimum_capacity_shortfall": 2,
     "evidence_path": "artifacts/RESERVE2_CONSOLIDATION_EVIDENCE_10.json"
+  },
+  "adjudication_packet_workflow": ".github/workflows/h392-adjudication-packet.yml",
+  "adjudication_packet_target": {
+    "ready": true,
+    "completed": false,
+    "workflow": ".github/workflows/h392-adjudication-packet.yml",
+    "protocol_freeze_schema": 30,
+    "expected_case_count": 158,
+    "layer_counts": {
+      "primary": 129,
+      "reserve01": 24,
+      "reserve02": 5
+    },
+    "canonical_sources": {
+      "primary": {
+        "successful_run_id": 37471731102,
+        "runner_commit": "e1422b3262ee308084ce2212a2f2825fdc737032",
+        "artifact_id": 11416657955,
+        "artifact_digest": "sha256:b8fea5f254790fc7cd51e740349a169b470e18e3ee2730b8aba7bbfcd7073ced",
+        "encrypted_bundle_sha256": "c6b5afa771a2aeba2f5017264d2fb98af56882baee0c6fe0109104678651c9f4",
+        "ledger_sha256": "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d"
+      },
+      "reserve01": {
+        "successful_run_id": 37578659973,
+        "runner_commit": "b3888b24b20571884465b349c9764c669b0e66f9",
+        "artifact_id": 11464000900,
+        "artifact_digest": "sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e",
+        "encrypted_bundle_sha256": "f73a1e1dc170af9a8fa4dde6c47348e85690fe4df712bda573b001c66b39dc19",
+        "ledger_sha256": "f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012"
+      },
+      "reserve02": {
+        "successful_run_id": 37673850809,
+        "runner_commit": "f01b6a15bf3a2f270bbb524a85519a2a3a4994f4",
+        "artifact_id": 11506885302,
+        "artifact_digest": "sha256:d671e473fd5011af7908d05c3aa26246477a7b6af6bde7363ad91f14aab13191",
+        "encrypted_bundle_sha256": "9290c795b632bb40bc529176998b8adfe5c15698fbc7438c28271279796a1326",
+        "ledger_sha256": "3ee73bec54dd6dd76542f52510d189e612c3fb2020c8d79ceea0ea2b488953b3"
+      }
+    },
+    "source_artifact_selection": "derive only from canonical adjudication rows and their canonical ledger source_artifact_id/source_run_id/source_run_attempt/source_sha/source_artifact_sha256/source_encrypted_bundle_sha256 bindings",
+    "output_policy": "source-bearing packet and decision template remain encrypted; public artifact surface may expose only redacted counts, bounded reason classes, identifiers, and SHA-256 bindings",
+    "automatic_decision_authorized": false,
+    "automatic_reserve_authorization_from_rejection": false
   }
 }

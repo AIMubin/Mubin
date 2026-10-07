@@ -12,7 +12,7 @@ from .manifests import emit_campaign_manifests
 from .holdout_seal import sealed_gold_path
 from .validate import validate_campaign
 
-FREEZE_SCHEMA_VERSION = 29
+FREEZE_SCHEMA_VERSION = 30
 ANCHOR_SCHEMA_VERSION = 1
 DEFAULT_ANCHOR_RELATIVE = Path("private/FREEZE_ANCHOR.json")
 
@@ -57,6 +57,7 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "benchmark_campaign" / "reserve_consolidation.py",
         root / "benchmark_campaign" / "capacity_extension.py",
         root / "benchmark_campaign" / "reserve2_consolidation.py",
+        root / "benchmark_campaign" / "adjudication.py",
         root / "AGENT_EXECUTION.md",
         root / "adapters" / "chat_completions.py",
     ]
