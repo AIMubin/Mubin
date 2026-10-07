@@ -82,6 +82,35 @@ class Reserve2ConsolidationTests(unittest.TestCase):
         _write_json(self.extension_path, self.extension)
         self.extension_sha = sha256_file(self.extension_path)
 
+        self.prior_path = self.root / "artifacts" / "PRIOR_PROMOTED_CASE_IDS.json"
+        self.primary_prior_binding = {
+            "source_run_id": 80,
+            "source_run_attempt": 1,
+            "source_head_sha": "a" * 40,
+            "workflow": ".github/workflows/h392-cumulative-consolidation.yml",
+            "artifact_id": 81,
+            "artifact_name": "h392-cumulative-primary-evidence",
+            "artifact_digest": "sha256:" + "3" * 64,
+            "summary_sha256": "4" * 64,
+            "encrypted_bundle_sha256": "5" * 64,
+            "ledger_sha256": "6" * 64,
+            "promoted_count": 2,
+        }
+        self.reserve_prior_binding = {
+            "source_run_id": 90,
+            "source_run_attempt": 1,
+            "source_head_sha": "b" * 40,
+            "workflow": ".github/workflows/h392-reserve-consolidation.yml",
+            "artifact_id": 91,
+            "artifact_name": "h392-reserve-consolidated-evidence",
+            "artifact_digest": "sha256:" + "7" * 64,
+            "summary_sha256": "8" * 64,
+            "encrypted_bundle_sha256": "9" * 64,
+            "ledger_sha256": "a" * 64,
+            "promoted_count": 1,
+        }
+        self._write_prior_ids(["prior-a", "prior-b", "prior-c"])
+
         self.artifacts = []
         self.validated = {}
         for offset, (slot, outcome) in enumerate(
@@ -202,6 +231,11 @@ class Reserve2ConsolidationTests(unittest.TestCase):
                 "aggregate_artifact_id": 500,
                 "aggregate_artifact_digest": "sha256:" + "9" * 64,
                 "aggregate_summary_sha256": "8" * 64,
+                "prior_promoted_case_id_surface": {
+                    "expected_promoted_case_id_count": 3,
+                    "primary": self.primary_prior_binding,
+                    "reserve": self.reserve_prior_binding,
+                },
                 "expected_outcomes": {
                     "promoted": 1,
                     "adjudication": 0,
@@ -209,7 +243,25 @@ class Reserve2ConsolidationTests(unittest.TestCase):
                 },
                 "source_artifacts": self.artifacts,
             },
+            "last_completed_cumulative_consolidation": {
+                "successful_run_id": 80,
+                "runner_commit": "a" * 40,
+                "artifact_id": 81,
+                "artifact_digest": "sha256:" + "3" * 64,
+                "summary_sha256": "4" * 64,
+                "encrypted_bundle_sha256": "5" * 64,
+                "cumulative_ledger_sha256": "6" * 64,
+                "promoted_primary_count": 2,
+            },
             "last_completed_reserve_consolidation": {
+                "successful_run_id": 90,
+                "runner_commit": "b" * 40,
+                "artifact_id": 91,
+                "artifact_digest": "sha256:" + "7" * 64,
+                "summary_sha256": "8" * 64,
+                "encrypted_bundle_sha256": "9" * 64,
+                "reserve_ledger_sha256": "a" * 64,
+                "promoted_reserve_count": 1,
                 "validated_promoted_record_count": 3,
                 "total_pending_adjudication_count": 5,
                 "exhausted_slot_count": 2,
@@ -217,6 +269,26 @@ class Reserve2ConsolidationTests(unittest.TestCase):
             },
         }
         _write_json(self.root / "artifacts" / "H3.9.2-STATUS.json", self.status)
+
+    def _write_prior_ids(self, case_ids):
+        payload = {
+            "schema_version": 1,
+            "campaign_id": "H3.9.2",
+            "kind": "canonical_prior_promoted_case_id_set",
+            "primary": {
+                key: value
+                for key, value in self.primary_prior_binding.items()
+                if key != "workflow" and key != "artifact_name"
+            },
+            "reserve": {
+                key: value
+                for key, value in self.reserve_prior_binding.items()
+                if key != "workflow" and key != "artifact_name"
+            },
+            "promoted_case_id_count": len(case_ids),
+            "promoted_case_ids": sorted(case_ids),
+        }
+        _write_json(self.prior_path, payload)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -240,6 +312,7 @@ class Reserve2ConsolidationTests(unittest.TestCase):
                 self.out,
                 source_cache_dir=self.source_cache,
                 capacity_extension_path=self.extension_path,
+                prior_promoted_case_ids_path=self.prior_path,
             )
 
     def test_consolidation_closes_prior_exhausted_surface(self):
@@ -265,6 +338,22 @@ class Reserve2ConsolidationTests(unittest.TestCase):
         evidence = self.evidence_root / "run-99-artifact-101"
         self.validated[str(evidence)]["origin"]["source_job_id"] = 999
         with self.assertRaisesRegex(ValueError, "job binding mismatch"):
+            self._run()
+
+    def test_prior_canonical_case_id_collision_fails_closed(self):
+        self._write_prior_ids(["case-r2", "prior-b", "prior-c"])
+        with self.assertRaisesRegex(
+            ValueError, "collides with prior canonical record"
+        ):
+            self._run()
+
+    def test_prior_promoted_binding_mismatch_fails_closed(self):
+        payload = load_json(self.prior_path)
+        payload["primary"]["ledger_sha256"] = "f" * 64
+        _write_json(self.prior_path, payload)
+        with self.assertRaisesRegex(
+            ValueError, "primary binding mismatch: ledger_sha256"
+        ):
             self._run()
 
     def test_unapproved_reserve2_task_fails_closed(self):
