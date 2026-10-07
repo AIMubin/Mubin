@@ -9,6 +9,7 @@ from .core import load_json, write_json
 from .consolidation import consolidate_primary_evidence
 from .post_consolidation import build_reserve_activation_manifest
 from .reserve_consolidation import consolidate_reserve_evidence
+from .reserve2_consolidation import consolidate_reserve2_evidence
 from .capacity_extension import build_capacity_extension_manifest
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
@@ -155,6 +156,13 @@ def main(argv: list[str] | None = None) -> int:
     rc.add_argument("--out-dir", type=Path, required=True)
     rc.add_argument("--source-cache-dir", type=Path, required=True)
     rc.add_argument("--activation", type=Path, required=True)
+
+    r2c = sub.add_parser("consolidate-reserve2")
+    r2c.add_argument("--evidence-root", type=Path, required=True)
+    r2c.add_argument("--out-dir", type=Path, required=True)
+    r2c.add_argument("--source-cache-dir", type=Path, required=True)
+    r2c.add_argument("--capacity-extension", type=Path, required=True)
+    r2c.add_argument("--prior-promoted-case-ids", type=Path, required=True)
 
     ce = sub.add_parser("build-capacity-extension")
     ce.add_argument("--reserve-dir", type=Path, required=True)
@@ -450,6 +458,33 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             source_cache_dir=source_cache_dir,
             activation_path=activation,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "consolidate-reserve2":
+        evidence_root = _resolve(root, args.evidence_root)
+        out_dir = _resolve(root, args.out_dir)
+        source_cache_dir = _resolve(root, args.source_cache_dir)
+        capacity_extension = _resolve(root, args.capacity_extension)
+        prior_promoted_case_ids = _resolve(root, args.prior_promoted_case_ids)
+        assert all(
+            path is not None
+            for path in (
+                evidence_root,
+                out_dir,
+                source_cache_dir,
+                capacity_extension,
+                prior_promoted_case_ids,
+            )
+        )
+        report = consolidate_reserve2_evidence(
+            root,
+            evidence_root,
+            out_dir,
+            source_cache_dir=source_cache_dir,
+            capacity_extension_path=capacity_extension,
+            prior_promoted_case_ids_path=prior_promoted_case_ids,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0

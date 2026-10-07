@@ -519,6 +519,8 @@ def _validate_reviewed_record_binding(
     *,
     reserve_activation: dict[str, Any] | None = None,
     reserve_activation_sha256: str | None = None,
+    capacity_extension: dict[str, Any] | None = None,
+    capacity_extension_sha256: str | None = None,
 ) -> None:
     candidate = curator.get("candidate")
     if not isinstance(candidate, dict):
@@ -736,27 +738,54 @@ def _validate_reviewed_record_binding(
 
     is_reserve = task.get("candidate_slot_kind") == "reserve"
     expected_reserve_activation: dict[str, Any] | None = None
-    if is_reserve:
+    expected_capacity_extension: dict[str, Any] | None = None
+    if is_reserve and task.get("reserve_attempt") == 1:
         if reserve_activation is None or reserve_activation_sha256 is None:
             raise ValueError(
-                f"reserve reviewed record lacks consolidation activation context: {task_id}"
+                f"reserve:01 reviewed record lacks consolidation activation context: {task_id}"
             )
+        if capacity_extension is not None or capacity_extension_sha256 is not None:
+            raise ValueError(f"reserve:01 reviewed record received reserve:02 context: {task_id}")
         expected_reserve_activation = {
             "activation_manifest_sha256": reserve_activation_sha256,
             "cumulative_ledger_sha256": reserve_activation["cumulative_ledger_sha256"],
             "replacement_eligibility_sha256": reserve_activation["replacement_eligibility_sha256"],
             "replacement_for_slot_id": task["replacement_for_slot_id"],
-            "reserve_attempt": task["reserve_attempt"],
+            "reserve_attempt": 1,
         }
         if canonical_json_bytes(fv.get("reserve_activation")) != canonical_json_bytes(
             expected_reserve_activation
-        ):
+        ) or "capacity_extension" in fv:
             raise ValueError(
-                f"reviewed factory reserve activation binding mismatch: {task_id}"
+                f"reviewed factory reserve:01 provenance binding mismatch: {task_id}"
             )
-    elif "reserve_activation" in fv:
+    elif is_reserve and task.get("reserve_attempt") == 2:
+        if capacity_extension is None or capacity_extension_sha256 is None:
+            raise ValueError(
+                f"reserve:02 reviewed record lacks capacity-extension context: {task_id}"
+            )
+        if reserve_activation is not None or reserve_activation_sha256 is not None:
+            raise ValueError(f"reserve:02 reviewed record received reserve:01 context: {task_id}")
+        expected_capacity_extension = {
+            "manifest_sha256": capacity_extension_sha256,
+            "protocol_freeze_schema": capacity_extension["protocol_freeze_schema"],
+            "base_factory_plan_sha256": capacity_extension["base_factory_plan_sha256"],
+            "reserve_ledger_sha256": capacity_extension["reserve_ledger_sha256"],
+            "exhausted_slots_sha256": capacity_extension["exhausted_slots_sha256"],
+            "replacement_for_slot_id": task["replacement_for_slot_id"],
+            "reserve_attempt": 2,
+        }
+        if canonical_json_bytes(fv.get("capacity_extension")) != canonical_json_bytes(
+            expected_capacity_extension
+        ) or "reserve_activation" in fv:
+            raise ValueError(
+                f"reviewed factory reserve:02 provenance binding mismatch: {task_id}"
+            )
+    elif is_reserve:
+        raise ValueError(f"unsupported reserve attempt in reviewed record: {task_id}")
+    elif "reserve_activation" in fv or "capacity_extension" in fv:
         raise ValueError(
-            f"primary reviewed record unexpectedly carries reserve activation: {task_id}"
+            f"primary reviewed record unexpectedly carries reserve provenance: {task_id}"
         )
 
     if not isinstance(fv.get("factory_version"), int) or fv["factory_version"] < 1:
@@ -817,6 +846,10 @@ def _validate_reviewed_record_binding(
         expected_candidate["factory_verification"]["reserve_activation"] = (
             expected_reserve_activation
         )
+    if expected_capacity_extension is not None:
+        expected_candidate["factory_verification"]["capacity_extension"] = (
+            expected_capacity_extension
+        )
     try:
         expected_record = seal_reviewed_record(
             root, expected_candidate, source_cache_dir
@@ -860,6 +893,7 @@ def validate_primary_run_evidence(
     *,
     task_scope: str = "primary",
     reserve_activation_path: Path | None = None,
+    capacity_extension_path: Path | None = None,
     expected_workflow_path: str = ".github/workflows/h392-curation-campaign.yml",
     expected_run_attempt: int | None = 1,
 ) -> dict[str, Any]:
@@ -869,12 +903,18 @@ def validate_primary_run_evidence(
     opt-in and requires the exact repository-approved activation manifest.
     """
 
-    if task_scope not in {"primary", "approved_reserve"}:
+    if task_scope not in {"primary", "approved_reserve", "approved_capacity_extension"}:
         raise ValueError(f"unsupported consolidation task_scope: {task_scope}")
-    if task_scope == "primary" and reserve_activation_path is not None:
-        raise ValueError("primary consolidation must not supply reserve activation")
-    if task_scope == "approved_reserve" and reserve_activation_path is None:
-        raise ValueError("reserve consolidation requires reserve activation")
+    if task_scope == "primary" and (
+        reserve_activation_path is not None or capacity_extension_path is not None
+    ):
+        raise ValueError("primary consolidation must not supply reserve authorization")
+    if task_scope == "approved_reserve":
+        if reserve_activation_path is None or capacity_extension_path is not None:
+            raise ValueError("reserve:01 consolidation requires only reserve activation")
+    if task_scope == "approved_capacity_extension":
+        if capacity_extension_path is None or reserve_activation_path is not None:
+            raise ValueError("reserve:02 consolidation requires only capacity extension")
 
     origin = _load_origin(
         evidence_dir / "ORIGIN.json",
@@ -893,13 +933,26 @@ def validate_primary_run_evidence(
 
     reserve_activation: dict[str, Any] | None = None
     reserve_activation_sha256: str | None = None
+    capacity_extension: dict[str, Any] | None = None
+    capacity_extension_sha256: str | None = None
     if task_scope == "approved_reserve":
         if summary.get("task_scope") != "approved_reserve":
-            raise ValueError("reserve run summary task_scope mismatch")
+            raise ValueError("reserve:01 run summary task_scope mismatch")
         assert reserve_activation_path is not None
         reserve_activation_sha256 = sha256_file(reserve_activation_path)
         if summary.get("reserve_activation_sha256") != reserve_activation_sha256:
-            raise ValueError("reserve run summary activation SHA-256 mismatch")
+            raise ValueError("reserve:01 run summary activation SHA-256 mismatch")
+        if summary.get("capacity_extension_sha256") is not None:
+            raise ValueError("reserve:01 run summary unexpectedly carries capacity extension")
+    elif task_scope == "approved_capacity_extension":
+        if summary.get("task_scope") != "approved_capacity_extension":
+            raise ValueError("reserve:02 run summary task_scope mismatch")
+        assert capacity_extension_path is not None
+        capacity_extension_sha256 = sha256_file(capacity_extension_path)
+        if summary.get("capacity_extension_sha256") != capacity_extension_sha256:
+            raise ValueError("reserve:02 run summary capacity-extension SHA-256 mismatch")
+        if summary.get("reserve_activation_sha256") is not None:
+            raise ValueError("reserve:02 run summary unexpectedly carries reserve activation")
     elif summary.get("task_scope") not in {None, "primary"}:
         raise ValueError("primary run summary unexpectedly declares reserve task scope")
 
@@ -938,19 +991,43 @@ def validate_primary_run_evidence(
             raise ValueError(f"required run evidence missing: {path}")
 
     tasks = _task_rows(tasks_path)
-    _validate_tasks_against_frozen_plan(root, tasks)
+    _validate_tasks_against_frozen_plan(
+        root,
+        tasks,
+        capacity_extension_path=capacity_extension_path,
+        require_capacity_execution=False,
+    )
     if any(task.get("partition") != "non_holdout" for task in tasks):
         raise ValueError("cumulative evidence must be non-holdout only")
     if task_scope == "primary":
         if any(task.get("candidate_slot_kind") == "reserve" for task in tasks):
             raise ValueError("cumulative primary evidence must not contain reserve tasks")
-    else:
-        if any(task.get("candidate_slot_kind") != "reserve" for task in tasks):
-            raise ValueError("reserve consolidation evidence must contain reserve tasks only")
+    elif task_scope == "approved_reserve":
+        if any(
+            task.get("candidate_slot_kind") != "reserve"
+            or task.get("reserve_attempt") != 1
+            for task in tasks
+        ):
+            raise ValueError("reserve:01 consolidation evidence must contain reserve:01 tasks only")
         assert reserve_activation_path is not None
         from .post_consolidation import validate_reserve_activation
         reserve_activation = validate_reserve_activation(
             root, reserve_activation_path, tasks
+        )
+    else:
+        if any(
+            task.get("candidate_slot_kind") != "reserve"
+            or task.get("reserve_attempt") != 2
+            for task in tasks
+        ):
+            raise ValueError("reserve:02 consolidation evidence must contain reserve:02 tasks only")
+        assert capacity_extension_path is not None
+        from .capacity_extension import validate_frozen_capacity_extension
+        capacity_extension = validate_frozen_capacity_extension(
+            root,
+            capacity_extension_path,
+            tasks,
+            require_execution_enabled=False,
         )
     if len(tasks) != int(summary["selected_task_count"]):
         raise ValueError("run summary selected_task_count differs from decrypted tasks")
@@ -1157,6 +1234,8 @@ def validate_primary_run_evidence(
             verifier,
             reserve_activation=reserve_activation,
             reserve_activation_sha256=reserve_activation_sha256,
+            capacity_extension=capacity_extension,
+            capacity_extension_sha256=capacity_extension_sha256,
         )
 
     for tid, row in adjudication.items():
@@ -1220,8 +1299,16 @@ def validate_primary_run_evidence(
             row.update({
                 "candidate_slot_kind": "reserve",
                 "replacement_for_slot_id": task["replacement_for_slot_id"],
-                "reserve_attempt": task["reserve_attempt"],
+                "reserve_attempt": 1,
                 "reserve_activation_sha256": reserve_activation_sha256,
+                "terminal_failure": bool(eligible) if outcome == "skipped" else False,
+            })
+        elif task_scope == "approved_capacity_extension":
+            row.update({
+                "candidate_slot_kind": "reserve",
+                "replacement_for_slot_id": task["replacement_for_slot_id"],
+                "reserve_attempt": 2,
+                "capacity_extension_sha256": capacity_extension_sha256,
                 "terminal_failure": bool(eligible) if outcome == "skipped" else False,
             })
         rows.append(row)
@@ -1235,7 +1322,27 @@ def validate_primary_run_evidence(
         "adjudication": adjudication,
         "reserve_activation": reserve_activation,
         "reserve_activation_sha256": reserve_activation_sha256,
+        "capacity_extension": capacity_extension,
+        "capacity_extension_sha256": capacity_extension_sha256,
     }
+
+
+def validate_reserve2_run_evidence(
+    root: Path,
+    evidence_dir: Path,
+    capacity_extension_path: Path,
+    source_cache_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Validate one decrypted approved reserve:02 curation artifact."""
+    return validate_primary_run_evidence(
+        root,
+        evidence_dir,
+        source_cache_dir,
+        task_scope="approved_capacity_extension",
+        capacity_extension_path=capacity_extension_path,
+        expected_workflow_path=".github/workflows/h392-reserve2-campaign.yml",
+        expected_run_attempt=1,
+    )
 
 
 def validate_reserve_run_evidence(

@@ -23,12 +23,20 @@ class Reserve2ExecutionWorkflowTests(unittest.TestCase):
             (project / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
         )
 
-    def test_repository_target_is_exactly_ten_frozen_reserve2_slots(self):
-        self.assertEqual(self.status["freeze_schema_version"], 28)
+    def test_repository_target_is_exactly_ten_executed_reserve2_slots(self):
+        self.assertEqual(self.status["freeze_schema_version"], 29)
         self.assertTrue(self.status["capacity_extension_enabled"])
         target = self.status["reserve2_execution_target"]
-        self.assertTrue(target["ready"])
+        self.assertFalse(target["ready"])
         self.assertFalse(target["completed"])
+        self.assertTrue(target["execution_succeeded"])
+        self.assertTrue(target["consolidation_pending"])
+        self.assertEqual(target["successful_run_id"], 37613354755)
+        self.assertEqual(target["successful_run_attempt"], 1)
+        self.assertEqual(
+            target["runner_commit"],
+            "d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b",
+        )
         self.assertEqual(target["workflow"], ".github/workflows/h392-reserve2-campaign.yml")
         self.assertEqual(target["task_scope"], "approved_capacity_extension")
         self.assertEqual(target["expected_task_count"], 10)

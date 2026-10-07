@@ -321,3 +321,24 @@ The campaign is fixed at ten tasks in five two-task shards. This reduces the rep
 
 A successful reserve2 campaign remains execution evidence only. Its encrypted source-bearing shards and redacted aggregate must be consolidated and frozen before the canonical 210-slot population is updated. The existing 153 pending adjudications remain outside the reserve2 execution set.
 
+## Schema-29 reserve2 evidence consolidation
+
+Reserve2 execution run `37613354755` completed successfully on attempt 1 from main commit `d6e04fc061426d2248dba0e9e4f7e5e484b6ae1b`. Its redacted aggregate artifact is `11478509807` with ZIP digest `sha256:dc02b20177f70f86d6f404f30d4733ccd204e309acef817b9c3d665d265754a1` and summary SHA-256 `22aa91a82d7b35eda0480806c89a417b222282edcd6aff86b7ff851210a75b73`.
+
+The execution observation is exactly:
+
+```text
+3 promoted
+5 adjudication
+2 skipped
+= 10 reserve:02 tasks
+```
+
+Schema 29 deliberately does not make those counts canonical from the redacted aggregate alone. It closes `reserve2_execution_target.ready` against redispatch and freezes the exact five shard artifact IDs, source job IDs, artifact ZIP digests, redacted-summary hashes, encrypted-bundle hashes, offsets, and run attempt in repository status.
+
+Use `.github/workflows/h392-reserve2-consolidation.yml`. The workflow has no editable evidence inputs. It verifies the successful source run and aggregate, fetches only the five reviewed shard artifacts, binds every artifact to its exact successful job, reacquires and verifies pinned non-holdout source bytes, decrypts source-bearing evidence only in the ephemeral runner, and invokes `consolidate-reserve2` against the exact committed schema-27 capacity manifest.
+
+The consolidator re-runs the same Curator/Verifier identity, blindness, source-grounding, deterministic reconciliation, reviewed-record resealing, and provenance checks used for schema-26 reserve evidence, but requires `reserve_attempt=2` and `factory_verification.capacity_extension`. Before counting any new promotion, the workflow also reacquires the exact canonical schema-25 primary-consolidation artifact and schema-26 reserve-consolidation artifact, verifies their run/artifact/encrypted-bundle/ledger bindings, decrypts them only ephemerally, and reconstructs the exact 47 already-promoted `case_id` values. Any reserve:02 promotion colliding with that canonical set fails consolidation. The derived ID set is not published; only its count and SHA-256 binding may appear in redacted consolidation evidence. The consolidator emits `RESERVE2_LEDGER.jsonl`, `RESERVE2_ADJUDICATION.jsonl`, promoted reviewed records, `RESERVE2_EXHAUSTED_SLOTS.json`, and `RESERVE2_MANIFEST.json` only inside the encrypted consolidated bundle.
+
+If source-bearing validation reproduces the observed 3/5/2 outcome, the resulting evidence-level state will be 50 validated promoted records, 158 pending adjudications, and 2 remaining exhausted slots, with a maximum fillable population of 208/210 and a minimum capacity shortfall of 2. Those figures remain non-canonical until the consolidation artifact itself is independently reviewed and frozen. No `reserve:03` capacity is authorized by schema 29.
+

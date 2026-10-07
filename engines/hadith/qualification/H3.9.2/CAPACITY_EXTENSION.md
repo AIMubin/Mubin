@@ -201,19 +201,20 @@ Execution uses:
 
 The workflow has no task-count, task-ID, task-scope, offset, or reserve-attempt inputs. It validates schema 28, the exact manifest SHA-256, and the exact ten-slot execution target; performs one centralized readiness gate; and delegates five deterministic two-task shards to the reusable pilot. Source-bearing outputs remain AES-GCM encrypted. Only redacted shard summaries and a redacted aggregate are public artifacts.
 
-The current gate is:
+Reserve2 execution run `37613354755` completed successfully on attempt 1 with exact 10/10 coverage and redacted accounting of 3 promoted, 5 adjudication, and 2 skipped. Schema 29 therefore closes redispatch and moves the campaign to source-bearing evidence consolidation:
 
 ```ini
-freeze_schema_version               = 28
-capacity_extension_proposal_frozen  = true
-capacity_extension_enabled          = true
-reserve2_execution_target.ready     = true
-reserve2_execution_target.completed = false
-reserve2_expected_tasks             = 10
-reserve2_expected_shards            = 5
-benchmark_population_complete       = false
-benchmark_gate_passed               = false
-h4_qualification_allowed            = false
+freeze_schema_version                  = 29
+capacity_extension_proposal_frozen     = true
+capacity_extension_enabled             = true
+reserve2_execution_target.ready        = false
+reserve2_execution_target.completed    = false
+reserve2_execution_succeeded           = true
+reserve2_consolidation_target.ready    = true
+reserve2_consolidation_target.completed = false
+benchmark_population_complete          = false
+benchmark_gate_passed                  = false
+h4_qualification_allowed               = false
 ```
 
-The 153 pending adjudications are not eligible for this execution. A successful reserve2 campaign is still execution evidence, not an automatic benchmark-population mutation; it must be consolidated and frozen before canonical population state changes.
+The 153 prior pending adjudications remain outside the reserve2 execution/consolidation set. The observed 3/5/2 reserve2 result is not canonical until the schema-29 consolidation artifact has independently revalidated source-bearing evidence and been frozen.
