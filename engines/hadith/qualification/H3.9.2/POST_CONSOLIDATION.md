@@ -398,3 +398,13 @@ h4_qualification_allowed                     = false
 
 The next work remains split into two reviewed surfaces: the 158-case human/authority adjudication campaign, and any separately reviewed capacity extension for the two exhausted slots. Consolidation itself does not create `reserve:03`.
 
+## Schema-30 adjudication packet handoff
+
+After canonical reserve2 consolidation, the pending adjudication surface is exactly **158 cases**: 129 primary, 24 reserve:01, and 5 reserve:02. Schema 30 moves that surface into a dedicated human/authority review packet.
+
+Use `.github/workflows/h392-adjudication-packet.yml`. The workflow derives case identity and originating artifact identity only from the canonical encrypted consolidation ledgers, reacquires pinned source bytes, revalidates the exact source-bearing curation evidence, and encrypts the complete review packet before publication.
+
+The workflow does not accept, reject, or defer any case. The decision template is intentionally blank. AI may assist with evidence organization but cannot self-authorize acceptance. Rejection does not automatically authorize replacement capacity, and `reserve:03` remains disabled.
+
+The two currently exhausted slots guarantee a minimum deficit of two, but final capacity extension is intentionally deferred until human adjudication is frozen because rejected/deferred decisions can increase the exact remaining shortfall. See `ADJUDICATION.md`.
+
