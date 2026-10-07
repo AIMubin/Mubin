@@ -1,0 +1,432 @@
+name: H3.9.2 capacity extension proposal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: engines/hadith/qualification/H3.9.2
+    env:
+      WORK_ROOT: /tmp/h392-capacity-extension
+      SOURCE_DIR: /tmp/h392-capacity-extension/source-bearing
+      OUT_DIR: /tmp/h392-capacity-extension/redacted
+
+    steps:
+      - name: Checkout Mubin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Refuse stale or non-main dispatch
+        run: |
+          set -eu
+          if [ "${GITHUB_REF_NAME:-}" != "main" ]; then
+            echo "Capacity extension proposal must be dispatched from main." >&2
+            exit 1
+          fi
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Refusing stale capacity extension proposal; dispatch from current main." >&2
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engines/hadith/qualification/H3.9.2/requirements.txt
+
+      - name: Install campaign dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate schema-27 repository target
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          test -n "$ARTIFACT_KEY"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          from benchmark_campaign.core import canonical_json_bytes, sha256_bytes
+          from benchmark_campaign.factory import build_factory_plan
+
+          root = Path.cwd()
+          status = json.loads(
+              (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+          )
+          if int(status.get("freeze_schema_version", 0)) != 27:
+              raise SystemExit("capacity extension proposal requires freeze schema 27")
+          if status.get("capacity_extension_enabled") is not False:
+              raise SystemExit("capacity extension must remain disabled before proposal review")
+
+          target = status.get("capacity_extension_target")
+          if not isinstance(target, dict):
+              raise SystemExit("capacity extension target missing")
+          if target.get("ready") is not True or target.get("completed") is not False:
+              raise SystemExit("capacity extension target is not open")
+          if target.get("workflow") != ".github/workflows/h392-capacity-extension.yml":
+              raise SystemExit("capacity extension workflow binding mismatch")
+          if int(target.get("protocol_freeze_schema", 0)) != 27:
+              raise SystemExit("capacity extension protocol schema mismatch")
+          if int(target.get("source_reserve_consolidation_freeze_schema", 0)) != 26:
+              raise SystemExit("capacity extension source schema mismatch")
+          if int(target.get("expected_exhausted_slot_count", -1)) != 10:
+              raise SystemExit("capacity extension must target exactly 10 exhausted slots")
+          if int(target.get("expected_new_reserve_slot_count", -1)) != 10:
+              raise SystemExit("capacity extension must propose exactly 10 new reserve slots")
+          if int(target.get("minimum_capacity_shortfall", -1)) != 10:
+              raise SystemExit("minimum shortfall binding mismatch")
+          if int(target.get("new_reserve_attempt", 0)) != 2:
+              raise SystemExit("capacity extension must propose reserve attempt 2 only")
+          if target.get("execution_authorized") is not False:
+              raise SystemExit("capacity extension proposal must not authorize execution")
+          if target.get("base_factory_plan_mutated") is not False:
+              raise SystemExit("schema-27 capacity extension must remain an overlay")
+
+          completed = status.get("last_completed_reserve_consolidation")
+          if not isinstance(completed, dict):
+              raise SystemExit("canonical reserve consolidation status missing")
+          exact = {
+              "successful_run_id": target["source_reserve_consolidation_run_id"],
+              "runner_commit": target["source_reserve_consolidation_runner_commit"],
+              "artifact_id": target["source_reserve_consolidation_artifact_id"],
+              "artifact_digest": target["source_reserve_consolidation_artifact_digest"],
+              "summary_sha256": target["source_reserve_consolidation_summary_sha256"],
+              "encrypted_bundle_sha256": target["source_encrypted_bundle_sha256"],
+              "reserve_ledger_sha256": target["reserve_ledger_sha256"],
+              "exhausted_slots_sha256": target["exhausted_slots_sha256"],
+              "exhausted_slot_count": target["expected_exhausted_slot_count"],
+              "minimum_capacity_shortfall": target["minimum_capacity_shortfall"],
+          }
+          for key, expected in exact.items():
+              if completed.get(key) != expected:
+                  raise SystemExit(f"capacity target differs from canonical reserve evidence: {key}")
+
+          plan = build_factory_plan(root)
+          plan_sha = sha256_bytes(canonical_json_bytes(plan))
+          if plan_sha != target["base_factory_plan_sha256"]:
+              raise SystemExit("capacity extension base Factory-plan binding mismatch")
+          if int(plan.get("reserve_slots_per_primary", -1)) != 1:
+              raise SystemExit("base Factory plan must remain one-reserve-per-primary")
+          if any(
+              slot.get("candidate_slot_kind") == "reserve"
+              and int(slot.get("reserve_attempt", 0)) != 1
+              for slot in plan.get("slots", [])
+          ):
+              raise SystemExit("base Factory plan already contains later reserve attempts")
+          PY
+
+      - name: Fetch exact canonical reserve consolidation artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p "$WORK_ROOT" "$SOURCE_DIR" "$OUT_DIR"
+          python - <<'PY'
+          from datetime import datetime
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import stat
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import zipfile
+
+          root = Path.cwd()
+          work = Path(os.environ["WORK_ROOT"])
+          status = json.loads(
+              (root / "artifacts" / "H3.9.2-STATUS.json").read_text(encoding="utf-8")
+          )
+          target = status["capacity_extension_target"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+
+          def request(url):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "mubin-h392-capacity-extension",
+                  },
+              )
+              return urllib.request.urlopen(req, timeout=120)
+
+          def api_json(url):
+              with request(url) as response:
+                  return json.load(response)
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          def download_location(url):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "mubin-h392-capacity-extension",
+                  },
+              )
+              opener = urllib.request.build_opener(NoRedirect)
+              try:
+                  with opener.open(req, timeout=120):
+                      raise SystemExit("artifact endpoint unexpectedly returned a body")
+              except urllib.error.HTTPError as exc:
+                  if exc.code not in {301, 302, 303, 307, 308}:
+                      raise
+                  location = exc.headers.get("Location")
+              if not location:
+                  raise SystemExit("artifact endpoint returned no redirect")
+              parsed = urllib.parse.urlparse(location)
+              if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+                  raise SystemExit("artifact redirect is not a safe HTTPS URL")
+              return location
+
+          def safe_unzip(archive, dest):
+              dest.mkdir(parents=True, exist_ok=True)
+              with zipfile.ZipFile(archive) as zf:
+                  for info in zf.infolist():
+                      p = Path(info.filename)
+                      mode = (info.external_attr >> 16) & 0xFFFF
+                      if p.is_absolute() or ".." in p.parts or stat.S_ISLNK(mode):
+                          raise SystemExit(f"unsafe artifact ZIP member: {info.filename}")
+                  zf.extractall(dest)
+
+          run_id = int(target["source_reserve_consolidation_run_id"])
+          run = api_json(f"https://api.github.com/repos/{repo}/actions/runs/{run_id}")
+          if (
+              run.get("status") != "completed"
+              or run.get("conclusion") != "success"
+              or run.get("event") != "workflow_dispatch"
+              or run.get("head_branch") != "main"
+              or run.get("head_sha") != target["source_reserve_consolidation_runner_commit"]
+              or run.get("path") != ".github/workflows/h392-reserve-consolidation.yml"
+              or int(run.get("run_attempt", 0)) != 1
+          ):
+              raise SystemExit("canonical reserve consolidation run provenance mismatch")
+
+          artifact_id = int(target["source_reserve_consolidation_artifact_id"])
+          artifact = api_json(
+              f"https://api.github.com/repos/{repo}/actions/artifacts/{artifact_id}"
+          )
+          if (
+              artifact.get("expired") is True
+              or artifact.get("name") != target["source_reserve_consolidation_artifact_name"]
+              or artifact.get("digest") != target["source_reserve_consolidation_artifact_digest"]
+              or int(artifact.get("workflow_run", {}).get("id", 0)) != run_id
+              or artifact.get("workflow_run", {}).get("head_sha")
+                  != target["source_reserve_consolidation_runner_commit"]
+          ):
+              raise SystemExit("canonical reserve consolidation artifact metadata mismatch")
+
+          archive = work / "reserve-consolidation.zip"
+          location = download_location(str(artifact["archive_download_url"]))
+          req = urllib.request.Request(
+              location,
+              headers={"User-Agent": "mubin-h392-capacity-extension"},
+          )
+          with urllib.request.urlopen(req, timeout=120) as response:
+              archive.write_bytes(response.read())
+
+          expected_zip_sha = target["source_reserve_consolidation_artifact_digest"].split(":", 1)[1]
+          if hashlib.sha256(archive.read_bytes()).hexdigest() != expected_zip_sha:
+              raise SystemExit("canonical reserve consolidation ZIP digest mismatch")
+
+          extracted = work / "artifact"
+          safe_unzip(archive, extracted)
+          files = {p.name: p for p in extracted.rglob("*") if p.is_file()}
+          expected_names = {
+              "RESERVE_CONSOLIDATION_SUMMARY.json",
+              "h392-reserve-consolidated-source-bearing.tar.gz.aesgcm",
+              "ENCRYPTED_RESERVE_CONSOLIDATED_BUNDLE_SHA256.txt",
+          }
+          if set(files) != expected_names:
+              raise SystemExit("canonical reserve consolidation artifact layout mismatch")
+
+          summary_sha = hashlib.sha256(
+              files["RESERVE_CONSOLIDATION_SUMMARY.json"].read_bytes()
+          ).hexdigest()
+          encrypted_sha = hashlib.sha256(
+              files["h392-reserve-consolidated-source-bearing.tar.gz.aesgcm"].read_bytes()
+          ).hexdigest()
+          declared_sha = files[
+              "ENCRYPTED_RESERVE_CONSOLIDATED_BUNDLE_SHA256.txt"
+          ].read_text(encoding="utf-8").strip()
+          if summary_sha != target["source_reserve_consolidation_summary_sha256"]:
+              raise SystemExit("canonical reserve consolidation summary hash mismatch")
+          if encrypted_sha != target["source_encrypted_bundle_sha256"]:
+              raise SystemExit("canonical reserve consolidation encrypted bundle hash mismatch")
+          if declared_sha != encrypted_sha:
+              raise SystemExit("canonical reserve consolidation bundle declaration mismatch")
+
+          summary = json.loads(
+              files["RESERVE_CONSOLIDATION_SUMMARY.json"].read_text(encoding="utf-8")
+          )
+          if (
+              summary.get("kind")
+                  != "redacted_consolidated_approved_non_holdout_reserve_summary"
+              or summary.get("reserve_execution_evidence_complete") is not True
+              or int(summary.get("exhausted_slot_count", -1)) != 10
+              or int(summary.get("minimum_capacity_shortfall", -1)) != 10
+              or summary.get("reserve_ledger_sha256") != target["reserve_ledger_sha256"]
+              or summary.get("exhausted_slots_sha256") != target["exhausted_slots_sha256"]
+              or summary.get("contains_source_text") is not False
+              or summary.get("contains_gold_payloads") is not False
+              or summary.get("contains_model_identity") is not False
+          ):
+              raise SystemExit("canonical reserve consolidation summary contract mismatch")
+
+          shutil.copy2(
+              files["h392-reserve-consolidated-source-bearing.tar.gz.aesgcm"],
+              work / "source-bearing.tar.gz.aesgcm",
+          )
+          shutil.rmtree(extracted)
+          archive.unlink()
+          PY
+
+      - name: Decrypt canonical reserve consolidation evidence
+        env:
+          ARTIFACT_KEY: ${{ secrets.H392_CURATION_ARTIFACT_KEY }}
+        run: |
+          set -eu
+          python -m benchmark_campaign.artifact_crypto decrypt             --input "$WORK_ROOT/source-bearing.tar.gz.aesgcm"             --output "$WORK_ROOT/source-bearing.tar.gz"             --passphrase-env ARTIFACT_KEY
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import tarfile
+
+          archive = Path(os.environ["WORK_ROOT"]) / "source-bearing.tar.gz"
+          dest = Path(os.environ["SOURCE_DIR"])
+          with tarfile.open(archive, "r:gz") as tf:
+              members = tf.getmembers()
+              for member in members:
+                  p = Path(member.name)
+                  if (
+                      p.is_absolute()
+                      or ".." in p.parts
+                      or member.issym()
+                      or member.islnk()
+                      or member.isdev()
+                  ):
+                      raise SystemExit(f"unsafe capacity source member: {member.name}")
+              tf.extractall(dest, members=members, filter="data")
+          archive.unlink()
+          (Path(os.environ["WORK_ROOT"]) / "source-bearing.tar.gz.aesgcm").unlink()
+          PY
+
+      - name: Reconfirm main before proposal generation
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Main advanced while capacity source evidence was acquired; dispatch again." >&2
+            exit 1
+          fi
+
+      - name: Build selective reserve attempt 2 proposal
+        run: |
+          set -eu
+          python - <<'PY' > "$RUNNER_TEMP/capacity-target.env"
+          import json
+          from pathlib import Path
+          status = json.loads(Path("artifacts/H3.9.2-STATUS.json").read_text(encoding="utf-8"))
+          target = status["capacity_extension_target"]
+          print(f'LEDGER={target["reserve_ledger_sha256"]}')
+          print(f'EXHAUSTED={target["exhausted_slots_sha256"]}')
+          print(f'COUNT={target["expected_exhausted_slot_count"]}')
+          PY
+          . "$RUNNER_TEMP/capacity-target.env"
+          python -m benchmark_campaign build-capacity-extension             --reserve-dir "$SOURCE_DIR"             --out "$OUT_DIR/CAPACITY_EXTENSION.json"             --expected-reserve-ledger-sha256 "$LEDGER"             --expected-exhausted-slots-sha256 "$EXHAUSTED"             --expected-exhausted-slot-count "$COUNT"
+
+      - name: Prove proposal is redacted and non-executable
+        run: |
+          set -eu
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["OUT_DIR"]) / "CAPACITY_EXTENSION.json"
+          obj = json.loads(path.read_text(encoding="utf-8"))
+          if obj.get("kind") != "selective_reserve_capacity_extension_manifest":
+              raise SystemExit("capacity extension manifest kind mismatch")
+          if int(obj.get("protocol_freeze_schema", 0)) != 27:
+              raise SystemExit("capacity extension manifest schema mismatch")
+          if int(obj.get("extended_primary_count", -1)) != 10:
+              raise SystemExit("capacity extension manifest primary count mismatch")
+          if int(obj.get("new_reserve_slot_count", -1)) != 10:
+              raise SystemExit("capacity extension manifest slot count mismatch")
+          if int(obj.get("new_reserve_attempt", 0)) != 2:
+              raise SystemExit("capacity extension manifest attempt mismatch")
+          if obj.get("execution_authorized") is not False:
+              raise SystemExit("unreviewed capacity proposal must not authorize execution")
+          if obj.get("requires_repository_approval") is not True:
+              raise SystemExit("capacity proposal must require repository approval")
+          rows = obj.get("extensions")
+          if not isinstance(rows, list) or len(rows) != 10:
+              raise SystemExit("capacity extension rows mismatch")
+          ids = [row.get("new_reserve_slot_id") for row in rows]
+          if len(set(ids)) != 10 or any(
+              not isinstance(value, str) or not value.endswith(":reserve:02")
+              for value in ids
+          ):
+              raise SystemExit("capacity extension reserve IDs invalid")
+
+          forbidden = {
+              "source_refs", "anchor_segment", "payload", "candidate", "answer",
+              "model_family", "model_ref", "excerpt", "support_text", "text",
+          }
+          def walk(value):
+              if isinstance(value, dict):
+                  for key, nested in value.items():
+                      if key in forbidden:
+                          raise SystemExit(f"source/model-bearing key leaked into proposal: {key}")
+                      walk(nested)
+              elif isinstance(value, list):
+                  for nested in value:
+                      walk(nested)
+          walk(obj)
+          PY
+          rm -rf "$SOURCE_DIR" "$WORK_ROOT/artifact" "$WORK_ROOT/source-bearing.tar.gz" "$WORK_ROOT/source-bearing.tar.gz.aesgcm"
+          test "$(find "$OUT_DIR" -maxdepth 1 -type f -printf '%f\n')" = "CAPACITY_EXTENSION.json"
+
+      - name: Reconfirm main before publishing proposal
+        run: |
+          set -eu
+          current="$(git rev-parse HEAD)"
+          latest="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$latest"
+          if [ "$current" != "$latest" ]; then
+            echo "Main advanced before capacity proposal publication; refusing stale artifact." >&2
+            exit 1
+          fi
+
+      - name: Upload redacted capacity extension proposal
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: h392-capacity-extension-proposal
+          path: /tmp/h392-capacity-extension/redacted/CAPACITY_EXTENSION.json
+          if-no-files-found: error
+          retention-days: 30

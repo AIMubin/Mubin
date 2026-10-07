@@ -63,6 +63,7 @@ class CampaignTests(unittest.TestCase):
             "benchmark_campaign/consolidation.py",
             "benchmark_campaign/post_consolidation.py",
             "benchmark_campaign/reserve_consolidation.py",
+            "benchmark_campaign/capacity_extension.py",
             "AGENT_EXECUTION.md",
             "adapters/chat_completions.py",
         ]:

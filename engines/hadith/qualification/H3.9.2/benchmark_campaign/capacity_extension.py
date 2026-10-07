@@ -1,0 +1,339 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from .core import canonical_json_bytes, load_json, load_jsonl, sha256_bytes, sha256_file, write_json
+from .factory import build_factory_plan
+from .post_consolidation import validate_reserve_activation
+
+
+CAPACITY_EXTENSION_SCHEMA_VERSION = 1
+CAPACITY_EXTENSION_PROTOCOL_FREEZE_SCHEMA = 27
+SOURCE_RESERVE_CONSOLIDATION_FREEZE_SCHEMA = 26
+NEW_RESERVE_ATTEMPT = 2
+
+
+def _repository_file(root: Path, value: Any, label: str) -> Path:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{label} path missing")
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"{label} path must stay inside repository")
+    candidate = root / relative
+    if candidate.is_symlink():
+        raise ValueError(f"{label} path must be a regular repository file")
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root.resolve())
+    except (FileNotFoundError, ValueError) as exc:
+        raise ValueError(f"{label} path must resolve inside repository") from exc
+    if not resolved.is_file():
+        raise ValueError(f"{label} path must be a regular repository file")
+    return resolved
+
+
+def _second_reserve_slot(primary_slot: dict[str, Any]) -> dict[str, Any]:
+    if primary_slot.get("candidate_slot_kind") == "reserve":
+        raise ValueError("capacity extension requires a primary slot")
+    primary_id = str(primary_slot.get("slot_id", ""))
+    if not primary_id:
+        raise ValueError("capacity extension primary slot_id missing")
+    slot = dict(primary_slot)
+    slot["slot_id"] = f"{primary_id}:reserve:{NEW_RESERVE_ATTEMPT:02d}"
+    slot["candidate_slot_kind"] = "reserve"
+    slot["replacement_for_slot_id"] = primary_id
+    slot["reserve_attempt"] = NEW_RESERVE_ATTEMPT
+    return slot
+
+
+def build_capacity_extension_manifest(
+    root: Path,
+    reserve_dir: Path,
+    out_path: Path,
+    *,
+    expected_reserve_ledger_sha256: str,
+    expected_exhausted_slots_sha256: str,
+    expected_exhausted_slot_count: int,
+) -> dict[str, Any]:
+    """Build a redacted proposal for reserve-attempt-2 capacity.
+
+    The proposal is derived only from the canonical schema-26 exhausted-slot
+    evidence. It does not mutate the base Factory plan and does not authorize
+    execution until the resulting manifest is independently reviewed and
+    committed into repository state.
+    """
+
+    if (
+        not isinstance(expected_exhausted_slot_count, int)
+        or isinstance(expected_exhausted_slot_count, bool)
+        or expected_exhausted_slot_count < 1
+    ):
+        raise ValueError("expected_exhausted_slot_count must be a positive integer")
+
+    status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
+    if int(status.get("freeze_schema_version", 0)) != CAPACITY_EXTENSION_PROTOCOL_FREEZE_SCHEMA:
+        raise ValueError("capacity extension requires freeze schema 27")
+
+    completed = status.get("last_completed_reserve_consolidation")
+    if not isinstance(completed, dict):
+        raise ValueError("canonical reserve consolidation status missing")
+    if int(completed.get("exhausted_slot_count", -1)) != expected_exhausted_slot_count:
+        raise ValueError("repository exhausted-slot count differs from requested extension")
+    if completed.get("reserve_ledger_sha256") != expected_reserve_ledger_sha256:
+        raise ValueError("repository reserve-ledger binding mismatch")
+    if completed.get("exhausted_slots_sha256") != expected_exhausted_slots_sha256:
+        raise ValueError("repository exhausted-slots binding mismatch")
+    if int(completed.get("minimum_capacity_shortfall", -1)) != expected_exhausted_slot_count:
+        raise ValueError("minimum capacity shortfall differs from exhausted-slot count")
+
+    target = status.get("capacity_extension_target")
+    if not isinstance(target, dict):
+        raise ValueError("capacity extension target missing from repository status")
+    if target.get("ready") is not True or target.get("completed") is not False:
+        raise ValueError("capacity extension target is not open")
+    if target.get("workflow") != ".github/workflows/h392-capacity-extension.yml":
+        raise ValueError("capacity extension target workflow mismatch")
+    if int(target.get("protocol_freeze_schema", 0)) != CAPACITY_EXTENSION_PROTOCOL_FREEZE_SCHEMA:
+        raise ValueError("capacity extension target protocol schema mismatch")
+    if int(target.get("expected_exhausted_slot_count", -1)) != expected_exhausted_slot_count:
+        raise ValueError("capacity extension target exhausted count mismatch")
+    if int(target.get("new_reserve_attempt", 0)) != NEW_RESERVE_ATTEMPT:
+        raise ValueError("capacity extension target reserve attempt mismatch")
+    if target.get("reserve_ledger_sha256") != expected_reserve_ledger_sha256:
+        raise ValueError("capacity extension target reserve-ledger binding mismatch")
+    if target.get("exhausted_slots_sha256") != expected_exhausted_slots_sha256:
+        raise ValueError("capacity extension target exhausted-slots binding mismatch")
+
+    repository_evidence_path = _repository_file(
+        root,
+        completed.get("evidence_path"),
+        "reserve consolidation evidence",
+    )
+    repository_evidence = load_json(repository_evidence_path)
+    if repository_evidence.get("evidence_kind") != "approved_non_holdout_reserve_consolidation":
+        raise ValueError("unexpected canonical reserve consolidation evidence kind")
+    if int(repository_evidence.get("protocol_freeze_schema", 0)) != SOURCE_RESERVE_CONSOLIDATION_FREEZE_SCHEMA:
+        raise ValueError("capacity extension requires schema-26 reserve consolidation evidence")
+    if repository_evidence.get("bindings", {}).get("reserve_ledger_sha256") != expected_reserve_ledger_sha256:
+        raise ValueError("repository evidence reserve-ledger binding mismatch")
+    if repository_evidence.get("bindings", {}).get("exhausted_slots_sha256") != expected_exhausted_slots_sha256:
+        raise ValueError("repository evidence exhausted-slots binding mismatch")
+    if int(repository_evidence.get("result", {}).get("exhausted", -1)) != expected_exhausted_slot_count:
+        raise ValueError("repository evidence exhausted count mismatch")
+
+    ledger_path = reserve_dir / "RESERVE_LEDGER.jsonl"
+    exhausted_path = reserve_dir / "EXHAUSTED_SLOTS.json"
+    manifest_path = reserve_dir / "RESERVE_MANIFEST.json"
+    for source in (ledger_path, exhausted_path, manifest_path):
+        if not source.exists():
+            raise FileNotFoundError(source)
+
+    actual_ledger_sha = sha256_file(ledger_path)
+    actual_exhausted_sha = sha256_file(exhausted_path)
+    if actual_ledger_sha != expected_reserve_ledger_sha256:
+        raise ValueError("decrypted reserve ledger SHA-256 differs from canonical binding")
+    if actual_exhausted_sha != expected_exhausted_slots_sha256:
+        raise ValueError("decrypted exhausted-slots SHA-256 differs from canonical binding")
+
+    source_manifest = load_json(manifest_path)
+    if source_manifest.get("campaign_id") != "H3.9.2":
+        raise ValueError("unexpected reserve consolidation campaign_id")
+    if source_manifest.get("kind") != "consolidated_approved_non_holdout_reserve_evidence":
+        raise ValueError("unexpected reserve consolidation manifest kind")
+    if int(source_manifest.get("protocol_freeze_schema", 0)) != SOURCE_RESERVE_CONSOLIDATION_FREEZE_SCHEMA:
+        raise ValueError("capacity extension source manifest must be schema 26")
+    if source_manifest.get("reserve_ledger_sha256") != actual_ledger_sha:
+        raise ValueError("reserve consolidation manifest ledger binding mismatch")
+    if source_manifest.get("exhausted_slots_sha256") != actual_exhausted_sha:
+        raise ValueError("reserve consolidation manifest exhausted-slots binding mismatch")
+    if int(source_manifest.get("exhausted_slot_count", -1)) != expected_exhausted_slot_count:
+        raise ValueError("reserve consolidation manifest exhausted count mismatch")
+
+    exhausted = load_json(exhausted_path)
+    if exhausted.get("campaign_id") != "H3.9.2":
+        raise ValueError("unexpected exhausted-slot campaign_id")
+    if exhausted.get("kind") != "exhausted_non_holdout_slots":
+        raise ValueError("unexpected exhausted-slot evidence kind")
+    if int(exhausted.get("protocol_freeze_schema", 0)) != SOURCE_RESERVE_CONSOLIDATION_FREEZE_SCHEMA:
+        raise ValueError("exhausted-slot evidence must be schema 26")
+    if exhausted.get("reserve_ledger_sha256") != actual_ledger_sha:
+        raise ValueError("exhausted-slot evidence ledger binding mismatch")
+    if int(exhausted.get("exhausted_slot_count", -1)) != expected_exhausted_slot_count:
+        raise ValueError("exhausted-slot evidence count mismatch")
+    policy = exhausted.get("policy")
+    if not isinstance(policy, dict):
+        raise ValueError("exhausted-slot policy missing")
+    if policy.get("automatic_second_reserve_authorized") is not False:
+        raise ValueError("source evidence must not already authorize reserve attempt 2")
+    if policy.get("capacity_extension_requires_reviewed_protocol_change") is not True:
+        raise ValueError("source evidence must require a reviewed capacity extension")
+
+    activation_status = status.get("reserve_activation")
+    if not isinstance(activation_status, dict) or activation_status.get("enabled") is not True:
+        raise ValueError("approved reserve activation status missing")
+    activation_path = _repository_file(
+        root,
+        activation_status.get("evidence_path"),
+        "reserve activation evidence",
+    )
+    activation = validate_reserve_activation(root, activation_path, [])
+    activation_sha = sha256_file(activation_path)
+    if source_manifest.get("activation_manifest_sha256") != activation_sha:
+        raise ValueError("reserve consolidation activation binding mismatch")
+    if target.get("activation_manifest_sha256") != activation_sha:
+        raise ValueError("capacity extension target activation binding mismatch")
+
+    base_plan = build_factory_plan(root)
+    base_plan_sha = sha256_bytes(canonical_json_bytes(base_plan))
+    if source_manifest.get("factory_plan_sha256") != base_plan_sha:
+        raise ValueError("reserve consolidation base Factory-plan binding mismatch")
+    if activation.get("factory_plan_sha256") != base_plan_sha:
+        raise ValueError("reserve activation base Factory-plan binding mismatch")
+    if target.get("base_factory_plan_sha256") != base_plan_sha:
+        raise ValueError("capacity extension target base Factory-plan binding mismatch")
+    slots = {str(row["slot_id"]): row for row in base_plan.get("slots", [])}
+
+    activated_rows = activation.get("activated")
+    if not isinstance(activated_rows, list):
+        raise ValueError("reserve activation rows missing")
+    activated = {
+        str(row.get("reserve_slot_id", "")): row
+        for row in activated_rows
+        if isinstance(row, dict)
+    }
+    if "" in activated or len(activated) != len(activated_rows):
+        raise ValueError("reserve activation contains duplicate/empty reserve IDs")
+
+    ledger_rows = load_jsonl(ledger_path)
+    ledger_by_slot: dict[str, dict[str, Any]] = {}
+    for row in ledger_rows:
+        slot_id = str(row.get("slot_id", ""))
+        if not slot_id or slot_id in ledger_by_slot:
+            raise ValueError("reserve ledger contains duplicate/empty slot IDs")
+        ledger_by_slot[slot_id] = row
+
+    exhausted_rows = exhausted.get("exhausted")
+    if not isinstance(exhausted_rows, list):
+        raise ValueError("exhausted-slot rows missing")
+    if len(exhausted_rows) != expected_exhausted_slot_count:
+        raise ValueError("exhausted-slot row count mismatch")
+
+    extensions: list[dict[str, Any]] = []
+    seen_primary: set[str] = set()
+    seen_prior_reserve: set[str] = set()
+    seen_new_reserve: set[str] = set()
+
+    for row in exhausted_rows:
+        if not isinstance(row, dict):
+            raise ValueError("exhausted-slot row must be an object")
+        primary_id = str(row.get("primary_slot_id", ""))
+        prior_reserve_id = str(row.get("reserve_slot_id", ""))
+        if not primary_id or primary_id in seen_primary:
+            raise ValueError("duplicate/empty exhausted primary slot")
+        if not prior_reserve_id or prior_reserve_id in seen_prior_reserve:
+            raise ValueError("duplicate/empty exhausted reserve slot")
+        seen_primary.add(primary_id)
+        seen_prior_reserve.add(prior_reserve_id)
+
+        primary_slot = slots.get(primary_id)
+        prior_reserve_slot = slots.get(prior_reserve_id)
+        if primary_slot is None or primary_slot.get("candidate_slot_kind") == "reserve":
+            raise ValueError(f"exhausted linkage references non-primary slot: {primary_id}")
+        if primary_slot.get("partition") != "non_holdout":
+            raise ValueError(f"capacity extension is non-holdout only: {primary_id}")
+        if (
+            prior_reserve_slot is None
+            or prior_reserve_slot.get("candidate_slot_kind") != "reserve"
+            or prior_reserve_slot.get("replacement_for_slot_id") != primary_id
+            or prior_reserve_slot.get("reserve_attempt") != 1
+        ):
+            raise ValueError(f"exhausted linkage does not reference reserve attempt 1: {prior_reserve_id}")
+        if prior_reserve_id not in activated:
+            raise ValueError(f"exhausted reserve was not in the reviewed activation: {prior_reserve_id}")
+
+        ledger = ledger_by_slot.get(prior_reserve_id)
+        if ledger is None:
+            raise ValueError(f"exhausted reserve missing from reserve ledger: {prior_reserve_id}")
+        if ledger.get("slot_state") != "exhausted":
+            raise ValueError(f"reserve ledger row is not exhausted: {prior_reserve_id}")
+        if ledger.get("outcome") != "skipped" or ledger.get("terminal_failure") is not True:
+            raise ValueError(f"exhausted reserve is not a terminal skipped outcome: {prior_reserve_id}")
+        if ledger.get("primary_slot_id") != primary_id:
+            raise ValueError(f"reserve ledger primary linkage mismatch: {prior_reserve_id}")
+        if row.get("reserve_task_fingerprint") != ledger.get("task_fingerprint"):
+            raise ValueError(f"exhausted reserve fingerprint mismatch: {prior_reserve_id}")
+        if row.get("reserve_ledger_sha256") != actual_ledger_sha:
+            raise ValueError(f"exhausted row ledger binding mismatch: {prior_reserve_id}")
+        if row.get("activation_manifest_sha256") != activation_sha:
+            raise ValueError(f"exhausted row activation binding mismatch: {prior_reserve_id}")
+
+        new_slot = _second_reserve_slot(primary_slot)
+        new_reserve_id = str(new_slot["slot_id"])
+        if new_reserve_id in slots:
+            raise ValueError(f"reserve attempt 2 already exists in base Factory plan: {new_reserve_id}")
+        if new_reserve_id in seen_new_reserve:
+            raise ValueError(f"duplicate reserve attempt 2 extension: {new_reserve_id}")
+        seen_new_reserve.add(new_reserve_id)
+
+        extensions.append({
+            "primary_slot_id": primary_id,
+            "primary_slot_binding_sha256": sha256_bytes(canonical_json_bytes(primary_slot)),
+            "prior_reserve_slot_id": prior_reserve_id,
+            "prior_reserve_slot_binding_sha256": sha256_bytes(
+                canonical_json_bytes(prior_reserve_slot)
+            ),
+            "prior_reserve_task_fingerprint": ledger["task_fingerprint"],
+            "prior_reserve_offset": ledger["reserve_offset"],
+            "prior_reserve_terminal_reason": ledger["canonical_reason"],
+            "new_reserve_slot_id": new_reserve_id,
+            "new_reserve_attempt": NEW_RESERVE_ATTEMPT,
+            "new_reserve_slot": new_slot,
+            "new_reserve_slot_binding_sha256": sha256_bytes(
+                canonical_json_bytes(new_slot)
+            ),
+            "activation_manifest_sha256": activation_sha,
+            "reserve_ledger_sha256": actual_ledger_sha,
+            "exhausted_slots_sha256": actual_exhausted_sha,
+        })
+
+    extensions.sort(key=lambda row: int(row["prior_reserve_offset"]))
+    if len(extensions) != expected_exhausted_slot_count:
+        raise ValueError("capacity extension count differs from exhausted-slot evidence")
+
+    manifest = {
+        "schema_version": CAPACITY_EXTENSION_SCHEMA_VERSION,
+        "campaign_id": "H3.9.2",
+        "kind": "selective_reserve_capacity_extension_manifest",
+        "protocol_freeze_schema": CAPACITY_EXTENSION_PROTOCOL_FREEZE_SCHEMA,
+        "source_reserve_consolidation_freeze_schema": SOURCE_RESERVE_CONSOLIDATION_FREEZE_SCHEMA,
+        "base_factory_plan_sha256": base_plan_sha,
+        "reserve_consolidation_evidence_sha256": sha256_file(repository_evidence_path),
+        "reserve_consolidation_run_id": completed["successful_run_id"],
+        "reserve_consolidation_artifact_id": completed["artifact_id"],
+        "reserve_consolidation_artifact_digest": completed["artifact_digest"],
+        "activation_manifest_sha256": activation_sha,
+        "reserve_ledger_sha256": actual_ledger_sha,
+        "exhausted_slots_sha256": actual_exhausted_sha,
+        "minimum_capacity_shortfall": completed["minimum_capacity_shortfall"],
+        "extended_primary_count": len(extensions),
+        "new_reserve_slot_count": len(extensions),
+        "new_reserve_attempt": NEW_RESERVE_ATTEMPT,
+        "capacity_extension_proposed": True,
+        "execution_authorized": False,
+        "requires_repository_approval": True,
+        "extensions": extensions,
+        "policy": {
+            "scope": "only schema-26 exhausted non-holdout slots",
+            "pending_adjudication_is_extended": False,
+            "promoted_slot_is_extended": False,
+            "base_factory_plan_is_mutated": False,
+            "extension_is_append_only_overlay": True,
+            "one_new_candidate_opportunity_per_exhausted_slot": True,
+            "automatic_future_reserve_attempts": False,
+        },
+    }
+    if out_path.exists():
+        raise FileExistsError(f"refusing to overwrite capacity extension manifest: {out_path}")
+    write_json(out_path, manifest)
+    return manifest

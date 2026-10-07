@@ -298,3 +298,14 @@ benchmark_gate_passed                      = false
 ```
 
 The next work must remain split into two reviewed surfaces: adjudicate the 153 pending cases under the human/authority policy, and separately define any capacity extension needed for the 10 exhausted slots. A capacity extension is a new protocol decision; consolidation itself does not create reserve attempt 2.
+
+## Schema-27 handoff
+
+Schema 26 is now closed as an evidence-producing stage. Its canonical outputs are the 47 validated promoted records, 153 pending adjudications, and 10 exhausted slots recorded in `artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json`.
+
+Because the 10 exhausted slots prove a minimum shortfall even under the best possible adjudication outcome, the next machine-generated artifact is a **capacity-extension proposal**, not another reserve execution. Schema 27 is specified in `CAPACITY_EXTENSION.md` and implemented by `.github/workflows/h392-capacity-extension.yml`.
+
+The proposal is limited to the exact 10 canonical exhausted slots and defines one deterministic `:reserve:02` slot for each. It is not executable authority. A separate repository-review boundary must freeze the generated manifest before task generation or reconciliation can be extended to those slots.
+
+The 153 adjudications remain orthogonal. Their future packet/review protocol must preserve the primary-vs-reserve provenance of each case and require human/authority decisions; schema 27 does not convert them into replacement eligibility.
+
