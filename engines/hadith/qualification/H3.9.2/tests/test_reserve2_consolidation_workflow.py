@@ -86,9 +86,9 @@ class Reserve2ConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn("CUMULATIVE_LEDGER.jsonl", section)
         self.assertIn("RESERVE_LEDGER.jsonl", section)
         self.assertIn('bound["artifact_digest"]', section)
-        self.assertIn('bound["summary_sha256"]', section)
-        self.assertIn('bound["encrypted_bundle_sha256"]', section)
-        self.assertIn('bound["ledger_sha256"]', section)
+        self.assertIn("prior {name} summary hash mismatch", section)
+        self.assertIn("prior {name} encrypted bundle hash mismatch", section)
+        self.assertIn("prior {name} ledger hash mismatch", section)
         self.assertIn("combined prior promoted case-ID set is not exact/unique", section)
         self.assertIn("PRIOR_PROMOTED_CASE_IDS", section)
 
