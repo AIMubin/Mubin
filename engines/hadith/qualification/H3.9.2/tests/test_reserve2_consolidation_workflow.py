@@ -81,8 +81,8 @@ class Reserve2ConsolidationWorkflowTests(unittest.TestCase):
         )[1].split(
             "- name: Reconfirm main before reserve consolidation", 1
         )[0]
-        self.assertIn("h392-cumulative-primary-evidence", section)
-        self.assertIn("h392-reserve-consolidated-evidence", section)
+        self.assertIn('artifact.get("name") != bound["artifact_name"]', section)
+        self.assertIn('run.get("path") != bound["workflow"]', section)
         self.assertIn("CUMULATIVE_LEDGER.jsonl", section)
         self.assertIn("RESERVE_LEDGER.jsonl", section)
         self.assertIn('bound["artifact_digest"]', section)
