@@ -143,6 +143,18 @@ def _verify_canonical_layer(
         raise ValueError(f"canonical {layer} manifest ledger binding mismatch")
     if manifest.get(manifest_adjudication_field) != sha256_file(adjudication_path):
         raise ValueError(f"canonical {layer} manifest adjudication binding mismatch")
+    expected_manifest = {
+        "primary": ("cumulative_non_holdout_primary_evidence", "freeze_schema_version", 25),
+        "reserve01": ("consolidated_approved_non_holdout_reserve_evidence", "protocol_freeze_schema", 26),
+        "reserve02": ("consolidated_approved_non_holdout_reserve2_evidence", "protocol_freeze_schema", 29),
+    }[layer]
+    expected_kind, schema_field, expected_schema = expected_manifest
+    if (
+        manifest.get("campaign_id") != "H3.9.2"
+        or manifest.get("kind") != expected_kind
+        or int(manifest.get(schema_field, -1)) != expected_schema
+    ):
+        raise ValueError(f"canonical {layer} manifest identity/schema mismatch")
 
     ledger = load_jsonl(ledger_path)
     adjudication = load_jsonl(adjudication_path)
@@ -152,6 +164,16 @@ def _verify_canonical_layer(
     ledger_by_task = {str(row.get("task_id", "")): row for row in ledger}
     if "" in ledger_by_task or len(ledger_by_task) != len(ledger):
         raise ValueError(f"canonical {layer} ledger task IDs invalid/duplicate")
+    ledger_adjudication_ids = {
+        tid for tid, row in ledger_by_task.items() if row.get("outcome") == "adjudication"
+    }
+    if set(adjudication_ids) != ledger_adjudication_ids:
+        raise ValueError(f"canonical {layer} adjudication file is not the exact ledger adjudication set")
+    if (
+        "adjudication_count" in manifest
+        and int(manifest.get("adjudication_count", -1)) != len(adjudication)
+    ):
+        raise ValueError(f"canonical {layer} manifest adjudication count mismatch")
     for row in adjudication:
         tid = str(row["task_id"])
         source = ledger_by_task.get(tid)
