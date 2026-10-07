@@ -337,3 +337,229 @@ def build_capacity_extension_manifest(
         raise FileExistsError(f"refusing to overwrite capacity extension manifest: {out_path}")
     write_json(out_path, manifest)
     return manifest
+
+def validate_frozen_capacity_extension(
+    root: Path,
+    manifest_path: Path,
+    tasks: list[dict[str, Any]] | None = None,
+    *,
+    require_execution_enabled: bool = False,
+) -> dict[str, Any]:
+    """Validate the exact repository-frozen schema-27 reserve:02 overlay.
+
+    The schema-27 manifest remains a proposal artifact with
+    execution_authorized=false. Schema 28 may separately authorize execution
+    of exactly that frozen set through repository status.
+    """
+
+    status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
+    if int(status.get("freeze_schema_version", 0)) < CAPACITY_EXTENSION_PROTOCOL_FREEZE_SCHEMA:
+        raise ValueError("repository schema predates capacity extension")
+
+    frozen = status.get("capacity_extension_proposal")
+    if not isinstance(frozen, dict) or frozen.get("frozen") is not True:
+        raise ValueError("capacity extension proposal is not frozen")
+    approved_path = _repository_file(
+        root, frozen.get("evidence_path"), "capacity extension proposal"
+    )
+    if approved_path != manifest_path.resolve():
+        raise ValueError("capacity extension path differs from repository-approved proposal")
+    manifest_sha = sha256_file(approved_path)
+    if manifest_sha != frozen.get("manifest_sha256"):
+        raise ValueError("capacity extension proposal SHA-256 differs from repository status")
+
+    manifest = load_json(approved_path)
+    if (
+        manifest.get("schema_version") != CAPACITY_EXTENSION_SCHEMA_VERSION
+        or manifest.get("campaign_id") != "H3.9.2"
+        or manifest.get("kind") != "selective_reserve_capacity_extension_manifest"
+        or int(manifest.get("protocol_freeze_schema", 0))
+            != CAPACITY_EXTENSION_PROTOCOL_FREEZE_SCHEMA
+        or int(manifest.get("source_reserve_consolidation_freeze_schema", 0))
+            != SOURCE_RESERVE_CONSOLIDATION_FREEZE_SCHEMA
+        or manifest.get("capacity_extension_proposed") is not True
+        or manifest.get("execution_authorized") is not False
+        or manifest.get("requires_repository_approval") is not True
+        or int(manifest.get("new_reserve_attempt", 0)) != NEW_RESERVE_ATTEMPT
+    ):
+        raise ValueError("capacity extension proposal contract invalid")
+
+    policy = manifest.get("policy")
+    if not isinstance(policy, dict):
+        raise ValueError("capacity extension policy missing")
+    expected_policy = {
+        "scope": "only schema-26 exhausted non-holdout slots",
+        "pending_adjudication_is_extended": False,
+        "promoted_slot_is_extended": False,
+        "base_factory_plan_is_mutated": False,
+        "extension_is_append_only_overlay": True,
+        "one_new_candidate_opportunity_per_exhausted_slot": True,
+        "automatic_future_reserve_attempts": False,
+    }
+    if canonical_json_bytes(policy) != canonical_json_bytes(expected_policy):
+        raise ValueError("capacity extension policy differs from reviewed contract")
+
+    bindings = {
+        "artifact_id": manifest.get("reserve_consolidation_artifact_id"),
+        "artifact_digest": manifest.get("reserve_consolidation_artifact_digest"),
+        "reserve_ledger_sha256": manifest.get("reserve_ledger_sha256"),
+        "exhausted_slots_sha256": manifest.get("exhausted_slots_sha256"),
+        "activation_manifest_sha256": manifest.get("activation_manifest_sha256"),
+        "base_factory_plan_sha256": manifest.get("base_factory_plan_sha256"),
+    }
+    expected_bindings = {
+        "artifact_id": frozen.get("source_reserve_consolidation_artifact_id"),
+        "artifact_digest": frozen.get("source_reserve_consolidation_artifact_digest"),
+        "reserve_ledger_sha256": frozen.get("reserve_ledger_sha256"),
+        "exhausted_slots_sha256": frozen.get("exhausted_slots_sha256"),
+        "activation_manifest_sha256": frozen.get("activation_manifest_sha256"),
+        "base_factory_plan_sha256": frozen.get("base_factory_plan_sha256"),
+    }
+    if canonical_json_bytes(bindings) != canonical_json_bytes(expected_bindings):
+        raise ValueError("capacity extension source bindings differ from frozen status")
+    if manifest.get("reserve_consolidation_run_id") != frozen.get(
+        "source_reserve_consolidation_run_id"
+    ):
+        raise ValueError("capacity extension reserve-consolidation run binding mismatch")
+
+    base_plan = build_factory_plan(root)
+    base_plan_sha = sha256_bytes(canonical_json_bytes(base_plan))
+    if manifest.get("base_factory_plan_sha256") != base_plan_sha:
+        raise ValueError("capacity extension base Factory-plan binding mismatch")
+    base_slots = {str(row["slot_id"]): row for row in base_plan.get("slots", [])}
+
+    rows = manifest.get("extensions")
+    if not isinstance(rows, list):
+        raise ValueError("capacity extension rows missing")
+    expected_count = int(frozen.get("new_reserve_slot_count", -1))
+    if (
+        len(rows) != expected_count
+        or int(manifest.get("extended_primary_count", -1)) != expected_count
+        or int(manifest.get("new_reserve_slot_count", -1)) != expected_count
+    ):
+        raise ValueError("capacity extension row count differs from frozen status")
+
+    seen_primary: set[str] = set()
+    seen_prior: set[str] = set()
+    seen_new: set[str] = set()
+    by_new_id: dict[str, dict[str, Any]] = {}
+    prior_offsets: list[int] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("capacity extension row must be an object")
+        primary_id = str(row.get("primary_slot_id", ""))
+        prior_id = str(row.get("prior_reserve_slot_id", ""))
+        new_id = str(row.get("new_reserve_slot_id", ""))
+        if (
+            not primary_id
+            or primary_id in seen_primary
+            or not prior_id
+            or prior_id in seen_prior
+            or not new_id
+            or new_id in seen_new
+        ):
+            raise ValueError("capacity extension contains duplicate/empty slot identity")
+        seen_primary.add(primary_id)
+        seen_prior.add(prior_id)
+        seen_new.add(new_id)
+
+        primary = base_slots.get(primary_id)
+        prior = base_slots.get(prior_id)
+        if primary is None or primary.get("candidate_slot_kind") == "reserve":
+            raise ValueError(f"capacity extension primary slot invalid: {primary_id}")
+        if primary.get("partition") != "non_holdout":
+            raise ValueError(f"capacity extension must remain non-holdout: {primary_id}")
+        if (
+            prior is None
+            or prior.get("candidate_slot_kind") != "reserve"
+            or prior.get("replacement_for_slot_id") != primary_id
+            or prior.get("reserve_attempt") != 1
+        ):
+            raise ValueError(f"capacity extension predecessor invalid: {prior_id}")
+        if row.get("primary_slot_binding_sha256") != sha256_bytes(
+            canonical_json_bytes(primary)
+        ):
+            raise ValueError(f"capacity extension primary binding mismatch: {primary_id}")
+        if row.get("prior_reserve_slot_binding_sha256") != sha256_bytes(
+            canonical_json_bytes(prior)
+        ):
+            raise ValueError(f"capacity extension predecessor binding mismatch: {prior_id}")
+
+        expected_new = _second_reserve_slot(primary)
+        if new_id != expected_new["slot_id"]:
+            raise ValueError(f"capacity extension reserve:02 ID mismatch: {new_id}")
+        if row.get("new_reserve_attempt") != NEW_RESERVE_ATTEMPT:
+            raise ValueError(f"capacity extension reserve attempt mismatch: {new_id}")
+        if canonical_json_bytes(row.get("new_reserve_slot")) != canonical_json_bytes(
+            expected_new
+        ):
+            raise ValueError(f"capacity extension reserve:02 slot mismatch: {new_id}")
+        if row.get("new_reserve_slot_binding_sha256") != sha256_bytes(
+            canonical_json_bytes(expected_new)
+        ):
+            raise ValueError(f"capacity extension reserve:02 binding mismatch: {new_id}")
+        if new_id in base_slots:
+            raise ValueError(f"capacity extension illegally mutates base Factory plan: {new_id}")
+        if row.get("activation_manifest_sha256") != frozen.get(
+            "activation_manifest_sha256"
+        ):
+            raise ValueError(f"capacity extension activation binding mismatch: {new_id}")
+        if row.get("reserve_ledger_sha256") != frozen.get("reserve_ledger_sha256"):
+            raise ValueError(f"capacity extension ledger binding mismatch: {new_id}")
+        if row.get("exhausted_slots_sha256") != frozen.get("exhausted_slots_sha256"):
+            raise ValueError(f"capacity extension exhausted binding mismatch: {new_id}")
+        if row.get("prior_reserve_terminal_reason") != (
+            "curator_rejection:adapter:contract_support_not_verbatim"
+        ):
+            raise ValueError(f"capacity extension predecessor is not canonical terminal failure: {new_id}")
+        offset = row.get("prior_reserve_offset")
+        if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+            raise ValueError(f"capacity extension prior reserve offset invalid: {new_id}")
+        prior_offsets.append(offset)
+        by_new_id[new_id] = row
+
+    if prior_offsets != sorted(prior_offsets) or len(prior_offsets) != len(set(prior_offsets)):
+        raise ValueError("capacity extension rows are not in unique canonical offset order")
+
+    if require_execution_enabled:
+        if int(status.get("freeze_schema_version", 0)) < 28:
+            raise ValueError("reserve:02 execution requires freeze schema 28")
+        if status.get("capacity_extension_enabled") is not True:
+            raise ValueError("capacity extension execution is not enabled")
+        execution = status.get("reserve2_execution_target")
+        if not isinstance(execution, dict):
+            raise ValueError("reserve:02 execution target missing")
+        if execution.get("ready") is not True or execution.get("completed") is not False:
+            raise ValueError("reserve:02 execution target is not open")
+        if execution.get("workflow") != ".github/workflows/h392-reserve2-campaign.yml":
+            raise ValueError("reserve:02 execution workflow binding mismatch")
+        if execution.get("task_scope") != "approved_capacity_extension":
+            raise ValueError("reserve:02 execution task scope mismatch")
+        if int(execution.get("expected_task_count", -1)) != expected_count:
+            raise ValueError("reserve:02 execution task count mismatch")
+        if execution.get("capacity_extension_manifest_sha256") != manifest_sha:
+            raise ValueError("reserve:02 execution manifest binding mismatch")
+        if execution.get("capacity_extension_evidence_path") != frozen.get("evidence_path"):
+            raise ValueError("reserve:02 execution evidence-path binding mismatch")
+
+    if tasks:
+        for task in tasks:
+            task_id = str(task.get("task_id", ""))
+            row = by_new_id.get(task_id)
+            if row is None:
+                raise ValueError(f"task is outside approved capacity extension: {task_id}")
+            slot = row["new_reserve_slot"]
+            if task.get("slot_id") != task_id:
+                raise ValueError(f"reserve:02 task_id/slot_id mismatch: {task_id}")
+            for field in (
+                "benchmark_id", "partition", "anchor_source_id", "task_type",
+                "allowed_labels", "auto_promotion", "risk_tier", "visibility",
+                "candidate_slot_kind", "replacement_for_slot_id", "reserve_attempt",
+            ):
+                if task.get(field) != slot.get(field):
+                    raise ValueError(
+                        f"reserve:02 task {field} differs from approved overlay: {task_id}"
+                    )
+
+    return manifest
+
