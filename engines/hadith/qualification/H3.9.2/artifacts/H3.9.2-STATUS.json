@@ -42,8 +42,8 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "The authoritative schema-25 cumulative primary evidence is frozen at 210 primary tasks: 40 promoted, 129 pending adjudication, and 41 terminal skipped primaries. Freeze schema 26 activated exactly those 41 linked reserves. Reserve execution run 37532437191 completed successfully after a bounded failed-job rerun, with redacted aggregate accounting of 7 promoted, 24 adjudication, and 10 skipped reserve outcomes. Those counts remain execution evidence, not canonical population state, until the exact six source-bearing shard artifacts are decrypted, provenance-validated, consolidated, and frozen.",
-  "next_action": "Dispatch .github/workflows/h392-reserve-consolidation.yml from current main. It must consume only the six repository-reviewed shard artifacts from reserve execution run 37532437191, preserve their true attempt/job provenance, validate all 41 decrypted reserve outcomes against the frozen activation and source evidence, and publish only a redacted summary plus encrypted consolidated reserve evidence.",
+  "reason": "The authoritative schema-25 primary evidence remains 210 tasks: 40 promoted, 129 pending adjudication, and 41 terminal skipped primaries. Schema 26 activated and executed exactly those 41 linked reserves. Reserve consolidation run 37578659973 independently revalidated all six encrypted shard artifacts and made the reserve outcomes canonical: 7 promoted replacements, 24 pending reserve adjudications, and 10 exhausted slots under the frozen one-reserve-per-primary capacity. The validated promoted total is 47; the combined pending adjudication surface is 153; the maximum fillable population under current capacity is 200, so the minimum capacity shortfall is 10.",
+  "next_action": "Do not execute additional reserves. Freeze the combined 153-case adjudication surface for human/authority review, and design a separate reviewed capacity-extension protocol for the 10 exhausted slots. Any second reserve attempt requires a later protocol/freeze change; it is not authorized by schema 26.",
   "freeze_schema_version": 26,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -186,7 +186,15 @@
     "reserve_consolidation_workflow": ".github/workflows/h392-reserve-consolidation.yml",
     "reserve_execution_run_id": 37532437191,
     "reserve_execution_final_attempt": 2,
-    "reserve_execution_head_sha": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7"
+    "reserve_execution_head_sha": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7",
+    "reserve_consolidation_successful_run_id": 37578659973,
+    "reserve_consolidation_evidence_path": "artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json",
+    "canonical_reserve_promoted_count": 7,
+    "canonical_reserve_pending_adjudication_count": 24,
+    "exhausted_slot_count": 10,
+    "combined_pending_adjudication_count": 153,
+    "minimum_capacity_shortfall": 10,
+    "automatic_second_reserve_authorized": false
   },
   "reserve_activation_target": {
     "ready": false,
@@ -219,7 +227,7 @@
   "reserve_execution_workflow": ".github/workflows/h392-reserve-campaign.yml",
   "reserve_execution_target": {
     "ready": false,
-    "completed": false,
+    "completed": true,
     "workflow": ".github/workflows/h392-reserve-campaign.yml",
     "task_scope": "approved_reserve",
     "expected_task_count": 41,
@@ -228,7 +236,7 @@
     "replacement_eligibility_sha256": "21275d808dd369a362975a45f92ee6889cecac88b293f1287d0b0660bb72baee",
     "execution_policy": "exact activated reserve set only; one candidate task identity per listed reserve slot; existing bounded transport-retry semantics unchanged; source-bearing outputs encrypted; redacted aggregate only",
     "execution_succeeded": true,
-    "consolidation_pending": true,
+    "consolidation_pending": false,
     "successful_run_id": 37532437191,
     "successful_run_final_attempt": 2,
     "runner_commit": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7",
@@ -239,10 +247,11 @@
       "promoted": 7,
       "adjudication": 24,
       "skipped": 10
-    }
+    },
+    "canonical_evidence_path": "artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json"
   },
   "reserve_execution_observation": {
-    "authoritative_after_consolidation": false,
+    "authoritative_after_consolidation": true,
     "workflow_run_id": 37532437191,
     "final_run_attempt": 2,
     "head_sha": "5fdeb0d8a7446a319c0bf21477d1ac916e2d7fc7",
@@ -253,12 +262,12 @@
     "promoted": 7,
     "adjudication": 24,
     "skipped": 10,
-    "note": "Redacted execution accounting only. Source-bearing outcomes must pass reserve consolidation before these counts become canonical evidence."
+    "note": "Canonical after successful reserve consolidation run 37578659973; exact source-bearing evidence remains encrypted and hash-bound."
   },
   "reserve_consolidation_workflow": ".github/workflows/h392-reserve-consolidation.yml",
   "reserve_consolidation_target": {
-    "ready": true,
-    "completed": false,
+    "ready": false,
+    "completed": true,
     "workflow": ".github/workflows/h392-reserve-consolidation.yml",
     "protocol_freeze_schema": 26,
     "source_run_id": 37532437191,
@@ -352,6 +361,40 @@
         "encrypted_bundle_sha256": "6e12f9140d0074580c752e22eba9426018070f74248e69c5df471f6ddeeadcaf"
       }
     ],
-    "security_boundary": "decrypt only in ephemeral runner; reacquire and verify pinned non-holdout sources; upload only redacted summary plus authenticated encrypted consolidated bundle"
+    "security_boundary": "decrypt only in ephemeral runner; reacquire and verify pinned non-holdout sources; upload only redacted summary plus authenticated encrypted consolidated bundle",
+    "successful_run_id": 37578659973,
+    "runner_commit": "b3888b24b20571884465b349c9764c669b0e66f9",
+    "artifact_id": 11464000900,
+    "artifact_digest": "sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e",
+    "summary_sha256": "13ccc3f3ae985fb2f577fb05e2f5e9b5bbddcbf87d41d1263e1a4fa07a87bd67",
+    "encrypted_bundle_sha256": "f73a1e1dc170af9a8fa4dde6c47348e85690fe4df712bda573b001c66b39dc19",
+    "reserve_ledger_sha256": "f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012",
+    "exhausted_slots_sha256": "7140e7b110d4be44d3685b20649bcd4df04b69d1cd561eb4afa69c3ba1c75490",
+    "evidence_path": "artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json"
+  },
+  "last_completed_reserve_consolidation": {
+    "successful_run_id": 37578659973,
+    "runner_commit": "b3888b24b20571884465b349c9764c669b0e66f9",
+    "source_execution_run_id": 37532437191,
+    "source_execution_final_attempt": 2,
+    "artifact_id": 11464000900,
+    "artifact_digest": "sha256:00385663166059b3701c0581bd460ba2f2d39a796d3cca1c1b015fb96170b64e",
+    "summary_sha256": "13ccc3f3ae985fb2f577fb05e2f5e9b5bbddcbf87d41d1263e1a4fa07a87bd67",
+    "encrypted_bundle_sha256": "f73a1e1dc170af9a8fa4dde6c47348e85690fe4df712bda573b001c66b39dc19",
+    "activation_manifest_sha256": "ca53b0403a1a9b9b3f9dba8bd18494966dc5df407f75932e94076c0088e2da3c",
+    "reserve_ledger_sha256": "f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012",
+    "exhausted_slots_sha256": "7140e7b110d4be44d3685b20649bcd4df04b69d1cd561eb4afa69c3ba1c75490",
+    "activated_reserve_task_count": 41,
+    "promoted_reserve_count": 7,
+    "pending_reserve_adjudication_count": 24,
+    "exhausted_slot_count": 10,
+    "primary_promoted_record_count": 40,
+    "primary_pending_adjudication_count": 129,
+    "validated_promoted_record_count": 47,
+    "total_pending_adjudication_count": 153,
+    "record_quota": 210,
+    "maximum_fillable_slots_under_current_capacity": 200,
+    "minimum_capacity_shortfall": 10,
+    "evidence_path": "artifacts/RESERVE_CONSOLIDATION_EVIDENCE_41.json"
   }
 }
