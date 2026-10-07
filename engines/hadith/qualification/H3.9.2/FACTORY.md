@@ -158,3 +158,12 @@ python -m benchmark_campaign factory-reconcile \
 ```
 
 Primary-only reconciliation must not receive this flag. A reserve task absent from the activation manifest fails closed. See `POST_CONSOLIDATION.md` for the full adjudication and activation sequence.
+
+## Freeze schema 27: selective capacity-extension proposal
+
+Schema 26 completed the first reserve cycle and proved a structural shortfall: 10 non-holdout primary slots remain exhausted after their exact approved `reserve:01` opportunity. The base Factory plan remains the schema-26 1,280-primary + 1,280-reserve plan and is not rewritten after observing those outcomes.
+
+Schema 27 introduces `benchmark_campaign/capacity_extension.py` and `.github/workflows/h392-capacity-extension.yml`. The builder consumes only the canonical schema-26 reserve ledger and exhausted-slot evidence and deterministically proposes one `:reserve:02` slot for each of the 10 exhausted primaries. The new slot is an append-only overlay definition; historical primary and `reserve:01` slot objects, hashes, offsets, task fingerprints, activation evidence, and execution provenance remain untouched.
+
+The generated `CAPACITY_EXTENSION.json` is redacted and explicitly carries `execution_authorized=false` and `requires_repository_approval=true`. No Factory task generation or reconciliation path accepts `reserve:02` under this schema until a later reviewed enablement change consumes the frozen proposal. Pending adjudications are excluded from this extension surface. See `CAPACITY_EXTENSION.md`.
+
