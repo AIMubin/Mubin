@@ -75,6 +75,23 @@ class Reserve2ConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn('source_job_id', fetch)
         self.assertIn('"github_run_attempt": int(reviewed["run_attempt"])', fetch)
 
+    def test_prior_canonical_promoted_ids_are_rederived_from_exact_encrypted_ledgers(self):
+        section = self.workflow.split(
+            "- name: Reconstruct exact prior canonical promoted case-ID set", 1
+        )[1].split(
+            "- name: Reconfirm main before reserve consolidation", 1
+        )[0]
+        self.assertIn("h392-cumulative-primary-evidence", section)
+        self.assertIn("h392-reserve-consolidated-evidence", section)
+        self.assertIn("CUMULATIVE_LEDGER.jsonl", section)
+        self.assertIn("RESERVE_LEDGER.jsonl", section)
+        self.assertIn('bound["artifact_digest"]', section)
+        self.assertIn('bound["summary_sha256"]', section)
+        self.assertIn('bound["encrypted_bundle_sha256"]', section)
+        self.assertIn('bound["ledger_sha256"]', section)
+        self.assertIn("combined prior promoted case-ID set is not exact/unique", section)
+        self.assertIn("PRIOR_PROMOTED_CASE_IDS", section)
+
     def test_consolidation_reacquires_sources_and_uses_capacity_bound_cli(self):
         self.assertIn("acquire-sources", self.workflow)
         self.assertIn("verify-source-cache", self.workflow)
@@ -86,6 +103,7 @@ class Reserve2ConsolidationWorkflowTests(unittest.TestCase):
         self.assertIn("consolidate-reserve2", section)
         self.assertIn("--capacity-extension", section)
         self.assertIn("--source-cache-dir", section)
+        self.assertIn("--prior-promoted-case-ids", section)
         self.assertNotIn("--activation", section)
 
     def test_upload_surface_is_only_redacted_summary_and_encrypted_bundle(self):
@@ -113,6 +131,20 @@ class Reserve2ConsolidationWorkflowTests(unittest.TestCase):
         self.assertEqual(target["source_run_id"], 37613354755)
         self.assertEqual(target["source_run_attempt"], 1)
         self.assertEqual(target["aggregate_artifact_id"], 11478509807)
+        prior = target["prior_promoted_case_id_surface"]
+        self.assertEqual(prior["expected_promoted_case_id_count"], 47)
+        self.assertEqual(prior["primary"]["artifact_id"], 11416657955)
+        self.assertEqual(prior["primary"]["promoted_count"], 40)
+        self.assertEqual(
+            prior["primary"]["ledger_sha256"],
+            "36938de84bd9053433b9d890a9f25ce6c5613d9fa1e1b1996f28df69f6cc5f0d",
+        )
+        self.assertEqual(prior["reserve"]["artifact_id"], 11464000900)
+        self.assertEqual(prior["reserve"]["promoted_count"], 7)
+        self.assertEqual(
+            prior["reserve"]["ledger_sha256"],
+            "f1fbd43fd68806c64a3d63d7eae0226c4f66e6e5f5ec12ab07e74d1d6ff63012",
+        )
         artifacts = sorted(target["source_artifacts"], key=lambda row: row["task_offset"])
         self.assertEqual(
             [(row["task_offset"], row["task_limit"]) for row in artifacts],
