@@ -51,3 +51,7 @@ The CLI accepts a UTF-8 JSON file no larger than **5 MiB**. Exit code **0** mean
 `assessment_status=no_recorded_objection` cannot be used on the conclusion of an inference with an open/sustained objection, nor on an inferred descendant that relies on the objection-affected conclusion; `blocked` and `undetermined` proofs do not excuse mislabeling. A documented `answered` objection must retain its evidence-bound response, without claiming scientific agreement.
 
 All claim-dependency paths have a maximum length of **128 claims** independent of record ordering. This depth does not count independent parallel siblings. Iterative proof-closure collection supports wide shallow graphs up to the separate 5000-entity bound.
+
+### Exception evidence reference integrity
+
+Every explicitly listed `exception_checks[*].evidence_ids` item must resolve to an existing evidence entity **for all outcome values**, including `unknown` and `triggered`. For unresolved/triggered outcomes, an empty evidence list or references to identified but unverified evidence are permitted because the state makes no claim of successful clearance. For `cleared`, a nonempty set of verified evidence references is required. Passing this structural check does not establish that a jurisprudential exception or material `mani'` was correctly evaluated; semantic verification remains future P4 scope.

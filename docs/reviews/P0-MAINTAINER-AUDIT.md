@@ -66,3 +66,11 @@ Scientific limits remain unchanged: this checks structural source references and
 ### Review-order note
 
 Prior to the new review policy, the first Codex review of this PR ran ahead of the formal maintainer audit. The maintainer-first review and associated fixes were then completed, followed by the second Codex review; its four findings received reproductions and code fixes. For all future changes, maintain the sequence `maintainer audit -> fixes -> tests -> CI -> Codex secondary -> merge decision`. Codex completion with findings is **not** a clean approval.
+
+## Third Codex follow-up — missing exception references (2026-10-08)
+
+The follow-up Codex review on `0b49132c8b28ca6f90ad7fc4016465fc32d5890e` completed with one P2 issue: `unknown` / `triggered` exception checks could include nonexistent `evidence_ids` and nevertheless pass `validate_bundle` when the proof was blocked/undetermined.
+
+**Maintainer independent verification before fix:** added explicit `test_unknown_exception_rejects_dangling_evidence_reference` and `test_triggered_exception_rejects_dangling_evidence_reference`, plus positive uncertainty cases. The pre-fix CI run `37812017233` failed precisely these two of 50 tests. Corrected `validator.py` to resolve **every supplied evidence identifier regardless of exception outcome**, but allow unknown/triggered checks to carry no evidence or unresolved/unverified sources. `cleared` continues to require nonempty, verified evidence. **Post-fix** CI run `37812127546` passed all **50/50** tests on code HEAD `725b0de3fa92be34c6d787a7fd523031c9f52769`.
+
+This fixes structural dangling-reference integrity, **not** the scientific validity of declaring a particular exception cleared. Request Codex second review only after maintainer and final HEAD CI gates.
