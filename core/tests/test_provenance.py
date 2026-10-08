@@ -240,6 +240,40 @@ class TestP1Provenance(unittest.TestCase):
         self.assertEqual(["ev.001", "ev.second"],
                          [receipt["evidence_id"] for receipt in result["receipts"]])
 
+    def test_lone_surrogate_in_bundle_fails_closed_in_library(self):
+        self.bundle["evidence"][0]["excerpt"] = "\\ud800".encode("ascii").decode("unicode_escape")
+        result = self.verify()
+        self.assertFalse(result["valid"], result)
+        self.assertEqual([], result["receipts"])
+        self.assertTrue(any("Unicode" in e for e in result["errors"]), result)
+
+    def test_lone_surrogate_in_bundle_cli_uses_documented_exit(self):
+        bundle_path = self.root / "bundle.json"
+        manifest_path = self.root / "manifest.json"
+        self.bundle["evidence"][0]["excerpt"] = "\\ud800".encode("ascii").decode("unicode_escape")
+        bundle_path.write_text(json.dumps(self.bundle, ensure_ascii=True), encoding="utf-8")
+        manifest_path.write_text(json.dumps(self.manifest), encoding="utf-8")
+        output = subprocess.run(
+            [sys.executable, "-m", "core.provenance",
+             str(bundle_path), str(manifest_path), str(self.root)],
+            cwd=ROOT, capture_output=True, text=True
+        )
+        self.assertEqual(1, output.returncode, output.stderr)
+        self.assertNotIn("Traceback", output.stderr)
+        self.assertIn("INVALID", output.stderr)
+
+    def test_malformed_oversized_spans_short_circuit_before_schema(self):
+        source = self.manifest["sources"][0]
+        source["spans"] = [{"locator": "", "start_byte": -1, "end_byte": 0}
+                           for _ in range(1025)]
+        self.assert_failed("exceeds 1024 spans per source")
+
+    def test_oversized_source_count_short_circuits_before_schema(self):
+        source = self.manifest["sources"][0]
+        self.manifest["sources"] = [copy.deepcopy(source) for _ in range(17)]
+        self.manifest["sources"][0]["relative_path"] = ""
+        self.assert_failed("exceeds P1 snapshot cap")
+
     def test_cli_valid_json_receipts_and_exit_codes(self):
         bundle_file = self.root / "bundle.json"
         manifest_file = self.root / "manifest.json"
