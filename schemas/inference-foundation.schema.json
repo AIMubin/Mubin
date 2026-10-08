@@ -616,6 +616,9 @@
             "answered",
             "sustained"
           ]
+        },
+        "answer": {
+          "$ref": "#/$defs/objection_answer"
         }
       },
       "required": [
@@ -626,7 +629,33 @@
         "evidence_ids",
         "status"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "answered"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "answer"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "answer"
+              ]
+            }
+          }
+        }
+      ]
     },
     "proof": {
       "type": "object",
@@ -752,6 +781,28 @@
         "historical_availability_id",
         "assumed_evidence_id",
         "assumption"
+      ]
+    },
+    "objection_answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "rationale",
+        "evidence_ids"
       ]
     }
   }
