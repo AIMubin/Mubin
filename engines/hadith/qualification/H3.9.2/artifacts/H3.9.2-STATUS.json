@@ -1,6 +1,6 @@
 {
   "campaign_id": "H3.9.2",
-  "release": "3.9.2-r10",
+  "release": "3.9.2-r11",
   "scope": "Hadith Benchmark Expansion Campaign only",
   "ci_authoritative": true,
   "ci_workflow": ".github/workflows/hadith-h392.yml",
@@ -42,9 +42,9 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Schema-30 adjudication packet preparation run 37722153068 completed successfully on main commit e257965d9f16f6d68fce3cbd6117815f8d07d42d. The exact 158-case human/authority review packet was derived from the three canonical adjudication layers, source-bearing inputs were revalidated, plaintext was removed before publication, and the public artifact surface is limited to a redacted summary, authenticated encrypted packet, and digest declaration. No adjudication decision has been made.",
-  "next_action": "Freeze a separate Schema-31 human/recognized-authority decision contract before any adjudication decisions are ingested. The contract must define reviewer eligibility and independence, conflicts of interest, reviewer/adjudicator counts, disagreement handling, minimum rationale, source-verification requirements, accepted-record resealing, rejected/deferred semantics, and evidence-bound decision ingestion. Do not redispatch the schema-30 packet workflow and do not authorize reserve:03 until adjudication outcomes are frozen.",
-  "freeze_schema_version": 30,
+  "reason": "Schema 31 freezes the human adjudication decision contract for the exact 158-case Schema-30 packet. Human review may now proceed under a bound reviewer/quorum/independence/conflict policy, while repository decision ingestion, automatic decision application, benchmark-population mutation, and reserve:03 remain unauthorized.",
+  "next_action": "Conduct the 158-case human review off-repository under config/adjudication-decision-contract.json and schemas/adjudication-decision.schema.json. Freeze the custodian-private reviewer-registry snapshot and completed decision-bundle hashes. Do not ingest or apply decisions in the repository until a separately reviewed Schema-32 decision-ingestion/outcome-freeze protocol is frozen.",
+  "freeze_schema_version": 31,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
   "factory_candidate_slot_count": 2560,
@@ -195,7 +195,7 @@
     "combined_pending_adjudication_count": 158,
     "minimum_capacity_shortfall": 2,
     "automatic_second_reserve_authorized": false,
-    "current_protocol_freeze_schema": 30,
+    "current_protocol_freeze_schema": 31,
     "capacity_extension_workflow": ".github/workflows/h392-capacity-extension.yml",
     "capacity_extension_enabled": true,
     "capacity_extension_expected_slot_count": 10,
@@ -240,7 +240,8 @@
     "adjudication_packet_artifact_digest": "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
     "adjudication_packet_encrypted_bundle_sha256": "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
     "adjudication_packet_evidence_path": "artifacts/ADJUDICATION_PACKET_EVIDENCE_158.json",
-    "adjudication_decision_contract_required": true
+    "adjudication_decision_contract_required": false,
+    "adjudication_decision_contract_frozen": true
   },
   "reserve_activation_target": {
     "ready": false,
@@ -479,7 +480,7 @@
     "evidence_path": "artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json"
   },
   "adjudication_review_surface": {
-    "protocol_state": "decision_contract_required",
+    "protocol_state": "decision_contract_frozen",
     "combined_pending_case_count": 158,
     "primary_pending_case_count": 129,
     "reserve_pending_case_count": 24,
@@ -507,7 +508,13 @@
     "packet_encrypted_bundle_sha256": "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
     "packet_evidence_path": "artifacts/ADJUDICATION_PACKET_EVIDENCE_158.json",
     "human_adjudication_started": false,
-    "decision_ingestion_authorized": false
+    "decision_ingestion_authorized": false,
+    "decision_contract_freeze_schema": 31,
+    "human_review_authorized": true,
+    "decision_bundle_may_be_prepared_off_repo": true,
+    "automatic_decision_application_authorized": false,
+    "reviewer_registry_snapshot_required": true,
+    "expert_gold_escalation_required": true
   },
   "capacity_extension_proposal_frozen": true,
   "capacity_extension_proposal": {
@@ -802,5 +809,35 @@
     "source_artifact_count": 37,
     "evidence_path": "artifacts/ADJUDICATION_PACKET_EVIDENCE_158.json",
     "execution_frozen": true
+  },
+  "adjudication_decision_contract": {
+    "frozen": true,
+    "protocol_freeze_schema": 31,
+    "path": "config/adjudication-decision-contract.json",
+    "schema_path": "schemas/adjudication-decision.schema.json",
+    "documentation_path": "ADJUDICATION_DECISIONS.md",
+    "contract_sha256": "15ece025affdbec708053ccdcc74c70f53062f16de84a9a9f3e6ae8a3c03133f",
+    "decision_schema_sha256": "4087cf00a339a92172bf2282ac35119098af857deca65cf48afe10a4fa229c76",
+    "packet_workflow_run_id": 37722153068,
+    "packet_artifact_id": 11526263194,
+    "packet_artifact_digest": "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
+    "encrypted_packet_sha256": "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
+    "case_count": 158,
+    "layer_counts": {
+      "primary": 129,
+      "reserve01": 24,
+      "reserve02": 5
+    },
+    "benchmark_counts": {
+      "external-critical-commentary": 158
+    },
+    "human_review_authorized": true,
+    "decision_ingestion_authorized": false,
+    "automatic_decision_application_authorized": false,
+    "automatic_reserve3_authorized": false,
+    "benchmark_population_mutation_authorized": false,
+    "reviewer_registry_storage": "custodian_private",
+    "reviewer_registry_snapshot_sha256_required_before_ingestion": true,
+    "next_protocol": "Schema 32 decision ingestion and outcome-freeze protocol"
   }
 }
