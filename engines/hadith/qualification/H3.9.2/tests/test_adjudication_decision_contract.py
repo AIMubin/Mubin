@@ -46,6 +46,11 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(
             authority["authority_evidence_does_not_replace_human_signoff"]
         )
+        self.assertEqual(
+            authority["canonical_terminal_decision_path"], "terminal_signoff.decision"
+        )
+        self.assertTrue(authority["terminal_signoff_must_be_human_attested"])
+        self.assertTrue(authority["unattested_top_level_terminal_decision_forbidden"])
 
     def test_terminal_quorum_requires_independent_source_verification(self):
         q = self.contract["terminal_quorum"]
@@ -90,6 +95,9 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(policy["undisclosed_material_conflict_invalidates_signoff"])
         self.assertTrue(policy["recused_reviewer_may_not_contribute_to_quorum"])
         self.assertTrue(policy["ai_systems_may_not_occupy_human_roles"])
+        self.assertTrue(policy["distinct_person_checks_use_person_binding_sha256"])
+        self.assertTrue(policy["per_case_conflict_declaration_required_for_every_signing_role"])
+        self.assertTrue(policy["per_case_recusal_must_be_false_for_every_counted_signoff"])
 
     def test_schema31_authorizes_review_not_ingestion(self):
         gates = self.contract["execution_gates"]
@@ -103,6 +111,12 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(policy["ingestion_must_validate_cross_identity_independence"])
         self.assertTrue(policy["ingestion_must_validate_terminal_quorum"])
         self.assertTrue(policy["ingestion_must_validate_expert_gold_escalation"])
+        self.assertTrue(policy["terminal_signoff_required"])
+        self.assertEqual(policy["canonical_terminal_decision_path"], "terminal_signoff.decision")
+        self.assertTrue(policy["ingestion_must_validate_terminal_signoff_coherence"])
+        self.assertTrue(policy["ingestion_must_validate_case_conflict_and_recusal"])
+        self.assertTrue(policy["ingestion_must_validate_unique_person_bindings"])
+        self.assertTrue(policy["ingestion_must_validate_material_disagreement_truthfulness"])
 
     def test_repository_status_binds_exact_contract_bytes(self):
         self.assertEqual(self.status["freeze_schema_version"], 31)
@@ -136,6 +150,15 @@ class Schema31DecisionContractTests(unittest.TestCase):
             "schemas/adjudication-reviewer-registry.schema.json",
         )
         self.assertTrue(self.contract["reviewer_registry"]["unique_reviewer_id_required"])
+        self.assertTrue(self.contract["reviewer_registry"]["unique_person_binding_required"])
+        self.assertTrue(self.contract["reviewer_registry"]["one_registry_entry_per_human"])
+        self.assertEqual(
+            self.contract["reviewer_registry"]["person_binding_method"],
+            "hmac-sha256-custodian-secret-v1",
+        )
+        self.assertTrue(
+            self.contract["reviewer_registry"]["person_binding_secret_must_remain_external"]
+        )
         self.assertTrue(decision["human_review_authorized"])
         self.assertFalse(decision["decision_ingestion_authorized"])
         self.assertFalse(decision["automatic_reserve3_authorized"])
@@ -145,9 +168,18 @@ class Schema31DecisionContractTests(unittest.TestCase):
         reviewer = self.reviewer_schema["properties"]["reviewers"]["items"]
         self.assertTrue(reviewer["properties"]["human"]["const"])
         self.assertEqual(
-            set(reviewer["properties"]["role"]["enum"]),
+            set(reviewer["properties"]["roles"]["items"]["enum"]),
             {"qualified_reviewer", "source_verifier", "adjudicator"},
         )
+        self.assertEqual(
+            self.reviewer_schema["properties"]["person_binding_method"]["const"],
+            "hmac-sha256-custodian-secret-v1",
+        )
+        self.assertEqual(
+            reviewer["properties"]["person_binding_sha256"]["pattern"],
+            "^[a-f0-9]{64}$",
+        )
+        self.assertTrue(reviewer["properties"]["identity_binding_attestation"]["const"])
         self.assertEqual(
             reviewer["properties"]["scope"]["items"]["enum"],
             ["external-critical-commentary"],
@@ -159,6 +191,15 @@ class Schema31DecisionContractTests(unittest.TestCase):
             self.schema["properties"]["benchmark_id"]["const"],
             "external-critical-commentary",
         )
+        self.assertNotIn("decision", self.schema["properties"])
+        terminal = self.schema["properties"]["terminal_signoff"]
+        self.assertTrue(terminal["properties"]["human_attestation"]["const"])
+        self.assertEqual(
+            set(terminal["properties"]["signer_role"]["enum"]),
+            {"qualified_reviewer", "adjudicator"},
+        )
+        self.assertEqual(terminal["properties"]["conflict_of_interest"]["const"], "none")
+        self.assertFalse(terminal["properties"]["recused"]["const"])
         review = self.schema["properties"]["reviews"]["items"]
         self.assertEqual(
             review["properties"]["reviewer_role"]["const"],
@@ -167,6 +208,13 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(
             review["properties"]["human_attestation"]["const"]
         )
+        self.assertFalse(review["properties"]["recused"]["const"])
+        source = self.schema["properties"]["source_verification"]["oneOf"][1]
+        self.assertEqual(source["properties"]["conflict_of_interest"]["const"], "none")
+        self.assertFalse(source["properties"]["recused"]["const"])
+        adjudicator = self.schema["properties"]["adjudication"]["oneOf"][1]
+        self.assertEqual(adjudicator["properties"]["conflict_of_interest"]["const"], "none")
+        self.assertFalse(adjudicator["properties"]["recused"]["const"])
         self.assertEqual(
             self.schema["properties"]["reviewer_registry_snapshot_sha256"]["pattern"],
             "^[a-f0-9]{64}$",
