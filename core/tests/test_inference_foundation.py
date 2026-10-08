@@ -1,9 +1,11 @@
 """P0 contracts: positive example and adversarial failure-on-uncertainty checks."""
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -37,11 +39,13 @@ def fixture():
         "claims": [{
             "id": name, "statement": "Hypothetical premise " + name,
             "claim_type": "source_attributed", "conclusion_kind": "source_derived",
-            "evidence_ids": ["ev.001"]
+            "evidence_ids": ["ev.001"], "modality": "actual",
+            "assessment_status": "no_recorded_objection"
         } for name in claims] + [{
             "id": "clm.conclusion", "statement": "Hypothetical qiyas conclusion",
             "claim_type": "inferred", "conclusion_kind": "qiyas_derived",
-            "evidence_ids": [], "inference_id": "inf.001"
+            "evidence_ids": [], "inference_id": "inf.001",
+            "modality": "actual", "assessment_status": "no_recorded_objection"
         }],
         "rules": [{
             "id": "rule.001", "methodology_id": "met.001",
@@ -174,7 +178,8 @@ class TestP0InferenceFoundation(unittest.TestCase):
         data["claims"].append({
             "id": "clm.intermediate", "statement": "Intermediate conclusion",
             "claim_type": "inferred", "conclusion_kind": "rule_derived",
-            "evidence_ids": [], "inference_id": "inf.002"
+            "evidence_ids": [], "inference_id": "inf.002",
+            "modality": "actual", "assessment_status": "no_recorded_objection"
         })
         data["inferences"].append({
             "id": "inf.002", "inference_kind": "deduction",
@@ -192,7 +197,7 @@ class TestP0InferenceFoundation(unittest.TestCase):
 
     def test_contested_conclusion_cannot_claim_checked_proof(self):
         data = fixture()
-        data["claims"][-1]["conclusion_kind"] = "contested"
+        data["claims"][-1]["assessment_status"] = "contested"
         self.assert_blocked(data, "contested or undetermined")
 
     def test_attested_reachability_cannot_use_impossibility_basis(self):
@@ -213,6 +218,154 @@ class TestP0InferenceFoundation(unittest.TestCase):
         data = fixture()
         data["claims"][0]["human_reviewed"] = True
         self.assert_blocked(data, "Additional properties are not allowed")
+
+    def test_empty_bundle_is_not_a_valid_inference(self):
+        data = fixture()
+        for key in ("sources", "evidence", "methodologies", "claims", "rules",
+                    "inferences", "objections", "proofs", "historical_availability"):
+            data[key] = []
+        self.assert_blocked(data, "[] should be non-empty")
+
+    def test_qiyas_rule_must_not_launder_as_deduction(self):
+        data = fixture()
+        inf = data["inferences"][0]
+        inf["inference_kind"] = "deduction"
+        inf.pop("qiyas_elements")
+        data["claims"][-1]["conclusion_kind"] = "rule_derived"
+        self.assert_blocked(data, "rule kind qiyas incompatible with deduction")
+
+    def test_kind_matched_deduction_allows_constraints(self):
+        data = fixture()
+        data["rules"].append({
+            "id": "rule.constraint", "methodology_id": "met.001",
+            "rule_type": "constraint", "expression": "Hypothetical constraint",
+            "preconditions": ["condition"], "exceptions": [],
+            "source_evidence_ids": ["ev.001"], "formalization_status": "draft"
+        })
+        data["inferences"][0]["rule_ids"].append("rule.constraint")
+        self.assertEqual([], validate_bundle(data))
+
+    def test_qiyas_requires_a_qiyas_rule_not_just_constraints(self):
+        data = fixture()
+        data["rules"][0]["rule_type"] = "constraint"
+        self.assert_blocked(data, "missing matching qiyas rule")
+
+    def test_counterfactual_claim_requires_explicit_context(self):
+        data = fixture()
+        data["claims"][-1]["modality"] = "counterfactual"
+        self.assert_blocked(data, "'counterfactual_context' is a required property")
+
+    def test_valid_counterfactual_is_structurally_distinguishable(self):
+        data = fixture()
+        data["claims"][-1]["modality"] = "counterfactual"
+        data["claims"][-1]["counterfactual_context"] = {
+            "scholar_id": "sch.001",
+            "historical_availability_id": "hist.001",
+            "assumed_evidence_id": "ev.001",
+            "assumption": "What if this evidence were available to the scholar?"
+        }
+        self.assertEqual([], validate_bundle(data))
+
+    def test_counterfactual_identity_mismatch(self):
+        data = fixture()
+        data["claims"][-1]["modality"] = "counterfactual"
+        data["claims"][-1]["counterfactual_context"] = {
+            "scholar_id": "sch.999",
+            "historical_availability_id": "hist.001",
+            "assumed_evidence_id": "ev.001",
+            "assumption": "Unknown historical access"
+        }
+        self.assert_blocked(data, "historical scholar identity mismatch")
+
+    def test_counterfactual_fails_when_evidence_was_already_known(self):
+        data = fixture()
+        data["historical_availability"][0].update(
+            knowledge_state="attested_reached",
+            basis_type="explicit_historical_testimony",
+            basis_evidence_ids=["ev.001"]
+        )
+        data["claims"][-1]["modality"] = "counterfactual"
+        data["claims"][-1]["counterfactual_context"] = {
+            "scholar_id": "sch.001",
+            "historical_availability_id": "hist.001",
+            "assumed_evidence_id": "ev.001",
+            "assumption": "Suppose he encountered the evidence"
+        }
+        self.assert_blocked(data, "evidence already attested reached")
+
+    def test_source_claim_may_not_claim_counterfactual_authorship(self):
+        data = fixture()
+        data["claims"][0]["modality"] = "counterfactual"
+        data["claims"][0]["counterfactual_context"] = {
+            "scholar_id": "sch.001",
+            "historical_availability_id": "hist.001",
+            "assumed_evidence_id": "ev.001",
+            "assumption": "Suppose the scholar knew this text"
+        }
+        self.assert_blocked(data, "'inferred' was expected")
+
+    def test_undetermined_cannot_have_checked_proof(self):
+        data = fixture()
+        data["claims"][-1]["assessment_status"] = "undetermined"
+        self.assert_blocked(data, "contested or undetermined conclusion cannot be checked")
+
+    def test_undetermined_with_blocked_proof_is_allowed(self):
+        data = fixture()
+        data["claims"][-1]["assessment_status"] = "undetermined"
+        data["proofs"][0]["verification_status"] = "undetermined"
+        self.assertEqual([], validate_bundle(data))
+
+    def test_answered_objection_requires_answer_and_evidence(self):
+        data = fixture()
+        data["objections"].append({
+            "id": "obj.001", "target_inference_id": "inf.001",
+            "objection_kind": "invalid_analogy",
+            "statement": "Hypothetical material objection",
+            "evidence_ids": ["ev.001"], "status": "answered"
+        })
+        self.assert_blocked(data, "'answer' is a required property")
+        data["objections"][0]["answer"] = {
+            "rationale": "Response trace", "evidence_ids": ["ev.missing"]
+        }
+        self.assert_blocked(data, "unknown evidence reference")
+        data["objections"][0]["answer"]["evidence_ids"] = ["ev.001"]
+        self.assertEqual([], validate_bundle(data))
+
+    def test_identifier_trailing_line_break_rejected(self):
+        data = fixture()
+        data["sources"][0]["id"] = "src.001\n"
+        self.assert_blocked(data, "does not match")
+
+    def test_cli_reports_true_scope_and_exit_codes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bundle.json"
+            path.write_text(json.dumps(fixture()), encoding="utf-8")
+            command = [sys.executable, "-m", "core.inference", str(path)]
+            success = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(0, success.returncode, success.stderr)
+            self.assertIn("structural_only", success.stdout)
+            self.assertIn("NOT verified", success.stdout)
+
+            data = fixture()
+            data["evidence"][0]["excerpt"] = "tampered"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            failure = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(1, failure.returncode, failure.stderr)
+            self.assertIn("digest mismatch", failure.stderr)
+
+            path.unlink()
+            missing = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(2, missing.returncode, missing.stderr)
+            self.assertIn("INPUT_ERROR", missing.stderr)
+
+    def test_cli_rejects_oversized_payload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "too-large.json"
+            path.write_text(" " * (5 * 1024 * 1024 + 1), encoding="utf-8")
+            command = [sys.executable, "-m", "core.inference", str(path)]
+            run = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(2, run.returncode)
+            self.assertIn("exceeds P0 CLI limit", run.stderr)
 
     def test_no_version_bump_or_h392_mutation(self):
         version = (ROOT / "VERSION.yaml").read_text(encoding="utf-8")
