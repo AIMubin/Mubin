@@ -33,6 +33,7 @@ on:
       - ".github/workflows/h392-reserve2-campaign.yml"
       - ".github/workflows/h392-reserve2-consolidation.yml"
       - ".github/workflows/h392-adjudication-packet.yml"
+      - ".github/workflows/h392-schema31-decision-template.yml"
 
 permissions:
   contents: read
