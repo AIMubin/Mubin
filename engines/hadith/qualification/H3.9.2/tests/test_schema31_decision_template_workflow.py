@@ -91,9 +91,11 @@ class Schema31DecisionTemplateWorkflowTests(unittest.TestCase):
         )
 
     def test_integrity_ci_covers_template_workflow(self):
-        self.assertIn(
-            '".github/workflows/h392-schema31-decision-template.yml"',
-            self.integrity,
+        self.assertEqual(
+            self.integrity.count(
+                '".github/workflows/h392-schema31-decision-template.yml"'
+            ),
+            2,
         )
 
 
