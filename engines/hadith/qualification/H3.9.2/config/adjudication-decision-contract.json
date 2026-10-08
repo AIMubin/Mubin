@@ -10,7 +10,6 @@
     "encrypted_packet_sha256": "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
     "source_target_sha256": "318913edd13ab6148926f7c414dab7ba6c1ff4a3846013a68db551793893a1ba",
     "packet_sha256": "44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27",
-    "decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
     "case_count": 158,
     "layer_counts": {
       "primary": 129,
@@ -19,7 +18,8 @@
     },
     "benchmark_counts": {
       "external-critical-commentary": 158
-    }
+    },
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2"
   },
   "authority_model": {
     "terminal_decisions_are_human_actions": true,
@@ -159,12 +159,13 @@
     "ingestion_must_validate_material_disagreement_truthfulness": true
   },
   "execution_gates": {
-    "human_review_may_begin_under_this_contract": true,
+    "human_review_may_begin_under_this_contract": false,
     "repository_decision_ingestion_authorized": false,
     "automatic_decision_application_authorized": false,
     "automatic_reserve3_authorized": false,
     "benchmark_population_mutation_authorized": false,
-    "next_protocol": "Schema 32 decision ingestion and outcome-freeze protocol after completed human review bundle exists."
+    "next_protocol": "Run and freeze the Schema-31 decision-template migration. Human review may begin only after that execution evidence is frozen; Schema 32 remains the later decision-ingestion/outcome-freeze protocol.",
+    "human_review_blocked_reason": "Schema-31-compatible decision template has not yet been generated and frozen from the exact Schema-30 packet."
   },
   "gold_status_escalation_policy": {
     "expert_gold_minimum_distinct_reviewers": 2,
@@ -172,5 +173,17 @@
     "expert_gold_source_verifier_required": true,
     "expert_gold_rule_overrides_lower_risk_tier_quorum": true,
     "derived_adjudicative_judgment_must_not_be_downgraded_to_source_attributed_to_avoid_expert_review": true
+  },
+  "template_migration_policy": {
+    "required_before_human_review": true,
+    "workflow": ".github/workflows/h392-schema31-decision-template.yml",
+    "source_packet_artifact_id": 11526263194,
+    "source_packet_sha256": "44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27",
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
+    "legacy_template_authorized_for_review": false,
+    "schema31_template_must_remove_unattested_top_level_decision": true,
+    "schema31_template_must_preserve_exact_packet_task_bindings": true,
+    "schema31_template_must_be_encrypted": true,
+    "schema31_template_execution_evidence_must_be_frozen_before_review": true
   }
 }
