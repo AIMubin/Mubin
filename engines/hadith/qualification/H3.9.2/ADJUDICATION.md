@@ -173,4 +173,4 @@ The public artifact surface contains exactly three files: the redacted summary, 
 
 The compact repository freeze is `artifacts/ADJUDICATION_PACKET_EVIDENCE_158.json`. Schema 30 remains the active freeze schema for this execution result. The packet workflow is now closed for redispatch.
 
-No human decision has been ingested. The next protocol change must be a separately reviewed **Schema 31 human/recognized-authority decision contract**. Until that contract is frozen, decision ingestion is unauthorized and `reserve:03` remains unauthorized.
+Schema 31 is defined separately in [ADJUDICATION_DECISIONS.md](ADJUDICATION_DECISIONS.md) and freezes the human decision contract for this exact packet. Human review may proceed under that contract, but repository decision ingestion and `reserve:03` remain unauthorized until a later outcome-freeze protocol.
