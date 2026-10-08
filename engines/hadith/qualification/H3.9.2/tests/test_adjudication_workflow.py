@@ -86,8 +86,9 @@ class AdjudicationPacketWorkflowTests(unittest.TestCase):
         self.assertIn("h392-adjudication-packet", self.workflow)
 
     def test_repository_target_matches_exact_158_case_surface(self):
-        self.assertEqual(self.status["freeze_schema_version"], 30)
+        self.assertEqual(self.status["freeze_schema_version"], 31)
         target = self.status["adjudication_packet_target"]
+        self.assertEqual(target["protocol_freeze_schema"], 30)
         self.assertFalse(target["ready"])
         self.assertTrue(target["completed"])
         self.assertEqual(target["expected_case_count"], 158)
