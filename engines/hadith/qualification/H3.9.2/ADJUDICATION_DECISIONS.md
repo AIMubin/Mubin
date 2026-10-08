@@ -17,7 +17,7 @@ The machine-readable contract is `config/adjudication-decision-contract.json`. D
 
 ## Authority model
 
-A terminal `accepted` or `rejected` result is a human action. AI may reconstruct evidence, compare sources, or draft a rationale, but it may not occupy a reviewer identity, provide a human attestation, cast the terminal decision, or self-authorize acceptance.
+The canonical terminal outcome is `terminal_signoff.decision`, and `terminal_signoff` is always a human-attested action. There is no independent unattested top-level decision field. AI may reconstruct evidence, compare sources, or draft a rationale, but it may not occupy a reviewer identity, provide a human attestation, cast the terminal decision, or self-authorize acceptance.
 
 A pinned statement written by a human scholar or other recognized authority may be **authority evidence**. It remains evidence: it does not replace the required human sign-off for this campaign. This is the operational boundary that permits AI-assisted extraction from books without converting model agreement into scholarly authority.
 
@@ -25,7 +25,7 @@ A pinned statement written by a human scholar or other recognized authority may 
 
 Reviewer identities are custodian-private. Repository decision records use pseudonymous reviewer IDs; personal identity is not required in Git.
 
-Before any decision bundle can be ingested, the custodian must freeze a reviewer-registry snapshot conforming to `schemas/adjudication-reviewer-registry.schema.json` and bind its SHA-256. Each active registry entry must attest that the participant is human and record role, qualification basis, review scope, active status, and conflict disclosure. Reviewer IDs must be unique within the frozen registry snapshot.
+Before any decision bundle can be ingested, the custodian must freeze a reviewer-registry snapshot conforming to `schemas/adjudication-reviewer-registry.schema.json` and bind its SHA-256. Each human has exactly one registry entry and one pseudonymous `reviewer_id`; role eligibility is an array on that entry. The private registry also stores a stable `person_binding_sha256`, derived as HMAC-SHA-256 from the custodian's stable internal person identity using an external secret that is never committed or uploaded. Reviewer IDs and person bindings must both be unique. This lets Schema 32 prove distinct-human independence without publishing personal identity.
 
 Allowed roles are:
 
@@ -37,12 +37,13 @@ Allowed roles are:
 
 For any terminal accepted/rejected decision:
 
-1. reviewer and source verifier are distinct people;
-2. an adjudicator, when required, is distinct from every case reviewer and the source verifier;
+1. reviewer and source verifier are distinct people, proven using the private `person_binding_sha256`, not pseudonym inequality alone;
+2. an adjudicator, when required, is distinct from every case reviewer and the source verifier on the same basis;
 3. a human who curated a case cannot serve as its terminal reviewer;
-4. a recused reviewer does not count toward quorum;
-5. an undisclosed material conflict invalidates the sign-off;
-6. AI systems cannot occupy any human role.
+4. every reviewer, source verifier, adjudicator, and terminal signer records a per-case conflict declaration and `recused=false` before the sign-off can count;
+5. a recused participant does not count toward quorum;
+6. an undisclosed material conflict invalidates the sign-off;
+7. AI systems cannot occupy any human role.
 
 ## Decision rules
 
@@ -68,11 +69,11 @@ Schema 31 does not weaken the stronger `CURATION.md` rule for `expert_gold`. If 
 
 ## Disagreement
 
-Material disagreement requires an independent adjudicator. Simple majority voting without that adjudicator is insufficient. The adjudicator may resolve to accepted, rejected, or deferred and must supply a rationale.
+Each decision row explicitly records `material_disagreement`. Material disagreement requires an independent adjudicator, and the terminal signer role must be `adjudicator`. Simple majority voting without that adjudicator is insufficient. The adjudicator may resolve to accepted, rejected, or deferred and must supply a rationale. Schema 32 must verify that the declared disagreement state matches the human recommendations and that the terminal sign-off is coherent with the reviewer/adjudicator evidence.
 
 ## Decision custody
 
-Completed decision files remain custodian-private and encrypted or equivalently access-controlled. The JSON schemas constrain record and registry **shape**, but cannot by themselves prove cross-record identity independence or quorum. A future Schema-32 ingestion/outcome-freeze validator must prove exact packet coverage, reject duplicate/unknown packet IDs, enforce unique reviewer IDs, validate reviewer/source-verifier/adjudicator distinctness, enforce terminal quorum and expert-gold escalation, bind the reviewer-registry snapshot SHA-256, and bind the completed decision-bundle SHA-256.
+Completed decision files remain custodian-private and encrypted or equivalently access-controlled. The JSON schemas constrain record and registry **shape**, but cannot by themselves prove cross-record identity independence or quorum. A future Schema-32 ingestion/outcome-freeze validator must prove exact packet coverage, reject duplicate/unknown packet IDs, enforce unique reviewer IDs and unique stable person bindings, validate reviewer/source-verifier/adjudicator distinct-person independence, validate every per-case conflict/recusal declaration, enforce terminal quorum and expert-gold escalation, verify `material_disagreement`, verify that `terminal_signoff.decision` is coherent with the human recommendation/adjudication path, bind the reviewer-registry snapshot SHA-256, and bind the completed decision-bundle SHA-256.
 
 Schema 31 authorizes **human review**, not repository ingestion. No automatic decision application, benchmark-population mutation, or `reserve:03` authorization is created here.
 
