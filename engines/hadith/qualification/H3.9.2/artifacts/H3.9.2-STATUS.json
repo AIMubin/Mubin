@@ -514,7 +514,10 @@
     "decision_bundle_may_be_prepared_off_repo": true,
     "automatic_decision_application_authorized": false,
     "reviewer_registry_snapshot_required": true,
-    "expert_gold_escalation_required": true
+    "expert_gold_escalation_required": true,
+    "terminal_human_signoff_required": true,
+    "per_case_conflict_and_recusal_attestation_required": true,
+    "stable_private_person_binding_required": true
   },
   "capacity_extension_proposal_frozen": true,
   "capacity_extension_proposal": {
@@ -816,8 +819,8 @@
     "path": "config/adjudication-decision-contract.json",
     "schema_path": "schemas/adjudication-decision.schema.json",
     "documentation_path": "ADJUDICATION_DECISIONS.md",
-    "contract_sha256": "3a0ee20358a4ad2426ba931848439ff2d5742a24fb5616d94a0770cc50d37b31",
-    "decision_schema_sha256": "4087cf00a339a92172bf2282ac35119098af857deca65cf48afe10a4fa229c76",
+    "contract_sha256": "6d2d55c9f26004dcbdad743cd151f8f351f5066d2ec343fabd12605244fc459a",
+    "decision_schema_sha256": "81d1ab74c6d1a0760e16d5b50344e6659dc9c2f3fe96c72fe1677532856c498f",
     "packet_workflow_run_id": 37722153068,
     "packet_artifact_id": 11526263194,
     "packet_artifact_digest": "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
@@ -840,6 +843,11 @@
     "reviewer_registry_snapshot_sha256_required_before_ingestion": true,
     "next_protocol": "Schema 32 decision ingestion and outcome-freeze protocol",
     "reviewer_registry_schema_path": "schemas/adjudication-reviewer-registry.schema.json",
-    "reviewer_registry_schema_sha256": "47f25566d09cda2ff395d204ee17ca237ab5e926655429c9cf7a59a75ea8129e"
+    "reviewer_registry_schema_sha256": "69a4e34562b0e6c9383b828a0b5b9dbd3b66fa0b622d106384e9d5e458fe0760",
+    "canonical_terminal_decision_path": "terminal_signoff.decision",
+    "terminal_human_signoff_required": true,
+    "reviewer_person_binding_method": "hmac-sha256-custodian-secret-v1",
+    "reviewer_person_binding_secret_external": true,
+    "per_case_conflict_and_recusal_attestation_required": true
   }
 }
