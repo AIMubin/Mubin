@@ -37,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = _load_json(args.manifest)
         if not Path(args.corpus_root).is_dir():
             raise ValueError("corpus root does not exist or is not a directory")
-    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError, RecursionError) as exc:
         print(f"INPUT_ERROR: {exc}", file=sys.stderr)
         return 2
     result = verify_bundle(bundle, manifest, args.corpus_root)
