@@ -10,6 +10,7 @@
     "protocol_freeze_schema",
     "registry_id",
     "snapshot_created_at",
+    "person_binding_method",
     "reviewers"
   ],
   "properties": {
@@ -30,6 +31,9 @@
       "type": "string",
       "format": "date-time"
     },
+    "person_binding_method": {
+      "const": "hmac-sha256-custodian-secret-v1"
+    },
     "reviewers": {
       "type": "array",
       "minItems": 2,
@@ -39,8 +43,10 @@
         "additionalProperties": false,
         "required": [
           "reviewer_id",
+          "person_binding_sha256",
+          "identity_binding_attestation",
           "human",
-          "role",
+          "roles",
           "qualification_basis",
           "scope",
           "active",
@@ -51,15 +57,27 @@
             "type": "string",
             "minLength": 1
           },
+          "person_binding_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "identity_binding_attestation": {
+            "const": true
+          },
           "human": {
             "const": true
           },
-          "role": {
-            "enum": [
-              "qualified_reviewer",
-              "source_verifier",
-              "adjudicator"
-            ]
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "qualified_reviewer",
+                "source_verifier",
+                "adjudicator"
+              ]
+            }
           },
           "qualification_basis": {
             "type": "string",
