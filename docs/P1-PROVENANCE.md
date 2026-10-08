@@ -34,3 +34,7 @@ CLI prints JSON receipts **to stdout**, and never writes or modifies source file
 ### P1.0 resource and rights gates
 
 P1.0 is a **small offline pilot**, with at most 16 source snapshots per run, 1,024 locator spans per source, 4,096 spans total, 8 MiB per UTF-8 source, and 32 MiB total snapshot bytes. The validator refuses restricted/unknown rights metadata **before reading file contents**. The `operator_cleared` bit and free-text rights basis remain declarations, not verified legal authority. The API assumes the local snapshot directory is not maliciously modified during validation; concurrent filesystem mutation and externally signed corpus provenance require a separately audited trust-anchor design.
+
+### Early rejection guarantees (maintainer hardening)
+
+P1.0 now applies source/span-count gates **before** running JSON Schema validation to avoid expensive error aggregation on malformed oversized manifests. The programmatic `verify_bundle` API enforces the CLI's 5 MiB JSON byte limit on each input and rejects unpaired Unicode surrogate codepoints before any P0 citation UTF-8 encoding. The API returns `valid=false, receipts=[]` for these inputs; CLI exit code `1` indicates structurally invalid input, with no traceback for these specified cases.

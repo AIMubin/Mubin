@@ -40,3 +40,18 @@ Initial P1 implementation CI `37817922739` passed **80** combined P0/P1 tests. F
 ## Review order
 
 This written independent maintainer audit and green HEAD CI must precede the first P1 Codex invocation. Resolve any Codex finding by independently reproducing it, adding a regression test, correcting the code, and rerunning HEAD CI. If Codex is unavailable or quota-limited, disclose the absence of independent review and perform an explicitly **non-independent** extra maintainer adversarial pass.
+
+## Second-pass review findings and falsification (post PR #49)
+
+Codex's review of primary-audited HEAD `322228fca470856b629f5fb903f156e50567756b` raised two P2 concerns. **Maintainer independently inspected the code and wrote failing tests before altering the validator.**
+
+| Finding | Original failure proof | Fixed invariant |
+| --- | --- | --- |
+| MR-P1-09: escaped lone surrogate (`\\ud800`) crashes verifier / CLI | Pre-fix CI `37828101212`: `test_lone_surrogate_in_bundle_fails_closed_in_library` errored with `UnicodeEncodeError`, `test_lone_surrogate_in_bundle_cli_uses_documented_exit` failed on raw traceback | Reject non-UTF-8-encodable JSON values with `valid=false`, empty receipts, diagnostics and CLI exit 1 before calling P0, in both programmatic and CLI paths |
+| MR-P1-10: oversized, malformed manifest traversed by JSON Schema before P1 caps | Same pre-fix run failed two tests: `test_malformed_oversized_spans_short_circuit_before_schema` and `test_oversized_source_count_short_circuits_before_schema` | Preflight source/span counts before expensive schema traversal, guarded against malformed nested entry types; enforce 5 MiB JSON bytes per programmatic argument as for CLI |
+
+**Controlled failing stage:** commit `a8d2323e5663e142aaf2f44b68b453021fd2a53e`, run `37828101212`, **87 tests: 3 failures and 1 error**, confined to the four newly added regressions. No preexisting passing test was loosened.
+
+**Code correction:** commit `3979c9f154a3e66ff02d2d349bd5c15b7cba84cd`. Both post-fix PR workflows passed: P1 `37828257950`, P0 `37828258051` — each **87/87**, as did P1 branch run `37828250963`. The later documentation-only commit requires its own latest-HEAD CI before another Codex review request.
+
+**Maintainer risk analysis:** early cardinality checks are intentionally type-guarded; invalid scalar/nested manifest structures are still rejected by the JSON Schema. Pure-Python library input beyond 5 MiB of compact UTF-8 JSON is now rejected; rejecting this early is not a proof of memory-safe processing of an adversarial Python object with highly complex custom types. No source trust, external rights verification, source authenticity, source-to-claim entailment, or qualified religious review is asserted.
