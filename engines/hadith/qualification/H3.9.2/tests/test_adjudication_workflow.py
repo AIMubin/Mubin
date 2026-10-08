@@ -88,12 +88,18 @@ class AdjudicationPacketWorkflowTests(unittest.TestCase):
     def test_repository_target_matches_exact_158_case_surface(self):
         self.assertEqual(self.status["freeze_schema_version"], 30)
         target = self.status["adjudication_packet_target"]
-        self.assertTrue(target["ready"])
-        self.assertFalse(target["completed"])
+        self.assertFalse(target["ready"])
+        self.assertTrue(target["completed"])
         self.assertEqual(target["expected_case_count"], 158)
         self.assertEqual(
             target["layer_counts"],
             {"primary": 129, "reserve01": 24, "reserve02": 5},
+        )
+        self.assertEqual(target["successful_run_id"], 37722153068)
+        self.assertEqual(target["artifact_id"], 11526263194)
+        self.assertEqual(
+            target["encrypted_bundle_sha256"],
+            "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
         )
 
     def test_integrity_ci_covers_adjudication_workflow(self):

@@ -152,3 +152,25 @@ benchmark_gate_passed             = false
 h4_qualification_allowed          = false
 automatic_reserve3_authorized     = false
 ```
+
+
+## Canonical schema-30 packet execution
+
+Workflow run `37722153068` completed successfully on attempt 1 from `main` commit `e257965d9f16f6d68fce3cbd6117815f8d07d42d`.
+
+The published artifact is frozen as:
+
+- artifact ID: `11526263194`;
+- artifact name: `h392-adjudication-packet`;
+- artifact ZIP SHA-256: `0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947`;
+- redacted-summary SHA-256: `fdf2dcd35bd34799ae1b67b311569f7a6bc95b34a957faca3bd37984ff1ba7dc`;
+- encrypted packet SHA-256: `5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd`;
+- source-target SHA-256: `318913edd13ab6148926f7c414dab7ba6c1ff4a3846013a68db551793893a1ba`;
+- packet SHA-256 reported by the redacted summary: `44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27`;
+- blank decision-template SHA-256 reported by the redacted summary: `e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2`.
+
+The public artifact surface contains exactly three files: the redacted summary, the encrypted source-bearing packet, and the encrypted-packet digest declaration. The redacted summary confirms exactly **158 cases** split **129 primary / 24 reserve:01 / 5 reserve:02**, derived from **37 originating source artifacts**. It contains no source text, gold payloads, or model identity.
+
+The compact repository freeze is `artifacts/ADJUDICATION_PACKET_EVIDENCE_158.json`. Schema 30 remains the active freeze schema for this execution result. The packet workflow is now closed for redispatch.
+
+No human decision has been ingested. The next protocol change must be a separately reviewed **Schema 31 human/recognized-authority decision contract**. Until that contract is frozen, decision ingestion is unauthorized and `reserve:03` remains unauthorized.

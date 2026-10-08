@@ -318,12 +318,31 @@ class RepositoryAdjudicationTargetTests(unittest.TestCase):
         status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
         self.assertEqual(status["freeze_schema_version"], 30)
         target = status["adjudication_packet_target"]
-        self.assertTrue(target["ready"])
-        self.assertFalse(target["completed"])
+        self.assertFalse(target["ready"])
+        self.assertTrue(target["completed"])
         self.assertEqual(target["expected_case_count"], 158)
         self.assertEqual(
             target["layer_counts"],
             {"primary": 129, "reserve01": 24, "reserve02": 5},
+        )
+        self.assertEqual(target["successful_run_id"], 37722153068)
+        self.assertEqual(target["run_attempt"], 1)
+        self.assertEqual(
+            target["runner_commit"],
+            "e257965d9f16f6d68fce3cbd6117815f8d07d42d",
+        )
+        self.assertEqual(target["artifact_id"], 11526263194)
+        self.assertEqual(
+            target["artifact_digest"],
+            "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
+        )
+        self.assertEqual(
+            target["encrypted_bundle_sha256"],
+            "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
+        )
+        self.assertEqual(
+            target["evidence_path"],
+            "artifacts/ADJUDICATION_PACKET_EVIDENCE_158.json",
         )
         self.assertFalse(target["automatic_decision_authorized"])
         self.assertFalse(target["automatic_reserve_authorization_from_rejection"])
@@ -331,9 +350,32 @@ class RepositoryAdjudicationTargetTests(unittest.TestCase):
         self.assertEqual(surface["combined_pending_case_count"], 158)
         self.assertTrue(surface["human_or_authority_decision_required"])
         self.assertFalse(surface["ai_may_self_authorize_acceptance"])
+        self.assertFalse(surface["packet_preparation_ready"])
+        self.assertTrue(surface["packet_preparation_completed"])
+        self.assertFalse(surface["human_adjudication_started"])
+        self.assertFalse(surface["decision_ingestion_authorized"])
+        self.assertEqual(surface["protocol_state"], "decision_contract_required")
         self.assertFalse(
             status["post_consolidation_protocol"]["automatic_reserve3_authorized"]
         )
+
+        evidence = load_json(
+            root / "artifacts" / "ADJUDICATION_PACKET_EVIDENCE_158.json"
+        )
+        self.assertEqual(evidence["protocol_freeze_schema"], 30)
+        self.assertEqual(evidence["workflow"]["run_id"], 37722153068)
+        self.assertEqual(evidence["artifact"]["id"], 11526263194)
+        self.assertEqual(
+            evidence["artifact"]["digest"],
+            "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
+        )
+        self.assertEqual(evidence["result"]["case_count"], 158)
+        self.assertEqual(
+            evidence["result"]["layer_counts"],
+            {"primary": 129, "reserve01": 24, "reserve02": 5},
+        )
+        self.assertFalse(evidence["next_action"]["decision_ingestion_authorized"])
+        self.assertFalse(evidence["next_action"]["automatic_reserve3_authorized"])
 
 
 if __name__ == "__main__":
