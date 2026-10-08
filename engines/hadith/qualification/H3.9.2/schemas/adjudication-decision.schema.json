@@ -11,8 +11,9 @@
     "packet_id",
     "task_id",
     "benchmark_id",
-    "decision",
     "reviews",
+    "material_disagreement",
+    "terminal_signoff",
     "reviewer_registry_snapshot_sha256"
   ],
   "properties": {
@@ -36,13 +37,6 @@
     "benchmark_id": {
       "const": "external-critical-commentary"
     },
-    "decision": {
-      "enum": [
-        "accepted",
-        "rejected",
-        "deferred"
-      ]
-    },
     "reviews": {
       "type": "array",
       "minItems": 1,
@@ -56,6 +50,7 @@
           "recommendation",
           "reviewed_at",
           "conflict_of_interest",
+          "recused",
           "rationale",
           "human_attestation"
         ],
@@ -81,6 +76,9 @@
           "conflict_of_interest": {
             "const": "none"
           },
+          "recused": {
+            "const": false
+          },
           "rationale": {
             "type": "string",
             "minLength": 1
@@ -93,6 +91,9 @@
           }
         }
       }
+    },
+    "material_disagreement": {
+      "type": "boolean"
     },
     "source_verification": {
       "oneOf": [
@@ -108,6 +109,8 @@
             "verified_at",
             "source_verified",
             "independent_from_reviewers",
+            "conflict_of_interest",
+            "recused",
             "verification_note",
             "human_attestation"
           ],
@@ -128,6 +131,12 @@
             },
             "independent_from_reviewers": {
               "const": true
+            },
+            "conflict_of_interest": {
+              "const": "none"
+            },
+            "recused": {
+              "const": false
             },
             "verification_note": {
               "type": "string",
@@ -154,6 +163,8 @@
             "decision",
             "adjudicated_at",
             "independent_from_case_reviewers_and_source_verifier",
+            "conflict_of_interest",
+            "recused",
             "rationale",
             "human_attestation"
           ],
@@ -179,6 +190,12 @@
             "independent_from_case_reviewers_and_source_verifier": {
               "const": true
             },
+            "conflict_of_interest": {
+              "const": "none"
+            },
+            "recused": {
+              "const": false
+            },
             "rationale": {
               "type": "string",
               "minLength": 1
@@ -189,6 +206,56 @@
           }
         }
       ]
+    },
+    "terminal_signoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signer_id",
+        "signer_role",
+        "decision",
+        "signed_at",
+        "conflict_of_interest",
+        "recused",
+        "rationale",
+        "human_attestation"
+      ],
+      "properties": {
+        "signer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signer_role": {
+          "enum": [
+            "qualified_reviewer",
+            "adjudicator"
+          ]
+        },
+        "decision": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "deferred"
+          ]
+        },
+        "signed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "conflict_of_interest": {
+          "const": "none"
+        },
+        "recused": {
+          "const": false
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "human_attestation": {
+          "const": true
+        }
+      }
     },
     "accepted_candidate_sha256": {
       "oneOf": [
@@ -258,12 +325,19 @@
     {
       "if": {
         "properties": {
-          "decision": {
-            "const": "accepted"
+          "terminal_signoff": {
+            "properties": {
+              "decision": {
+                "const": "accepted"
+              }
+            },
+            "required": [
+              "decision"
+            ]
           }
         },
         "required": [
-          "decision"
+          "terminal_signoff"
         ]
       },
       "then": {
@@ -296,12 +370,19 @@
     {
       "if": {
         "properties": {
-          "decision": {
-            "const": "rejected"
+          "terminal_signoff": {
+            "properties": {
+              "decision": {
+                "const": "rejected"
+              }
+            },
+            "required": [
+              "decision"
+            ]
           }
         },
         "required": [
-          "decision"
+          "terminal_signoff"
         ]
       },
       "then": {
@@ -329,12 +410,19 @@
     {
       "if": {
         "properties": {
-          "decision": {
-            "const": "deferred"
+          "terminal_signoff": {
+            "properties": {
+              "decision": {
+                "const": "deferred"
+              }
+            },
+            "required": [
+              "decision"
+            ]
           }
         },
         "required": [
-          "decision"
+          "terminal_signoff"
         ]
       },
       "then": {
@@ -351,6 +439,36 @@
           "defer_reason": {
             "type": "string",
             "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "material_disagreement": {
+            "const": true
+          }
+        },
+        "required": [
+          "material_disagreement"
+        ]
+      },
+      "then": {
+        "required": [
+          "adjudication"
+        ],
+        "properties": {
+          "adjudication": {
+            "type": "object"
+          },
+          "terminal_signoff": {
+            "type": "object",
+            "properties": {
+              "signer_role": {
+                "const": "adjudicator"
+              }
+            }
           }
         }
       }
