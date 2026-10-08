@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "campaign_id": "H3.9.2",
+  "evidence_kind": "schema31_human_adjudication_decision_template_migration",
+  "canonical_main_evidence": true,
+  "protocol_freeze_schema": 31,
+  "runner_commit": "4ca54bf0d98d4709774e04d80d18b74c13679abc",
+  "workflow": {
+    "path": ".github/workflows/h392-schema31-decision-template.yml",
+    "run_id": 37781676566,
+    "run_attempt": 1,
+    "job_id": 113326049266,
+    "event": "workflow_dispatch",
+    "head_branch": "main",
+    "conclusion": "success"
+  },
+  "source_packet": {
+    "workflow_run_id": 37722153068,
+    "artifact_id": 11526263194,
+    "artifact_name": "h392-adjudication-packet",
+    "artifact_digest": "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
+    "packet_sha256": "44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27",
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2"
+  },
+  "artifact": {
+    "id": 11552726258,
+    "name": "h392-schema31-decision-template",
+    "digest": "sha256:7c7095a0a76b14479d37351bbf58f60307bcc6456e8ebd0e1b0a5aafc95da00d",
+    "size_bytes": 9958,
+    "published_file_count": 3,
+    "published_files": [
+      "SCHEMA31_DECISION_TEMPLATE_SUMMARY.json",
+      "ENCRYPTED_SCHEMA31_DECISION_TEMPLATE_SHA256.txt",
+      "h392-schema31-decision-template.tar.gz.aesgcm"
+    ],
+    "redacted_summary_sha256": "674c05e5e72afe58d2e62bacf4049c67dee43914e6aeee072963794eacd3291c",
+    "digest_declaration_sha256": "90aee8a9ff0aea0e13125be93da091d809f7a422bd70f5310d034f65265e0e20",
+    "encrypted_bundle_sha256": "631630ee20af8c50c43dedcf6b0e8bf6613cd5b4ed993d3bd0529216e584be05",
+    "redacted": true,
+    "decision_template_payload_encrypted": true
+  },
+  "result": {
+    "case_count": 158,
+    "benchmark_counts": {
+      "external-critical-commentary": 158
+    },
+    "packet_task_binding_sha256": "ce8d63b6d186bcfe715c56ba140d0b475ab1b53f1ef0577341189e98e78840fa",
+    "decision_template_sha256": "a72d1ba9993d2b5e1d156701c8a12684c7b3703426d99ba85c25b66479200558",
+    "decision_schema_sha256": "81d1ab74c6d1a0760e16d5b50344e6659dc9c2f3fe96c72fe1677532856c498f",
+    "reviewer_registry_schema_sha256": "69a4e34562b0e6c9383b828a0b5b9dbd3b66fa0b622d106384e9d5e458fe0760",
+    "blank_template": true,
+    "contains_terminal_decisions": false,
+    "contains_source_text": false,
+    "contains_gold_payloads": false,
+    "contains_model_identity": false,
+    "canonical_terminal_decision_path": "terminal_signoff.decision",
+    "legacy_top_level_decision_field_present": false,
+    "human_attested_terminal_signoff_required_for_completion": true,
+    "reviewer_registry_snapshot_required_for_completion": true
+  },
+  "verification_scope": {
+    "independently_verified": [
+      "workflow run identity, attempt, branch, exact main head SHA, job success, and all migration steps successful",
+      "artifact ID, name, size, and GitHub artifact ZIP SHA-256",
+      "exact three-file public artifact surface",
+      "redacted summary SHA-256",
+      "encrypted Schema-31 template bundle SHA-256 and matching digest declaration",
+      "redacted summary contract: 158 external-critical-commentary cases, blank template, no terminal decisions, no source text, no gold payloads, no model identity, canonical terminal decision path terminal_signoff.decision, no legacy top-level decision field"
+    ],
+    "workflow_published_hash_bindings": [
+      "source_packet_sha256",
+      "packet_task_binding_sha256",
+      "decision_template_sha256",
+      "decision_schema_sha256",
+      "reviewer_registry_schema_sha256"
+    ],
+    "plaintext_schema31_template_independently_decrypted": false,
+    "note": "The repository freeze does not claim independent plaintext decryption outside the successful secret-bearing workflow. The encrypted public artifact, its ZIP digest, redacted summary, and digest declaration were independently hash-verified; internal template/binding hashes are recorded exactly as published by the redacted summary."
+  },
+  "artifact_policy": {
+    "contains_source_text": false,
+    "contains_gold_payloads": false,
+    "contains_model_identity": false,
+    "plaintext_schema31_decision_template_committed": false,
+    "persisted_evidence_contains_only_hashes_counts_identifiers_and_policy": true
+  },
+  "qualification_effect": {
+    "human_review_authorized_after_evidence_freeze": true,
+    "human_adjudication_started": false,
+    "decision_ingestion_authorized": false,
+    "automatic_decision_application_authorized": false,
+    "benchmark_population_mutation_authorized": false,
+    "validated_promoted_record_count": 50,
+    "pending_adjudication_count": 158,
+    "remaining_exhausted_slot_count": 2,
+    "benchmark_population_complete": false,
+    "benchmark_gate_passed": false,
+    "architecture_gate_passed": false,
+    "h4_development_allowed": true,
+    "h4_qualification_allowed": false,
+    "h4_release_allowed": false,
+    "automatic_reserve3_authorized": false,
+    "note": "This evidence freezes successful migration of the blank Schema-31 decision template only. It authorizes human review under the frozen Schema-31 contract after merge, but makes no human decisions, ingests no decision rows, promotes no additional records, authorizes no replacement capacity, and opens no benchmark or H4 qualification gate."
+  },
+  "next_action": {
+    "purpose": "Freeze a custodian-private reviewer-registry snapshot, then conduct the exact 158-case human review using the frozen Schema-31 template and contract. Keep completed decision rows private and do not ingest or apply them until a separately reviewed Schema-32 decision-ingestion/outcome-freeze protocol is frozen.",
+    "human_review_may_begin_after_merge": true,
+    "human_adjudication_started": false,
+    "decision_ingestion_authorized": false,
+    "automatic_reserve3_authorized": false
+  }
+}
