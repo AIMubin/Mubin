@@ -18,6 +18,8 @@ MANIFEST_SCHEMA_PATH = (
 MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
 MAX_TOTAL_BYTES = 32 * 1024 * 1024
 MAX_SOURCES = 16
+MAX_SPANS_PER_SOURCE = 1024
+MAX_TOTAL_SPANS = 4096
 PATH_PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 
 
@@ -94,6 +96,13 @@ def verify_bundle(
     if indexed.keys() != p0_sources.keys():
         errors.append("manifest source IDs do not match P0 bundle source IDs")
 
+    if any(len(entry["spans"]) > MAX_SPANS_PER_SOURCE for entry in sources):
+        errors.append(f"manifest: exceeds {MAX_SPANS_PER_SOURCE} spans per source")
+    if sum(len(entry["spans"]) for entry in sources) > MAX_TOTAL_SPANS:
+        errors.append(f"manifest: exceeds {MAX_TOTAL_SPANS} total locator spans")
+    if errors:
+        return {"valid": False, "errors": sorted(set(errors)), "receipts": []}
+
     raw_snapshots: dict[str, bytes] = {}
     spans: dict[tuple[str, str], tuple[int, int]] = {}
     consumed = 0
@@ -111,7 +120,10 @@ def verify_bundle(
                 errors.append(f"source {key}: mismatched {field}")
         rights = entry["rights"]
         if rights["status"] != "operator_cleared":
+            # Never even open a source file whose stated rights are restricted
+            # or unknown: clearance metadata is an explicit ingestion gate.
             errors.append(f"source {key}: rights not operator-cleared")
+            continue
         try:
             path = _safe_snapshot_path(root, entry["relative_path"])
             with path.open("rb") as fp:
