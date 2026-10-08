@@ -25,7 +25,7 @@ A pinned statement written by a human scholar or other recognized authority may 
 
 Reviewer identities are custodian-private. Repository decision records use pseudonymous reviewer IDs; personal identity is not required in Git.
 
-Before any decision bundle can be ingested, the custodian must freeze a reviewer-registry snapshot and bind its SHA-256. Each active registry entry must attest that the participant is human and record role, qualification basis, review scope, active status, and conflict disclosure.
+Before any decision bundle can be ingested, the custodian must freeze a reviewer-registry snapshot conforming to `schemas/adjudication-reviewer-registry.schema.json` and bind its SHA-256. Each active registry entry must attest that the participant is human and record role, qualification basis, review scope, active status, and conflict disclosure.
 
 Allowed roles are:
 
