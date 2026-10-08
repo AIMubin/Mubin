@@ -299,6 +299,34 @@ class TestP1Provenance(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertIn("INPUT_ERROR", result.stderr)
 
+    def test_cli_deeply_nested_json_returns_input_error_without_traceback(self):
+        deep_path = self.root / "deep.json"
+        manifest_path = self.root / "manifest.json"
+        deep_path.write_text('{"x":' + "[" * 10000 + "0" + "]" * 10000 + "}", encoding="utf-8")
+        manifest_path.write_text(json.dumps(self.manifest), encoding="utf-8")
+        run = subprocess.run(
+            [sys.executable, "-m", "core.provenance",
+             str(deep_path), str(manifest_path), str(self.root)],
+            cwd=ROOT, capture_output=True, text=True
+        )
+        self.assertEqual(2, run.returncode, run.stderr)
+        self.assertIn("INPUT_ERROR", run.stderr)
+        self.assertNotIn("Traceback", run.stderr)
+
+    def test_cli_deeply_nested_manifest_returns_input_error(self):
+        bundle_path = self.root / "bundle.json"
+        manifest_path = self.root / "deep-manifest.json"
+        bundle_path.write_text(json.dumps(self.bundle), encoding="utf-8")
+        manifest_path.write_text('{"sources":' + "[" * 10000 + "0" + "]" * 10000 + "}", encoding="utf-8")
+        run = subprocess.run(
+            [sys.executable, "-m", "core.provenance",
+             str(bundle_path), str(manifest_path), str(self.root)],
+            cwd=ROOT, capture_output=True, text=True
+        )
+        self.assertEqual(2, run.returncode, run.stderr)
+        self.assertIn("INPUT_ERROR", run.stderr)
+        self.assertNotIn("Traceback", run.stderr)
+
     def test_cli_malformed_json_input(self):
         bundle_file = self.root / "broken.json"
         bundle_file.write_text("{bad json", encoding="utf-8")
