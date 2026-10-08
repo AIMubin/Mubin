@@ -91,7 +91,11 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
             if rule is not None and inf["inference_kind"] == "qiyas" and rule["rule_type"] != "qiyas":
                 errors.append(f"{context}: non-qiyas rule used for qiyas")
         for key in inf["premise_claim_ids"]:
-            require("claims", key, context)
+            premise = require("claims", key, context)
+            if premise is not None and premise["claim_type"] == "inferred":
+                parent = index["inferences"].get(premise.get("inference_id"))
+                if parent is not None and parent["methodology_id"] != inf["methodology_id"]:
+                    errors.append(f"{context}: incompatible methodology in derived premise {key}")
         if inf["inference_kind"] == "qiyas":
             elements = inf.get("qiyas_elements", {})
             for role in ("asl", "far", "hukm_al_asl", "illah"):
@@ -192,6 +196,9 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
             if inf is not None and inf["methodology_id"] != p["methodology_id"]:
                 errors.append(f"{context}: mixed methodology in inference {key}")
         if p["verification_status"] == "structurally_checked":
+            conclusion = index["claims"][p["conclusion_claim_id"]]
+            if conclusion["conclusion_kind"] in ("contested", "undetermined"):
+                errors.append(f"{context}: contested or undetermined conclusion cannot be checked")
             if not rooted(p["conclusion_claim_id"]) or not expected:
                 errors.append(f"{context}: unsupported conclusion cannot be checked")
             for o in bundle["objections"]:
@@ -199,10 +206,23 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                     errors.append(f"{context}: outstanding objection {o['id']}")
             for key in actual:
                 inf = index["inferences"].get(key)
-                if inf is not None and any(
-                    check["outcome"] != "cleared" for check in inf["exception_checks"]
-                ):
+                if inf is None:
+                    continue
+                checks = inf["exception_checks"]
+                declared = set()
+                for rule_id in inf["rule_ids"]:
+                    rule = index["rules"].get(rule_id)
+                    if rule is not None:
+                        declared.update(rule["exceptions"])
+                outcomes = {check["exception"]: check["outcome"] for check in checks}
+                if len(outcomes) != len(checks):
+                    errors.append(f"{context}: duplicated exception check in {key}")
+                if any(outcome != "cleared" for outcome in outcomes.values()):
                     errors.append(f"{context}: unresolved or triggered exception in {key}")
+                if not declared.issubset({
+                    name for name, outcome in outcomes.items() if outcome == "cleared"
+                }):
+                    errors.append(f"{context}: unchecked declared rule exceptions in {key}")
 
     for h in bundle["historical_availability"]:
         context = "history " + h["id"]
@@ -219,5 +239,7 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                 "explicit_historical_testimony", "documented_chronological_impossibility"
             ):
                 errors.append(f"{context}: non-reachability cannot be inferred from silence")
+            if state == "attested_reached" and basis != "explicit_historical_testimony":
+                errors.append(f"{context}: reachability requires explicit historical testimony")
 
     return sorted(set(errors))

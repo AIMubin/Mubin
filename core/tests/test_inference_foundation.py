@@ -159,6 +159,51 @@ class TestP0InferenceFoundation(unittest.TestCase):
         )
         self.assert_blocked(data, "no source evidence")
 
+    def test_mixed_methodology_through_derived_premise(self):
+        data = fixture()
+        data["methodologies"].append({
+            "id": "met.002", "label": "Other method", "version": "1",
+            "source_evidence_ids": ["ev.001"]
+        })
+        data["rules"].append({
+            "id": "rule.002", "methodology_id": "met.002",
+            "rule_type": "deduction", "expression": "Hypothetical",
+            "preconditions": ["one premise"], "exceptions": [],
+            "source_evidence_ids": ["ev.001"], "formalization_status": "draft"
+        })
+        data["claims"].append({
+            "id": "clm.intermediate", "statement": "Intermediate conclusion",
+            "claim_type": "inferred", "conclusion_kind": "rule_derived",
+            "evidence_ids": [], "inference_id": "inf.002"
+        })
+        data["inferences"].append({
+            "id": "inf.002", "inference_kind": "deduction",
+            "methodology_id": "met.002", "rule_ids": ["rule.002"],
+            "premise_claim_ids": ["clm.asl"],
+            "conclusion_claim_id": "clm.intermediate", "exception_checks": []
+        })
+        data["inferences"][0]["premise_claim_ids"].append("clm.intermediate")
+        self.assert_blocked(data, "incompatible methodology in derived premise")
+
+    def test_unchecked_rule_exception_blocks_proof(self):
+        data = fixture()
+        data["rules"][0]["exceptions"] = ["mani exists"]
+        self.assert_blocked(data, "unchecked declared rule exceptions")
+
+    def test_contested_conclusion_cannot_claim_checked_proof(self):
+        data = fixture()
+        data["claims"][-1]["conclusion_kind"] = "contested"
+        self.assert_blocked(data, "contested or undetermined")
+
+    def test_attested_reachability_cannot_use_impossibility_basis(self):
+        data = fixture()
+        data["historical_availability"][0].update(
+            knowledge_state="attested_reached",
+            basis_type="documented_chronological_impossibility",
+            basis_evidence_ids=["ev.001"]
+        )
+        self.assert_blocked(data, "reachability requires explicit historical testimony")
+
     def test_cross_entity_duplicate_id(self):
         data = fixture()
         data["rules"][0]["id"] = "ev.001"
