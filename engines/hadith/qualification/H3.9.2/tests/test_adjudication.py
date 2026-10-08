@@ -316,8 +316,9 @@ class RepositoryAdjudicationTargetTests(unittest.TestCase):
     def test_repository_schema30_target_is_158_human_authority_cases(self):
         root = Path(__file__).resolve().parents[1]
         status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
-        self.assertEqual(status["freeze_schema_version"], 30)
+        self.assertEqual(status["freeze_schema_version"], 31)
         target = status["adjudication_packet_target"]
+        self.assertEqual(target["protocol_freeze_schema"], 30)
         self.assertFalse(target["ready"])
         self.assertTrue(target["completed"])
         self.assertEqual(target["expected_case_count"], 158)
@@ -354,7 +355,17 @@ class RepositoryAdjudicationTargetTests(unittest.TestCase):
         self.assertTrue(surface["packet_preparation_completed"])
         self.assertFalse(surface["human_adjudication_started"])
         self.assertFalse(surface["decision_ingestion_authorized"])
-        self.assertEqual(surface["protocol_state"], "decision_contract_required")
+        self.assertEqual(surface["protocol_state"], "decision_template_migration_required")
+        self.assertFalse(surface["human_review_authorized"])
+        self.assertTrue(surface["schema31_decision_template_required"])
+        self.assertFalse(surface["schema31_decision_template_frozen"])
+        template_target = status["adjudication_decision_template_target"]
+        self.assertTrue(template_target["ready"])
+        self.assertFalse(template_target["completed"])
+        self.assertEqual(template_target["protocol_freeze_schema"], 31)
+        self.assertEqual(template_target["expected_case_count"], 158)
+        self.assertEqual(template_target["source_packet_artifact_id"], 11526263194)
+        self.assertFalse(surface["decision_ingestion_authorized"])
         self.assertFalse(
             status["post_consolidation_protocol"]["automatic_reserve3_authorized"]
         )

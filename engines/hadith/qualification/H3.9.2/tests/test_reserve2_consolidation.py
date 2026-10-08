@@ -359,7 +359,7 @@ class RepositoryReserve2ConsolidationTargetTests(unittest.TestCase):
     def test_real_schema29_target_is_exact_execution_observation(self):
         root = Path(__file__).resolve().parents[1]
         status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
-        self.assertEqual(status["freeze_schema_version"], 30)
+        self.assertEqual(status["freeze_schema_version"], 31)
 
         execution = status["reserve2_execution_target"]
         self.assertFalse(execution["ready"])

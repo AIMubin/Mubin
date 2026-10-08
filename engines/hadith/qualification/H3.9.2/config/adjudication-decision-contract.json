@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "campaign_id": "H3.9.2",
+  "contract_id": "H3.9.2-schema31-human-adjudication-v1",
+  "protocol_freeze_schema": 31,
+  "scope": {
+    "packet_workflow_run_id": 37722153068,
+    "packet_artifact_id": 11526263194,
+    "packet_artifact_digest": "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
+    "encrypted_packet_sha256": "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
+    "source_target_sha256": "318913edd13ab6148926f7c414dab7ba6c1ff4a3846013a68db551793893a1ba",
+    "packet_sha256": "44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27",
+    "case_count": 158,
+    "layer_counts": {
+      "primary": 129,
+      "reserve01": 24,
+      "reserve02": 5
+    },
+    "benchmark_counts": {
+      "external-critical-commentary": 158
+    },
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2"
+  },
+  "authority_model": {
+    "terminal_decisions_are_human_actions": true,
+    "ai_may_prepare_evidence_or_draft_rationale": true,
+    "ai_may_fill_reviewer_identity_or_attestation": false,
+    "ai_may_cast_or_self_authorize_decision": false,
+    "model_agreement_is_never_authority": true,
+    "pinned_human_authored_authority_statement_may_be_evidence": true,
+    "authority_evidence_does_not_replace_human_signoff": true,
+    "canonical_terminal_decision_path": "terminal_signoff.decision",
+    "terminal_signoff_must_be_human_attested": true,
+    "unattested_top_level_terminal_decision_forbidden": true
+  },
+  "reviewer_registry": {
+    "storage": "custodian_private",
+    "public_personal_identity_required": false,
+    "repository_decisions_use_pseudonymous_reviewer_ids": true,
+    "snapshot_sha256_required_before_ingestion": true,
+    "required_attested_fields": [
+      "reviewer_id",
+      "person_binding_sha256",
+      "identity_binding_attestation",
+      "human",
+      "roles",
+      "qualification_basis",
+      "scope",
+      "active",
+      "conflict_disclosure"
+    ],
+    "allowed_roles": [
+      "qualified_reviewer",
+      "source_verifier",
+      "adjudicator"
+    ],
+    "qualification_policy": {
+      "qualified_reviewer": "Human with attested competence in hadith/source-language evaluation and the benchmark decision surface.",
+      "source_verifier": "Human able to verify pinned source identity, locator, excerpt/support fidelity, and whether the proposed decision is actually source-supported.",
+      "adjudicator": "Human with equal or stronger domain competence than the reviewer and independent of the reviewer and source verifier for the case."
+    },
+    "schema_path": "schemas/adjudication-reviewer-registry.schema.json",
+    "unique_reviewer_id_required": true,
+    "person_binding_method": "hmac-sha256-custodian-secret-v1",
+    "person_binding_secret_must_remain_external": true,
+    "one_registry_entry_per_human": true,
+    "unique_person_binding_required": true
+  },
+  "independence_and_conflict_policy": {
+    "reviewer_and_source_verifier_must_be_distinct": true,
+    "adjudicator_must_be_distinct_from_all_case_reviewers_and_source_verifier": true,
+    "human_case_curator_may_not_be_terminal_reviewer_of_same_case": true,
+    "undisclosed_material_conflict_invalidates_signoff": true,
+    "recused_reviewer_may_not_contribute_to_quorum": true,
+    "ai_systems_may_not_occupy_human_roles": true,
+    "distinct_person_checks_use_person_binding_sha256": true,
+    "per_case_conflict_declaration_required_for_every_signing_role": true,
+    "per_case_recusal_must_be_false_for_every_counted_signoff": true
+  },
+  "decision_states": [
+    "accepted",
+    "rejected",
+    "deferred"
+  ],
+  "current_packet_risk_tier": 2,
+  "risk_tier_basis": "The frozen 158-case packet contains only external-critical-commentary cases; H3.8/H3.9 identity/family cases are not present in this packet and require a later equal-or-stronger contract.",
+  "terminal_quorum": {
+    "accepted": {
+      "minimum_qualified_reviewers": 1,
+      "independent_source_verifier_required": true,
+      "source_verified_must_be_true": true,
+      "nonempty_rationale_required": true,
+      "accepted_candidate_binding_required": true,
+      "adjudicator_required_on_material_disagreement": true
+    },
+    "rejected": {
+      "minimum_qualified_reviewers": 1,
+      "independent_source_verifier_required": true,
+      "nonempty_rationale_required": true,
+      "rejection_reason_required": true,
+      "adjudicator_required_on_material_disagreement": true
+    },
+    "deferred": {
+      "minimum_qualified_reviewers": 1,
+      "independent_source_verifier_required": false,
+      "nonempty_rationale_required": true,
+      "defer_reason_required": true,
+      "remains_pending": true,
+      "replacement_eligible": false
+    }
+  },
+  "disagreement_policy": {
+    "material_disagreement_requires_adjudicator": true,
+    "adjudicator_may_choose": [
+      "accepted",
+      "rejected",
+      "deferred"
+    ],
+    "adjudicator_rationale_required": true,
+    "simple_majority_without_adjudicator_is_not_sufficient": true,
+    "material_disagreement_field_required": true,
+    "when_material_disagreement_terminal_signer_role": "adjudicator"
+  },
+  "accepted_record_policy": {
+    "must_preserve_original_packet_id_and_task_id": true,
+    "must_preserve_source_provenance": true,
+    "must_be_source_verified": true,
+    "must_be_resealed_before_benchmark_population_entry": true,
+    "may_not_enter_benchmark_population_directly_from_decision_file": true
+  },
+  "rejected_record_policy": {
+    "produces_reviewed_record": false,
+    "does_not_auto_authorize_reserve": true,
+    "replacement_eligibility_requires_later_evidence_bound_capacity_protocol": true
+  },
+  "deferred_record_policy": {
+    "remains_pending": true,
+    "does_not_auto_authorize_reserve": true,
+    "replacement_eligible": false
+  },
+  "decision_record_policy": {
+    "schema_path": "schemas/adjudication-decision.schema.json",
+    "storage_before_ingestion": "custodian_private_encrypted_or_equivalently_access_controlled",
+    "one_final_record_per_packet_id": true,
+    "exact_packet_coverage_required_for_outcome_freeze": true,
+    "duplicate_packet_id_forbidden": true,
+    "unknown_packet_id_forbidden": true,
+    "reviewer_registry_snapshot_sha256_required": true,
+    "decision_bundle_sha256_required": true,
+    "ingestion_must_validate_unique_reviewer_ids": true,
+    "ingestion_must_validate_cross_identity_independence": true,
+    "ingestion_must_validate_terminal_quorum": true,
+    "ingestion_must_validate_expert_gold_escalation": true,
+    "canonical_terminal_decision_path": "terminal_signoff.decision",
+    "terminal_signoff_required": true,
+    "ingestion_must_validate_terminal_signoff_coherence": true,
+    "ingestion_must_validate_case_conflict_and_recusal": true,
+    "ingestion_must_validate_unique_person_bindings": true,
+    "ingestion_must_validate_material_disagreement_truthfulness": true
+  },
+  "execution_gates": {
+    "human_review_may_begin_under_this_contract": false,
+    "repository_decision_ingestion_authorized": false,
+    "automatic_decision_application_authorized": false,
+    "automatic_reserve3_authorized": false,
+    "benchmark_population_mutation_authorized": false,
+    "next_protocol": "Run and freeze the Schema-31 decision-template migration. Human review may begin only after that execution evidence is frozen; Schema 32 remains the later decision-ingestion/outcome-freeze protocol.",
+    "human_review_blocked_reason": "Schema-31-compatible decision template has not yet been generated and frozen from the exact Schema-30 packet."
+  },
+  "gold_status_escalation_policy": {
+    "expert_gold_minimum_distinct_reviewers": 2,
+    "expert_gold_independent_adjudicator_required": true,
+    "expert_gold_source_verifier_required": true,
+    "expert_gold_rule_overrides_lower_risk_tier_quorum": true,
+    "derived_adjudicative_judgment_must_not_be_downgraded_to_source_attributed_to_avoid_expert_review": true
+  },
+  "template_migration_policy": {
+    "required_before_human_review": true,
+    "workflow": ".github/workflows/h392-schema31-decision-template.yml",
+    "source_packet_artifact_id": 11526263194,
+    "source_packet_sha256": "44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27",
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
+    "legacy_template_authorized_for_review": false,
+    "schema31_template_must_remove_unattested_top_level_decision": true,
+    "schema31_template_must_preserve_exact_packet_task_bindings": true,
+    "schema31_template_must_be_encrypted": true,
+    "schema31_template_execution_evidence_must_be_frozen_before_review": true
+  }
+}
