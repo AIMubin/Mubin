@@ -99,9 +99,15 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(policy["per_case_conflict_declaration_required_for_every_signing_role"])
         self.assertTrue(policy["per_case_recusal_must_be_false_for_every_counted_signoff"])
 
-    def test_schema31_authorizes_review_not_ingestion(self):
+    def test_schema31_blocks_review_until_template_migration_freeze(self):
         gates = self.contract["execution_gates"]
-        self.assertTrue(gates["human_review_may_begin_under_this_contract"])
+        self.assertFalse(gates["human_review_may_begin_under_this_contract"])
+        self.assertIn("Schema-31-compatible decision template", gates["human_review_blocked_reason"])
+        migration = self.contract["template_migration_policy"]
+        self.assertTrue(migration["required_before_human_review"])
+        self.assertFalse(migration["legacy_template_authorized_for_review"])
+        self.assertTrue(migration["schema31_template_must_remove_unattested_top_level_decision"])
+        self.assertTrue(migration["schema31_template_execution_evidence_must_be_frozen_before_review"])
         self.assertFalse(gates["repository_decision_ingestion_authorized"])
         self.assertFalse(gates["automatic_decision_application_authorized"])
         self.assertFalse(gates["automatic_reserve3_authorized"])
@@ -159,7 +165,9 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(
             self.contract["reviewer_registry"]["person_binding_secret_must_remain_external"]
         )
-        self.assertTrue(decision["human_review_authorized"])
+        self.assertFalse(decision["human_review_authorized"])
+        self.assertTrue(decision["template_migration_required_before_review"])
+        self.assertFalse(decision["legacy_schema30_decision_template_authorized"])
         self.assertFalse(decision["decision_ingestion_authorized"])
         self.assertFalse(decision["automatic_reserve3_authorized"])
 
