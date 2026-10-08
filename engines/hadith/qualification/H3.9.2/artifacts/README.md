@@ -9,6 +9,7 @@ This directory contains **tracked preregistration, baseline state, and compact c
 - Historical cumulative checkpoint: `CUMULATIVE_PRIMARY_EVIDENCE_168.json`, permanently binding the canonical 0..167 prefix and its schema-25 cumulative ledger.
 - Final external-critical-commentary primary batch evidence: `PRIMARY_BATCH_EVIDENCE_168_210.json`, binding successful campaign run `37426135905`, all six shard artifact digests, exact 168..209 coverage, and the redacted aggregate summary.
 - Authoritative 210-primary cumulative evidence: `CUMULATIVE_PRIMARY_EVIDENCE_210.json`, derived from successful cumulative run `37471731102` and permanently binding the exact 0..209 prefix, normalized cumulative outcome/reason counts, cumulative-ledger SHA-256, replacement-eligibility SHA-256, and encrypted artifact identity.
+- Schema-30 adjudication packet execution evidence: `ADJUDICATION_PACKET_EVIDENCE_158.json`, binding run `37722153068`, artifact `11526263194`, the exact 158-case surface, redacted public artifact contract, and encrypted-packet SHA-256. Schema 31 governs human review but does not commit completed decision rows here.
 - Dataset qualification: regenerate `validation-report.json` with `python -m benchmark_campaign validate`.
 - Freeze evidence: generated only after the real 1,280-case population qualifies.
 - Final evaluation evidence: generated only after model lock and one-shot sealed-holdout evaluation.
