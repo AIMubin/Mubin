@@ -289,7 +289,7 @@ class RepositoryCapacityExtensionTargetTests(unittest.TestCase):
     def test_real_target_is_exactly_the_canonical_ten_slot_shortfall(self):
         root = Path(__file__).resolve().parents[1]
         status = load_json(root / "artifacts" / "H3.9.2-STATUS.json")
-        self.assertEqual(status["freeze_schema_version"], 30)
+        self.assertEqual(status["freeze_schema_version"], 31)
         self.assertTrue(status["capacity_extension_enabled"])
         target = status["capacity_extension_target"]
         self.assertFalse(target["ready"])
