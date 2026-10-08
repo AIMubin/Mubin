@@ -43,3 +43,11 @@ python -m unittest discover -s core/tests -v
 ```
 
 The CLI accepts a UTF-8 JSON file no larger than **5 MiB**. Exit code **0** means only that structural checks passed; the output explicitly disclaims external source authenticity and scholarly correctness. Exit code **1** indicates schema/cross-reference/graph validation failure; exit code **2** indicates missing, malformed, unreadable, or oversized input. The CLI never issues a fatwa or independently asserts that quoted evidence appears in its claimed edition.
+
+## P0 follow-on integrity guarantees
+
+`counterfactual_context.assumed_evidence_id` must occur within the referenced counterfactual claim's actual dependency closure of claim citations or applied rule citations. Merely having the evidence in a scholar's historical-availability record or methodology profile is insufficient. This is still a **structural** dependency claim, not proof the cited passage supports the counterfactual.
+
+`assessment_status=no_recorded_objection` cannot be used on the conclusion of an inference with an open/sustained objection, nor on an inferred descendant that relies on the objection-affected conclusion; `blocked` and `undetermined` proofs do not excuse mislabeling. A documented `answered` objection must retain its evidence-bound response, without claiming scientific agreement.
+
+All claim-dependency paths have a maximum length of **128 claims** independent of record ordering. This depth does not count independent parallel siblings. Iterative proof-closure collection supports wide shallow graphs up to the separate 5000-entity bound.

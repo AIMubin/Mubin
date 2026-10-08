@@ -47,3 +47,22 @@ GitHub workflow: `.github/workflows/mubin-inference-foundation.yml`. Record succ
 No automated review agent is used as an exploratory discovery stage in future Mubin PRs. Primary maintainer review must produce its own change-specific findings and regression checks *before* Codex is requested. Codex can act as the independent second opinion **only after** the maintainer's tests and CI pass. If Codex quota or availability prevents that, the primary reviewer must perform a second explicit, adversarial, evidence-backed pass and record **independent_review_unavailable**, never claim Codex approved.
 
 **Merge blocker:** all discovered P1/P2 bugs above corrected and verified on latest PR HEAD; CI green; no unresolved second-review finding. The maintainer audit alone does not authorize modifying H3.9.2 qualification gates.
+
+## Follow-on independent second-review findings and maintainer verification
+
+Secondary Codex review at `4cfa3bf12e7f6c814412ee02c249b13341ef4321` completed with **four concrete unresolved findings**, all reviewed against the implementation and reproduced with adversarial tests **before** correction. The original branch CI was green but insufficient.
+
+| ID | Review severity | Verified defect | Closure / regression |
+|---|---|---|---|
+| SR-01 | P1 | Historical counterfactual could assume evidence that appeared nowhere in the claim/rule inference ancestry | `trace_evidence` now walks only applied claim/rule source references in the relevant closure; `test_counterfactual_assumed_evidence_must_occur_in_inference_trace` |
+| SR-02 | P2 | An open objection could coexist with `assessment_status=no_recorded_objection` if proof was blocked or absent | require a contested/undetermined status for the targeted conclusion; additionally propagate outstanding objections into dependent claim states; direct/descendant negative and contested-positive tests |
+| SR-03 | P2 | Memoizing only a boolean allowed a source-first chain deeper than 128 nodes to bypass the global cap | cache both rootedness and absolute longest path; source-first 130-link regression |
+| SR-04 | P2 | A proof with >128 shallow siblings was mistaken for >128 depth because the traversal counted globally visited nodes | proof-reachability traversal is iterative, deduplicated and width-independent; 150-sibling valid regression |
+
+**Pre-fix evidence:** GitHub run `37806836269` failed exactly four newly introduced tests (44 total), prior to correction. Another self-identified transitive-objection gap was reproduced by run `37807240630` (one of 46 tests failed) before its correction. **Post-fix evidence must use the latest HEAD CI, not these earlier runs.**
+
+Scientific limits remain unchanged: this checks structural source references and model-data provenance only; does not verify real-world quotations, formalize actual fiqh or authenticate hadith. No `H3.9.2` asset, Schema-31 human-attestation rule, or system `VERSION.yaml` was changed.
+
+### Review-order note
+
+Prior to the new review policy, the first Codex review of this PR ran ahead of the formal maintainer audit. The maintainer-first review and associated fixes were then completed, followed by the second Codex review; its four findings received reproductions and code fixes. For all future changes, maintain the sequence `maintainer audit -> fixes -> tests -> CI -> Codex secondary -> merge decision`. Codex completion with findings is **not** a clean approval.
