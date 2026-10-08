@@ -587,6 +587,52 @@ class TestP0InferenceFoundation(unittest.TestCase):
         data["proofs"][0]["inference_ids"].append("inf.desc")
         self.assert_blocked(data, "inherits outstanding objection")
 
+    def test_unknown_exception_rejects_dangling_evidence_reference(self):
+        data = fixture()
+        data["inferences"][0]["exception_checks"].append({
+            "exception": "unresolved impediment",
+            "outcome": "unknown", "evidence_ids": ["ev.missing"]
+        })
+        data["proofs"][0]["verification_status"] = "undetermined"
+        self.assert_blocked(data, "unknown evidence reference")
+
+    def test_triggered_exception_rejects_dangling_evidence_reference(self):
+        data = fixture()
+        data["inferences"][0]["exception_checks"].append({
+            "exception": "blocking impediment",
+            "outcome": "triggered", "evidence_ids": ["ev.missing"]
+        })
+        data["proofs"][0]["verification_status"] = "blocked"
+        self.assert_blocked(data, "unknown evidence reference")
+
+    def test_unknown_exception_may_cite_unverified_existing_evidence(self):
+        data = fixture()
+        supporting = dict(data["evidence"][0])
+        supporting["id"] = "ev.unverified"
+        supporting["verification_status"] = "unverified"
+        supporting["verification_method"] = "unverified"
+        data["evidence"].append(supporting)
+        data["inferences"][0]["exception_checks"].append({
+            "exception": "unresolved impediment",
+            "outcome": "unknown", "evidence_ids": ["ev.unverified"]
+        })
+        data["proofs"][0]["verification_status"] = "undetermined"
+        self.assertEqual([], validate_bundle(data))
+
+    def test_cleared_exception_must_reject_unverified_evidence(self):
+        data = fixture()
+        supporting = dict(data["evidence"][0])
+        supporting["id"] = "ev.unverified"
+        supporting["verification_status"] = "unverified"
+        supporting["verification_method"] = "unverified"
+        data["evidence"].append(supporting)
+        data["rules"][0]["exceptions"] = ["known impediment"]
+        data["inferences"][0]["exception_checks"] = [{
+            "exception": "known impediment",
+            "outcome": "cleared", "evidence_ids": ["ev.unverified"]
+        }]
+        self.assert_blocked(data, "is not verified")
+
     def test_no_version_bump_or_h392_mutation(self):
         version = (ROOT / "VERSION.yaml").read_text(encoding="utf-8")
         self.assertIn("version: 0.1.0-alpha", version)
