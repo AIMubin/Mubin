@@ -53,7 +53,8 @@
       "qualified_reviewer": "Human with attested competence in hadith/source-language evaluation and the benchmark decision surface.",
       "source_verifier": "Human able to verify pinned source identity, locator, excerpt/support fidelity, and whether the proposed decision is actually source-supported.",
       "adjudicator": "Human with equal or stronger domain competence than the reviewer and independent of the reviewer and source verifier for the case."
-    }
+    },
+    "schema_path": "schemas/adjudication-reviewer-registry.schema.json"
   },
   "independence_and_conflict_policy": {
     "reviewer_and_source_verifier_must_be_distinct": true,
