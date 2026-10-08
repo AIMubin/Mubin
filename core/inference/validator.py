@@ -253,6 +253,34 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                         f"objection {o['id']}: open objection contradicts no_recorded_objection on {conclusion['id']}"
                     )
 
+    # An unresolved objection affects the entire downstream claim closure, not
+    # merely the direct conclusion. Otherwise an unverified descendant could
+    # be mislabeled as having no recorded objections while its proof is blocked.
+    dependents: dict[str, set[str]] = {}
+    for inf in bundle["inferences"]:
+        for premise_id in inf["premise_claim_ids"]:
+            dependents.setdefault(premise_id, set()).add(inf["conclusion_claim_id"])
+    for objection in bundle["objections"]:
+        if objection["status"] == "answered":
+            continue
+        inf = index["inferences"].get(objection["target_inference_id"])
+        if inf is None:
+            continue
+        origin = inf["conclusion_claim_id"]
+        pending = list(dependents.get(origin, ()))
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            descendant = index["claims"].get(current)
+            if descendant is not None and descendant["assessment_status"] == "no_recorded_objection":
+                errors.append(
+                    f"claim {current}: inherits outstanding objection {objection['id']}"
+                )
+            pending.extend(dependents.get(current, ()))
+
     def trace_inferences(claim_id: str) -> set[str]:
         # Iterative reachability: a global seen count measures width, NOT depth.
         # The rooted() pass independently limits maximum graph path depth.
