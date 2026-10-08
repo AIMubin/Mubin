@@ -198,7 +198,7 @@ class TestP0InferenceFoundation(unittest.TestCase):
     def test_contested_conclusion_cannot_claim_checked_proof(self):
         data = fixture()
         data["claims"][-1]["assessment_status"] = "contested"
-        self.assert_blocked(data, "contested or undetermined")
+        self.assert_blocked(data, "unresolved premise or conclusion")
 
     def test_attested_reachability_cannot_use_impossibility_basis(self):
         data = fixture()
