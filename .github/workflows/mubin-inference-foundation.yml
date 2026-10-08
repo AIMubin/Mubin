@@ -10,6 +10,8 @@ on:
       - "docs/ROADMAP.md"
       - "docs/INFERENCE_CONTRACTS.md"
       - "docs/reviews/**"
+      - "docs/REVIEW_POLICY.md"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
       - ".github/workflows/mubin-inference-foundation.yml"
   push:
     branches: [main, "p0/**", "p0-*"]
@@ -21,6 +23,8 @@ on:
       - "docs/ROADMAP.md"
       - "docs/INFERENCE_CONTRACTS.md"
       - "docs/reviews/**"
+      - "docs/REVIEW_POLICY.md"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
       - ".github/workflows/mubin-inference-foundation.yml"
 
 permissions:
