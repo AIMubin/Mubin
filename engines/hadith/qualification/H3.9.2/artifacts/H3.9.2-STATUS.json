@@ -42,8 +42,8 @@
   "h4_development_allowed": true,
   "h4_qualification_allowed": false,
   "h4_release_allowed": false,
-  "reason": "Schema 31 freezes the human adjudication decision contract for the exact 158-case Schema-30 packet. Human review may now proceed under a bound reviewer/quorum/independence/conflict policy, while repository decision ingestion, automatic decision application, benchmark-population mutation, and reserve:03 remain unauthorized.",
-  "next_action": "Conduct the 158-case human review off-repository under config/adjudication-decision-contract.json and schemas/adjudication-decision.schema.json. Freeze the custodian-private reviewer-registry snapshot and completed decision-bundle hashes. Do not ingest or apply decisions in the repository until a separately reviewed Schema-32 decision-ingestion/outcome-freeze protocol is frozen.",
+  "reason": "Schema 31 freezes the human adjudication decision contract for the exact 158-case Schema-30 packet, but human review remains fail-closed until a Schema-31-compatible blank decision template is migrated from that exact packet and its execution evidence is frozen.",
+  "next_action": "Run .github/workflows/h392-schema31-decision-template.yml on main. Freeze the resulting encrypted Schema-31 decision-template artifact and hashes before authorizing any human review. Decision ingestion, benchmark mutation, and reserve:03 remain unauthorized.",
   "freeze_schema_version": 31,
   "factory_primary_slot_count": 1280,
   "factory_reserve_slot_count": 1280,
@@ -241,7 +241,10 @@
     "adjudication_packet_encrypted_bundle_sha256": "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
     "adjudication_packet_evidence_path": "artifacts/ADJUDICATION_PACKET_EVIDENCE_158.json",
     "adjudication_decision_contract_required": false,
-    "adjudication_decision_contract_frozen": true
+    "adjudication_decision_contract_frozen": true,
+    "adjudication_decision_template_migration_required": true,
+    "adjudication_decision_template_migration_workflow": ".github/workflows/h392-schema31-decision-template.yml",
+    "human_review_authorized": false
   },
   "reserve_activation_target": {
     "ready": false,
@@ -480,7 +483,7 @@
     "evidence_path": "artifacts/CAPACITY_EXTENSION_9bd2468737d0cd1b89227b3b625814dfc1a3cab25512fece98ae377ef1ac4fce.json"
   },
   "adjudication_review_surface": {
-    "protocol_state": "decision_contract_frozen",
+    "protocol_state": "decision_template_migration_required",
     "combined_pending_case_count": 158,
     "primary_pending_case_count": 129,
     "reserve_pending_case_count": 24,
@@ -510,14 +513,17 @@
     "human_adjudication_started": false,
     "decision_ingestion_authorized": false,
     "decision_contract_freeze_schema": 31,
-    "human_review_authorized": true,
-    "decision_bundle_may_be_prepared_off_repo": true,
+    "human_review_authorized": false,
+    "decision_bundle_may_be_prepared_off_repo": false,
     "automatic_decision_application_authorized": false,
     "reviewer_registry_snapshot_required": true,
     "expert_gold_escalation_required": true,
     "terminal_human_signoff_required": true,
     "per_case_conflict_and_recusal_attestation_required": true,
-    "stable_private_person_binding_required": true
+    "stable_private_person_binding_required": true,
+    "schema31_decision_template_required": true,
+    "schema31_decision_template_frozen": false,
+    "legacy_schema30_decision_template_authorized": false
   },
   "capacity_extension_proposal_frozen": true,
   "capacity_extension_proposal": {
@@ -819,7 +825,7 @@
     "path": "config/adjudication-decision-contract.json",
     "schema_path": "schemas/adjudication-decision.schema.json",
     "documentation_path": "ADJUDICATION_DECISIONS.md",
-    "contract_sha256": "6d2d55c9f26004dcbdad743cd151f8f351f5066d2ec343fabd12605244fc459a",
+    "contract_sha256": "b56f3e128271fc7ce0a5dbd696f5616f5e78b59ff570c46d2346f4065cf19853",
     "decision_schema_sha256": "81d1ab74c6d1a0760e16d5b50344e6659dc9c2f3fe96c72fe1677532856c498f",
     "packet_workflow_run_id": 37722153068,
     "packet_artifact_id": 11526263194,
@@ -834,7 +840,7 @@
     "benchmark_counts": {
       "external-critical-commentary": 158
     },
-    "human_review_authorized": true,
+    "human_review_authorized": false,
     "decision_ingestion_authorized": false,
     "automatic_decision_application_authorized": false,
     "automatic_reserve3_authorized": false,
@@ -848,6 +854,34 @@
     "terminal_human_signoff_required": true,
     "reviewer_person_binding_method": "hmac-sha256-custodian-secret-v1",
     "reviewer_person_binding_secret_external": true,
-    "per_case_conflict_and_recusal_attestation_required": true
+    "per_case_conflict_and_recusal_attestation_required": true,
+    "template_migration_required_before_review": true,
+    "template_migration_workflow": ".github/workflows/h392-schema31-decision-template.yml",
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
+    "legacy_schema30_decision_template_authorized": false
+  },
+  "adjudication_decision_template_target": {
+    "ready": true,
+    "completed": false,
+    "workflow": ".github/workflows/h392-schema31-decision-template.yml",
+    "protocol_freeze_schema": 31,
+    "expected_case_count": 158,
+    "benchmark_counts": {
+      "external-critical-commentary": 158
+    },
+    "source_packet_workflow_run_id": 37722153068,
+    "source_packet_artifact_id": 11526263194,
+    "source_packet_artifact_name": "h392-adjudication-packet",
+    "source_packet_artifact_digest": "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
+    "source_packet_artifact_size_bytes": 791263,
+    "source_packet_redacted_summary_sha256": "fdf2dcd35bd34799ae1b67b311569f7a6bc95b34a957faca3bd37984ff1ba7dc",
+    "source_packet_encrypted_bundle_sha256": "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
+    "source_packet_sha256": "44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27",
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
+    "output_artifact_name": "h392-schema31-decision-template",
+    "output_policy": "preserve exact packet/task/benchmark bindings; generate blank Schema-31 field layout only; no terminal decisions; no source text; encrypt template bundle; publish only redacted summary and SHA-256 declaration",
+    "human_review_authorized_before_freeze": false,
+    "decision_ingestion_authorized": false,
+    "automatic_reserve3_authorized": false
   }
 }
