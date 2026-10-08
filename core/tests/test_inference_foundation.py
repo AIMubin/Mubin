@@ -545,6 +545,48 @@ class TestP0InferenceFoundation(unittest.TestCase):
             data["proofs"][0]["inference_ids"].append(infid)
         self.assertEqual([], validate_bundle(data))
 
+    def test_contested_blocked_proof_with_objection_is_consistent(self):
+        data = fixture()
+        data["proofs"][0]["verification_status"] = "blocked"
+        data["claims"][-1]["assessment_status"] = "contested"
+        data["objections"].append({
+            "id": "obj.001", "target_inference_id": "inf.001",
+            "objection_kind": "contrary_evidence", "statement": "Material objection",
+            "evidence_ids": ["ev.001"], "status": "open"
+        })
+        self.assertEqual([], validate_bundle(data))
+
+    def test_unresolved_objection_propagates_to_inferred_descendants(self):
+        data = fixture()
+        data["rules"].append({
+            "id": "rule.ded", "methodology_id": "met.001",
+            "rule_type": "deduction", "expression": "Toy deduction",
+            "preconditions": ["one claim"], "exceptions": [],
+            "source_evidence_ids": ["ev.001"], "formalization_status": "draft"
+        })
+        data["claims"][-1]["assessment_status"] = "contested"
+        data["claims"].append({
+            "id": "clm.desc", "statement": "Derived result from contested source",
+            "claim_type": "inferred", "conclusion_kind": "rule_derived",
+            "evidence_ids": [], "inference_id": "inf.desc",
+            "modality": "actual", "assessment_status": "no_recorded_objection"
+        })
+        data["inferences"].append({
+            "id": "inf.desc", "inference_kind": "deduction",
+            "methodology_id": "met.001", "rule_ids": ["rule.ded"],
+            "premise_claim_ids": ["clm.conclusion"],
+            "conclusion_claim_id": "clm.desc", "exception_checks": []
+        })
+        data["objections"].append({
+            "id": "obj.001", "target_inference_id": "inf.001",
+            "objection_kind": "contrary_evidence", "statement": "Material objection",
+            "evidence_ids": ["ev.001"], "status": "open"
+        })
+        data["proofs"][0]["verification_status"] = "blocked"
+        data["proofs"][0]["conclusion_claim_id"] = "clm.desc"
+        data["proofs"][0]["inference_ids"].append("inf.desc")
+        self.assert_blocked(data, "inherits outstanding objection")
+
     def test_no_version_bump_or_h392_mutation(self):
         version = (ROOT / "VERSION.yaml").read_text(encoding="utf-8")
         self.assertIn("version: 0.1.0-alpha", version)
