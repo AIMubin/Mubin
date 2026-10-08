@@ -68,7 +68,7 @@ jobs:
           mkdir -p "$WORK_ROOT" "$PACKET_ROOT" "$TEMPLATE_ROOT" "$REDACTED_ROOT"
           cd engines/hadith/qualification/H3.9.2
           python - <<'PY'
-          import hashlib, io, json, os, pathlib, tarfile, urllib.request, urllib.parse, zipfile
+          import hashlib, json, os, pathlib, tarfile, urllib.error, urllib.request, urllib.parse, zipfile
           from benchmark_campaign.artifact_crypto import decrypt_file
 
           root=pathlib.Path(".")
