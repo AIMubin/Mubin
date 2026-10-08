@@ -54,7 +54,8 @@
       "source_verifier": "Human able to verify pinned source identity, locator, excerpt/support fidelity, and whether the proposed decision is actually source-supported.",
       "adjudicator": "Human with equal or stronger domain competence than the reviewer and independent of the reviewer and source verifier for the case."
     },
-    "schema_path": "schemas/adjudication-reviewer-registry.schema.json"
+    "schema_path": "schemas/adjudication-reviewer-registry.schema.json",
+    "unique_reviewer_id_required": true
   },
   "independence_and_conflict_policy": {
     "reviewer_and_source_verifier_must_be_distinct": true,
@@ -131,7 +132,11 @@
     "duplicate_packet_id_forbidden": true,
     "unknown_packet_id_forbidden": true,
     "reviewer_registry_snapshot_sha256_required": true,
-    "decision_bundle_sha256_required": true
+    "decision_bundle_sha256_required": true,
+    "ingestion_must_validate_unique_reviewer_ids": true,
+    "ingestion_must_validate_cross_identity_independence": true,
+    "ingestion_must_validate_terminal_quorum": true,
+    "ingestion_must_validate_expert_gold_escalation": true
   },
   "execution_gates": {
     "human_review_may_begin_under_this_contract": true,
