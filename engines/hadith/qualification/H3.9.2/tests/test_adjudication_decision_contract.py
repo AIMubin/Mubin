@@ -99,12 +99,22 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(policy["per_case_conflict_declaration_required_for_every_signing_role"])
         self.assertTrue(policy["per_case_recusal_must_be_false_for_every_counted_signoff"])
 
-    def test_schema31_blocks_review_until_template_migration_freeze(self):
+    def test_schema31_authorizes_review_after_template_execution_freeze(self):
         gates = self.contract["execution_gates"]
-        self.assertFalse(gates["human_review_may_begin_under_this_contract"])
-        self.assertIn("Schema-31-compatible decision template", gates["human_review_blocked_reason"])
+        self.assertTrue(gates["human_review_may_begin_under_this_contract"])
+        self.assertNotIn("human_review_blocked_reason", gates)
+        self.assertEqual(
+            gates["human_review_authorization_basis"]["workflow_run_id"],
+            37781676566,
+        )
         migration = self.contract["template_migration_policy"]
         self.assertTrue(migration["required_before_human_review"])
+        self.assertTrue(migration["requirement_satisfied"])
+        self.assertTrue(migration["execution_frozen"])
+        self.assertEqual(
+            migration["execution_evidence_path"],
+            "artifacts/SCHEMA31_DECISION_TEMPLATE_EVIDENCE_158.json",
+        )
         self.assertFalse(migration["legacy_template_authorized_for_review"])
         self.assertTrue(migration["schema31_template_must_remove_unattested_top_level_decision"])
         self.assertTrue(migration["schema31_template_execution_evidence_must_be_frozen_before_review"])
@@ -165,8 +175,14 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(
             self.contract["reviewer_registry"]["person_binding_secret_must_remain_external"]
         )
-        self.assertFalse(decision["human_review_authorized"])
+        self.assertTrue(decision["human_review_authorized"])
         self.assertTrue(decision["template_migration_required_before_review"])
+        self.assertTrue(decision["template_migration_requirement_satisfied"])
+        self.assertTrue(decision["template_execution_frozen"])
+        self.assertEqual(
+            decision["template_execution_evidence_path"],
+            "artifacts/SCHEMA31_DECISION_TEMPLATE_EVIDENCE_158.json",
+        )
         self.assertFalse(decision["legacy_schema30_decision_template_authorized"])
         self.assertFalse(decision["decision_ingestion_authorized"])
         self.assertFalse(decision["automatic_reserve3_authorized"])
