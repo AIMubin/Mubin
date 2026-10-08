@@ -1,0 +1,359 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AIMubin/Mubin/engines/hadith/qualification/H3.9.2/schemas/adjudication-decision.schema.json",
+  "title": "Mubin H3.9.2 Schema-31 adjudication decision record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "campaign_id",
+    "protocol_freeze_schema",
+    "packet_id",
+    "task_id",
+    "benchmark_id",
+    "decision",
+    "reviews",
+    "reviewer_registry_snapshot_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "campaign_id": {
+      "const": "H3.9.2"
+    },
+    "protocol_freeze_schema": {
+      "const": 31
+    },
+    "packet_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "benchmark_id": {
+      "const": "external-critical-commentary"
+    },
+    "decision": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "deferred"
+      ]
+    },
+    "reviews": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reviewer_id",
+          "reviewer_role",
+          "recommendation",
+          "reviewed_at",
+          "conflict_of_interest",
+          "rationale",
+          "human_attestation"
+        ],
+        "properties": {
+          "reviewer_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reviewer_role": {
+            "const": "qualified_reviewer"
+          },
+          "recommendation": {
+            "enum": [
+              "accepted",
+              "rejected",
+              "deferred"
+            ]
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "conflict_of_interest": {
+            "const": "none"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "human_attestation": {
+            "const": true
+          },
+          "ai_assistance_used": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "source_verification": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "verifier_id",
+            "verifier_role",
+            "verified_at",
+            "source_verified",
+            "independent_from_reviewers",
+            "verification_note",
+            "human_attestation"
+          ],
+          "properties": {
+            "verifier_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "verifier_role": {
+              "const": "source_verifier"
+            },
+            "verified_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "source_verified": {
+              "type": "boolean"
+            },
+            "independent_from_reviewers": {
+              "const": true
+            },
+            "verification_note": {
+              "type": "string",
+              "minLength": 1
+            },
+            "human_attestation": {
+              "const": true
+            }
+          }
+        }
+      ]
+    },
+    "adjudication": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "adjudicator_id",
+            "adjudicator_role",
+            "decision",
+            "adjudicated_at",
+            "independent_from_case_reviewers_and_source_verifier",
+            "rationale",
+            "human_attestation"
+          ],
+          "properties": {
+            "adjudicator_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "adjudicator_role": {
+              "const": "adjudicator"
+            },
+            "decision": {
+              "enum": [
+                "accepted",
+                "rejected",
+                "deferred"
+              ]
+            },
+            "adjudicated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "independent_from_case_reviewers_and_source_verifier": {
+              "const": true
+            },
+            "rationale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "human_attestation": {
+              "const": true
+            }
+          }
+        }
+      ]
+    },
+    "accepted_candidate_sha256": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      ]
+    },
+    "rejection_reason": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "defer_reason": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "authority_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "locator",
+          "excerpt_sha256"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1
+          },
+          "excerpt_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "reviewer_registry_snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "accepted"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "required": [
+          "source_verification",
+          "accepted_candidate_sha256"
+        ],
+        "properties": {
+          "source_verification": {
+            "type": "object",
+            "properties": {
+              "source_verified": {
+                "const": true
+              }
+            }
+          },
+          "accepted_candidate_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "rejection_reason": {
+            "type": "null"
+          },
+          "defer_reason": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "rejected"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "required": [
+          "source_verification",
+          "rejection_reason"
+        ],
+        "properties": {
+          "source_verification": {
+            "type": "object"
+          },
+          "accepted_candidate_sha256": {
+            "type": "null"
+          },
+          "rejection_reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "defer_reason": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "deferred"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "required": [
+          "defer_reason"
+        ],
+        "properties": {
+          "accepted_candidate_sha256": {
+            "type": "null"
+          },
+          "rejection_reason": {
+            "type": "null"
+          },
+          "defer_reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}
