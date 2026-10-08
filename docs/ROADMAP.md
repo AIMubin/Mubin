@@ -25,3 +25,7 @@ P1/P2 can partly run in parallel with the design of P3/P4, but operational reaso
 ### P0 release checklist
 
 Typed source/evidence/claim/rule/inference/proof/objection/historical-availability schema; a negative-test-heavy structural validator; a separate CI workflow; no changes to Hadith qualification assets; Codex review of the new PR.
+
+## P0 maintainer review exit conditions
+
+The PR cannot merge solely on passing its original 19 tests. Maintainer-originated adversarial additions must exercise qiyas-rule laundering, forced-empty bundles, open and falsely answered objections, source-verified digest changes, distinct claim modality, mismatched historical identities, CI execution and CLI failure exit codes. Codex is an **independent second pass after** maintainer review and fixes; if unavailable or quota-limited, record an explicit maintainer-only fallback audit rather than fabricate a second approval.

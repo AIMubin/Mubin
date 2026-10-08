@@ -45,3 +45,7 @@ Entities: Source (pinned text/edition), Evidence (quoted excerpt and checksum), 
 ## Evaluation
 
 Measure independently: quotation fidelity, faithful rule encoding, correct execution of those encoded rules, and correspondence to historical precedents. Do not conflate them. Freeze source/family-disjoint holdouts before tuning; add counterexamples, abstentions and model leakage checks. Review P0 contract details in `docs/INFERENCE_CONTRACTS.md`.
+
+## Claim origin versus confidence and hypothesis
+
+Every Claim now distinguishes `conclusion_kind` (source/rule/qiyas derivation), `assessment_status` (no recorded objection/contested/undetermined) and `modality` (actual/counterfactual). A bound counterfactual assumes access to evidence and models possible reasoning **without asserting what an historical scholar certainly thought**. Independent historical provenance is required before an actual assertion that a source reached—or did not reach—an historical figure.

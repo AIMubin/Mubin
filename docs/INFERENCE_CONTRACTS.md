@@ -24,3 +24,22 @@ HistoricalAvailability tracks `attested_reached`, `attested_not_reached`, or `un
 4. Alignment and disagreement with frozen scholarly precedents (P7).
 
 Machine-only checks can establish structural invariants but **never replace the H3.9.2 Schema-31 independent-human quorum**. Keep the historical 158 cases and all H3.9.2 gates unchanged. Mubin system stays at `0.1.0-alpha` until an integrated evaluation-backed release.
+
+## Review hardening: inference, modality, assessment
+
+`Claim.conclusion_kind` is now **derivation provenance only**: `source_derived`, `rule_derived`, or `qiyas_derived`. Epistemic state is independently recorded in `Claim.assessment_status=no_recorded_objection|contested|undetermined`; `no_recorded_objection` merely reports the graph's known objections, **not universal support or juristic soundness**. `Claim.modality=actual|counterfactual` is mandatory. A counterfactual claim must be inferred and must bind a `counterfactual_context` to a particular scholar, source evidence and historical-availability case, with an explicit assumption. A structural proof for a counterfactual remains hypothetical; it must never be projected onto a scholar as a historical fact.
+
+Each inference must use at least one rule whose kind matches its kind. Ancillary `constraint` and `exception` rules may supplement the main rule but never substitute for it. A qiyas rule may **not** be hidden in deduction/tarjih to bypass mandatory asl/far/hukm/illah claims. `answered` objections require an explicit evidence-bound answer. `structurally_checked` proofs are forbidden for `contested` or `undetermined` conclusions, open/sustained objections, or unresolved/triggered/unchecked rule exceptions.
+
+Nonempty source/evidence/method/rule/claim/inference/proof collections are required for a valid inference bundle. P0 limits validation to **5000 entities** and at most **128 claim-dependency levels**; this is a small-bundle structural validator, not a replacement for P1 corpus infrastructure. Identifier checks reject final-newline aliases.
+
+## CLI and error contracts
+
+```bash
+python -m pip install -r core/requirements-test.txt
+python -m core.inference --help
+python -m core.inference /path/to/bundle.json
+python -m unittest discover -s core/tests -v
+```
+
+The CLI accepts a UTF-8 JSON file no larger than **5 MiB**. Exit code **0** means only that structural checks passed; the output explicitly disclaims external source authenticity and scholarly correctness. Exit code **1** indicates schema/cross-reference/graph validation failure; exit code **2** indicates missing, malformed, unreadable, or oversized input. The CLI never issues a fatwa or independently asserts that quoted evidence appears in its claimed edition.
