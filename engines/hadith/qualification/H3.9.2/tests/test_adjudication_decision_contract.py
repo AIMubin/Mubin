@@ -98,6 +98,11 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertFalse(gates["automatic_decision_application_authorized"])
         self.assertFalse(gates["automatic_reserve3_authorized"])
         self.assertFalse(gates["benchmark_population_mutation_authorized"])
+        policy = self.contract["decision_record_policy"]
+        self.assertTrue(policy["ingestion_must_validate_unique_reviewer_ids"])
+        self.assertTrue(policy["ingestion_must_validate_cross_identity_independence"])
+        self.assertTrue(policy["ingestion_must_validate_terminal_quorum"])
+        self.assertTrue(policy["ingestion_must_validate_expert_gold_escalation"])
 
     def test_repository_status_binds_exact_contract_bytes(self):
         self.assertEqual(self.status["freeze_schema_version"], 31)
@@ -130,6 +135,7 @@ class Schema31DecisionContractTests(unittest.TestCase):
             self.contract["reviewer_registry"]["schema_path"],
             "schemas/adjudication-reviewer-registry.schema.json",
         )
+        self.assertTrue(self.contract["reviewer_registry"]["unique_reviewer_id_required"])
         self.assertTrue(decision["human_review_authorized"])
         self.assertFalse(decision["decision_ingestion_authorized"])
         self.assertFalse(decision["automatic_reserve3_authorized"])
