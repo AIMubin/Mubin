@@ -20,6 +20,7 @@ MAX_TOTAL_BYTES = 32 * 1024 * 1024
 MAX_SOURCES = 16
 MAX_SPANS_PER_SOURCE = 1024
 MAX_TOTAL_SPANS = 4096
+MAX_JSON_BYTES = 5 * 1024 * 1024
 PATH_PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 
 
@@ -71,6 +72,44 @@ def verify_bundle(
     A receipt proves a byte-exact match to an *operator-supplied local snapshot*.
     It does not prove publication origin, lawful licensing or textual entailment.
     """
+    # Fail cheaply on gross cardinality violations BEFORE JSON Schema traversal.
+    # Avoid treating arbitrary malformed shapes as dictionaries or lists here:
+    # the schema checker remains responsible for those type errors.
+    sources_for_cap = manifest.get("sources") if isinstance(manifest, dict) else None
+    if isinstance(sources_for_cap, list):
+        if len(sources_for_cap) > MAX_SOURCES:
+            return {"valid": False, "errors": [
+                f"manifest: exceeds P1 snapshot cap of {MAX_SOURCES} sources"
+            ], "receipts": []}
+        span_counts = [
+            len(item["spans"])
+            for item in sources_for_cap
+            if isinstance(item, dict) and isinstance(item.get("spans"), list)
+        ]
+        if any(count > MAX_SPANS_PER_SOURCE for count in span_counts):
+            return {"valid": False, "errors": [
+                f"manifest: exceeds {MAX_SPANS_PER_SOURCE} spans per source"
+            ], "receipts": []}
+        if sum(span_counts) > MAX_TOTAL_SPANS:
+            return {"valid": False, "errors": [
+                f"manifest: exceeds {MAX_TOTAL_SPANS} total locator spans"
+            ], "receipts": []}
+
+    # Lone surrogates are valid JSON escape sequences, but not valid UTF-8
+    # text. Reject before any P0 evidence .encode() or receipt serialization.
+    # Apply the CLI's 5 MiB per-JSON-input limit to programmatic calls as well.
+    for label, value in (("bundle", bundle), ("manifest", manifest)):
+        try:
+            encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8", "strict")
+        except (UnicodeError, ValueError, TypeError, RecursionError) as exc:
+            return {"valid": False, "errors": [
+                f"{label}: invalid JSON/UTF-8 input ({type(exc).__name__})"
+            ], "receipts": []}
+        if len(encoded) > MAX_JSON_BYTES:
+            return {"valid": False, "errors": [
+                f"{label}: exceeds P1 JSON byte limit of {MAX_JSON_BYTES}"
+            ], "receipts": []}
+
     errors = ["P0: " + error for error in validate_bundle(bundle)]
     schema = json.loads(MANIFEST_SCHEMA_PATH.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
@@ -82,10 +121,6 @@ def verify_bundle(
         return {"valid": False, "errors": sorted(set(errors)), "receipts": []}
 
     sources = manifest["sources"]
-    if len(sources) > MAX_SOURCES:
-        return {"valid": False, "errors": [
-            f"manifest: exceeds P1 snapshot cap of {MAX_SOURCES} sources"
-        ], "receipts": []}
 
     indexed: dict[str, dict[str, Any]] = {}
     for entry in sources:
@@ -96,10 +131,6 @@ def verify_bundle(
     if indexed.keys() != p0_sources.keys():
         errors.append("manifest source IDs do not match P0 bundle source IDs")
 
-    if any(len(entry["spans"]) > MAX_SPANS_PER_SOURCE for entry in sources):
-        errors.append(f"manifest: exceeds {MAX_SPANS_PER_SOURCE} spans per source")
-    if sum(len(entry["spans"]) for entry in sources) > MAX_TOTAL_SPANS:
-        errors.append(f"manifest: exceeds {MAX_TOTAL_SPANS} total locator spans")
     if errors:
         return {"valid": False, "errors": sorted(set(errors)), "receipts": []}
 
