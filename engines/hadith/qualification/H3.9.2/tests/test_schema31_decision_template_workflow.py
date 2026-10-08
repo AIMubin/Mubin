@@ -34,13 +34,26 @@ class Schema31DecisionTemplateWorkflowTests(unittest.TestCase):
     def test_exact_schema30_packet_is_hash_and_metadata_bound(self):
         for value in (
             "11526263194",
-            "h392-adjudication-packet",
-            "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
-            "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
             "44df7e629adb56a8a822a08de95f1025f439db40cd7a3501028be114b2c5eb27",
-            "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
         ):
             self.assertIn(value, self.workflow)
+        target = self.status["adjudication_decision_template_target"]
+        self.assertEqual(target["source_packet_artifact_name"], "h392-adjudication-packet")
+        self.assertEqual(
+            target["source_packet_artifact_digest"],
+            "sha256:0333a36089ece40573d67cce106879dbc638892d00fed98890f91f2699ff6947",
+        )
+        self.assertEqual(
+            target["source_packet_encrypted_bundle_sha256"],
+            "5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd",
+        )
+        self.assertEqual(
+            target["legacy_schema30_decision_template_sha256"],
+            "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
+        )
+        self.assertIn('t["source_packet_artifact_digest"]', self.workflow)
+        self.assertIn('t["source_packet_encrypted_bundle_sha256"]', self.workflow)
+        self.assertIn('t["legacy_schema30_decision_template_sha256"]', self.workflow)
         self.assertIn("Schema-30 decrypted packet surface mismatch", self.workflow)
         self.assertIn("legacy Schema-30 decision-template SHA mismatch", self.workflow)
 
