@@ -139,5 +139,12 @@
     "automatic_reserve3_authorized": false,
     "benchmark_population_mutation_authorized": false,
     "next_protocol": "Schema 32 decision ingestion and outcome-freeze protocol after completed human review bundle exists."
+  },
+  "gold_status_escalation_policy": {
+    "expert_gold_minimum_distinct_reviewers": 2,
+    "expert_gold_independent_adjudicator_required": true,
+    "expert_gold_source_verifier_required": true,
+    "expert_gold_rule_overrides_lower_risk_tier_quorum": true,
+    "derived_adjudicative_judgment_must_not_be_downgraded_to_source_attributed_to_avoid_expert_review": true
   }
 }
