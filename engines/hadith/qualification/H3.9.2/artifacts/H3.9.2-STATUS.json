@@ -816,7 +816,7 @@
     "path": "config/adjudication-decision-contract.json",
     "schema_path": "schemas/adjudication-decision.schema.json",
     "documentation_path": "ADJUDICATION_DECISIONS.md",
-    "contract_sha256": "15ece025affdbec708053ccdcc74c70f53062f16de84a9a9f3e6ae8a3c03133f",
+    "contract_sha256": "0611c79952949f35c52a5032cf13ee3bb96559824c4c8bdc7ec5bcb864068476",
     "decision_schema_sha256": "4087cf00a339a92172bf2282ac35119098af857deca65cf48afe10a4fa229c76",
     "packet_workflow_run_id": 37722153068,
     "packet_artifact_id": 11526263194,
@@ -838,6 +838,8 @@
     "benchmark_population_mutation_authorized": false,
     "reviewer_registry_storage": "custodian_private",
     "reviewer_registry_snapshot_sha256_required_before_ingestion": true,
-    "next_protocol": "Schema 32 decision ingestion and outcome-freeze protocol"
+    "next_protocol": "Schema 32 decision ingestion and outcome-freeze protocol",
+    "reviewer_registry_schema_path": "schemas/adjudication-reviewer-registry.schema.json",
+    "reviewer_registry_schema_sha256": "47f25566d09cda2ff395d204ee17ca237ab5e926655429c9cf7a59a75ea8129e"
   }
 }
