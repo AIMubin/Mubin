@@ -25,7 +25,7 @@ A pinned statement written by a human scholar or other recognized authority may 
 
 Reviewer identities are custodian-private. Repository decision records use pseudonymous reviewer IDs; personal identity is not required in Git.
 
-Before any decision bundle can be ingested, the custodian must freeze a reviewer-registry snapshot conforming to `schemas/adjudication-reviewer-registry.schema.json` and bind its SHA-256. Each active registry entry must attest that the participant is human and record role, qualification basis, review scope, active status, and conflict disclosure.
+Before any decision bundle can be ingested, the custodian must freeze a reviewer-registry snapshot conforming to `schemas/adjudication-reviewer-registry.schema.json` and bind its SHA-256. Each active registry entry must attest that the participant is human and record role, qualification basis, review scope, active status, and conflict disclosure. Reviewer IDs must be unique within the frozen registry snapshot.
 
 Allowed roles are:
 
@@ -72,7 +72,7 @@ Material disagreement requires an independent adjudicator. Simple majority votin
 
 ## Decision custody
 
-Completed decision files remain custodian-private and encrypted or equivalently access-controlled. A future outcome freeze must prove exact packet coverage, reject duplicate/unknown packet IDs, bind the reviewer-registry snapshot SHA-256, and bind the completed decision-bundle SHA-256.
+Completed decision files remain custodian-private and encrypted or equivalently access-controlled. The JSON schemas constrain record and registry **shape**, but cannot by themselves prove cross-record identity independence or quorum. A future Schema-32 ingestion/outcome-freeze validator must prove exact packet coverage, reject duplicate/unknown packet IDs, enforce unique reviewer IDs, validate reviewer/source-verifier/adjudicator distinctness, enforce terminal quorum and expert-gold escalation, bind the reviewer-registry snapshot SHA-256, and bind the completed decision-bundle SHA-256.
 
 Schema 31 authorizes **human review**, not repository ingestion. No automatic decision application, benchmark-population mutation, or `reserve:03` authorization is created here.
 
