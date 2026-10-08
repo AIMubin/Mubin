@@ -107,6 +107,9 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
             errors.append(f"{context}: missing matching {inf['inference_kind']} rule")
         for key in inf["premise_claim_ids"]:
             premise = require("claims", key, context)
+            if premise is not None and conclusion is not None:
+                if conclusion["modality"] == "actual" and premise["modality"] == "counterfactual":
+                    errors.append(f"{context}: counterfactual premise cannot support actual claim")
             if premise is not None and premise["claim_type"] == "inferred":
                 parent = index["inferences"].get(premise.get("inference_id"))
                 if parent is not None and parent["methodology_id"] != inf["methodology_id"]:
@@ -231,9 +234,24 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
             if inf is not None and inf["methodology_id"] != p["methodology_id"]:
                 errors.append(f"{context}: mixed methodology in inference {key}")
         if p["verification_status"] == "structurally_checked":
-            conclusion = index["claims"][p["conclusion_claim_id"]]
-            if conclusion["assessment_status"] != "no_recorded_objection":
-                errors.append(f"{context}: contested or undetermined conclusion cannot be checked")
+            # Checking the final claim alone is insufficient: a contested/undetermined
+            # premise can otherwise be laundered into a clean-looking descendant.
+            closure = set()
+            pending = [p["conclusion_claim_id"]]
+            while pending:
+                claim_id = pending.pop()
+                if claim_id in closure:
+                    continue
+                closure.add(claim_id)
+                claim = index["claims"].get(claim_id)
+                if claim is not None and claim["claim_type"] == "inferred":
+                    dep = index["inferences"].get(claim.get("inference_id"))
+                    if dep is not None:
+                        pending.extend(dep["premise_claim_ids"])
+            for claim_id in closure:
+                claim = index["claims"].get(claim_id)
+                if claim is not None and claim["assessment_status"] != "no_recorded_objection":
+                    errors.append(f"{context}: unresolved premise or conclusion {claim_id}")
             if not rooted(p["conclusion_claim_id"]) or not expected:
                 errors.append(f"{context}: unsupported conclusion cannot be checked")
             for o in bundle["objections"]:
@@ -263,6 +281,8 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
         context = "history " + h["id"]
         require("evidence", h["evidence_id"], context)
         state, basis = h["knowledge_state"], h["basis_type"]
+        if state != "unknown":
+            evidence_refs([h["evidence_id"]], context + " historical target")
         if state == "unknown":
             if basis != "none" or h["basis_evidence_ids"]:
                 errors.append(f"{context}: unknown cannot assert a verified reachability basis")
