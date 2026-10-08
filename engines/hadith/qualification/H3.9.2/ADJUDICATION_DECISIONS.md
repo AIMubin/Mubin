@@ -1,0 +1,77 @@
+# H3.9.2 Schema-31 Human Decision Contract
+
+Schema 31 governs human review of the **exact 158-case packet** frozen by Schema 30. It changes no benchmark answers, creates no reviewed records, and does not ingest decisions into the repository.
+
+## Scope binding
+
+This contract is bound to:
+
+- packet workflow run `37722153068`;
+- packet artifact `11526263194`;
+- encrypted packet SHA-256 `5f154c631b6a0fd6494b329c62e863e26512a0aa17211daa13c56435dd8637fd`;
+- source-target SHA-256 `318913edd13ab6148926f7c414dab7ba6c1ff4a3846013a68db551793893a1ba`;
+- exactly **158** cases: 129 primary, 24 reserve:01, 5 reserve:02;
+- benchmark surface: **158 external-critical-commentary cases only**.
+
+The machine-readable contract is `config/adjudication-decision-contract.json`. Decision rows must conform to `schemas/adjudication-decision.schema.json`.
+
+## Authority model
+
+A terminal `accepted` or `rejected` result is a human action. AI may reconstruct evidence, compare sources, or draft a rationale, but it may not occupy a reviewer identity, provide a human attestation, cast the terminal decision, or self-authorize acceptance.
+
+A pinned statement written by a human scholar or other recognized authority may be **authority evidence**. It remains evidence: it does not replace the required human sign-off for this campaign. This is the operational boundary that permits AI-assisted extraction from books without converting model agreement into scholarly authority.
+
+## Reviewer registry
+
+Reviewer identities are custodian-private. Repository decision records use pseudonymous reviewer IDs; personal identity is not required in Git.
+
+Before any decision bundle can be ingested, the custodian must freeze a reviewer-registry snapshot and bind its SHA-256. Each active registry entry must attest that the participant is human and record role, qualification basis, review scope, active status, and conflict disclosure.
+
+Allowed roles are:
+
+- `qualified_reviewer`: human with attested competence in hadith/source-language evaluation and this benchmark decision surface;
+- `source_verifier`: human able to verify pinned source identity, locator, excerpt/support fidelity, and actual source support;
+- `adjudicator`: independent human with equal or stronger relevant competence than the case reviewer.
+
+## Independence and conflicts
+
+For any terminal accepted/rejected decision:
+
+1. reviewer and source verifier are distinct people;
+2. an adjudicator, when required, is distinct from every case reviewer and the source verifier;
+3. a human who curated a case cannot serve as its terminal reviewer;
+4. a recused reviewer does not count toward quorum;
+5. an undisclosed material conflict invalidates the sign-off;
+6. AI systems cannot occupy any human role.
+
+## Decision rules
+
+The current packet is classified as risk tier 2 because it contains only `external-critical-commentary`. This contract does **not** pre-authorize the later H3.8/H3.9 identity/family surfaces; those require an equal-or-stronger reviewed contract.
+
+### Accepted
+
+Requires one qualified human reviewer, an independent human source verifier, `source_verified=true`, a non-empty rationale, and a cryptographic binding to the accepted candidate. If there is material disagreement, an independent adjudicator is mandatory.
+
+Acceptance does not directly insert a record into the benchmark. The accepted record must preserve packet/task provenance, be source-verified, and be resealed under a later ingestion/outcome-freeze protocol.
+
+### Rejected
+
+Requires one qualified human reviewer, an independent human source verifier, a non-empty rationale, and a rejection reason. Rejection creates no reviewed record and does not authorize replacement capacity.
+
+### Deferred
+
+Requires one qualified human reviewer and a non-empty defer reason. It remains pending and nonreplaceable. Source verification is not required merely to defer a case.
+
+## Disagreement
+
+Material disagreement requires an independent adjudicator. Simple majority voting without that adjudicator is insufficient. The adjudicator may resolve to accepted, rejected, or deferred and must supply a rationale.
+
+## Decision custody
+
+Completed decision files remain custodian-private and encrypted or equivalently access-controlled. A future outcome freeze must prove exact packet coverage, reject duplicate/unknown packet IDs, bind the reviewer-registry snapshot SHA-256, and bind the completed decision-bundle SHA-256.
+
+Schema 31 authorizes **human review**, not repository ingestion. No automatic decision application, benchmark-population mutation, or `reserve:03` authorization is created here.
+
+## Next protocol
+
+After the human decision bundle exists, Schema 32 may define the reviewed ingestion and outcome-freeze mechanism. Only that later evidence-bound step may compute accepted/rejected/deferred totals and the resulting exact capacity deficit.
