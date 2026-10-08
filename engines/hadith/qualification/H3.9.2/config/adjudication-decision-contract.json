@@ -19,7 +19,18 @@
     "benchmark_counts": {
       "external-critical-commentary": 158
     },
-    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2"
+    "legacy_schema30_decision_template_sha256": "e4c4d89429d445502b128a3cd32dfb15d27628684b627202dd0081e2dd51abf2",
+    "schema31_decision_template": {
+      "workflow_run_id": 37781676566,
+      "runner_commit": "4ca54bf0d98d4709774e04d80d18b74c13679abc",
+      "artifact_id": 11552726258,
+      "artifact_name": "h392-schema31-decision-template",
+      "artifact_digest": "sha256:7c7095a0a76b14479d37351bbf58f60307bcc6456e8ebd0e1b0a5aafc95da00d",
+      "encrypted_bundle_sha256": "631630ee20af8c50c43dedcf6b0e8bf6613cd5b4ed993d3bd0529216e584be05",
+      "packet_task_binding_sha256": "ce8d63b6d186bcfe715c56ba140d0b475ab1b53f1ef0577341189e98e78840fa",
+      "decision_template_sha256": "a72d1ba9993d2b5e1d156701c8a12684c7b3703426d99ba85c25b66479200558",
+      "evidence_path": "artifacts/SCHEMA31_DECISION_TEMPLATE_EVIDENCE_158.json"
+    }
   },
   "authority_model": {
     "terminal_decisions_are_human_actions": true,
@@ -159,13 +170,17 @@
     "ingestion_must_validate_material_disagreement_truthfulness": true
   },
   "execution_gates": {
-    "human_review_may_begin_under_this_contract": false,
+    "human_review_may_begin_under_this_contract": true,
     "repository_decision_ingestion_authorized": false,
     "automatic_decision_application_authorized": false,
     "automatic_reserve3_authorized": false,
     "benchmark_population_mutation_authorized": false,
-    "next_protocol": "Run and freeze the Schema-31 decision-template migration. Human review may begin only after that execution evidence is frozen; Schema 32 remains the later decision-ingestion/outcome-freeze protocol.",
-    "human_review_blocked_reason": "Schema-31-compatible decision template has not yet been generated and frozen from the exact Schema-30 packet."
+    "next_protocol": "Conduct the exact 158-case human review under this contract and the frozen Schema-31 template. Repository decision ingestion remains prohibited until a separately reviewed Schema-32 decision-ingestion/outcome-freeze protocol is frozen.",
+    "human_review_authorization_basis": {
+      "schema31_template_execution_evidence": "artifacts/SCHEMA31_DECISION_TEMPLATE_EVIDENCE_158.json",
+      "workflow_run_id": 37781676566,
+      "decision_template_sha256": "a72d1ba9993d2b5e1d156701c8a12684c7b3703426d99ba85c25b66479200558"
+    }
   },
   "gold_status_escalation_policy": {
     "expert_gold_minimum_distinct_reviewers": 2,
@@ -184,6 +199,11 @@
     "schema31_template_must_remove_unattested_top_level_decision": true,
     "schema31_template_must_preserve_exact_packet_task_bindings": true,
     "schema31_template_must_be_encrypted": true,
-    "schema31_template_execution_evidence_must_be_frozen_before_review": true
+    "schema31_template_execution_evidence_must_be_frozen_before_review": true,
+    "requirement_satisfied": true,
+    "execution_frozen": true,
+    "execution_evidence_path": "artifacts/SCHEMA31_DECISION_TEMPLATE_EVIDENCE_158.json",
+    "schema31_decision_template_sha256": "a72d1ba9993d2b5e1d156701c8a12684c7b3703426d99ba85c25b66479200558",
+    "packet_task_binding_sha256": "ce8d63b6d186bcfe715c56ba140d0b475ab1b53f1ef0577341189e98e78840fa"
   }
 }
