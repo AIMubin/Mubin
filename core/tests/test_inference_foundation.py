@@ -466,6 +466,85 @@ class TestP0InferenceFoundation(unittest.TestCase):
             })
         self.assert_blocked(data, "exceeds P0 structural entity cap")
 
+    def test_counterfactual_assumed_evidence_must_occur_in_inference_trace(self):
+        data = fixture()
+        second = dict(data["evidence"][0])
+        second["id"] = "ev.other"
+        data["evidence"].append(second)
+        for claim in data["claims"][:-1]:
+            claim["evidence_ids"] = ["ev.other"]
+        data["rules"][0]["source_evidence_ids"] = ["ev.other"]
+        data["claims"][-1]["modality"] = "counterfactual"
+        data["claims"][-1]["counterfactual_context"] = {
+            "scholar_id": "sch.001", "historical_availability_id": "hist.001",
+            "assumed_evidence_id": "ev.001",
+            "assumption": "Suppose the scholar had known the missing evidence."
+        }
+        self.assert_blocked(data, "assumed evidence absent from inference trace")
+
+    def test_blocked_proof_cannot_hide_open_objection_as_no_recorded(self):
+        data = fixture()
+        data["proofs"][0]["verification_status"] = "blocked"
+        data["objections"].append({
+            "id": "obj.001", "target_inference_id": "inf.001",
+            "objection_kind": "contrary_evidence", "statement": "Material objection",
+            "evidence_ids": ["ev.001"], "status": "open"
+        })
+        self.assert_blocked(data, "open objection contradicts no_recorded_objection")
+
+    def test_global_depth_cap_independent_of_claim_insertion_order(self):
+        data = fixture()
+        data["rules"].append({
+            "id": "rule.ded", "methodology_id": "met.001",
+            "rule_type": "deduction", "expression": "Toy induction step",
+            "preconditions": ["one claim"], "exceptions": [],
+            "source_evidence_ids": ["ev.001"], "formalization_status": "draft"
+        })
+        parent = "clm.asl"
+        # Source-first order previously evaded the cached boolean rootedness cap.
+        for i in range(130):
+            name, infid = f"clm.chain{i:03d}", f"inf.chain{i:03d}"
+            data["claims"].append({
+                "id": name, "statement": f"Chained derived claim {i}",
+                "claim_type": "inferred", "conclusion_kind": "rule_derived",
+                "evidence_ids": [], "inference_id": infid,
+                "modality": "actual", "assessment_status": "no_recorded_objection"
+            })
+            data["inferences"].append({
+                "id": infid, "inference_kind": "deduction",
+                "methodology_id": "met.001", "rule_ids": ["rule.ded"],
+                "premise_claim_ids": [parent], "conclusion_claim_id": name,
+                "exception_checks": []
+            })
+            parent = name
+        self.assert_blocked(data, "dependency exceeds P0 depth cap")
+
+    def test_wide_shallow_proof_not_confused_with_deep_proof(self):
+        data = fixture()
+        data["rules"].append({
+            "id": "rule.ded", "methodology_id": "met.001",
+            "rule_type": "deduction", "expression": "Toy support step",
+            "preconditions": ["one claim"], "exceptions": [],
+            "source_evidence_ids": ["ev.001"], "formalization_status": "draft"
+        })
+        for i in range(150):
+            name, infid = f"clm.wide{i:03d}", f"inf.wide{i:03d}"
+            data["claims"].append({
+                "id": name, "statement": "Independent shallow support",
+                "claim_type": "inferred", "conclusion_kind": "rule_derived",
+                "evidence_ids": [], "inference_id": infid,
+                "modality": "actual", "assessment_status": "no_recorded_objection"
+            })
+            data["inferences"].append({
+                "id": infid, "inference_kind": "deduction",
+                "methodology_id": "met.001", "rule_ids": ["rule.ded"],
+                "premise_claim_ids": ["clm.asl"], "conclusion_claim_id": name,
+                "exception_checks": []
+            })
+            data["inferences"][0]["premise_claim_ids"].append(name)
+            data["proofs"][0]["inference_ids"].append(infid)
+        self.assertEqual([], validate_bundle(data))
+
     def test_no_version_bump_or_h392_mutation(self):
         version = (ROOT / "VERSION.yaml").read_text(encoding="utf-8")
         self.assertIn("version: 0.1.0-alpha", version)
