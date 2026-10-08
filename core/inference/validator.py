@@ -125,21 +125,29 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
             if check["outcome"] == "cleared":
                 evidence_refs(check["evidence_ids"], context + " exception " + check["exception"])
 
-    # A valid derived claim must reach source-anchored premises AND sourced rules.
-    memo: dict[str, bool] = {}
+    # Evaluate every claim's rootedness AND longest dependency path. A boolean-only
+    # memo lets long source-first chains bypass the cap; include the absolute depth
+    # in the memo so the outcome is independent of collection ordering.
+    memo: dict[str, tuple[bool, int]] = {}
 
     def rooted(claim_id: str, stack: frozenset[str] = frozenset()) -> bool:
         if claim_id in stack:
             errors.append(f"cycle: premise dependency includes {claim_id}")
             return False
         if len(stack) >= MAX_DEPENDENCY_DEPTH:
-            errors.append(f"claim {claim_id}: premise dependency exceeds P0 depth cap")
+            errors.append(f"claim {claim_id}: dependency exceeds P0 depth cap")
             return False
         if claim_id in memo:
-            return memo[claim_id]
+            valid, depth = memo[claim_id]
+            if len(stack) + depth > MAX_DEPENDENCY_DEPTH:
+                errors.append(f"claim {claim_id}: dependency exceeds P0 depth cap")
+                return False
+            return valid
+
         claim = require("claims", claim_id, "proof trace")
         if claim is None:
             return False
+        depth = 1
         if claim["claim_type"] == "source_attributed":
             okay = claim["conclusion_kind"] == "source_derived"
             if not okay:
@@ -162,11 +170,16 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                 if inf["conclusion_claim_id"] != claim_id:
                     errors.append(f"claim {claim_id}: inference concludes a different claim")
                     okay = False
-                if not all(
+                premise_results = [
                     rooted(premise, stack | {claim_id})
                     for premise in inf["premise_claim_ids"]
-                ):
+                ]
+                if not all(premise_results):
                     okay = False
+                depth = 1 + max(
+                    (memo.get(premise, (False, 0))[1] for premise in inf["premise_claim_ids"]),
+                    default=0,
+                )
                 for rule_id in inf["rule_ids"]:
                     rule = index["rules"].get(rule_id)
                     if rule is None or not evidence_refs(
@@ -177,9 +190,37 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                     claim["evidence_ids"], "claim " + claim_id
                 ):
                     okay = False
-        if okay:
-            memo[claim_id] = True
+        if depth > MAX_DEPENDENCY_DEPTH:
+            errors.append(f"claim {claim_id}: dependency exceeds P0 depth cap")
+            okay = False
+        memo[claim_id] = (okay, depth)
         return okay
+
+    def trace_evidence(claim_id: str) -> set[str]:
+        """Only claim and applied-rule evidence in the claim's own inference closure."""
+        found: set[str] = set()
+        visited_claims: set[str] = set()
+        pending = [claim_id]
+        while pending:
+            current = pending.pop()
+            if current in visited_claims:
+                continue
+            visited_claims.add(current)
+            claim = index["claims"].get(current)
+            if claim is None:
+                continue
+            found.update(claim["evidence_ids"])
+            if claim["claim_type"] != "inferred":
+                continue
+            inf = index["inferences"].get(claim.get("inference_id"))
+            if inf is None:
+                continue
+            for rule_id in inf["rule_ids"]:
+                rule = index["rules"].get(rule_id)
+                if rule is not None:
+                    found.update(rule["source_evidence_ids"])
+            pending.extend(inf["premise_claim_ids"])
+        return found
 
     for claim in bundle["claims"]:
         rooted(claim["id"])
@@ -195,29 +236,43 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                     errors.append(f"{context}: assumed evidence not bound to historical case")
                 if history["knowledge_state"] == "attested_reached":
                     errors.append(f"{context}: evidence already attested reached; no non-reachability counterfactual")
+            if ctx["assumed_evidence_id"] not in trace_evidence(claim["id"]):
+                errors.append(f"{context}: assumed evidence absent from inference trace")
 
     for o in bundle["objections"]:
         require("inferences", o["target_inference_id"], "objection " + o["id"])
         evidence_refs(o["evidence_ids"], "objection " + o["id"])
         if o["status"] == "answered":
             evidence_refs(o["answer"]["evidence_ids"], "objection answer " + o["id"])
+        else:
+            target = index["inferences"].get(o["target_inference_id"])
+            if target is not None:
+                conclusion = index["claims"].get(target["conclusion_claim_id"])
+                if conclusion is not None and conclusion["assessment_status"] == "no_recorded_objection":
+                    errors.append(
+                        f"objection {o['id']}: open objection contradicts no_recorded_objection on {conclusion['id']}"
+                    )
 
-    def trace_inferences(claim_id: str, seen: set[str] | None = None) -> set[str]:
-        seen = set() if seen is None else seen
-        claim = index["claims"].get(claim_id)
-        if not claim or claim["claim_type"] != "inferred":
-            return set()
-        inference_id = claim.get("inference_id")
-        if not inference_id or inference_id in seen or inference_id not in index["inferences"]:
-            return set()
-        if len(seen) >= MAX_DEPENDENCY_DEPTH:
-            errors.append(f"proof trace: dependency depth exceeds P0 cap at {inference_id}")
-            return set()
-        seen.add(inference_id)
-        inf = index["inferences"][inference_id]
-        found = {inference_id}
-        for p in inf["premise_claim_ids"]:
-            found.update(trace_inferences(p, seen))
+    def trace_inferences(claim_id: str) -> set[str]:
+        # Iterative reachability: a global seen count measures width, NOT depth.
+        # The rooted() pass independently limits maximum graph path depth.
+        found: set[str] = set()
+        visited_claims: set[str] = set()
+        pending = [claim_id]
+        while pending:
+            current = pending.pop()
+            if current in visited_claims:
+                continue
+            visited_claims.add(current)
+            claim = index["claims"].get(current)
+            if claim is None or claim["claim_type"] != "inferred":
+                continue
+            inference_id = claim.get("inference_id")
+            inf = index["inferences"].get(inference_id)
+            if inf is None:
+                continue
+            found.add(inference_id)
+            pending.extend(inf["premise_claim_ids"])
         return found
 
     for p in bundle["proofs"]:
