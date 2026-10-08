@@ -12,37 +12,43 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/source"
-      }
+      },
+      "minItems": 1
     },
     "evidence": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/evidence"
-      }
+      },
+      "minItems": 1
     },
     "methodologies": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/methodology"
-      }
+      },
+      "minItems": 1
     },
     "claims": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/claim"
-      }
+      },
+      "minItems": 1
     },
     "rules": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/rule"
-      }
+      },
+      "minItems": 1
     },
     "inferences": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/inference"
-      }
+      },
+      "minItems": 1
     },
     "objections": {
       "type": "array",
@@ -54,7 +60,8 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/proof"
-      }
+      },
+      "minItems": 1
     },
     "historical_availability": {
       "type": "array",
@@ -79,7 +86,7 @@
   "$defs": {
     "identifier": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+      "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
     },
     "digest": {
       "type": "string",
@@ -90,7 +97,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "kind": {
           "type": "string",
@@ -136,11 +143,11 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "source_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "locator": {
           "type": "string",
@@ -211,7 +218,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "label": {
           "type": "string",
@@ -225,7 +232,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true
         }
@@ -243,7 +250,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "statement": {
           "type": "string",
@@ -261,22 +268,38 @@
           "enum": [
             "source_derived",
             "rule_derived",
-            "qiyas_derived",
-            "contested",
-            "undetermined"
+            "qiyas_derived"
           ]
         },
         "evidence_ids": {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true
         },
         "inference_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
+        },
+        "modality": {
+          "type": "string",
+          "enum": [
+            "actual",
+            "counterfactual"
+          ]
+        },
+        "assessment_status": {
+          "type": "string",
+          "enum": [
+            "no_recorded_objection",
+            "contested",
+            "undetermined"
+          ]
+        },
+        "counterfactual_context": {
+          "$ref": "#/$defs/counterfactual_context"
         }
       },
       "required": [
@@ -284,20 +307,53 @@
         "statement",
         "claim_type",
         "conclusion_kind",
-        "evidence_ids"
+        "evidence_ids",
+        "modality",
+        "assessment_status"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "modality": {
+                "const": "counterfactual"
+              }
+            },
+            "required": [
+              "modality"
+            ]
+          },
+          "then": {
+            "required": [
+              "counterfactual_context"
+            ],
+            "properties": {
+              "claim_type": {
+                "const": "inferred"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "counterfactual_context"
+              ]
+            }
+          }
+        }
+      ]
     },
     "rule": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "methodology_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "rule_type": {
           "type": "string",
@@ -332,7 +388,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true
         },
@@ -375,7 +431,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true
         }
@@ -392,19 +448,19 @@
       "properties": {
         "asl": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "far": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "hukm_al_asl": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "illah": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         }
       },
       "required": [
@@ -420,7 +476,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "inference_kind": {
           "type": "string",
@@ -432,13 +488,13 @@
         },
         "methodology_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "rule_ids": {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true,
           "minItems": 1
@@ -447,14 +503,14 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true,
           "minItems": 1
         },
         "conclusion_claim_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "exception_checks": {
           "type": "array",
@@ -523,11 +579,11 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "target_inference_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "objection_kind": {
           "type": "string",
@@ -548,7 +604,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true,
           "minItems": 1
@@ -577,24 +633,24 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "conclusion_claim_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "inference_ids": {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true,
           "minItems": 1
         },
         "methodology_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "verification_scope": {
           "const": "structural_only"
@@ -623,15 +679,15 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "scholar_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "evidence_id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
         },
         "knowledge_state": {
           "type": "string",
@@ -653,7 +709,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}(?![\\s\\S])"
           },
           "uniqueItems": true
         },
@@ -672,6 +728,31 @@
         "statement"
       ],
       "additionalProperties": false
+    },
+    "counterfactual_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scholar_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "historical_availability_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "assumed_evidence_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "assumption": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "scholar_id",
+        "historical_availability_id",
+        "assumed_evidence_id",
+        "assumption"
+      ]
     }
   }
 }
