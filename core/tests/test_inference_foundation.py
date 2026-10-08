@@ -442,6 +442,30 @@ class TestP0InferenceFoundation(unittest.TestCase):
         ]
         self.assert_blocked(data, "depth")
 
+    def test_cli_handles_malformed_json_and_wrong_document_type(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bundle.json"
+            command = [sys.executable, "-m", "core.inference", str(path)]
+            path.write_text("{ malformed", encoding="utf-8")
+            malformed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(2, malformed.returncode, malformed.stderr)
+            self.assertIn("INPUT_ERROR", malformed.stderr)
+            path.write_text("[]", encoding="utf-8")
+            wrong_type = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(1, wrong_type.returncode, wrong_type.stderr)
+            self.assertIn("INVALID", wrong_type.stderr)
+
+    def test_programmatic_entity_cap_is_enforced(self):
+        data = fixture()
+        for number in range(5001):
+            data["sources"].append({
+                "id": f"src.{number + 1000}", "kind": "usul",
+                "work_title": "Synthetic resource-limit test",
+                "edition": "test-only", "locator": "sample",
+                "content_sha256": "0" * 64
+            })
+        self.assert_blocked(data, "exceeds P0 structural entity cap")
+
     def test_no_version_bump_or_h392_mutation(self):
         version = (ROOT / "VERSION.yaml").read_text(encoding="utf-8")
         self.assertIn("version: 0.1.0-alpha", version)

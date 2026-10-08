@@ -9,6 +9,7 @@ on:
       - "docs/ARCHITECTURE.md"
       - "docs/ROADMAP.md"
       - "docs/INFERENCE_CONTRACTS.md"
+      - "docs/reviews/**"
       - ".github/workflows/mubin-inference-foundation.yml"
   push:
     branches: [main, "p0/**", "p0-*"]
@@ -19,6 +20,7 @@ on:
       - "docs/ARCHITECTURE.md"
       - "docs/ROADMAP.md"
       - "docs/INFERENCE_CONTRACTS.md"
+      - "docs/reviews/**"
       - ".github/workflows/mubin-inference-foundation.yml"
 
 permissions:
