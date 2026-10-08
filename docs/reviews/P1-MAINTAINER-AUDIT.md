@@ -55,3 +55,16 @@ Codex's review of primary-audited HEAD `322228fca470856b629f5fb903f156e50567756b
 **Code correction:** commit `3979c9f154a3e66ff02d2d349bd5c15b7cba84cd`. Both post-fix PR workflows passed: P1 `37828257950`, P0 `37828258051` — each **87/87**, as did P1 branch run `37828250963`. The later documentation-only commit requires its own latest-HEAD CI before another Codex review request.
 
 **Maintainer risk analysis:** early cardinality checks are intentionally type-guarded; invalid scalar/nested manifest structures are still rejected by the JSON Schema. Pure-Python library input beyond 5 MiB of compact UTF-8 JSON is now rejected; rejecting this early is not a proof of memory-safe processing of an adversarial Python object with highly complex custom types. No source trust, external rights verification, source authenticity, source-to-claim entailment, or qualified religious review is asserted.
+
+
+## MR-P1-11 — nested JSON decoder recursion (8 October 2026)
+
+**Secondary-review discovery:** Codex on `3039ef32650624a6a467ce41f886862ca981d426` identified that `_load_json` could raise an uncaught `RecursionError` on deeply nested JSON well below the 5 MiB input limit. This violates the documented CLI input-error contract. The associated PR #49 thread remained unresolved when reproduction began.
+
+**Independent maintainer reproduction FIRST:** test-only commit `86954e2d437e0975bd38daef1c4b49042e6b61d7` added two targeted negative tests, one for the bundle and one for the manifest. Workflow `37832965816` recorded **89 tests, 2 failures**; both tests showed an uncaught `RecursionError` and exit 1 rather than documented exit 2.
+
+**Correction:** `ce988b831992539ca864e30e74d9779b9cc4c5a2` includes `RecursionError` in the guarded JSON input exceptions, preserving `INPUT_ERROR` and exit 2. Workflow `37833093496` completed **89/89** tests successfully, including both newly failing regressions.
+
+**Scope:** only `core/provenance/__main__.py` and `core/tests/test_provenance.py` changed in this correction. P0 contracts, prior P1 trust boundaries, and all H3.9.2 frozen assets remained untouched. P0 input-boundary hardening is separately tracked in draft PR #50.
+
+**Review policy:** this document commit requires fresh latest-HEAD CI before any merge. Recheck the complete new diff, Codex finding/thread resolution, and the repository's main-branch protection state. No source authenticity, operator rights, scholarly review or fiqh correctness is claimed.
