@@ -355,8 +355,16 @@ class RepositoryAdjudicationTargetTests(unittest.TestCase):
         self.assertTrue(surface["packet_preparation_completed"])
         self.assertFalse(surface["human_adjudication_started"])
         self.assertFalse(surface["decision_ingestion_authorized"])
-        self.assertEqual(surface["protocol_state"], "decision_contract_frozen")
-        self.assertTrue(surface["human_review_authorized"])
+        self.assertEqual(surface["protocol_state"], "decision_template_migration_required")
+        self.assertFalse(surface["human_review_authorized"])
+        self.assertTrue(surface["schema31_decision_template_required"])
+        self.assertFalse(surface["schema31_decision_template_frozen"])
+        template_target = status["adjudication_decision_template_target"]
+        self.assertTrue(template_target["ready"])
+        self.assertFalse(template_target["completed"])
+        self.assertEqual(template_target["protocol_freeze_schema"], 31)
+        self.assertEqual(template_target["expected_case_count"], 158)
+        self.assertEqual(template_target["source_packet_artifact_id"], 11526263194)
         self.assertFalse(surface["decision_ingestion_authorized"])
         self.assertFalse(
             status["post_consolidation_protocol"]["automatic_reserve3_authorized"]
