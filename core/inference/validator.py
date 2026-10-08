@@ -13,6 +13,9 @@ COLLECTIONS = (
     "sources", "evidence", "methodologies", "claims", "rules",
     "inferences", "objections", "proofs", "historical_availability",
 )
+# P0 handles small research bundles, not corpus-scale untrusted graph ingestion.
+MAX_ENTITIES = 5000
+MAX_DEPENDENCY_DEPTH = 128
 
 
 def validate_bundle(bundle: dict[str, Any]) -> list[str]:
@@ -25,6 +28,8 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
     ]
     if errors:
         return sorted(set(errors))
+    if sum(len(bundle[collection]) for collection in COLLECTIONS) > MAX_ENTITIES:
+        return [f"bundle exceeds P0 structural entity cap of {MAX_ENTITIES}"]
 
     index: dict[str, dict[str, Any]] = {}
     membership: dict[str, str] = {}
@@ -84,12 +89,22 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                 errors.append(f"{context}: qiyas conclusion has wrong origin label")
             if inf["inference_kind"] != "qiyas" and conclusion["conclusion_kind"] == "qiyas_derived":
                 errors.append(f"{context}: non-qiyas conclusion claims qiyas origin")
+        # Prevent rule-kind laundering: a qiyas rule cannot be presented as deduction
+        # to avoid the mandatory asl/far/hukm/illah trace. Auxiliary constraints
+        # and exceptions can accompany a kind-matched rule, never replace it.
+        kinds_seen = set()
         for key in inf["rule_ids"]:
             rule = require("rules", key, context)
-            if rule is not None and rule["methodology_id"] != inf["methodology_id"]:
+            if rule is None:
+                continue
+            kind = rule["rule_type"]
+            kinds_seen.add(kind)
+            if rule["methodology_id"] != inf["methodology_id"]:
                 errors.append(f"{context}: incompatible methodology in rule {key}")
-            if rule is not None and inf["inference_kind"] == "qiyas" and rule["rule_type"] != "qiyas":
-                errors.append(f"{context}: non-qiyas rule used for qiyas")
+            if kind not in (inf["inference_kind"], "constraint", "exception"):
+                errors.append(f"{context}: rule kind {kind} incompatible with {inf['inference_kind']}")
+        if inf["inference_kind"] not in kinds_seen:
+            errors.append(f"{context}: missing matching {inf['inference_kind']} rule")
         for key in inf["premise_claim_ids"]:
             premise = require("claims", key, context)
             if premise is not None and premise["claim_type"] == "inferred":
@@ -113,6 +128,9 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
     def rooted(claim_id: str, stack: frozenset[str] = frozenset()) -> bool:
         if claim_id in stack:
             errors.append(f"cycle: premise dependency includes {claim_id}")
+            return False
+        if len(stack) >= MAX_DEPENDENCY_DEPTH:
+            errors.append(f"claim {claim_id}: premise dependency exceeds P0 depth cap")
             return False
         if claim_id in memo:
             return memo[claim_id]
@@ -162,10 +180,24 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
 
     for claim in bundle["claims"]:
         rooted(claim["id"])
+        if claim["modality"] == "counterfactual":
+            context = "counterfactual claim " + claim["id"]
+            ctx = claim["counterfactual_context"]
+            history = require("historical_availability", ctx["historical_availability_id"], context)
+            require("evidence", ctx["assumed_evidence_id"], context)
+            if history is not None:
+                if history["scholar_id"] != ctx["scholar_id"]:
+                    errors.append(f"{context}: historical scholar identity mismatch")
+                if history["evidence_id"] != ctx["assumed_evidence_id"]:
+                    errors.append(f"{context}: assumed evidence not bound to historical case")
+                if history["knowledge_state"] == "attested_reached":
+                    errors.append(f"{context}: evidence already attested reached; no non-reachability counterfactual")
 
     for o in bundle["objections"]:
         require("inferences", o["target_inference_id"], "objection " + o["id"])
         evidence_refs(o["evidence_ids"], "objection " + o["id"])
+        if o["status"] == "answered":
+            evidence_refs(o["answer"]["evidence_ids"], "objection answer " + o["id"])
 
     def trace_inferences(claim_id: str, seen: set[str] | None = None) -> set[str]:
         seen = set() if seen is None else seen
@@ -174,6 +206,9 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
             return set()
         inference_id = claim.get("inference_id")
         if not inference_id or inference_id in seen or inference_id not in index["inferences"]:
+            return set()
+        if len(seen) >= MAX_DEPENDENCY_DEPTH:
+            errors.append(f"proof trace: dependency depth exceeds P0 cap at {inference_id}")
             return set()
         seen.add(inference_id)
         inf = index["inferences"][inference_id]
@@ -197,7 +232,7 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
                 errors.append(f"{context}: mixed methodology in inference {key}")
         if p["verification_status"] == "structurally_checked":
             conclusion = index["claims"][p["conclusion_claim_id"]]
-            if conclusion["conclusion_kind"] in ("contested", "undetermined"):
+            if conclusion["assessment_status"] != "no_recorded_objection":
                 errors.append(f"{context}: contested or undetermined conclusion cannot be checked")
             if not rooted(p["conclusion_claim_id"]) or not expected:
                 errors.append(f"{context}: unsupported conclusion cannot be checked")
