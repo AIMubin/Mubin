@@ -816,7 +816,7 @@
     "path": "config/adjudication-decision-contract.json",
     "schema_path": "schemas/adjudication-decision.schema.json",
     "documentation_path": "ADJUDICATION_DECISIONS.md",
-    "contract_sha256": "0611c79952949f35c52a5032cf13ee3bb96559824c4c8bdc7ec5bcb864068476",
+    "contract_sha256": "3a0ee20358a4ad2426ba931848439ff2d5742a24fb5616d94a0770cc50d37b31",
     "decision_schema_sha256": "4087cf00a339a92172bf2282ac35119098af857deca65cf48afe10a4fa229c76",
     "packet_workflow_run_id": 37722153068,
     "packet_artifact_id": 11526263194,
