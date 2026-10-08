@@ -307,7 +307,7 @@ class TestP0InferenceFoundation(unittest.TestCase):
     def test_undetermined_cannot_have_checked_proof(self):
         data = fixture()
         data["claims"][-1]["assessment_status"] = "undetermined"
-        self.assert_blocked(data, "contested or undetermined conclusion cannot be checked")
+        self.assert_blocked(data, "unresolved premise or conclusion")
 
     def test_undetermined_with_blocked_proof_is_allowed(self):
         data = fixture()
@@ -366,6 +366,81 @@ class TestP0InferenceFoundation(unittest.TestCase):
             run = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
             self.assertEqual(2, run.returncode)
             self.assertIn("exceeds P0 CLI limit", run.stderr)
+
+    def test_unresolved_source_premise_blocks_checked_descendant(self):
+        data = fixture()
+        data["claims"][0]["assessment_status"] = "undetermined"
+        self.assert_blocked(data, "unresolved premise or conclusion clm.asl")
+
+    def test_counterfactual_premise_cannot_support_actual_descendant(self):
+        data = fixture()
+        data["claims"][-1]["modality"] = "counterfactual"
+        data["claims"][-1]["counterfactual_context"] = {
+            "scholar_id": "sch.001",
+            "historical_availability_id": "hist.001",
+            "assumed_evidence_id": "ev.001",
+            "assumption": "Suppose this scholar knew the cited evidence"
+        }
+        data["rules"].append({
+            "id": "rule.ded", "methodology_id": "met.001",
+            "rule_type": "deduction", "expression": "Hypothetical",
+            "preconditions": ["one premise"], "exceptions": [],
+            "source_evidence_ids": ["ev.001"], "formalization_status": "draft"
+        })
+        data["claims"].append({
+            "id": "clm.actual", "statement": "Actual conclusion laundering a hypothetical",
+            "claim_type": "inferred", "conclusion_kind": "rule_derived",
+            "assessment_status": "no_recorded_objection", "modality": "actual",
+            "evidence_ids": [], "inference_id": "inf.ded"
+        })
+        data["inferences"].append({
+            "id": "inf.ded", "inference_kind": "deduction",
+            "methodology_id": "met.001", "rule_ids": ["rule.ded"],
+            "premise_claim_ids": ["clm.conclusion"],
+            "conclusion_claim_id": "clm.actual", "exception_checks": []
+        })
+        data["proofs"][0]["conclusion_claim_id"] = "clm.actual"
+        data["proofs"][0]["inference_ids"].append("inf.ded")
+        self.assert_blocked(data, "counterfactual premise cannot support actual claim")
+
+    def test_known_historical_state_needs_verified_target(self):
+        data = fixture()
+        data["historical_availability"][0].update(
+            knowledge_state="attested_reached",
+            basis_type="explicit_historical_testimony",
+            basis_evidence_ids=["ev.001"]
+        )
+        data["evidence"][0]["verification_status"] = "unverified"
+        data["evidence"][0]["verification_method"] = "unverified"
+        self.assert_blocked(data, "is not verified")
+
+    def test_dependency_depth_limit_is_fail_closed(self):
+        data = fixture()
+        data["rules"].append({
+            "id": "rule.ded", "methodology_id": "met.001",
+            "rule_type": "deduction", "expression": "Hypothetical",
+            "preconditions": ["one premise"], "exceptions": [],
+            "source_evidence_ids": ["ev.001"], "formalization_status": "draft"
+        })
+        for number in reversed(range(1, 132)):
+            prev = "clm.conclusion" if number == 1 else f"clm.step{number - 1}"
+            data["claims"].append({
+                "id": f"clm.step{number}", "statement": "Depth test",
+                "claim_type": "inferred", "conclusion_kind": "rule_derived",
+                "assessment_status": "no_recorded_objection", "modality": "actual",
+                "evidence_ids": [], "inference_id": f"inf.step{number}"
+            })
+            data["inferences"].append({
+                "id": f"inf.step{number}", "inference_kind": "deduction",
+                "methodology_id": "met.001", "rule_ids": ["rule.ded"],
+                "premise_claim_ids": [prev],
+                "conclusion_claim_id": f"clm.step{number}", "exception_checks": []
+            })
+        data["proofs"][0]["conclusion_claim_id"] = "clm.step131"
+        data["proofs"][0]["inference_ids"] = ["inf.001"] + [
+            f"inf.step{number}" for number in range(1, 132)
+        ]
+        self.assert_blocked(data, "depth")
 
     def test_no_version_bump_or_h392_mutation(self):
         version = (ROOT / "VERSION.yaml").read_text(encoding="utf-8")
