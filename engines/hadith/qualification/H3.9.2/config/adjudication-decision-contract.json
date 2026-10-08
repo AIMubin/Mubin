@@ -28,7 +28,10 @@
     "ai_may_cast_or_self_authorize_decision": false,
     "model_agreement_is_never_authority": true,
     "pinned_human_authored_authority_statement_may_be_evidence": true,
-    "authority_evidence_does_not_replace_human_signoff": true
+    "authority_evidence_does_not_replace_human_signoff": true,
+    "canonical_terminal_decision_path": "terminal_signoff.decision",
+    "terminal_signoff_must_be_human_attested": true,
+    "unattested_top_level_terminal_decision_forbidden": true
   },
   "reviewer_registry": {
     "storage": "custodian_private",
@@ -37,8 +40,10 @@
     "snapshot_sha256_required_before_ingestion": true,
     "required_attested_fields": [
       "reviewer_id",
+      "person_binding_sha256",
+      "identity_binding_attestation",
       "human",
-      "role",
+      "roles",
       "qualification_basis",
       "scope",
       "active",
@@ -55,7 +60,11 @@
       "adjudicator": "Human with equal or stronger domain competence than the reviewer and independent of the reviewer and source verifier for the case."
     },
     "schema_path": "schemas/adjudication-reviewer-registry.schema.json",
-    "unique_reviewer_id_required": true
+    "unique_reviewer_id_required": true,
+    "person_binding_method": "hmac-sha256-custodian-secret-v1",
+    "person_binding_secret_must_remain_external": true,
+    "one_registry_entry_per_human": true,
+    "unique_person_binding_required": true
   },
   "independence_and_conflict_policy": {
     "reviewer_and_source_verifier_must_be_distinct": true,
@@ -63,7 +72,10 @@
     "human_case_curator_may_not_be_terminal_reviewer_of_same_case": true,
     "undisclosed_material_conflict_invalidates_signoff": true,
     "recused_reviewer_may_not_contribute_to_quorum": true,
-    "ai_systems_may_not_occupy_human_roles": true
+    "ai_systems_may_not_occupy_human_roles": true,
+    "distinct_person_checks_use_person_binding_sha256": true,
+    "per_case_conflict_declaration_required_for_every_signing_role": true,
+    "per_case_recusal_must_be_false_for_every_counted_signoff": true
   },
   "decision_states": [
     "accepted",
@@ -105,7 +117,9 @@
       "deferred"
     ],
     "adjudicator_rationale_required": true,
-    "simple_majority_without_adjudicator_is_not_sufficient": true
+    "simple_majority_without_adjudicator_is_not_sufficient": true,
+    "material_disagreement_field_required": true,
+    "when_material_disagreement_terminal_signer_role": "adjudicator"
   },
   "accepted_record_policy": {
     "must_preserve_original_packet_id_and_task_id": true,
@@ -136,7 +150,13 @@
     "ingestion_must_validate_unique_reviewer_ids": true,
     "ingestion_must_validate_cross_identity_independence": true,
     "ingestion_must_validate_terminal_quorum": true,
-    "ingestion_must_validate_expert_gold_escalation": true
+    "ingestion_must_validate_expert_gold_escalation": true,
+    "canonical_terminal_decision_path": "terminal_signoff.decision",
+    "terminal_signoff_required": true,
+    "ingestion_must_validate_terminal_signoff_coherence": true,
+    "ingestion_must_validate_case_conflict_and_recusal": true,
+    "ingestion_must_validate_unique_person_bindings": true,
+    "ingestion_must_validate_material_disagreement_truthfulness": true
   },
   "execution_gates": {
     "human_review_may_begin_under_this_contract": true,
