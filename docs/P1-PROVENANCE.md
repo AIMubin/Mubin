@@ -30,3 +30,7 @@ CLI prints JSON receipts **to stdout**, and never writes or modifies source file
 - **P2:** Quran canonical-text import separately from tafsir.
 - **P3:** Hadith chain and matn evidence with distinct editions and source families.
 - **P4/P5:** execution of Usul rules and historical scholar-evidence inference. Prior `H3.9.2` benchmark gates remain unchanged.
+
+### P1.0 resource and rights gates
+
+P1.0 is a **small offline pilot**, with at most 16 source snapshots per run, 1,024 locator spans per source, 4,096 spans total, 8 MiB per UTF-8 source, and 32 MiB total snapshot bytes. The validator refuses restricted/unknown rights metadata **before reading file contents**. The `operator_cleared` bit and free-text rights basis remain declarations, not verified legal authority. The API assumes the local snapshot directory is not maliciously modified during validation; concurrent filesystem mutation and externally signed corpus provenance require a separately audited trust-anchor design.

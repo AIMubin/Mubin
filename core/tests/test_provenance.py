@@ -204,6 +204,42 @@ class TestP1Provenance(unittest.TestCase):
         self.bundle["inferences"][0]["rule_ids"] = ["rule.nonexistent"]
         self.assert_failed("P0:")
 
+    def test_rights_gate_rejects_without_reading_restricted_file(self):
+        # A restricted snapshot is never opened, even when the file is missing.
+        self.manifest["sources"][0]["rights"]["status"] = "restricted"
+        self.path.unlink()
+        result = self.verify()
+        self.assertFalse(result["valid"])
+        self.assertEqual([], result["receipts"])
+        self.assertTrue(any("rights not operator-cleared" in e for e in result["errors"]))
+        self.assertFalse(any("not an existing regular file" in e for e in result["errors"]))
+
+    def test_per_source_span_cap_blocks_excessive_locator_input(self):
+        original = self.manifest["sources"][0]["spans"][0]
+        self.manifest["sources"][0]["spans"] = [
+            {"locator": f"line:{i}", "start_byte": original["start_byte"],
+             "end_byte": original["end_byte"]} for i in range(1025)
+        ]
+        self.assert_failed("exceeds 1024 spans per source")
+
+    def test_multiple_nonoverlapping_locators(self):
+        # An additional quote must get a distinct, pinned byte range and receipt.
+        text = "Preface"
+        ev = dict(self.bundle["evidence"][0])
+        ev["id"] = "ev.second"
+        ev["excerpt"] = text
+        ev["excerpt_sha256"] = sha(text.encode("utf-8"))
+        ev["locator"] = "folio-0"
+        self.bundle["evidence"].append(ev)
+        self.manifest["sources"][0]["spans"].append({
+            "locator": "folio-0", "start_byte": 0,
+            "end_byte": len(text.encode("utf-8"))
+        })
+        result = self.verify()
+        self.assertTrue(result["valid"], result)
+        self.assertEqual(["ev.001", "ev.second"],
+                         [receipt["evidence_id"] for receipt in result["receipts"]])
+
     def test_cli_valid_json_receipts_and_exit_codes(self):
         bundle_file = self.root / "bundle.json"
         manifest_file = self.root / "manifest.json"
