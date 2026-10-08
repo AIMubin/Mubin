@@ -122,8 +122,15 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
             if len(set(elements.values())) != 4:
                 errors.append(f"{context}: qiyas roles must be distinct claims")
         for check in inf["exception_checks"]:
+            check_context = context + " exception " + check["exception"]
+            # Every supplied reference must resolve, including checks marked
+            # unknown/triggered in blocked or undetermined proof traces.
+            # Such checks may cite unverified evidence (or none at all);
+            # clearing an exception requires at least one verified source item.
             if check["outcome"] == "cleared":
-                evidence_refs(check["evidence_ids"], context + " exception " + check["exception"])
+                evidence_refs(check["evidence_ids"], check_context)
+            elif check["evidence_ids"]:
+                evidence_refs(check["evidence_ids"], check_context, require_verified=False)
 
     # Evaluate every claim's rootedness AND longest dependency path. A boolean-only
     # memo lets long source-first chains bypass the cap; include the absolute depth
