@@ -79,15 +79,26 @@ class Schema31DecisionTemplateWorkflowTests(unittest.TestCase):
         self.assertIn("SCHEMA31_DECISION_TEMPLATE_SUMMARY.json", self.workflow)
         self.assertIn("h392-schema31-decision-template", self.workflow)
 
-    def test_repository_target_is_open_and_review_remains_closed(self):
+    def test_repository_target_is_closed_after_execution_freeze(self):
         target = self.status["adjudication_decision_template_target"]
-        self.assertTrue(target["ready"])
-        self.assertFalse(target["completed"])
+        self.assertFalse(target["ready"])
+        self.assertTrue(target["completed"])
+        self.assertTrue(target["execution_frozen"])
         self.assertEqual(target["protocol_freeze_schema"], 31)
         self.assertEqual(target["expected_case_count"], 158)
         self.assertEqual(target["source_packet_artifact_id"], 11526263194)
-        self.assertFalse(
+        self.assertEqual(target["successful_run_id"], 37781676566)
+        self.assertEqual(target["artifact_id"], 11552726258)
+        self.assertEqual(
+            target["decision_template_sha256"],
+            "a72d1ba9993d2b5e1d156701c8a12684c7b3703426d99ba85c25b66479200558",
+        )
+        self.assertTrue(
             self.status["adjudication_review_surface"]["human_review_authorized"]
+        )
+        self.assertIn(
+            't.get("ready") is not True or t.get("completed") is not False',
+            self.workflow,
         )
 
     def test_integrity_ci_covers_template_workflow(self):

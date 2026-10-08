@@ -1,6 +1,6 @@
 # H3.9.2 Schema-31 Human Decision Contract
 
-Schema 31 defines the human decision contract for the **exact 158-case packet** frozen by Schema 30. It changes no benchmark answers, creates no reviewed records, and does not ingest decisions into the repository. Human review remains **blocked** until the Schema-31-compatible decision template is generated from that exact packet and its execution evidence is frozen.
+Schema 31 defines the human decision contract for the **exact 158-case packet** frozen by Schema 30. It changes no benchmark answers, creates no reviewed records, and does not ingest decisions into the repository. The Schema-31-compatible blank decision template was generated from that exact packet in successful run `37781676566`; its execution evidence is frozen in `artifacts/SCHEMA31_DECISION_TEMPLATE_EVIDENCE_158.json`. Human review is therefore authorized under this contract, while repository decision ingestion remains blocked.
 
 ## Scope binding
 
@@ -17,7 +17,7 @@ The machine-readable contract is `config/adjudication-decision-contract.json`. F
 
 ## Decision-template migration gate
 
-The Schema-30 packet remains canonical evidence and is not rewritten. Its historical blank decision template is hash-bound as legacy input only. Before human review starts, `.github/workflows/h392-schema31-decision-template.yml` must decrypt the exact frozen packet artifact in an ephemeral runner, verify its artifact and plaintext hashes, preserve the exact 158 `packet_id`/`task_id` bindings, generate a blank Schema-31 field layout with no unattested top-level `decision`, encrypt that new template, and publish only redacted hashes/counts plus the encrypted bundle. Human review becomes authorized only after that execution evidence is independently frozen in repository state.
+The Schema-30 packet remains canonical evidence and is not rewritten. Its historical blank decision template is hash-bound as legacy input only. `.github/workflows/h392-schema31-decision-template.yml` executed successfully in run `37781676566` on canonical main commit `4ca54bf0d98d4709774e04d80d18b74c13679abc`. The frozen result preserves all 158 `packet_id`/`task_id` bindings, removes the legacy unattested top-level `decision`, remains blank, and is stored only as an encrypted template bundle plus a redacted summary and SHA-256 declaration. The new template SHA-256 is `a72d1ba9993d2b5e1d156701c8a12684c7b3703426d99ba85c25b66479200558`; the encrypted bundle SHA-256 is `631630ee20af8c50c43dedcf6b0e8bf6613cd5b4ed993d3bd0529216e584be05`.
 
 ## Authority model
 
@@ -79,8 +79,8 @@ Each decision row explicitly records `material_disagreement`. Material disagreem
 
 Completed decision files remain custodian-private and encrypted or equivalently access-controlled. The JSON schemas constrain record and registry **shape**, but cannot by themselves prove cross-record identity independence or quorum. A future Schema-32 ingestion/outcome-freeze validator must prove exact packet coverage, reject duplicate/unknown packet IDs, enforce unique reviewer IDs and unique stable person bindings, validate reviewer/source-verifier/adjudicator distinct-person independence, validate every per-case conflict/recusal declaration, enforce terminal quorum and expert-gold escalation, verify `material_disagreement`, verify that `terminal_signoff.decision` is coherent with the human recommendation/adjudication path, bind the reviewer-registry snapshot SHA-256, and bind the completed decision-bundle SHA-256.
 
-Schema 31 currently authorizes the **decision contract and template migration only**. Human review is not yet authorized. No repository ingestion, automatic decision application, benchmark-population mutation, or `reserve:03` authorization is created here.
+Schema 31 now authorizes **human review of the exact 158 cases** under the frozen contract and migrated blank template. No human decision has yet been recorded by repository state. Repository ingestion, automatic decision application, benchmark-population mutation, and `reserve:03` remain unauthorized.
 
 ## Next protocol
 
-First run and freeze the Schema-31-compatible decision-template migration. Only after that freeze may the 158-case human review begin. After a completed human decision bundle exists, Schema 32 may define the reviewed ingestion and outcome-freeze mechanism. Only that later evidence-bound step may compute accepted/rejected/deferred totals and the resulting exact capacity deficit.
+Freeze a custodian-private reviewer-registry snapshot, then conduct the 158-case human review using the frozen Schema-31 template. Completed decision rows remain private. After a completed human decision bundle exists, Schema 32 may define the reviewed ingestion and outcome-freeze mechanism. Only that later evidence-bound step may compute accepted/rejected/deferred totals and the resulting exact capacity deficit.
