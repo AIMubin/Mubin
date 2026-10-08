@@ -12,9 +12,11 @@ class Schema31DecisionContractTests(unittest.TestCase):
         cls.root = Path(__file__).resolve().parents[1]
         cls.contract_path = cls.root / "config" / "adjudication-decision-contract.json"
         cls.schema_path = cls.root / "schemas" / "adjudication-decision.schema.json"
+        cls.reviewer_schema_path = cls.root / "schemas" / "adjudication-reviewer-registry.schema.json"
         cls.status_path = cls.root / "artifacts" / "H3.9.2-STATUS.json"
         cls.contract = json.loads(cls.contract_path.read_text(encoding="utf-8"))
         cls.schema = json.loads(cls.schema_path.read_text(encoding="utf-8"))
+        cls.reviewer_schema = json.loads(cls.reviewer_schema_path.read_text(encoding="utf-8"))
         cls.status = json.loads(cls.status_path.read_text(encoding="utf-8"))
 
     def test_contract_is_bound_to_exact_schema30_packet(self):
@@ -55,6 +57,18 @@ class Schema31DecisionContractTests(unittest.TestCase):
         self.assertTrue(q["accepted"]["source_verified_must_be_true"])
         self.assertTrue(q["accepted"]["accepted_candidate_binding_required"])
         self.assertTrue(q["rejected"]["rejection_reason_required"])
+
+    def test_expert_gold_escalation_preserves_stronger_curation_rule(self):
+        policy = self.contract["gold_status_escalation_policy"]
+        self.assertEqual(policy["expert_gold_minimum_distinct_reviewers"], 2)
+        self.assertTrue(policy["expert_gold_independent_adjudicator_required"])
+        self.assertTrue(policy["expert_gold_source_verifier_required"])
+        self.assertTrue(policy["expert_gold_rule_overrides_lower_risk_tier_quorum"])
+        self.assertTrue(
+            policy[
+                "derived_adjudicative_judgment_must_not_be_downgraded_to_source_attributed_to_avoid_expert_review"
+            ]
+        )
 
     def test_deferred_remains_pending_and_nonreplaceable(self):
         q = self.contract["terminal_quorum"]["deferred"]
@@ -104,9 +118,34 @@ class Schema31DecisionContractTests(unittest.TestCase):
             decision["decision_schema_sha256"],
             hashlib.sha256(self.schema_path.read_bytes()).hexdigest(),
         )
+        self.assertEqual(
+            decision["reviewer_registry_schema_path"],
+            "schemas/adjudication-reviewer-registry.schema.json",
+        )
+        self.assertEqual(
+            decision["reviewer_registry_schema_sha256"],
+            hashlib.sha256(self.reviewer_schema_path.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            self.contract["reviewer_registry"]["schema_path"],
+            "schemas/adjudication-reviewer-registry.schema.json",
+        )
         self.assertTrue(decision["human_review_authorized"])
         self.assertFalse(decision["decision_ingestion_authorized"])
         self.assertFalse(decision["automatic_reserve3_authorized"])
+
+    def test_reviewer_registry_schema_requires_human_attested_roles(self):
+        self.assertFalse(self.reviewer_schema["additionalProperties"])
+        reviewer = self.reviewer_schema["properties"]["reviewers"]["items"]
+        self.assertTrue(reviewer["properties"]["human"]["const"])
+        self.assertEqual(
+            set(reviewer["properties"]["role"]["enum"]),
+            {"qualified_reviewer", "source_verifier", "adjudicator"},
+        )
+        self.assertEqual(
+            reviewer["properties"]["scope"]["items"]["enum"],
+            ["external-critical-commentary"],
+        )
 
     def test_decision_schema_is_narrow_and_human_attested(self):
         self.assertFalse(self.schema["additionalProperties"])
