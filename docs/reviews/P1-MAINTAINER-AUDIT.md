@@ -1,0 +1,42 @@
+# P1.0 Independent Maintainer Engineering Review
+
+**Stage:** offline source snapshot provenance pilot, not complete P1 corpus qualification.  
+**Primary reviewed candidate:** branch `p1-evidence-provenance-core` after initial contract/validator/test commits; source baseline `567e55858a9911a23430ef81f1e41b7a5f26480e`.  
+**Audit author:** primary maintainer engineering review **before any P1 Codex request**.
+
+## Source-based findings and responses
+
+| Area | Finding and consequence | Correction / test |
+| --- | --- | --- |
+| Source digest | P0 permits a self-asserted `verified` field that does not prove the original file matches | Recompute full local file SHA-256, compare with both P0 `Source.content_sha256` and manifest; independently bind quote to exact byte span. Tamper+fake-quote tests |
+| Locator integrity | Global substring search could satisfy a quote from the wrong location | Use versioned, unique half-open byte spans; reject bad interval, duplicate locator, overlap and UTF-8 split; positive Arabic multibyte test |
+| Input traversal | User-supplied relative paths could access files outside corpus | Reject absolute/traversal/backslash/unusual path segments and existing symlinked ancestors; negative tests for parent/final symlinks |
+| Rights | Initial validator flagged restricted rights but still opened local source; even reading was inappropriate | Fail before source file open if `rights.status != operator_cleared`. Regression with restricted source deliberately deleted |
+| Resource limits | Initial design bounded file bytes but not number of per-source locator spans | Cap 16 sources, 1,024 spans each, 4,096 total spans, 8 MiB/source, 32 MiB total, 5 MiB each CLI JSON input; cap regressions |
+| False assurance | A self-consistent malicious fake book+manifest can pass a local hash check | Return only `local_byte_exact_match_only` receipts, `rights_assurance=operator_assertion_only`. Never call this verified external origin, legal clearance, a valid hadith or fiqh conclusion |
+| CLI | Should not expose receipts for partly failing bundles or overwrite pinned source snapshots | Read-only CLI and library; failure returns `receipts=[]`; 0 structural+local match, 1 validation rejection, 2 malformed/missing/oversize input |
+| Compatibility | Source manifests must not mutate P0, rewrite scholar-derived statements or relax H3.9.2 | Reuse P0 validator before P1 and leave system `VERSION.yaml`, all H3.9.2 campaign artifacts and their qualification gates unchanged |
+
+## Reproducibility
+
+```bash
+python -m pip install -r core/requirements-test.txt
+python -m compileall -q core/inference core/provenance core/tests
+python -m core.provenance --help
+python -m unittest discover -s core/tests -v
+```
+
+Initial P1 implementation CI `37817922739` passed **80** combined P0/P1 tests. Following the primary review, further tests cover hardening and resource limits; only the CI run associated with **final reviewed HEAD** can authorize a PR review request. Any subsequent commit requires re-evaluation of HEAD-specific CI.
+
+**Scientific caveat:** Unit fixtures are synthetic, not actual Quran/Hadith/fiqh editions. This P1.0 pilot demonstrates local byte correspondence and explicit uncertainty but **does not** provide an independently authenticated Islamic corpus or historical facts. A signed/verified external source trust anchor, license audit, and immutable corpus acquisition (P1.1) are still required.
+
+## Known operational limits, separate future work
+
+- Concurrent malicious changes to the local filesystem between path checks and reading are outside the trusted, stable-snapshot model. Do not deploy P1.0 as a hostile-multi-tenant file ingestion service without an audited descriptor-safe open implementation.
+- Rights information is operator-supplied metadata, not legal authentication.
+- P0 proof checking remains structural; source match does not establish that a quotation entails a proposition or validates a scholarly conclusion.
+- No real corpus content or redistribution license is bundled. P1.1 ingestion requires explicit source evidence and licensing review.
+
+## Review order
+
+This written independent maintainer audit and green HEAD CI must precede the first P1 Codex invocation. Resolve any Codex finding by independently reproducing it, adding a regression test, correcting the code, and rerunning HEAD CI. If Codex is unavailable or quota-limited, disclose the absence of independent review and perform an explicitly **non-independent** extra maintainer adversarial pass.
