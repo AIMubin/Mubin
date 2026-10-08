@@ -12,6 +12,7 @@ from .reserve_consolidation import consolidate_reserve_evidence
 from .reserve2_consolidation import consolidate_reserve2_evidence
 from .capacity_extension import build_capacity_extension_manifest
 from .adjudication import build_adjudication_packet, derive_adjudication_source_target
+from .decision_template import build_schema31_decision_template
 from .curation import curate_reviewed_file
 from .evaluate import evaluate_holdout
 from .execution import run_agent_execution
@@ -176,6 +177,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", type=Path, required=True)
     ap.add_argument("--activation", type=Path, required=True)
     ap.add_argument("--capacity-extension", type=Path, required=True)
+
+    dt = sub.add_parser("build-schema31-decision-template")
+    dt.add_argument("--packet", type=Path, required=True)
+    dt.add_argument("--out-dir", type=Path, required=True)
+    dt.add_argument("--expected-packet-sha256", required=True)
 
     ce = sub.add_parser("build-capacity-extension")
     ce.add_argument("--reserve-dir", type=Path, required=True)
@@ -537,6 +543,19 @@ def main(argv: list[str] | None = None) -> int:
             out_dir,
             activation_path=activation,
             capacity_extension_path=capacity_extension,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.cmd == "build-schema31-decision-template":
+        packet = _resolve(root, args.packet)
+        out_dir = _resolve(root, args.out_dir)
+        assert packet is not None and out_dir is not None
+        report = build_schema31_decision_template(
+            root,
+            packet,
+            out_dir,
+            expected_packet_sha256=args.expected_packet_sha256,
         )
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
