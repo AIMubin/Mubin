@@ -12,7 +12,7 @@ from .manifests import emit_campaign_manifests
 from .holdout_seal import sealed_gold_path
 from .validate import validate_campaign
 
-FREEZE_SCHEMA_VERSION = 30
+FREEZE_SCHEMA_VERSION = 31
 ANCHOR_SCHEMA_VERSION = 1
 DEFAULT_ANCHOR_RELATIVE = Path("private/FREEZE_ANCHOR.json")
 
@@ -28,9 +28,15 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "schemas" / "source-registry.schema.json",
         root / "schemas" / "factory-curator-response.schema.json",
         root / "schemas" / "factory-verifier-response.schema.json",
+        root / "schemas" / "adjudication-decision.schema.json",
+        root / "schemas" / "adjudication-reviewer-registry.schema.json",
         root / "config" / "factory-policy.json",
+        root / "config" / "adjudication-decision-contract.json",
         root / "agents" / "CURATOR_CONTRACT.md",
         root / "agents" / "VERIFIER_CONTRACT.md",
+        root / "CURATION.md",
+        root / "ADJUDICATION.md",
+        root / "ADJUDICATION_DECISIONS.md",
         root / "requirements.txt",
         root / "benchmark_campaign" / "__init__.py",
         root / "benchmark_campaign" / "__main__.py",
@@ -58,6 +64,7 @@ def _frozen_protocol_files(root: Path) -> list[Path]:
         root / "benchmark_campaign" / "capacity_extension.py",
         root / "benchmark_campaign" / "reserve2_consolidation.py",
         root / "benchmark_campaign" / "adjudication.py",
+        root / "benchmark_campaign" / "decision_template.py",
         root / "AGENT_EXECUTION.md",
         root / "adapters" / "chat_completions.py",
     ]
