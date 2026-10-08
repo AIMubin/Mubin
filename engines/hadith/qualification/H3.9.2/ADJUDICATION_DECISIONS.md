@@ -62,6 +62,10 @@ Requires one qualified human reviewer, an independent human source verifier, a n
 
 Requires one qualified human reviewer and a non-empty defer reason. It remains pending and nonreplaceable. Source verification is not required merely to defer a case.
 
+### Expert-gold escalation
+
+Schema 31 does not weaken the stronger `CURATION.md` rule for `expert_gold`. If an accepted candidate is `expert_gold`, or the judgment is genuinely derived/adjudicative and therefore belongs on that track, the case requires **two distinct qualified reviewers plus an independent adjudicator**, with source verification. The case may not be relabeled `source_attributed` merely to avoid that stronger quorum.
+
 ## Disagreement
 
 Material disagreement requires an independent adjudicator. Simple majority voting without that adjudicator is insufficient. The adjudicator may resolve to accepted, rejected, or deferred and must supply a rationale.
