@@ -43,7 +43,7 @@ def run(argv: list[str] | None = None) -> int:
         )
     except (OSError, UnicodeError, ValueError, RecursionError) as exc:
         result = {"valid": False, "code": "INPUT_ERROR", "errors": [
-            f"invalid or unreadable catalog input ({type(exc).__name__})"
+            f"invalid JSON/UTF-8 or unreadable catalog input ({type(exc).__name__})"
         ]}
         if args.json:
             print(json.dumps(result, ensure_ascii=False))
