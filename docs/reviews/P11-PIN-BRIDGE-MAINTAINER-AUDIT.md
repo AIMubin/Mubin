@@ -25,3 +25,11 @@
 - Snapshot custody and multi-user hostile-filesystem ingestion require additional security review; path checks on POSIX use `O_NOFOLLOW` and fstat but do not attest to external origin.
 - Final code, documentation and tests must run successfully on the exact latest HEAD. Secondary Codex review is requested only **after** maintainer review and clean CI; quota/unavailability fallback is a non-independent maintainer-only second pass and must be labeled as such.
 - PR #49 prerequisite, PR #50 input hardening, and branch protection remain open governance dependencies.
+
+## Additional maintainer finding — explicit selection, not silent filtering
+
+The initial implementation implicitly required a cached file for every registry entry, but the H3.9.2 registry includes 19 entries (18 eligible plus one discovery-only), and the existing acquisition defaults to eligible entries. A full-registry assertion would consequently fail even for an otherwise correct eligible-only cache. More seriously, silently omitting the missing entry would make report completeness ambiguous.
+
+Test-only commit `d5bc5c8203ff8563ac6c15d7d29f15989ebd7a8e`, CI `38903282534`, **108 tests, 3 errors** for missing explicit selection API. Corrected with explicit library and CLI filters in commits `72d2e51624b7ea97b3b4c092babc04f344168964` and `ccb769d220c88041ccdc09aa4a505778cecd579b`. Fix CI `38903364828`, **108/108 passed**. Every filtered result records the full registry source count, selected count, filter mode and exact source IDs; unknown/empty filters fail closed.
+
+**Holdout isolation remains external to this bridge:** source eligibility does not identify training/validation/holdout partitions. The adapter must never be used as a means to access a sealed holdout during development. Source partition controls must be enforced by the existing Hadith custodian process. Final exact-HEAD CI is required after this documentation update.
