@@ -1,0 +1,82 @@
+{
+  "catalog_version": "0.1.0",
+  "scope": "shamela_bibliographic_metadata_only",
+  "acquisition": {
+    "method": "manual_official_page_review",
+    "database_inspected": false,
+    "text_acquired": false,
+    "rights_verified": false
+  },
+  "entries": [
+    {
+      "source_id": "shamela:book:1681",
+      "book_id": 1681,
+      "discipline": "hadith",
+      "work_title": "صحيح البخاري",
+      "author_display": "محمد بن إسماعيل البخاري",
+      "edition_display": "الطبعة السلطانية، المطبعة الكبرى الأميرية ببولاق، ١٣١١ هـ؛ تصوير بعناية محمد زهير الناصر، دار طوق النجاة، ١٤٢٢ هـ",
+      "editor_display": "تحقيق جماعة من العلماء؛ تصوير بعناية محمد زهير الناصر",
+      "publisher_display": "المطبعة الكبرى الأميرية، بولاق، مصر؛ تصوير دار طوق النجاة، بيروت",
+      "volume_description": "٩ أجزاء",
+      "pagination_status": "site_reports_print_match",
+      "book_url": "https://shamela.ws/book/1681",
+      "sample_page_url": "https://shamela.ws/book/1681/9",
+      "rights_status": "unverified",
+      "edition_verification": "bibliographic_claim_only",
+      "text_acquisition_status": "not_acquired",
+      "notes": "صفحة الشاملة تصف الطبعة السلطانية والتصوير اللاحق مع ترقيم الأحاديث والحواشي؛ تعدد الطبعات والترقيم لا يجيز المطابقة النصية أو نقل الدرجة الحديثية آليا.",
+      "review_flags": [
+        "multiple_editions",
+        "pagination_edition_specific",
+        "cross_edition_numbering_risk"
+      ]
+    },
+    {
+      "source_id": "shamela:book:7798",
+      "book_id": 7798,
+      "discipline": "tafsir",
+      "work_title": "جامع البيان عن تأويل آي القرآن",
+      "author_display": "محمد بن جرير الطبري",
+      "edition_display": "تحقيق عبد الله بن عبد المحسن التركي؛ الطبعة الأولى، ١٤٢٢ هـ - ٢٠٠١ م",
+      "editor_display": "عبد الله بن عبد المحسن التركي، بالتعاون مع دار هجر وعبد السند حسن يمامة",
+      "publisher_display": "دار هجر، القاهرة، مصر",
+      "volume_description": "٢٦ جزءًا (٢٤ والفهارس)",
+      "pagination_status": "site_reports_print_match",
+      "book_url": "https://shamela.ws/book/7798",
+      "sample_page_url": "https://shamela.ws/book/7798/1",
+      "rights_status": "unverified",
+      "edition_verification": "bibliographic_claim_only",
+      "text_acquisition_status": "not_acquired",
+      "notes": "البطاقة تنص على إدخال إلكتروني جديد اعتمادًا على تحقيق التركي. يتضمن الوصف الطويل أيضًا نصًا عن الاعتماد على طبعة أخرى ثم موافقة صفحات هجر؛ هذا تعارض وصفي أو أثر نقل سابق يستدعي مراجعة بشرية قبل اعتماد هوية النسخة النصية.",
+      "review_flags": [
+        "multiple_editions",
+        "electronic_transcription_edition_sensitive",
+        "bibliographic_description_needs_human_review",
+        "pagination_edition_specific"
+      ]
+    },
+    {
+      "source_id": "shamela:book:8180",
+      "book_id": 8180,
+      "discipline": "usul",
+      "work_title": "الرسالة",
+      "author_display": "محمد بن إدريس الشافعي",
+      "edition_display": "تحقيق وشرح أحمد محمد شاكر؛ الطبعة الأولى، ١٣٥٧ هـ - ١٩٣٨ م",
+      "editor_display": "أحمد محمد شاكر",
+      "publisher_display": "مصطفى البابي الحلبي وأولاد، مصر",
+      "volume_description": "٦٠١ صفحة",
+      "pagination_status": "site_reports_print_match",
+      "book_url": "https://shamela.ws/book/8180",
+      "sample_page_url": "https://shamela.ws/book/8180/114",
+      "rights_status": "unverified",
+      "edition_verification": "bibliographic_claim_only",
+      "text_acquisition_status": "not_acquired",
+      "notes": "تذكر بطاقة الشاملة إدراج تصويبات وإضافات من مستدرك المحقق في مواضعها داخل النسخة الإلكترونية مع الإشارة إليها؛ لذلك لا يجوز مساواة السلسلة الرقمية بأصل تاريخي أو طبعة أخرى دون مقابلة مستقلة.",
+      "review_flags": [
+        "editorial_interventions",
+        "pagination_edition_specific",
+        "multiple_editions"
+      ]
+    }
+  ]
+}
