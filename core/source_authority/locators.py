@@ -19,7 +19,7 @@ from .hadith_bridge import (
 )
 
 MAX_EXCERPT_BYTES = 1024 * 1024
-_LOCATOR = re.compile(r"gitblob:([0-9a-f]{40})#char=(0|[1-9][0-9]*):(0|[1-9][0-9]*)\Z")
+_LOCATOR = re.compile(r"gitblob:([0-9a-f]{40})#char=(0|[1-9][0-9]{0,18}):(0|[1-9][0-9]{0,18})\Z")
 
 
 def verify_hadith_locator(
@@ -84,6 +84,10 @@ def verify_hadith_locator(
     a, b = int(raw_a), int(raw_b)
     if b <= a:
         return reject("locator character range must be strictly increasing")
+    if b - a != len(excerpt):
+        return reject("excerpt character length differs from locator span")
+    if b > max_source_bytes:
+        return reject("locator character bound exceeds source byte budget")
 
     sources = {item["source_id"]: item for item in registry["sources"]}
     entry = sources.get(source_id)
