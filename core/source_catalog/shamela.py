@@ -44,27 +44,45 @@ def validate_shamela_catalog(catalog: Any) -> list[str]:
     entries = catalog.get("entries")
     if isinstance(entries, list) and len(entries) > MAX_ENTRIES:
         return [f"catalog: exceeds {MAX_ENTRIES} entries"]
-    # Reject deeply nested or disguised fields BEFORE whole-object JSON
-    # serialization or jsonschema's potentially huge value echoing.
-    textual = (
+    # Keep adversarial programmatic values bounded BEFORE whole-object JSON
+    # serialization or jsonschema's potentially huge diagnostic value echo.
+    text_limits = {
+        "source_id": 40, "discipline": 20, "work_title": 200,
+        "author_display": 300, "edition_display": 500,
+        "editor_display": 300, "publisher_display": 300,
+        "volume_description": 100, "pagination_status": 50,
+        "book_url": 100, "sample_page_url": 120, "rights_status": 40,
+        "edition_verification": 50, "text_acquisition_status": 40,
+        "notes": 4096,
+    }
+    significant = (
         "work_title", "author_display", "edition_display",
         "editor_display", "publisher_display", "volume_description", "notes",
     )
+    allowed = set(text_limits) | {"book_id", "review_flags"}
+    unknown_root = set(catalog) - {"catalog_version", "scope", "acquisition", "entries"}
+    if unknown_root:
+        return ["catalog: unknown top-level metadata field"]
     if isinstance(entries, list):
         for i, row in enumerate(entries):
             if not isinstance(row, dict):
                 return [f"catalog: invalid JSON entry shape at {i}"]
-            for field in textual:
+            for field in row:
+                if not isinstance(field, str) or field not in allowed:
+                    return [f"catalog: unknown metadata field {str(field)[:100]} at {i}"]
+            for field, cap in text_limits.items():
                 if field in row:
                     value = row[field]
                     if not isinstance(value, str):
                         return [f"catalog: invalid JSON text field {field} at {i}"]
-                    if not value.strip():
+                    if len(value) > cap:
+                        return [f"catalog: {field} exceeds field size limit at {i}"]
+                    if field in significant and not value.strip():
                         return [f"catalog: {field} cannot be whitespace-only at {i}"]
             if "review_flags" in row:
                 flags = row["review_flags"]
                 if not isinstance(flags, list) or len(flags) > 16 or any(
-                    not isinstance(flag, str) for flag in flags
+                    not isinstance(flag, str) or len(flag) > 100 for flag in flags
                 ):
                     return [f"catalog: invalid JSON review_flags at {i}"]
     try:
