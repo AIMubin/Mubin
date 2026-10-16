@@ -97,7 +97,7 @@ def validate_parent_window_binding(
         window_bytes.decode("utf-8", "strict")
     except UnicodeError:
         issues.append("window contains invalid UTF-8 bytes")
-    if b"\\r" in window_bytes:
+    if b"\r" in window_bytes:
         issues.append("window contains unsupported CR newline")
     if window["size_bytes"] > ABSOLUTE_MAX_WINDOW_BYTES:
         issues.append("window declared size exceeds maximum byte limit")
