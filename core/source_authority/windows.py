@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import stat
 from pathlib import Path
 from typing import Any
@@ -114,6 +115,15 @@ def validate_parent_window_binding(
         issues.append("quote digest mismatch")
     if quote["end_char"] <= quote["start_char"]:
         issues.append("quote character span invalid")
+    match = re.fullmatch(
+        r"gitblob:([a-f0-9]{40})#char=(0|[1-9][0-9]{0,18}):(0|[1-9][0-9]{0,18})",
+        quote["locator"],
+    )
+    if (
+        match is None or int(match.group(2)) != quote["start_char"]
+        or int(match.group(3)) != quote["end_char"]
+    ):
+        issues.append("quote character offsets differ from frozen locator")
     if not quote["locator"].startswith("gitblob:" + parent["git_blob_sha1"] + "#char="):
         issues.append("quote locator's parent blob pin mismatch")
     if window["id"] != "win." + _sha(_canonical(_identity_payload(binding))):
@@ -283,3 +293,57 @@ def derive_parent_window(
     result["valid"] = True
     result["binding"] = binding
     return result, window_bytes
+
+
+def check_linked_p1_receipt(
+    binding: dict[str, Any],
+    p1_result: dict[str, Any],
+) -> list[str]:
+    """Check a P1 *local* receipt matches precisely one derived quote window.
+
+    Input should be the direct output of core.provenance.verify_bundle in a
+    trusted pipeline. JSON metadata consistency is NOT an attestation of
+    publisher identity, real permissions, or trustworthy remote execution.
+    """
+    if not isinstance(binding, dict) or not isinstance(p1_result, dict):
+        return ["binding and P1 result must be objects"]
+    try:
+        raw = _canonical(binding)
+        if len(raw) > 5 * 1024 * 1024:
+            return ["binding JSON byte limit exceeded"]
+        schema = json.loads(WINDOW_SCHEMA_PATH.read_text(encoding="utf-8"))
+        schema_errors = list(Draft202012Validator(schema).iter_errors(binding))
+    except (TypeError, ValueError, RecursionError, UnicodeError) as exc:
+        return [f"invalid binding JSON ({type(exc).__name__})"]
+    if schema_errors:
+        return ["binding schema invalid"]
+
+    if p1_result.get("valid") is not True:
+        return ["P1 result is not valid"]
+    if p1_result.get("scope") != "local_byte_exact_match_only":
+        return ["P1 receipt assurance scope mismatch"]
+    if p1_result.get("rights_assurance") != "operator_assertion_only":
+        return ["P1 rights assurance scope mismatch"]
+    receipts = p1_result.get("receipts")
+    if not isinstance(receipts, list) or len(receipts) != 1:
+        return ["expected exactly one P1 quote receipt for this derived window"]
+    p1 = receipts[0]
+    if not isinstance(p1, dict):
+        return ["P1 quote receipt must be an object"]
+
+    q = binding["quote"]
+    w = binding["window"]
+    expected = {
+        "source_id": w["id"],
+        "source_sha256": w["content_sha256"],
+        "excerpt_sha256": q["sha256"],
+        "start_byte": q["start_in_window_byte"],
+        "end_byte": q["end_in_window_byte"],
+        "verification_kind": "local_byte_exact_match",
+    }
+    issues = []
+    for name, desired in expected.items():
+        actual = p1.get(name)
+        if type(actual) is not type(desired) or actual != desired:
+            issues.append(f"P1 receipt {name} differs from parent-window binding")
+    return issues
