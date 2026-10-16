@@ -192,23 +192,39 @@ class TestP11ParentWindow(unittest.TestCase):
         self.assertEqual("operator_assertion_only", p1["rights_assurance"])
         # The *separate* parent-window binding carries full-parent identity.
         self.assertEqual(sha(self.raw), binding["parent"]["source_sha256"])
-        self.assertEqual([], check_linked_p1_receipt(binding, p1))
+        self.assertEqual([], check_linked_p1_receipt(binding, p1, content))
         other = copy.deepcopy(p1)
         other["receipts"][0]["source_sha256"] = binding["parent"]["source_sha256"]
-        self.assertTrue(check_linked_p1_receipt(binding, other))
+        self.assertTrue(check_linked_p1_receipt(binding, other, content))
         other = copy.deepcopy(p1)
         other["receipts"][0]["start_byte"] += 1
-        self.assertTrue(check_linked_p1_receipt(binding, other))
+        self.assertTrue(check_linked_p1_receipt(binding, other, content))
         other = copy.deepcopy(p1)
         other["receipts"][0]["source_id"] = "win.forged"
-        self.assertTrue(check_linked_p1_receipt(binding, other))
+        self.assertTrue(check_linked_p1_receipt(binding, other, content))
         altered_binding = copy.deepcopy(binding)
         altered_binding["parent"]["version_id"] = "forged-source-edition"
-        self.assertTrue(check_linked_p1_receipt(altered_binding, p1))
+        self.assertTrue(check_linked_p1_receipt(altered_binding, p1, content))
+
+        # A hash is NOT a signature: rehash a physically impossible window
+        # to prove that the linker performs semantic checks, not just hashes.
+        for wrong_length in (len(content) + 1, 4 * 1024 * 1024 + 1):
+            malformed = copy.deepcopy(binding)
+            malformed["window"]["size_bytes"] = wrong_length
+            unsigned = dict(malformed)
+            unsigned.pop("binding_sha256", None)
+            malformed["binding_sha256"] = sha(json.dumps(
+                unsigned, ensure_ascii=False, sort_keys=True,
+                separators=(",", ":")
+            ).encode("utf-8"))
+            self.assertTrue(
+                check_linked_p1_receipt(malformed, p1, content),
+                "linker accepted impossible or over-budget window size"
+            )
 
         other = copy.deepcopy(p1)
         other["scope"] = "fabricated_external_authentication"
-        self.assertTrue(check_linked_p1_receipt(binding, other))
+        self.assertTrue(check_linked_p1_receipt(binding, other, content))
 
         (stage / "windows" / "quote.txt").write_bytes(content + b"!")
         rejected = verify_bundle(data, manifest, stage)
@@ -243,6 +259,37 @@ class TestP11ParentWindow(unittest.TestCase):
         self.assertTrue(
             any("locator" in x or "character" in x for x in validate_parent_window_binding(bad, content))
         )
+
+    def test_window_validator_rejects_self_consistent_invalid_utf8_and_cr(self):
+        from core.source_authority.windows import _identity_payload, _canonical, _sha, _binding_digest
+        result, original = self.derive(left_context_bytes=1)
+        self.assertTrue(result["valid"], result)
+        self.assertIsNotNone(original)
+        self.assertEqual(b"\\n", original[:1])
+        for wrong_prefix in (b"\\xff", b"\\r"):
+            with self.subTest(wrong_prefix=wrong_prefix):
+                malicious_bytes = wrong_prefix + original[1:]
+                forged = copy.deepcopy(result["binding"])
+                forged["window"]["content_sha256"] = sha(malicious_bytes)
+                forged["window"]["id"] = "win." + _sha(_canonical(_identity_payload(forged)))
+                forged["binding_sha256"] = _binding_digest(forged)
+                issues = validate_parent_window_binding(forged, malicious_bytes)
+                self.assertTrue(issues, "invalid UTF-8/CR context was accepted")
+
+    def test_window_validator_rejects_quote_character_count_mismatch(self):
+        from core.source_authority.windows import _identity_payload, _canonical, _sha, _binding_digest
+        result, content = self.derive()
+        self.assertTrue(result["valid"], result)
+        forged = copy.deepcopy(result["binding"])
+        forged["quote"]["end_char"] += 1
+        forged["quote"]["locator"] = (
+            "gitblob:" + forged["parent"]["git_blob_sha1"] + "#char="
+            + str(forged["quote"]["start_char"]) + ":"
+            + str(forged["quote"]["end_char"])
+        )
+        forged["binding_sha256"] = _binding_digest(forged)
+        issues = validate_parent_window_binding(forged, content)
+        self.assertTrue(issues, "quote codepoint length and locator disagree")
 
     def test_actual_larger_than_p1_snapshot_limit_can_derive_small_window(self):
         # 9 MiB raw parent; P1 cannot verify it as one <=8 MiB snapshot.
