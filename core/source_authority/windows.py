@@ -91,6 +91,16 @@ def validate_parent_window_binding(
 
     parent, window, quote = binding["parent"], binding["window"], binding["quote"]
     issues: list[str] = []
+    # JSON hashes are self-asserted: validate actual bytes and source format too.
+    # With the 4 MiB cap already enforced, decoding here is bounded.
+    try:
+        window_bytes.decode("utf-8", "strict")
+    except UnicodeError:
+        issues.append("window contains invalid UTF-8 bytes")
+    if b"\\r" in window_bytes:
+        issues.append("window contains unsupported CR newline")
+    if window["size_bytes"] > ABSOLUTE_MAX_WINDOW_BYTES:
+        issues.append("window declared size exceeds maximum byte limit")
     if parent["quote_end_byte"] <= parent["quote_start_byte"]:
         issues.append("parent quote byte span is invalid")
     if not (
@@ -111,8 +121,16 @@ def validate_parent_window_binding(
         issues.append("quote end offset differs from parent")
     if not (0 <= a < b <= len(window_bytes)):
         issues.append("quote byte interval outside window")
-    elif _sha(window_bytes[a:b]) != quote["sha256"]:
-        issues.append("quote digest mismatch")
+    else:
+        if _sha(window_bytes[a:b]) != quote["sha256"]:
+            issues.append("quote digest mismatch")
+        try:
+            literal_quote = window_bytes[a:b].decode("utf-8", "strict")
+        except UnicodeError:
+            issues.append("quote splits a UTF-8 character boundary")
+        else:
+            if len(literal_quote) != quote["end_char"] - quote["start_char"]:
+                issues.append("quote codepoint length inconsistent with character locator")
     if quote["end_char"] <= quote["start_char"]:
         issues.append("quote character span invalid")
     match = re.fullmatch(
@@ -298,6 +316,7 @@ def derive_parent_window(
 def check_linked_p1_receipt(
     binding: dict[str, Any],
     p1_result: dict[str, Any],
+    window_bytes: bytes,
 ) -> list[str]:
     """Check a P1 *local* receipt matches precisely one derived quote window.
 
@@ -307,6 +326,11 @@ def check_linked_p1_receipt(
     """
     if not isinstance(binding, dict) or not isinstance(p1_result, dict):
         return ["binding and P1 result must be objects"]
+    # Re-validate the *actual* immutable derived bytes: a rehashed, impossible
+    # size/UTF-8/CR claim must never be enough to link a P1 receipt.
+    binding_issues = validate_parent_window_binding(binding, window_bytes)
+    if binding_issues:
+        return ["invalid parent-window binding: " + problem for problem in binding_issues]
     try:
         raw = _canonical(binding)
         if len(raw) > 5 * 1024 * 1024:
