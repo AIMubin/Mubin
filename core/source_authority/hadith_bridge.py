@@ -115,6 +115,8 @@ def verify_hadith_cache(
     *,
     max_source_bytes: int = DEFAULT_MAX_SOURCE_BYTES,
     max_total_bytes: int = DEFAULT_MAX_TOTAL_BYTES,
+    eligible_only: bool = False,
+    allowed_source_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Verify the bytes against the *declared frozen registry pin*, nothing more.
 
@@ -138,6 +140,36 @@ def verify_hadith_cache(
         result["errors"] = ["byte budgets must be positive integers"]
         return result
 
+    if type(eligible_only) is not bool:
+        result["errors"] = ["eligible_only must be a boolean"]
+        return result
+    if allowed_source_ids is not None:
+        if not isinstance(allowed_source_ids, (set, frozenset)) or any(
+            not isinstance(sid, str) for sid in allowed_source_ids
+        ):
+            result["errors"] = ["allowed_source_ids must be a set of strings"]
+            return result
+        available_ids = {entry["source_id"] for entry in registry["sources"]}
+        unknown = sorted(allowed_source_ids - available_ids)
+        if unknown:
+            result["errors"] = [f"unknown source IDs: {', '.join(unknown[:10])}"]
+            return result
+
+    selected = [
+        entry for entry in registry["sources"]
+        if (not eligible_only or entry["qualification_eligible"])
+        and (allowed_source_ids is None or entry["source_id"] in allowed_source_ids)
+    ]
+    result["selection"] = {
+        "registry_source_count": len(registry["sources"]),
+        "selected_source_count": len(selected),
+        "eligible_only": eligible_only,
+        "allowed_source_ids": sorted(allowed_source_ids) if allowed_source_ids is not None else None,
+    }
+    if not selected:
+        result["errors"] = ["source selection is empty"]
+        return result
+
     result["registry_sha256"] = _registry_digest(registry)
     root = Path(cache_root)
     if root.is_symlink() or not root.is_dir():
@@ -145,7 +177,7 @@ def verify_hadith_cache(
         return result
 
     consumed = 0
-    for entry in sorted(registry["sources"], key=lambda x: x["source_id"]):
+    for entry in sorted(selected, key=lambda x: x["source_id"]):
         name = cache_filename(entry["source_id"])
         record: dict[str, Any] = {
             "source_id": entry["source_id"],
@@ -227,5 +259,5 @@ def verify_hadith_cache(
             record["status"] = "unsafe_cache_file"
             errors.append(f"{entry['source_id']}: cache I/O failed ({type(exc).__name__})")
     result["errors"] = errors
-    result["valid"] = not errors and len(result["sources"]) == len(registry["sources"])
+    result["valid"] = not errors and len(result["sources"]) == len(selected)
     return result
