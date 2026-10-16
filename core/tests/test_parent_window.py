@@ -202,6 +202,10 @@ class TestP11ParentWindow(unittest.TestCase):
         other = copy.deepcopy(p1)
         other["receipts"][0]["source_id"] = "win.forged"
         self.assertTrue(check_linked_p1_receipt(binding, other))
+        altered_binding = copy.deepcopy(binding)
+        altered_binding["parent"]["version_id"] = "forged-source-edition"
+        self.assertTrue(check_linked_p1_receipt(altered_binding, p1))
+
         other = copy.deepcopy(p1)
         other["scope"] = "fabricated_external_authentication"
         self.assertTrue(check_linked_p1_receipt(binding, other))
