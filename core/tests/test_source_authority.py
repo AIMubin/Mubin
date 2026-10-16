@@ -165,6 +165,46 @@ class TestHadithPinBridge(unittest.TestCase):
         self.assertFalse(r["valid"])
         self.assertEqual("unsafe_cache_file", r["sources"][0]["status"])
 
+    def test_selection_skips_ineligible_only_when_explicit(self):
+        discovery = {
+            **self.source, "source_id": "discovery:000Example.Index",
+            "work_id": "000Example.Index",
+            "version_id": "000Example.Index.test",
+            "qualification_eligible": False,
+        }
+        self.registry["sources"].append(discovery)
+        self.assertFalse(self.verify()["valid"], "all sources should require all cache files")
+        r = self.verify(eligible_only=True)
+        self.assertTrue(r["valid"], r)
+        self.assertEqual(1, r["selection"]["selected_source_count"])
+        self.assertEqual(2, r["selection"]["registry_source_count"])
+        self.assertEqual(True, r["selection"]["eligible_only"])
+        self.assertEqual([self.sid], [s["source_id"] for s in r["sources"]])
+
+    def test_explicit_subset_selection_and_unknown_ids_fail_closed(self):
+        second = {
+            **self.source, "source_id": "openiti:002Other.Work",
+            "work_id": "002Other.Work",
+            "version_id": "002Other.Work.test",
+        }
+        self.registry["sources"].append(second)
+        r = self.verify(allowed_source_ids={self.sid})
+        self.assertTrue(r["valid"], r)
+        self.assertEqual([self.sid], [s["source_id"] for s in r["sources"]])
+        self.assertEqual([self.sid], r["selection"]["allowed_source_ids"])
+        rejected = self.verify(allowed_source_ids={"openiti:unknown"})
+        self.assertFalse(rejected["valid"])
+        self.assertTrue(any("unknown" in e for e in rejected["errors"]), rejected)
+        empty = self.verify(allowed_source_ids=set())
+        self.assertFalse(empty["valid"])
+        self.assertTrue(any("empty" in e for e in empty["errors"]), empty)
+
+    def test_eligible_only_with_no_eligible_source_is_error(self):
+        self.source["qualification_eligible"] = False
+        r = self.verify(eligible_only=True)
+        self.assertFalse(r["valid"])
+        self.assertTrue(any("empty" in e for e in r["errors"]), r)
+
     def test_real_frozen_registry_metadata_is_structurally_accepted(self):
         frozen = json.loads(HADITH_REGISTRY.read_text(encoding="utf-8"))
         # This is deliberately a metadata test; cached source files are NOT
