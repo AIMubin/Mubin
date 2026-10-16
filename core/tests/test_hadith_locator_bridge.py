@@ -61,7 +61,7 @@ class TestHadithLocatorBridge(unittest.TestCase):
         self.assertEqual(hashlib.sha256(self.raw).hexdigest(), receipt["source_sha256"])
         self.assertEqual("pinned_bytes_and_exact_excerpt_only", result["scope"])
         self.assertEqual("not_authenticated", result["authority"]["edition"])
-        self.assertNotIn("excerpt", json.dumps(result, ensure_ascii=False))
+        self.assertNotIn(excerpt, json.dumps(result, ensure_ascii=False))
 
     def test_utf8_bom_is_a_character_at_offset_zero(self):
         self.raw = b"\xef\xbb\xbf" + "لفظ 😀 آخر".encode("utf-8")
@@ -108,6 +108,25 @@ class TestHadithLocatorBridge(unittest.TestCase):
                 )
                 self.assertFalse(got["valid"], got)
                 self.assertIsNone(got["receipt"])
+
+    def test_excessively_long_decimal_offsets_fail_without_exception(self):
+        giant = "9" * 5000
+        got = verify_hadith_locator(
+            self.registry, self.cache, self.source_id,
+            f"gitblob:{pin(self.raw)}#char=1:{giant}", "abc"
+        )
+        self.assertFalse(got["valid"])
+        self.assertIsNone(got["receipt"])
+        self.assertTrue(got["errors"])
+
+    def test_unpaired_surrogate_quote_does_not_crash(self):
+        got = verify_hadith_locator(
+            self.registry, self.cache, self.source_id,
+            f"gitblob:{pin(self.raw)}#char=0:1", "\ud800"
+        )
+        self.assertFalse(got["valid"])
+        self.assertIsNone(got["receipt"])
+        self.assertTrue(any("UTF-8" in issue for issue in got["errors"]), got)
 
     def test_invalid_utf8_file_rejected_despite_self_consistent_pin(self):
         self.raw = b"abc\xffz"
