@@ -25,3 +25,20 @@
 - Full parent is hashed twice per window: correct but inefficient for many quotes, requiring later safely batched immutable parent snapshots, coalesced spans and source-scale benchmarking.
 - Real corpus source and authority/edition rights verification, CRLF handling, and protocol-specific holdout custody are separate gates. The current integration uses explicitly cleared **synthetic** P1 bytes exclusively.
 - This record represents **primary maintainer inspection**, not independent Codex/research/scholarly review. Any Codex quota fallback must be identified as maintainer-only and cannot authorize an independent-approval claim.
+
+## 2026-10-16: mandatory maintainer revisit after PR review findings
+
+Reviewed exact code and contract (validator, receipt linker, schema, CLI/test workflow and documentation), **before authorizing any further outside review**. On PR #57, Codex had identified two unclosed findings against previous HEAD `a4d9731b9b3cca72115587723b18acb2ce6e8c5f`:
+
+1. **P1 (linker accepts rehashed inconsistent windows):** two-argument `check_linked_p1_receipt(binding, p1_result)` checked metadata hashes but never validated actual window byte length, window size/span consistency or 4 MiB cap. A fabricated declared length could be canonically rehashed and accepted as linked.
+2. **P2 (standalone validator trusts hashed but illegal contents):** self-consistent `binding_sha256` and `window.id` could hide invalid UTF-8 or a CR byte in the claimed window. Both violate the Phase-B strict-UTF-8 and LF-only contract.
+
+**Additional independent maintainer finding:** even a window with valid UTF-8 bytes could claim a locator with a different Unicode codepoint count while recomputing metadata hashes. This is not a defensible H3.9.2 char locator mapping.
+
+**Test-first negative evidence:** test-only `0e2dc4bef22aa664b8bdfd3e151419a9ed499823` and fixture-fix `5578ef77cabd66d40f413f5940851485f95b1a1d`: [CI 38920523338](https://github.com/AIMubin/Mubin/actions/runs/38920523338) **143 tests; 2 failed tests (including 2 parameterized UTF-8/CR cases) and 1 error**. Failures were missing raw-window linker argument and unsupported integrity invariants. A separate earlier run `38920446804` also exposed an accidentally double-escaped *test fixture*; its fixture was corrected before the proper red run.
+
+**Fix:** `887f64e9fd8e3d91df25110e55cbf9be756769fc` makes actual immutable `window_bytes: bytes` mandatory in P1 linkage, calls the full `validate_parent_window_binding` before comparing P1 receipt fields, decodes window and quote in strict UTF-8, validates UTF-8 quote codepoint count, and checks declared-size limits. A literal `CR` byte probe was corrected in `f2da73d5ecbeaba6d7504019051acd5275282e8f`. **CI [38920708657](https://github.com/AIMubin/Mubin/actions/runs/38920708657) passed 143/143**, including all new regression cases.
+
+**API compatibility:** This is an intentional breaking change *inside unmerged PR #57*; all known new call sites in `core/tests/test_parent_window.py` are updated. No released or merged public API is being broken.
+
+**Residual red-team boundaries:** binding SHA-256 is not a signature; a detached window cannot independently establish the exact parent-book character positions without parent access; a caller-supplied `p1_result` cannot prove trustworthy execution of the actual P1 validator. Registry/edition/rights/holdout restrictions remain separate. Last CI evidence for this updated audit/doc commit must be checked on its exact HEAD before resolving findings or merging.
