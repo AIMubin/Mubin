@@ -176,6 +176,16 @@ class TestShamelaBibliographicPilot(unittest.TestCase):
         changed["entries"][0]["text_payload"] = value
         self.assert_rejected(changed, "unknown")
 
+    def test_unknown_nested_acquisition_metadata_rejected_early(self):
+        changed = copy.deepcopy(self.catalog)
+        value = []
+        for _ in range(1500):
+            value = [value]
+        changed["acquisition"]["untrusted_db_export"] = value
+        problems = validate_shamela_catalog(changed)
+        self.assertTrue(any("unknown" in p for p in problems), problems)
+        self.assertTrue(all(len(p) < 1000 for p in problems), problems)
+
     def test_lone_surrogate_in_url_does_not_crash(self):
         changed = copy.deepcopy(self.catalog)
         changed["entries"][0]["book_url"] = "https://shamela.ws/book/1681\ud800"
