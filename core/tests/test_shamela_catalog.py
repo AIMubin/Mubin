@@ -191,6 +191,53 @@ class TestShamelaBibliographicPilot(unittest.TestCase):
         changed["entries"][0]["book_url"] = "https://shamela.ws/book/1681\ud800"
         self.assert_rejected(changed, "UTF-8")
 
+    def test_cli_rejects_duplicate_json_object_members(self):
+        """An ambiguous source/rights value must not pass because JSON uses last-wins."""
+        raw = CATALOG.read_text(encoding="utf-8")
+        variants = [
+            # Last-rights-wins (currently accepted), first-rights-wins (unsafe).
+            raw.replace('"rights_status": "unverified"',
+                        '"rights_status": "operator_cleared", "rights_status": "unverified"', 1),
+            raw.replace('"scope": "shamela_bibliographic_metadata_only"',
+                        '"scope": "full_text_ingested", "scope": "shamela_bibliographic_metadata_only"', 1),
+            raw.replace('"book_id": 1681', '"book_id": 7798, "book_id": 1681', 1),
+            raw.replace('"text_acquired": false',
+                        '"text_acquired": true, "text_acquired": false', 1),
+        ]
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "ambiguous.json"
+            for content in variants:
+                with self.subTest(input_length=len(content)):
+                    path.write_text(content, encoding="utf-8")
+                    done = subprocess.run(
+                        [sys.executable, "-m", "core.source_catalog", str(path), "--json"],
+                        cwd=ROOT, text=True, capture_output=True, check=False,
+                    )
+                    self.assertEqual(2, done.returncode, (done.stdout, done.stderr))
+                    result = json.loads(done.stdout)
+                    self.assertEqual("INPUT_ERROR", result["code"])
+                    self.assertTrue(any("JSON" in e or "duplicate" in e for e in result["errors"]))
+
+    def test_cli_rejects_nonstandard_nan_json(self):
+        raw = CATALOG.read_text(encoding="utf-8")
+        raw = raw.replace('"book_id": 1681', '"book_id": NaN', 1)
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "nan.json"
+            p.write_text(raw, encoding="utf-8")
+            done = subprocess.run(
+                [sys.executable, "-m", "core.source_catalog", str(p), "--json"],
+                cwd=ROOT, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(2, done.returncode, (done.stdout, done.stderr))
+            self.assertEqual("INPUT_ERROR", json.loads(done.stdout)["code"])
+
+    def test_catalog_alone_triggers_ci_on_pr_and_main_push(self):
+        workflow = (ROOT / ".github/workflows/mubin-inference-foundation.yml").read_text(encoding="utf-8")
+        self.assertGreaterEqual(
+            workflow.count('"research/shamela/**"'), 2,
+            "Both pull_request and push paths must include research/shamela/**",
+        )
+
     def test_cli_accepts_metadata_and_rejects_unsafe_inputs(self):
         ok = subprocess.run(
             [sys.executable, "-m", "core.source_catalog", str(CATALOG), "--json"],
