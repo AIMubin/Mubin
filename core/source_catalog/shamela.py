@@ -63,6 +63,26 @@ def validate_shamela_catalog(catalog: Any) -> list[str]:
     unknown_root = set(catalog) - {"catalog_version", "scope", "acquisition", "entries"}
     if unknown_root:
         return ["catalog: unknown top-level metadata field"]
+    for field, max_length in (("catalog_version", 20), ("scope", 100)):
+        if field in catalog:
+            value = catalog[field]
+            if not isinstance(value, str) or len(value) > max_length:
+                return [f"catalog: invalid JSON {field}"]
+    acquisition = catalog.get("acquisition")
+    if isinstance(acquisition, dict):
+        known = {"method", "database_inspected", "text_acquired", "rights_verified"}
+        if any(not isinstance(k, str) or k not in known for k in acquisition):
+            return ["catalog: unknown acquisition metadata field"]
+        if "method" in acquisition and (
+            not isinstance(acquisition["method"], str)
+            or len(acquisition["method"]) > 80
+        ):
+            return ["catalog: invalid JSON acquisition method"]
+        for key in ("database_inspected", "text_acquired", "rights_verified"):
+            if key in acquisition and type(acquisition[key]) is not bool:
+                return [f"catalog: invalid JSON acquisition {key}"]
+    elif acquisition is not None:
+        return ["catalog: invalid JSON acquisition shape"]
     if isinstance(entries, list):
         for i, row in enumerate(entries):
             if not isinstance(row, dict):
