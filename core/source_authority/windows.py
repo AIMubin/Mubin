@@ -317,6 +317,29 @@ def check_linked_p1_receipt(
         return [f"invalid binding JSON ({type(exc).__name__})"]
     if schema_errors:
         return ["binding schema invalid"]
+    # Hashes are consistency checks, not signatures; nevertheless an ordinary
+    # edited parent identity must never silently relink to an existing P1 receipt.
+    if binding["binding_sha256"] != _binding_digest(binding):
+        return ["parent-window binding fingerprint mismatch"]
+    parent, window, quote = binding["parent"], binding["window"], binding["quote"]
+    if window["id"] != "win." + _sha(_canonical(_identity_payload(binding))):
+        return ["parent-window identity digest mismatch"]
+    match = re.fullmatch(
+        r"gitblob:([a-f0-9]{40})#char=(0|[1-9][0-9]{0,18}):(0|[1-9][0-9]{0,18})",
+        quote["locator"],
+    )
+    if (
+        match is None or match.group(1) != parent["git_blob_sha1"]
+        or int(match.group(2)) != quote["start_char"]
+        or int(match.group(3)) != quote["end_char"]
+    ):
+        return ["parent-window locator/character mapping mismatch"]
+    if (
+        window["absolute_start_byte"] + quote["start_in_window_byte"] != parent["quote_start_byte"]
+        or window["absolute_start_byte"] + quote["end_in_window_byte"] != parent["quote_end_byte"]
+        or window["absolute_end_byte"] > parent["size_bytes"]
+    ):
+        return ["parent-window absolute/relative byte binding mismatch"]
 
     if p1_result.get("valid") is not True:
         return ["P1 result is not valid"]
