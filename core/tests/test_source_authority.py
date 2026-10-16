@@ -99,7 +99,9 @@ class TestHadithPinBridge(unittest.TestCase):
         })
         self.registry["sources"][1]["source_id"] = "openiti:001Example__Work"
         self.registry["sources"][0]["source_id"] = "openiti:001Example:Work"
-        self.assertFalse(self.verify()["valid"])
+        r = self.verify()
+        self.assertFalse(r["valid"])
+        self.assertTrue(any("cache filename collision" in issue for issue in r["errors"]), r)
 
     def test_invalid_repository_pin_and_metadata_rejected(self):
         self.source["repo_ref"] = "latest"
@@ -119,6 +121,39 @@ class TestHadithPinBridge(unittest.TestCase):
         r = self.verify(max_source_bytes=64)
         self.assertFalse(r["valid"], r)
         self.assertEqual("size_limit_exceeded", r["sources"][0]["status"])
+
+    def test_total_byte_budget_exceeded_across_sources(self):
+        second = {
+            **self.source,
+            "source_id": "openiti:002Other.Work",
+            "work_id": "002Other.Work",
+            "version_id": "002Other.Work.test",
+        }
+        self.registry["sources"].append(second)
+        (self.cache / "openiti__002Other.Work.source").write_bytes(self.raw)
+        r = self.verify(max_total_bytes=len(self.raw))
+        self.assertFalse(r["valid"])
+        self.assertEqual("registry_blob_matched", r["sources"][0]["status"])
+        self.assertEqual("size_limit_exceeded", r["sources"][1]["status"])
+
+    def test_directory_named_like_source_is_not_read(self):
+        self.cache_file.unlink()
+        self.cache_file.mkdir()
+        r = self.verify()
+        self.assertFalse(r["valid"])
+        self.assertEqual("unsafe_cache_file", r["sources"][0]["status"])
+
+    def test_deep_programmatic_registry_fails_before_file_read(self):
+        self.registry["untrusted"] = []
+        cursor = self.registry["untrusted"]
+        for _ in range(10000):
+            item = []
+            cursor.append(item)
+            cursor = item
+        r = self.verify()
+        self.assertFalse(r["valid"])
+        self.assertEqual([], r["sources"])
+        self.assertTrue(any("RecursionError" in msg for msg in r["errors"]), r)
 
     @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "requires POSIX no-follow")
     def test_symlink_cache_file_rejected(self):
