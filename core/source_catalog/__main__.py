@@ -9,6 +9,21 @@ from pathlib import Path
 from .shamela import MAX_CATALOG_BYTES, assess_shamela_catalog
 
 
+def _reject_duplicate_members(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Fail on ambiguous object keys rather than silently using last-wins."""
+    unique: dict[str, object] = {}
+    for key, value in pairs:
+        if key in unique:
+            raise ValueError("duplicate JSON object member")
+        unique[key] = value
+    return unique
+
+
+def _reject_json_constant(name: str) -> None:
+    """NaN/Infinity are not valid interoperable JSON numbers."""
+    raise ValueError("nonstandard JSON numeric constant")
+
+
 def run(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Validate metadata-only Shamela catalog (no download/rights certification)."
@@ -21,7 +36,11 @@ def run(argv: list[str] | None = None) -> int:
             data = fp.read(MAX_CATALOG_BYTES + 1)
         if len(data) > MAX_CATALOG_BYTES:
             raise ValueError("catalog exceeds JSON byte limit")
-        source = json.loads(data.decode("utf-8", "strict"))
+        source = json.loads(
+            data.decode("utf-8", "strict"),
+            object_pairs_hook=_reject_duplicate_members,
+            parse_constant=_reject_json_constant,
+        )
     except (OSError, UnicodeError, ValueError, RecursionError) as exc:
         result = {"valid": False, "code": "INPUT_ERROR", "errors": [
             f"invalid or unreadable catalog input ({type(exc).__name__})"
