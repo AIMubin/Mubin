@@ -18,6 +18,7 @@ from core.source_authority.windows import (
     derive_parent_window,
     validate_parent_window_binding,
     check_linked_p1_receipt,
+    verify_staged_parent_window,
 )
 from test_inference_foundation import fixture
 
@@ -183,6 +184,17 @@ class TestP11ParentWindow(unittest.TestCase):
                 }],
             }],
         }
+        linked = verify_staged_parent_window(binding, content, data, manifest, stage)
+        self.assertTrue(linked["valid"], linked)
+        self.assertEqual("derived_window_local_p1_only", linked["scope"])
+        self.assertEqual("not_authenticated", linked["authority"]["edition"])
+        self.assertEqual("not_reviewed", linked["authority"]["rights"])
+        self.assertEqual("not_checked", linked["authority"]["entailment"])
+        self.assertEqual("operator_assertion_only", linked["rights_assurance"])
+        self.assertEqual(binding["binding_sha256"], linked["parent_window_binding_sha256"])
+        self.assertEqual(binding["window"]["id"], linked["receipt"]["source_id"])
+        self.assertEqual(binding["window"]["content_sha256"], linked["receipt"]["source_sha256"])
+        self.assertNotIn(self.excerpt, json.dumps(linked, ensure_ascii=False))
         p1 = verify_bundle(data, manifest, stage)
         self.assertTrue(p1["valid"], p1)
         self.assertEqual(1, len(p1["receipts"]))
@@ -226,10 +238,21 @@ class TestP11ParentWindow(unittest.TestCase):
         other["scope"] = "fabricated_external_authentication"
         self.assertTrue(check_linked_p1_receipt(binding, other, content))
 
+        restricted_manifest = copy.deepcopy(manifest)
+        restricted_manifest["sources"][0]["rights"]["status"] = "unknown"
+        denied = verify_staged_parent_window(
+            binding, content, data, restricted_manifest, stage
+        )
+        self.assertFalse(denied["valid"])
+        self.assertIsNone(denied["receipt"])
+        self.assertTrue(any("rights" in e for e in denied["errors"]), denied)
         (stage / "windows" / "quote.txt").write_bytes(content + b"!")
         rejected = verify_bundle(data, manifest, stage)
         self.assertFalse(rejected["valid"])
         self.assertEqual([], rejected["receipts"])
+        after_swap = verify_staged_parent_window(binding, content, data, manifest, stage)
+        self.assertFalse(after_swap["valid"])
+        self.assertIsNone(after_swap["receipt"])
 
     def test_parent_changed_after_locator_preflight_fails_closed(self):
         from core.source_authority.locators import verify_hadith_locator
