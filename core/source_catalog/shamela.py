@@ -44,6 +44,29 @@ def validate_shamela_catalog(catalog: Any) -> list[str]:
     entries = catalog.get("entries")
     if isinstance(entries, list) and len(entries) > MAX_ENTRIES:
         return [f"catalog: exceeds {MAX_ENTRIES} entries"]
+    # Reject deeply nested or disguised fields BEFORE whole-object JSON
+    # serialization or jsonschema's potentially huge value echoing.
+    textual = (
+        "work_title", "author_display", "edition_display",
+        "editor_display", "publisher_display", "volume_description", "notes",
+    )
+    if isinstance(entries, list):
+        for i, row in enumerate(entries):
+            if not isinstance(row, dict):
+                return [f"catalog: invalid JSON entry shape at {i}"]
+            for field in textual:
+                if field in row:
+                    value = row[field]
+                    if not isinstance(value, str):
+                        return [f"catalog: invalid JSON text field {field} at {i}"]
+                    if not value.strip():
+                        return [f"catalog: {field} cannot be whitespace-only at {i}"]
+            if "review_flags" in row:
+                flags = row["review_flags"]
+                if not isinstance(flags, list) or len(flags) > 16 or any(
+                    not isinstance(flag, str) for flag in flags
+                ):
+                    return [f"catalog: invalid JSON review_flags at {i}"]
     try:
         raw = _serialized(catalog)
     except (ValueError, TypeError, UnicodeError, RecursionError, OverflowError) as exc:
@@ -55,7 +78,7 @@ def validate_shamela_catalog(catalog: Any) -> list[str]:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         errors = [
             "schema " + "/".join(str(part) for part in item.absolute_path)
-            + ": " + item.message
+            + ": " + item.message[:512]
             for item in Draft202012Validator(schema).iter_errors(catalog)
         ]
     except (ValueError, TypeError, UnicodeError, RecursionError, OSError) as exc:
