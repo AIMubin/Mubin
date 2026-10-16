@@ -53,3 +53,13 @@ Codex submitted review against `a5c9f707c3182316fcf3bde1616ca4e91f384834`, ident
 **Additional official-source observation:** The public [official Shamela Telegram feed](https://t.me/s/shamelaws) describes portable `app` and `database` directories, calls out externally hosted paid AI tools using Shamela books without coordination, and mentions development of a free Shamela AI effort. That warning does not itself constitute a binding general-use prohibition; it is a strong reason to seek independent written clarification before any ingestion. The official [download page](https://shamela.ws/page/download) describes portability and availability of a full data folder, **not** an API, storage format, or rights grant.
 
 **Review disposition:** P2 technical fixes were reproduced in unit tests, then repaired and CI validated. Resolve review threads with evidence and request a secondary pass on the final change if necessary. No merge unless final HEAD CI and change-scope review pass.
+
+## Catalog-only CI trigger proven empirically
+
+A **catalog-only** metadata clarification was committed as `6475ecef3a4c167cd4f03bedb8b2fe16bc1f486e` after the workflow path-filter correction. [GitHub Actions 38938699339](https://github.com/AIMubin/Mubin/actions/runs/38938699339) triggered from that exact commit **without edits to source code, schema or workflow in the same commit**, and passed **72/72**. This provides direct evidence that a change to `research/shamela/pilot-catalog.json` now invokes the contract suite on a PR. Both the `pull_request` and `push` path filters include `research/shamela/**`; the push behavior was code-inspected, not demonstrated by an actual main push because PR #59 remains unmerged.
+
+## Follow-up gate
+
+Written rights and supported source-format clarification are tracked in [S0.2 Issue #60](https://github.com/AIMubin/Mubin/issues/60). The official project’s publicly stated disagreement with uncoordinated *paid* AI products is a coordination signal; it does not establish a blanket prohibition, nor does it grant any rights. Mubin must obtain explicit authorized, per-purpose source access before local corpus extraction, embedding/indexing, AI training or redistribution.
+
+**Approval boundary:** This remains a maintainer source-code and metadata-validator audit; final PR must be checked at its exact HEAD, secondary comments disposed with negative tests, and it must not be represented as an edition or legal license audit.
