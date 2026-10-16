@@ -25,6 +25,13 @@ The synthetic integration fixture explicitly writes an in-memory window to a pri
 
 The synthetic `rights.status=operator_cleared` in the P1 test applies **only to locally generated test bytes**. Production rights are NOT inferred from `source_blob_sha` or from this derived binding. The implementation does not generate a rights declaration.
 
+
+## In-process P1 execution path
+
+`verify_staged_parent_window(binding, window_bytes, bundle, manifest, corpus_root)` is the preferred **local integration** entry point when the caller already has the verified parent-window binding, the same immutable window bytes, a separately created/staged snapshot, and appropriately reviewed rights metadata. Unlike the passive `check_linked_p1_receipt`, this function invokes the actual `core.provenance.verify_bundle` on the staged window, requires a passing P1 response, and only then revalidates the quote and derived-window identifiers. It returns no excerpt or source text; the result includes the P1 bundle/manifest local fingerprints and one bounded receipt, with `scope=derived_window_local_p1_only`, `rights_assurance=operator_assertion_only`, and the unchanged three explicit non-authority statuses.
+
+If rights are unknown or restricted, P1 itself rejects the manifest. If staging bytes are altered, P1 rejects the file; if metadata/bytes are inconsistent, the parent-window validator rejects before source ingestion. The code **does not** create or authorize any source file, rights declaration, or temporary directory: all staging remains the caller's explicit responsibility. It is an in-process implementation guarantee, **not remote execution attestation or independent publisher authentication**. A malicious operator with control of source registry, code runtime, and filesystem can still forge a self-consistent local dataset and run.
+
 ## Non-negotiable boundaries
 
 - H3.9.2 source partitions and its source-disjoint final holdout are governed by external custodian rules. The window API does NOT grant access to holdout sources; normal research must use only permitted non-holdout files.
