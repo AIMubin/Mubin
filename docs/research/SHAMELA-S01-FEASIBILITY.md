@@ -52,6 +52,14 @@ python -m unittest discover -s core/tests -v
 
 Passing says only that **the catalog structure and declared restrictions are internally valid**. There is no source-provider signature and no attested publisher. The catalog JSON is not a substitute for an external legal review, signed release manifest or content source registry.
 
+## Official-channel research update (2026-10-16)
+
+The [official Shamela channel](https://t.me/s/shamelaws) has described an `app` folder for application code and a separate portable `database` folder for books and user data. The [official download page](https://shamela.ws/page/download) confirms cross-platform `database` portability and offers a full data directory. **Neither observation reveals the internal database engine, schema, stable textual IDs, certified provenance, nor any universal republication or AI-training license.** Older `.bok` or Access-related assumptions from other sources must not be applied to the current app without direct authorized verification.
+
+The same official channel explicitly notes that external **paid** AI services claim to use Shamela books without any coordination or relationship with the project, and states an intention to offer its own **free** AI offering. This is a public coordination and provenance concern, **not a formal statement that all independent noncommercial scholarship is forbidden**. It strengthens the need for a written, per-purpose permission inquiry covering index creation, storage, display, external network access and training. Publisher and modern-editor rights are separate from the ancient author's copyright status.
+
+The channel also references third-party [Turath](https://app.turath.io) as a useful reading app. Endorsement of a reading tool does not grant API rights or content reuse to Mubin; do not silently substitute this integration for publisher permission.
+
 ## Gates for S0.2, before any text acquisition
 
 1. **Rights matrix by work and edition:** independently document permitted read, local reproduction, automated bulk extraction, transformation, attribution, research evaluation, public display, redistribution and model-training rights. Record authorization provenance or remain HOLD. A site's "free" status is not a blanket permission.
