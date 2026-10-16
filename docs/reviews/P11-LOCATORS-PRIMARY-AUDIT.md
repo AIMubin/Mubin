@@ -31,3 +31,7 @@
 - Secondary reviewer must examine latest exact HEAD and complete diff **after** independent primary maintainer audit and successful latest-HEAD CI; record an honest maintainer-only fallback if Codex is quota-limited. All PRs #49, #50 and #53 remain separate unmerged prerequisites.
 
 This audit is primary maintainer inspection, not independent approval, and it does not certify religious inference.
+
+## Additional resource-boundary discovery and fix
+
+After the first 126-test green run on \`8d7052d0bae408193e6a6f4dc4d4518bd4d678f0\` (run \`38912403688\`), the primary maintainer identified that encoding an attacker-provided string **before** enforcing the 1 MiB quote cap can itself allocate large memory. Test-only commit \`1f98e2e2ed210897a2c7a37f840be3e83ecc0eb8\` supplied a synthetic oversized \`str\` subclass whose \`.encode()\` must never be called; CI \`38912609453\` reproduced the error (127 tests; one failure). Fix \`e2f53b44a82e0e43767ca1eebdceae88a252e419\` preflights Unicode codepoint count before UTF-8 encoding; actual UTF-8 byte size is still checked afterward. A new latest-HEAD test run is necessary after this audit is committed. No new corpus content or independent scholarly review was introduced.
