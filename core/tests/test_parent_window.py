@@ -10,12 +10,14 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from core.provenance import verify_bundle
 from core.source_authority import cache_filename
 from core.source_authority.windows import (
     derive_parent_window,
     validate_parent_window_binding,
+    check_linked_p1_receipt,
 )
 from test_inference_foundation import fixture
 
@@ -190,11 +192,53 @@ class TestP11ParentWindow(unittest.TestCase):
         self.assertEqual("operator_assertion_only", p1["rights_assurance"])
         # The *separate* parent-window binding carries full-parent identity.
         self.assertEqual(sha(self.raw), binding["parent"]["source_sha256"])
+        self.assertEqual([], check_linked_p1_receipt(binding, p1))
+        other = copy.deepcopy(p1)
+        other["receipts"][0]["source_sha256"] = binding["parent"]["source_sha256"]
+        self.assertTrue(check_linked_p1_receipt(binding, other))
+        other = copy.deepcopy(p1)
+        other["receipts"][0]["start_byte"] += 1
+        self.assertTrue(check_linked_p1_receipt(binding, other))
+        other = copy.deepcopy(p1)
+        other["receipts"][0]["source_id"] = "win.forged"
+        self.assertTrue(check_linked_p1_receipt(binding, other))
+        other = copy.deepcopy(p1)
+        other["scope"] = "fabricated_external_authentication"
+        self.assertTrue(check_linked_p1_receipt(binding, other))
 
         (stage / "windows" / "quote.txt").write_bytes(content + b"!")
         rejected = verify_bundle(data, manifest, stage)
         self.assertFalse(rejected["valid"])
         self.assertEqual([], rejected["receipts"])
+
+    def test_parent_changed_after_locator_preflight_fails_closed(self):
+        from core.source_authority.locators import verify_hadith_locator
+        real = verify_hadith_locator
+
+        def mutate_after_valid_locator(*args, **kwargs):
+            receipt = real(*args, **kwargs)
+            self.assertTrue(receipt["valid"], receipt)
+            self.file.write_bytes(self.raw + b"!")
+            return receipt
+
+        with patch(
+            "core.source_authority.windows.verify_hadith_locator",
+            side_effect=mutate_after_valid_locator,
+        ):
+            result, content = self.derive()
+        self.assertFalse(result["valid"])
+        self.assertIsNone(content)
+        self.assertIsNone(result["binding"])
+        self.assertTrue(any("pin" in x or "SHA-256" in x for x in result["errors"]), result)
+
+    def test_binding_char_range_must_match_original_locator(self):
+        result, content = self.derive()
+        self.assertTrue(result["valid"], result)
+        bad = copy.deepcopy(result["binding"])
+        bad["quote"]["start_char"] += 1
+        self.assertTrue(
+            any("locator" in x or "character" in x for x in validate_parent_window_binding(bad, content))
+        )
 
     def test_actual_larger_than_p1_snapshot_limit_can_derive_small_window(self):
         # 9 MiB raw parent; P1 cannot verify it as one <=8 MiB snapshot.
