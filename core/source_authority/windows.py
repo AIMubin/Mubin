@@ -394,3 +394,64 @@ def check_linked_p1_receipt(
         if type(actual) is not type(desired) or actual != desired:
             issues.append(f"P1 receipt {name} differs from parent-window binding")
     return issues
+
+
+def verify_staged_parent_window(
+    binding: dict[str, Any],
+    window_bytes: bytes,
+    bundle: dict[str, Any],
+    manifest: dict[str, Any],
+    corpus_root: str | Path,
+) -> dict[str, Any]:
+    """Run actual local P1 validation, then link its receipt to a derived window.
+
+    This is an in-process, fail-closed composition, NOT independent execution
+    attestation, legal rights verification, edition authentication, or a
+    semantic judgment. The caller provides an already-derived, safely staged
+    window and separately established rights metadata; we do not stage files
+    or issue rights clearance on its behalf.
+    """
+    report: dict[str, Any] = {
+        "valid": False,
+        "scope": "derived_window_local_p1_only",
+        "authority": dict(AUTHORITY),
+        "rights_assurance": "not_verified",
+        "parent_window_binding_sha256": None,
+        "bundle_sha256": None,
+        "manifest_sha256": None,
+        "receipt": None,
+        "errors": [],
+    }
+
+    # Reject unverified, synthetic-only or mismatched content before P1 reads
+    # a staged path. No validated receipt can be made from metadata alone.
+    issues = validate_parent_window_binding(binding, window_bytes)
+    if issues:
+        report["errors"] = ["parent-window: " + issue for issue in issues]
+        return report
+
+    # Import at use site so source-authority metadata inspection need not
+    # construct a P1 execution path.
+    from core.provenance import verify_bundle
+
+    checked = verify_bundle(bundle, manifest, corpus_root)
+    if checked.get("valid") is not True:
+        report["errors"] = [
+            "P1: " + str(message) for message in checked.get("errors", ["validation failed"])
+        ]
+        if not report["errors"]:
+            report["errors"] = ["P1: validation failed"]
+        return report
+
+    links = check_linked_p1_receipt(binding, checked, window_bytes)
+    if links:
+        report["errors"] = ["P1 link: " + issue for issue in links]
+        return report
+
+    report["valid"] = True
+    report["rights_assurance"] = "operator_assertion_only"
+    report["parent_window_binding_sha256"] = binding["binding_sha256"]
+    report["bundle_sha256"] = checked["bundle_sha256"]
+    report["manifest_sha256"] = checked["manifest_sha256"]
+    report["receipt"] = checked["receipts"][0]
+    return report
