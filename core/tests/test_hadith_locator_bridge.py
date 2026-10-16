@@ -91,6 +91,35 @@ class TestHadithLocatorBridge(unittest.TestCase):
         self.assertIsNone(got["receipt"])
         self.assertTrue(any("excerpt" in e for e in got["errors"]), got)
 
+    def test_same_length_different_quote_cannot_be_substituted(self):
+        full = self.raw.decode("utf-8")
+        excerpt = "نص عربي"
+        wrong = "نص مزيف"  # same Unicode codepoint and UTF-8 byte length
+        self.assertEqual(len(excerpt), len(wrong))
+        self.assertEqual(len(excerpt.encode("utf-8")), len(wrong.encode("utf-8")))
+        start = full.index(excerpt)
+        loc = f"gitblob:{pin(self.raw)}#char={start}:{start + len(excerpt)}"
+        r = verify_hadith_locator(self.registry, self.cache, self.source_id, loc, wrong)
+        self.assertFalse(r["valid"], r)
+        self.assertIsNone(r["receipt"])
+        self.assertTrue(any("excerpt" in e for e in r["errors"]), r)
+
+    def test_non_ascii_prefix_and_middle_excerpt_map_correctly(self):
+        self.raw = "تمهيد 😀\nالنص المختار والنهاية".encode("utf-8")
+        self.file.write_bytes(self.raw)
+        self.source["source_blob_sha"] = pin(self.raw)
+        phrase = "النص المختار"
+        result = self.match(phrase)
+        self.assertTrue(result["valid"], result)
+        self.assertEqual(self.raw.index(phrase.encode("utf-8")), result["receipt"]["start_byte"])
+        self.assertEqual(self.raw.decode().index(phrase), result["receipt"]["start_char"])
+
+    def test_out_of_bounds_char_span_fails_without_receipt(self):
+        loc = f"gitblob:{pin(self.raw)}#char=1000000:1000006"
+        r = verify_hadith_locator(self.registry, self.cache, self.source_id, loc, "Header")
+        self.assertFalse(r["valid"], r)
+        self.assertIsNone(r["receipt"])
+
     def test_wrong_locator_git_pin_rejected(self):
         got = verify_hadith_locator(
             self.registry, self.cache, self.source_id,
