@@ -17,6 +17,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("registry", help="Frozen H3.9.2 source-registry.json")
     parser.add_argument("source_cache", help="Existing local source cache directory")
     parser.add_argument("--json", action="store_true", help="Print metadata-only JSON verification report")
+    parser.add_argument("--eligible-only", action="store_true", help="Select qualification-eligible registry entries explicitly")
+    parser.add_argument("--source-id", action="append", default=None,
+                        help="Select this exact source_id; repeat to verify an explicit subset")
     args = parser.parse_args(argv)
     try:
         with Path(args.registry).open("rb") as stream:
@@ -30,7 +33,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"INPUT_ERROR: {exc}", file=sys.stderr)
         return 2
 
-    report = verify_hadith_cache(registry, args.source_cache)
+    report = verify_hadith_cache(
+        registry, args.source_cache, eligible_only=args.eligible_only,
+        allowed_source_ids=set(args.source_id) if args.source_id is not None else None,
+    )
     if args.json:
         print(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2))
     elif report["valid"]:
