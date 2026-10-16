@@ -21,7 +21,7 @@ A window can be up to 4 MiB with an explicitly chosen cap (default 1 MiB) and is
 
 The synthetic integration fixture explicitly writes an in-memory window to a private temporary directory. It represents the **derived window as its own P0 `Source`**, using the window's SHA-256—not the parent's. A P1 manifest references only that window and a relative quote byte span. `core.provenance.verify_bundle` returns a P1 local-byte-exact receipt for the **window**. A corrupted staged window correctly invalidates that receipt.
 
-`check_linked_p1_receipt(binding, p1_result)` checks that the **direct P1 validator result** has the expected local scope, operator-only rights assurance, exactly one matching receipt and an exact match of window ID, window SHA-256, quote SHA-256, relative start/end and receipt type. It also validates binding schema, deterministic window identity, canonical binding fingerprint and quote locator-to-char/byte consistency. A detached fabricated P1 result or forged operator-supplied registry remains outside these guarantees.
+`check_linked_p1_receipt(binding, p1_result, window_bytes)` checks that the **direct P1 validator result** has the expected local scope, operator-only rights assurance, exactly one matching receipt and an exact match of window ID, window SHA-256, quote SHA-256, relative start/end and receipt type. It requires the **original immutable window bytes** to revalidate the maximum 4 MiB size, declared size versus byte span, strict UTF-8, rejection of CR, the quote's exact UTF-8 byte span and codepoint count, and the window/content digests, in addition to binding schema, deterministic window identity, canonical binding fingerprint and quote locator-to-char/byte consistency. This signature is intentionally stricter than the earlier two-argument draft. A detached fabricated P1 result or forged operator-supplied registry remains outside these guarantees.
 
 The synthetic `rights.status=operator_cleared` in the P1 test applies **only to locally generated test bytes**. Production rights are NOT inferred from `source_blob_sha` or from this derived binding. The implementation does not generate a rights declaration.
 
@@ -42,3 +42,9 @@ python -m unittest discover -s core/tests -v
 ```
 
 Refer to `docs/reviews/P11-PARENT-WINDOW-PRIMARY-AUDIT.md` for commit-pinned red/green CI evidence and independent-review status.
+
+## Verification vs attestation
+
+`check_linked_p1_receipt` is a deterministic consistency checker over caller-supplied binding, window bytes, and a **claimed** P1 result. It does **not** execute `verify_bundle` itself. A malicious caller could forge every field and recompute the local hash; production provenance must invoke the actual P1 verifier in a controlled pipeline and retain its input identities. A quote's original source-character coordinates can only be confirmed by reopening the pinned parent with `derive_parent_window`; the binding validator alone cannot rederive original book positions from a detached window.
+
+**Security and correctness gates:** PR #57 was held after review found a missing 4 MiB/size-span check in the two-argument receipt linker and missing UTF-8/CR checks in the standalone binding validator. Both are now guarded by mandatory window-byte revalidation; quote decoded codepoint count is also matched to the H3.9.2 locator. See the red/green audit. This is a code-hardening result, not an additional level of scholarly or licensing assurance.
