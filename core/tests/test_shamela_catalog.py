@@ -158,6 +158,24 @@ class TestShamelaBibliographicPilot(unittest.TestCase):
             changed["entries"][0]["notes"] = [changed["entries"][0]["notes"]]
         self.assert_rejected(changed, "JSON")
 
+    def test_overlong_metadata_rejected_before_strip_allocation(self):
+        class LongText(str):
+            def strip(self, *args, **kwargs):
+                raise AssertionError("cannot strip oversized untrusted text")
+
+        changed = copy.deepcopy(self.catalog)
+        changed["entries"][0]["notes"] = LongText("x" * 4097)
+        problems = validate_shamela_catalog(changed)
+        self.assertTrue(any("notes" in p for p in problems), problems)
+
+    def test_unknown_nested_field_rejected_before_serialization(self):
+        changed = copy.deepcopy(self.catalog)
+        value = []
+        for _ in range(1500):
+            value = [value]
+        changed["entries"][0]["text_payload"] = value
+        self.assert_rejected(changed, "unknown")
+
     def test_lone_surrogate_in_url_does_not_crash(self):
         changed = copy.deepcopy(self.catalog)
         changed["entries"][0]["book_url"] = "https://shamela.ws/book/1681\ud800"
