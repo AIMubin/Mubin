@@ -71,6 +71,10 @@ def verify_hadith_locator(
         return reject("byte limits must be positive integers")
     if not isinstance(excerpt, str) or not excerpt:
         return reject("excerpt must be non-empty UTF-8 text")
+    # Every Unicode scalar encodes to at least one UTF-8 byte. Bound input
+    # characters before allocating the encoded representation.
+    if len(excerpt) > max_excerpt_bytes:
+        return reject("excerpt exceeds byte limit")
     try:
         target = excerpt.encode("utf-8", "strict")
     except UnicodeError:
