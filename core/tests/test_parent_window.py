@@ -1,0 +1,247 @@
+"""P1.1 Phase-C adversarial proof of parent-bound windows and P1 local receipts.
+
+All test material is synthetic. No qualified source, release edition or rights are attested.
+"""
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from core.provenance import verify_bundle
+from core.source_authority import cache_filename
+from core.source_authority.windows import (
+    derive_parent_window,
+    validate_parent_window_binding,
+)
+from test_inference_foundation import fixture
+
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def git_blob(data: bytes) -> str:
+    return hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
+
+
+class TestP11ParentWindow(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.cache = self.root / "private-cache"
+        self.cache.mkdir()
+        self.source_id = "openiti:001Synthetic.Work"
+        self.excerpt = "نصّ تجريبي 😀"
+        self.raw = ("مقدمة عربيّة\n" + self.excerpt + "\nخاتمة").encode("utf-8")
+        self.source = {
+            "source_id": self.source_id,
+            "work_id": "001Synthetic.Work",
+            "title_ar": "ملف اصطناعي",
+            "qualification_eligible": True,
+            "provider": "OpenITI",
+            "source_repo": "OpenITI/RELEASE",
+            "source_path": "data/001Synthetic/001Synthetic.Work/sample",
+            "repo_ref": "a" * 40,
+            "source_blob_sha": git_blob(self.raw),
+            "version_id": "001Synthetic.Work.unit-test",
+            "format": "OpenITI-mARkdown",
+        }
+        self.registry = {
+            "schema_version": 2,
+            "registry_id": "synthetic-registry-only",
+            "sources": [self.source],
+        }
+        self.file = self.cache / cache_filename(self.source_id)
+        self.file.write_bytes(self.raw)
+
+    def locator(self):
+        decoded = self.raw.decode("utf-8")
+        start = decoded.index(self.excerpt)
+        return f"gitblob:{self.source['source_blob_sha']}#char={start}:{start+len(self.excerpt)}"
+
+    def derive(self, **kwargs):
+        return derive_parent_window(
+            self.registry, self.cache, self.source_id,
+            self.locator(), self.excerpt, **kwargs
+        )
+
+    def test_distinct_parent_and_window_identity(self):
+        result, content = self.derive(left_context_bytes=0, right_context_bytes=0)
+        self.assertTrue(result["valid"], result)
+        self.assertEqual(self.excerpt.encode(), content)
+        binding = result["binding"]
+        self.assertEqual("parent_pinned_window_only", result["scope"])
+        self.assertEqual("not_authenticated", result["authority"]["edition"])
+        self.assertEqual("not_reviewed", result["authority"]["rights"])
+        self.assertEqual("not_checked", result["authority"]["entailment"])
+        self.assertEqual(sha(self.raw), binding["parent"]["source_sha256"])
+        self.assertEqual(git_blob(self.raw), binding["parent"]["git_blob_sha1"])
+        self.assertEqual(sha(content), binding["window"]["content_sha256"])
+        self.assertNotEqual(binding["parent"]["source_sha256"], binding["window"]["content_sha256"])
+        self.assertTrue(binding["window"]["id"].startswith("win."))
+        self.assertEqual([], validate_parent_window_binding(binding, content))
+        self.assertNotIn(self.excerpt, json.dumps(result, ensure_ascii=False))
+
+    def test_context_window_contains_exact_quote_with_absolute_and_relative_offsets(self):
+        result, content = self.derive(left_context_bytes=1, right_context_bytes=1)
+        self.assertTrue(result["valid"], result)
+        b = result["binding"]
+        quote_offset = b["quote"]["start_in_window_byte"]
+        self.assertEqual(self.excerpt.encode(), content[quote_offset:b["quote"]["end_in_window_byte"]])
+        self.assertEqual(
+            b["parent"]["quote_start_byte"],
+            b["window"]["absolute_start_byte"] + quote_offset
+        )
+        self.assertEqual(self.raw[b["window"]["absolute_start_byte"]:b["window"]["absolute_end_byte"]], content)
+
+    def test_utf8_boundary_split_rejected_not_normalized(self):
+        result, content = self.derive(left_context_bytes=1, right_context_bytes=0)
+        # Previous example's immediately preceding character is LF; choose a
+        # window byte offset that ends half-way into an Arabic codepoint instead.
+        if result["valid"]:
+            self.raw = "ع" .encode() + self.excerpt.encode()
+            self.source["source_blob_sha"] = git_blob(self.raw)
+            self.file.write_bytes(self.raw)
+            result, content = self.derive(left_context_bytes=1, right_context_bytes=0)
+        self.assertFalse(result["valid"])
+        self.assertIsNone(content)
+        self.assertTrue(any("UTF-8" in msg or "boundary" in msg for msg in result["errors"]), result)
+
+    def test_modified_parent_rejected_and_never_returns_window_bytes(self):
+        self.file.write_bytes(self.raw + b"altered")
+        result, content = self.derive()
+        self.assertFalse(result["valid"])
+        self.assertIsNone(content)
+        self.assertIsNone(result["binding"])
+
+    def test_bad_bytes_cannot_reuse_binding(self):
+        result, content = self.derive()
+        self.assertTrue(result["valid"], result)
+        assert content is not None
+        corrupted = b"X" + content[1:]
+        problems = validate_parent_window_binding(result["binding"], corrupted)
+        self.assertTrue(any("digest" in x or "quote" in x for x in problems), problems)
+
+    def test_forged_parent_identity_breaks_binding_fingerprint(self):
+        result, content = self.derive()
+        self.assertTrue(result["valid"], result)
+        binding = copy.deepcopy(result["binding"])
+        binding["parent"]["version_id"] = "forged-edition"
+        problems = validate_parent_window_binding(binding, content)
+        self.assertTrue(any("binding" in x for x in problems), problems)
+
+    def test_window_is_not_the_original_book_in_p1_receipt(self):
+        result, content = self.derive()
+        self.assertTrue(result["valid"], result)
+        assert content is not None
+        binding = result["binding"]
+        stage = self.root / "stage"
+        (stage / "windows").mkdir(parents=True)
+        (stage / "windows" / "quote.txt").write_bytes(content)
+        data = fixture()
+        source = data["sources"][0]
+        source.update({
+            "id": binding["window"]["id"],
+            "kind": "hadith",
+            "work_title": "Synthetic derived quote window, not original book",
+            "edition": "synthetic-window-unit-test",
+            "locator": "derived-parent-quote-window",
+            "content_sha256": binding["window"]["content_sha256"],
+        })
+        evidence = data["evidence"][0]
+        evidence.update({
+            "source_id": source["id"],
+            "locator": "quote-byte-span",
+            "excerpt": self.excerpt,
+            "excerpt_sha256": sha(self.excerpt.encode()),
+        })
+        manifest = {
+            "contract_version": "0.1.0",
+            "sources": [{
+                "id": source["id"],
+                "relative_path": "windows/quote.txt",
+                "work_title": source["work_title"],
+                "edition": source["edition"],
+                "scope_locator": source["locator"],
+                "content_sha256": source["content_sha256"],
+                "rights": {
+                    "status": "operator_cleared",
+                    "basis": "synthetic generated test bytes only",
+                    "reference": "unit-test:locally-generated",
+                },
+                "spans": [{
+                    "locator": evidence["locator"],
+                    "start_byte": binding["quote"]["start_in_window_byte"],
+                    "end_byte": binding["quote"]["end_in_window_byte"],
+                }],
+            }],
+        }
+        p1 = verify_bundle(data, manifest, stage)
+        self.assertTrue(p1["valid"], p1)
+        self.assertEqual(1, len(p1["receipts"]))
+        self.assertEqual(sha(content), p1["receipts"][0]["source_sha256"])
+        self.assertNotEqual(sha(self.raw), p1["receipts"][0]["source_sha256"])
+        self.assertEqual("local_byte_exact_match_only", p1["scope"])
+        self.assertEqual("operator_assertion_only", p1["rights_assurance"])
+        # The *separate* parent-window binding carries full-parent identity.
+        self.assertEqual(sha(self.raw), binding["parent"]["source_sha256"])
+
+        (stage / "windows" / "quote.txt").write_bytes(content + b"!")
+        rejected = verify_bundle(data, manifest, stage)
+        self.assertFalse(rejected["valid"])
+        self.assertEqual([], rejected["receipts"])
+
+    def test_actual_larger_than_p1_snapshot_limit_can_derive_small_window(self):
+        # 9 MiB raw parent; P1 cannot verify it as one <=8 MiB snapshot.
+        self.raw = b"x" * (9 * 1024 * 1024) + "\n".encode() + self.excerpt.encode()
+        self.source["source_blob_sha"] = git_blob(self.raw)
+        self.file.write_bytes(self.raw)
+        result, content = self.derive(max_source_bytes=16 * 1024 * 1024)
+        self.assertTrue(result["valid"], result)
+        self.assertEqual(sha(self.raw), result["binding"]["parent"]["source_sha256"])
+        self.assertEqual(self.excerpt.encode(), content)
+
+    def test_invalid_byte_budget_fails_without_data_leak(self):
+        for params in [
+            {"max_window_bytes": 0}, {"max_source_bytes": 0},
+            {"max_window_bytes": True}, {"max_window_bytes": 1},
+            {"left_context_bytes": -1}, {"right_context_bytes": -1},
+        ]:
+            with self.subTest(params=params):
+                result, content = self.derive(**params)
+                self.assertFalse(result["valid"])
+                self.assertIsNone(content)
+
+    def test_invalid_crlf_file_rejected_without_window(self):
+        self.raw = b"prefix\r\n" + self.excerpt.encode()
+        self.file.write_bytes(self.raw)
+        self.source["source_blob_sha"] = git_blob(self.raw)
+        result, content = self.derive()
+        self.assertFalse(result["valid"])
+        self.assertIsNone(content)
+        self.assertTrue(any("CR" in s for s in result["errors"]), result)
+
+    def test_deterministic_binding_and_no_write_to_parent(self):
+        one, a = self.derive()
+        two, b = self.derive()
+        self.assertEqual(one, two)
+        self.assertEqual(a, b)
+        self.assertEqual(self.raw, self.file.read_bytes())
+
+    def test_binding_schema_rejects_extra_claim_of_authenticity(self):
+        result, content = self.derive()
+        self.assertTrue(result["valid"], result)
+        binding = copy.deepcopy(result["binding"])
+        binding["authority"]["edition"] = "authenticated"
+        problems = validate_parent_window_binding(binding, content)
+        self.assertTrue(problems)
+        self.assertTrue(any("schema" in x for x in problems), problems)
+
+
+if __name__ == "__main__":
+    unittest.main()
