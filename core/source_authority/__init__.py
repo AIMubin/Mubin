@@ -2,6 +2,6 @@
 
 from .hadith_bridge import cache_filename, validate_hadith_registry, verify_hadith_cache
 from .locators import verify_hadith_locator
-from .windows import derive_parent_window, validate_parent_window_binding, check_linked_p1_receipt
+from .windows import derive_parent_window, validate_parent_window_binding, check_linked_p1_receipt, verify_staged_parent_window
 
-__all__ = ["cache_filename", "validate_hadith_registry", "verify_hadith_cache", "verify_hadith_locator", "derive_parent_window", "validate_parent_window_binding", "check_linked_p1_receipt"]
+__all__ = ["cache_filename", "validate_hadith_registry", "verify_hadith_cache", "verify_hadith_locator", "derive_parent_window", "validate_parent_window_binding", "check_linked_p1_receipt", "verify_staged_parent_window"]
