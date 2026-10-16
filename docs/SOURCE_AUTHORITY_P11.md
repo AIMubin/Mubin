@@ -34,6 +34,23 @@ python -m core.source_authority \
   --json
 ```
 
+**Selection of the available source subset is explicit.** The H3.9.2 registry contains a discovery-only entry; the frozen cache acquisition skips ineligible entries by default. Therefore use `--eligible-only` if the local cache contains all 18 qualification-eligible registry sources, or repeat `--source-id` for the exact subset actually present. Verification of all 19 sources is the default. Unknown IDs or selections resolving to zero sources fail closed; the report includes both the complete registry hash and the selected scope.
+
+```bash
+# Verify only qualified registry entries (does not imply non-holdout):
+python -m core.source_authority \
+  engines/hadith/qualification/H3.9.2/sources/source-registry.json \
+  /private/hadith-source-cache --eligible-only --json
+
+# Verify one explicitly named source in a separate prepared cache:
+python -m core.source_authority \
+  engines/hadith/qualification/H3.9.2/sources/source-registry.json \
+  /private/hadith-source-cache \
+  --source-id openiti:0279Tirmidhi.Sunan --json
+```
+
+**Qualification-eligible does not mean non-holdout.** This standalone verifier does not know or authorize H3.9.2 source partitions; operators must preserve the campaign's strict source-cache and final-holdout custodian separation. Never run it against restricted holdout cache material as part of model development or ordinary CI. No actual source files are included in tests.
+
 No network access or source acquisition is attempted. Source paths are looked up using exactly the existing H3.9.2 cache filename convention (`: -> __`). The command never modifies source files, registry files or cache directories.
 
 **Exit status:** 0 iff all files match pins, 1 for unverifiable/missing/mismatched source data, 2 for invalid CLI JSON input or filesystem read failures while loading the registry. Invalid registry metadata is a verification failure (exit 1), not a source authenticity claim.
