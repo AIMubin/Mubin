@@ -265,8 +265,8 @@ class TestP11ParentWindow(unittest.TestCase):
         result, original = self.derive(left_context_bytes=1)
         self.assertTrue(result["valid"], result)
         self.assertIsNotNone(original)
-        self.assertEqual(b"\\n", original[:1])
-        for wrong_prefix in (b"\\xff", b"\\r"):
+        self.assertEqual(b"\n", original[:1])
+        for wrong_prefix in (b"\xff", b"\r"):
             with self.subTest(wrong_prefix=wrong_prefix):
                 malicious_bytes = wrong_prefix + original[1:]
                 forged = copy.deepcopy(result["binding"])
