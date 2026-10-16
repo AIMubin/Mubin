@@ -202,6 +202,20 @@ class TestHadithLocatorBridge(unittest.TestCase):
         self.assertFalse(got["valid"])
         self.assertTrue(any("excerpt" in e for e in got["errors"]), got)
 
+    def test_oversized_excerpt_is_rejected_before_encoding(self):
+        class HugeExcerpt(str):
+            def encode(self, *args, **kwargs):
+                raise AssertionError("oversized quote should not be encoded")
+
+        giant = HugeExcerpt("a" * (1024 * 1024 + 1))
+        locator = f"gitblob:{pin(self.raw)}#char=0:1"
+        r = verify_hadith_locator(
+            self.registry, self.cache, self.source_id, locator, giant
+        )
+        self.assertFalse(r["valid"], r)
+        self.assertIsNone(r["receipt"])
+        self.assertTrue(any("limit" in issue for issue in r["errors"]), r)
+
     def test_nonpositive_byte_caps_rejected(self):
         for caps in [{"max_source_bytes": 0}, {"max_excerpt_bytes": 0},
                      {"max_source_bytes": True}, {"max_excerpt_bytes": False}]:
