@@ -24,6 +24,31 @@ The source snapshot uses Shamela book 8180 only. Its four recorded web route IDs
 2. **Identity laundering found during primary review:** the original docket allowed exchanging two candidate IDs, duplicate topic assignments, or dropping one chapter while still returning valid metadata. Red-first test commit `65632a7b8fe3c5de6eeb98877ac0b9b461b3f418` reproduced two failing test methods across [39064553858](https://github.com/AIMubin/Mubin/actions/runs/39064553858) and [39064553836](https://github.com/AIMubin/Mubin/actions/runs/39064553836), **90 tests / 2 failures**. Strict four-slot schema and ID→topic→route binding repairs followed in `2c5a502af93ea9b5103056891d9b2520edc8cf17` and `a805c9581bc643837002652d97972f7bd358118d`.
 3. **Result after repairs/doc:** both exact implementation HEAD `b75a1a56ef93e6f9ad6819ce83fffca4552ff9ba` CI [39064676990](https://github.com/AIMubin/Mubin/actions/runs/39064676990) (P0) and [39064676946](https://github.com/AIMubin/Mubin/actions/runs/39064676946) (U0.2) passed **90/90**. A future audit-document commit is another HEAD and must have its own verified green CI.
 
+## Additional latest-HEAD primary finding: editorial warning laundering (2026-10-17)
+
+**Observed flaw on HEAD `c53f57328c5984d8d6a589a84abaeafeb5120031`:**
+`validate_docket` pinned candidate ID, topic and route but only *enumerated*
+`heading_provenance` and permitted unconstrained replacement of
+`editorial_warning`. A caller could relabel the recorded editor-added
+`u02_c004` Ijma heading as a printed variant and replace its caution with
+a denial, while `valid_metadata=true`. This is metadata integrity
+laundering, not evidence of real source falsity.
+
+- RED test-first commit `05d96e38e1ddda740d5001bbcb24c2491603d64e`:
+  new `test_source_editorial_interventions_cannot_be_reclassified` exercises
+  the four changed classifications and a replaced Ijma caveat.
+- RED CI: [P0 #39065501920](https://github.com/AIMubin/Mubin/actions/runs/39065501920)
+  and [U0.2 #39065501922](https://github.com/AIMubin/Mubin/actions/runs/39065501922)
+  both failed as expected; U0.2 job recorded **91 tests, 5 failed subcases**,
+  while all previously covered tests passed.
+- Repair commit `b26bbcc99d983b7d30821913be9b2f7f99746715` pins each
+  candidate ID to its topic, route and exact declared `heading_provenance`,
+  and binds the critical Ijma editorial caveat to the four-slot v1 contract.
+  Other unrestricted research descriptions are still **site metadata only**.
+- After this documentation commit, verify **the final HEAD's** syntax, unit
+  tests, both CI workflows and offline CLI before requesting Codex. Do not
+  treat historic green runs as proof for the updated HEAD.
+
 ## Remaining boundaries and review decision
 
 - The website route may change. The site description could be wrong; no independent editor/printed-edition collation, content rights or publisher authentication occurred. All statements in the docket are site-observation **claims**, not scholarly gold.
