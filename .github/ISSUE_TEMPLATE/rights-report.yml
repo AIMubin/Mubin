@@ -1,0 +1,53 @@
+name: "بلاغ حقوق أو تصحيح مصدر"
+description: "إبلاغ عن حق أو نسبة أو طبعة، دون نشر وثائق سرية أو بيانات خاصة"
+title: "[حقوق/مصدر] وصف مختصر"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        شكرًا لمساعدتك في الأمانة العلمية. لا تنشر عقودًا سرية أو بيانات شخصية حساسة أو نصوصًا كاملة محمية. قدّم وصفًا عامًا فقط، واطلب قناة خاصة إن لزم.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: "نوع البلاغ"
+      options:
+        - "حقوق نشر أو إعادة استخدام"
+        - "طبعة أو تحقيق أو ترجمة"
+        - "نسبة خاطئة أو مصدر غير دقيق"
+        - "محتوى قاعدة بيانات"
+        - "غير ذلك"
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: "رابط المقطع أو معرّف المصدر المعني"
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "المشكلة والدليل العام غير السري"
+      description: "اذكر الطبعة أو التحقيق أو الموضع دون مشاركة وثائق خاصة"
+    validations:
+      required: true
+  - type: dropdown
+    id: action
+    attributes:
+      label: "الإجراء المطلوب"
+      options:
+        - "تصحيح نسبة أو بيانات"
+        - "تقييد عرض مادة محددة"
+        - "إزالة مادة محددة"
+        - "طلب قناة غير علنية للأدلة"
+        - "ملاحظة أخرى"
+    validations:
+      required: true
+  - type: checkboxes
+    id: private
+    attributes:
+      label: "خصوصية البلاغ"
+      options:
+        - label: "لم أرفق بيانات شخصية حساسة أو مستندات سرية"
+          required: true
