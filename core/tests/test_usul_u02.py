@@ -96,6 +96,23 @@ class SourceDocketTests(unittest.TestCase):
         d=copy.deepcopy(self.d);d["candidates"][3]["heading_authorship"]="verified_authorial"
         self.invalid(d)
 
+    def test_source_editorial_interventions_cannot_be_reclassified(self):
+        # Red-first: structural validation must not silently erase recorded
+        # editorial provenance, especially the editor-added Ijma heading.
+        for idx, provenance in enumerate((
+            "undetermined", "undetermined", "undetermined",
+            "printed_variant_reported",
+        )):
+            with self.subTest(candidate=idx):
+                changed = copy.deepcopy(self.d)
+                changed["candidates"][idx]["heading_provenance"] = provenance
+                self.invalid(changed)
+        changed = copy.deepcopy(self.d)
+        changed["candidates"][3]["editorial_warning"] = (
+            "لم تذكر الصفحة أي إضافة تحريرية لعنوان باب الإجماع."
+        )
+        self.invalid(changed)
+
     def test_order_change_keeps_queue_but_changes_metadata_digest(self):
         d=copy.deepcopy(self.d);d["candidates"].reverse()
         orig=assess_docket(self.d);changed=assess_docket(d)
