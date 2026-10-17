@@ -99,6 +99,19 @@ def validate_docket(document: Any) -> list[str]:
     base = f"https://shamela.ws/book/{book['book_id']}"
     if book["book_url"] != base or book["source_id"] != f"shamela:book:{book['book_id']}":
         return ["invalid:book_identity_mismatch"]
+    # This is a four-slot pilot, not an open-ended catalog. A route and topic
+    # may not be reassigned to a different candidate ID by editing JSON.
+    expected = {
+        "u02_c001": ("generality_with_exception", 146),
+        "u02_c002": ("mixed_generality_and_particularity", 149),
+        "u02_c003": ("sunnah_specifies_generality", 157),
+        "u02_c004": ("ijma_chapter", 556),
+    }
+    if len(document["candidates"]) != 4:
+        return ["invalid:incomplete_research_docket"]
+    for cand in document["candidates"]:
+        if expected.get(cand["candidate_id"]) != (cand["topic_id"], cand["locator"]["route_id"]):
+            return ["invalid:candidate_topic_route_identity_mismatch"]
     ids: set[str] = set()
     routes: set[int] = set()
     for i, cand in enumerate(document["candidates"]):
