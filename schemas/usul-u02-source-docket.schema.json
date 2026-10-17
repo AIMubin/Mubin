@@ -95,8 +95,8 @@
     },
     "candidates": {
       "type": "array",
-      "minItems": 1,
-      "maxItems": 16,
+      "minItems": 4,
+      "maxItems": 4,
       "items": {
         "type": "object",
         "additionalProperties": false,
