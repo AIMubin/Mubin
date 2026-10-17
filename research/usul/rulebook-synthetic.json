@@ -1,0 +1,188 @@
+{
+  "contract": "mubin-usul-synthetic-rulebook-v1",
+  "scope": "synthetic_logic_not_fiqh_fatwa",
+  "symbols": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "ex",
+    "exb"
+  ],
+  "methodologies": [
+    {
+      "id": "method_a",
+      "rules": [
+        {
+          "id": "a1",
+          "question_id": "q_alpha",
+          "when": {
+            "op": "all",
+            "args": [
+              {
+                "op": "fact",
+                "id": "a"
+              },
+              {
+                "op": "fact",
+                "id": "b"
+              }
+            ]
+          },
+          "unless": {
+            "op": "fact",
+            "id": "ex"
+          },
+          "conclusion": "track_north"
+        },
+        {
+          "id": "a2",
+          "question_id": "q_alpha",
+          "when": {
+            "op": "fact",
+            "id": "c"
+          },
+          "unless": {
+            "op": "fact",
+            "id": "exb"
+          },
+          "conclusion": "track_south"
+        },
+        {
+          "id": "a3",
+          "question_id": "q_alpha",
+          "when": {
+            "op": "all",
+            "args": [
+              {
+                "op": "fact",
+                "id": "d"
+              },
+              {
+                "op": "not",
+                "arg": {
+                  "op": "fact",
+                  "id": "e"
+                }
+              }
+            ]
+          },
+          "conclusion": "track_north"
+        },
+        {
+          "id": "a4",
+          "question_id": "q_alpha",
+          "when": {
+            "op": "any",
+            "args": [
+              {
+                "op": "fact",
+                "id": "f"
+              },
+              {
+                "op": "fact",
+                "id": "g"
+              }
+            ]
+          },
+          "conclusion": "track_north"
+        },
+        {
+          "id": "a5",
+          "question_id": "q_beta",
+          "when": {
+            "op": "all",
+            "args": [
+              {
+                "op": "fact",
+                "id": "h"
+              },
+              {
+                "op": "fact",
+                "id": "i"
+              }
+            ]
+          },
+          "conclusion": "track_south"
+        }
+      ]
+    },
+    {
+      "id": "method_b",
+      "rules": [
+        {
+          "id": "b1",
+          "question_id": "q_alpha",
+          "when": {
+            "op": "all",
+            "args": [
+              {
+                "op": "fact",
+                "id": "a"
+              },
+              {
+                "op": "fact",
+                "id": "b"
+              }
+            ]
+          },
+          "conclusion": "track_south"
+        },
+        {
+          "id": "b2",
+          "question_id": "q_alpha",
+          "when": {
+            "op": "all",
+            "args": [
+              {
+                "op": "fact",
+                "id": "h"
+              },
+              {
+                "op": "fact",
+                "id": "i"
+              }
+            ]
+          },
+          "conclusion": "track_north"
+        },
+        {
+          "id": "b3",
+          "question_id": "q_alpha",
+          "when": {
+            "op": "fact",
+            "id": "c"
+          },
+          "unless": {
+            "op": "fact",
+            "id": "exb"
+          },
+          "conclusion": "track_north"
+        },
+        {
+          "id": "b4",
+          "question_id": "q_beta",
+          "when": {
+            "op": "any",
+            "args": [
+              {
+                "op": "fact",
+                "id": "f"
+              },
+              {
+                "op": "fact",
+                "id": "g"
+              }
+            ]
+          },
+          "conclusion": "track_south"
+        }
+      ]
+    }
+  ]
+}
