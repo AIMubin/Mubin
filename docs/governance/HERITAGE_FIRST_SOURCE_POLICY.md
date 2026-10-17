@@ -1,6 +1,6 @@
 # Mubin heritage-first source-use routing — Stage A
 
-**Status:** proposed research governance, not legal advice or content clearance. **System release:** remains \`0.1.0-alpha\`. Tracks [Issue #63](https://github.com/AIMubin/Mubin/issues/63).
+**Status:** proposed research governance, not legal advice or content clearance. **System release:** remains `0.1.0-alpha`. Tracks [Issue #63](https://github.com/AIMubin/Mubin/issues/63).
 
 ## Working policy
 
@@ -17,15 +17,15 @@ Mubin is an open, non-profit scholarly research project. Classical Islamic knowl
 
 ## Programmatic interface
 
-\`core.source_policy.assess_source_use(SourceUseRecord, purpose)\` yields one of \`proceed\`, \`restricted\`, \`source_hold\`, \`invalid\`, always with \`assurance="operator_declarations_only"\`.
+`core.source_policy.assess_source_use(SourceUseRecord, purpose)` yields one of `proceed`, `restricted`, `source_hold`, `invalid`, always with `assurance="operator_declarations_only"`.
 
-**Critical semantics:** \`proceed\` means *only* that fields in a source-use request follow these policy gates. It is **not** a license, an authoritative legal opinion, a verified custody receipt, an actual AI-use audit event, or authorization to ingest any raw book into Mubin. Downstream source acquisition and content processing remain **closed** until separate source- and purpose-specific verification.
+**Critical semantics:** `proceed` means *only* that fields in a source-use request follow these policy gates. It is **not** a license, an authoritative legal opinion, a verified custody receipt, an actual AI-use audit event, or authorization to ingest any raw book into Mubin. Downstream source acquisition and content processing remain **closed** until separate source- and purpose-specific verification.
 
-This Stage A PR intentionally excludes \`core/source_policy/intake.py\`, private \`usage_log.py\`, all Usul U0.1–U0.6 code/fixtures and production text acquisition. Those modules require separate reviewable code PRs.
+This Stage A PR intentionally excludes `core/source_policy/intake.py`, private `usage_log.py`, all Usul U0.1–U0.6 code/fixtures and production text acquisition. Those modules require separate reviewable code PRs.
 
 ## Receiving and resolving rights or attribution complaints
 
-Use the public \`RIGHTS_NOTICE.md\` and GitHub issue template. Ask for precise source URL/ID, edition and issue; never publish private identity documents, license contracts or confidential content in a public issue. Review scope, hold and correct only the affected material when warranted, retain an audit of disposition outside confidential repositories, and continue unrelated work. A complaint procedure does not retroactively legalize unauthorized use.
+Use the public `RIGHTS_NOTICE.md` and GitHub issue template. Ask for precise source URL/ID, edition and issue; never publish private identity documents, license contracts or confidential content in a public issue. Review scope, hold and correct only the affected material when warranted, retain an audit of disposition outside confidential repositories, and continue unrelated work. A complaint procedure does not retroactively legalize unauthorized use.
 
 ## Basis for legal review
 
@@ -33,9 +33,9 @@ The project's local policy research cites the Saudi 2026 copyright law and imple
 
 ## Reproduction
 
-\`\`\`bash
+```bash
 python -m unittest discover -s core/tests -p 'test_heritage_rights_routing.py' -v
 python -m unittest discover -s core/tests -v
-\`\`\`
+```
 
-A successful suite proves these *synthetic routing conditions*, not the accuracy of source declarations. See the versioned primary audit in \`docs/reviews/HERITAGE-FIRST-STAGE-A-PRIMARY-AUDIT.md\`.
+A successful suite proves these *synthetic routing conditions*, not the accuracy of source declarations. See the versioned primary audit in `docs/reviews/HERITAGE-FIRST-STAGE-A-PRIMARY-AUDIT.md`.
