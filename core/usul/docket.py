@@ -102,16 +102,26 @@ def validate_docket(document: Any) -> list[str]:
     # This is a four-slot pilot, not an open-ended catalog. A route and topic
     # may not be reassigned to a different candidate ID by editing JSON.
     expected = {
-        "u02_c001": ("generality_with_exception", 146),
-        "u02_c002": ("mixed_generality_and_particularity", 149),
-        "u02_c003": ("sunnah_specifies_generality", 157),
-        "u02_c004": ("ijma_chapter", 556),
+        "u02_c001": ("generality_with_exception", 146, "printed_variant_reported"),
+        "u02_c002": ("mixed_generality_and_particularity", 149, "printed_variant_reported"),
+        "u02_c003": ("sunnah_specifies_generality", 157, "printed_variant_reported"),
+        "u02_c004": ("ijma_chapter", 556, "editor_added_heading_reported"),
     }
     if len(document["candidates"]) != 4:
         return ["invalid:incomplete_research_docket"]
     for cand in document["candidates"]:
-        if expected.get(cand["candidate_id"]) != (cand["topic_id"], cand["locator"]["route_id"]):
-            return ["invalid:candidate_topic_route_identity_mismatch"]
+        identity = (cand["topic_id"], cand["locator"]["route_id"],
+                    cand["heading_provenance"])
+        if expected.get(cand["candidate_id"]) != identity:
+            return ["invalid:candidate_topic_route_editorial_identity_mismatch"]
+        # The editor-added Ijma heading is a critical negative attribution
+        # observation. Treat the recorded warning as immutable in this v1
+        # four-slot pilot; weakening it requires explicit schema/code review.
+        if cand["candidate_id"] == "u02_c004" and cand["editorial_warning"] != (
+            "المحقق أحمد شاكر ينبه إلى أن عنوان «باب الإجماع» غير مثبت في الأصل، "
+            "وأنه أثبته من النسخ المطبوعة وأشار إلى الزيادة."
+        ):
+            return ["invalid:critical_editorial_warning_mismatch"]
     ids: set[str] = set()
     routes: set[int] = set()
     for i, cand in enumerate(document["candidates"]):
