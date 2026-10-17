@@ -124,6 +124,26 @@ class SourceDocketTests(unittest.TestCase):
         d["candidates"][0]=ForgedDict(d["candidates"][0])
         self.invalid(d)
 
+    def test_candidate_identity_must_bind_topic_and_route(self):
+        changed=copy.deepcopy(self.d)
+        changed["candidates"][0]["candidate_id"],changed["candidates"][3]["candidate_id"] = (
+            changed["candidates"][3]["candidate_id"],changed["candidates"][0]["candidate_id"]
+        )
+        self.invalid(changed)
+        changed=copy.deepcopy(self.d)
+        changed["candidates"][0]["topic_id"]=changed["candidates"][3]["topic_id"]
+        self.invalid(changed)
+        changed=copy.deepcopy(self.d)
+        changed["candidates"][0]["locator"],changed["candidates"][1]["locator"]=(
+            changed["candidates"][1]["locator"],changed["candidates"][0]["locator"]
+        )
+        self.invalid(changed)
+
+    def test_fixed_four_book_chapters_cannot_silently_disappear(self):
+        changed=copy.deepcopy(self.d)
+        changed["candidates"]=changed["candidates"][:-1]
+        self.invalid(changed)
+
     def test_cli_good(self):
         r=subprocess.run([sys.executable,"-m","core.usul.docket_cli",str(INPUT),"--json"],
                          cwd=ROOT,capture_output=True,text=True,timeout=15)
