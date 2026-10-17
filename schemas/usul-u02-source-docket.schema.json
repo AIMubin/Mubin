@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mubin U0.2 bibliographic chapter docket; no executable Usul doctrine",
+  "description": "Observed chapter locators; NOT source byte custody, printed edition, public license, scholarly review, or authoritative rule.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "scope",
+    "automatic_promotion",
+    "text_storage",
+    "source_partition",
+    "book",
+    "candidates"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mubin-usul-u02-source-candidates-v1"
+    },
+    "scope": {
+      "const": "source_candidate_metadata_only"
+    },
+    "automatic_promotion": {
+      "const": false
+    },
+    "text_storage": {
+      "const": "none"
+    },
+    "source_partition": {
+      "const": "unassigned_no_holdout_access"
+    },
+    "book": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "source_id",
+        "book_id",
+        "book_url",
+        "work_title",
+        "author_display",
+        "edition_display",
+        "editor_display",
+        "edition_status",
+        "editorial_interventions",
+        "source_bytes_status",
+        "text_rights_status"
+      ],
+      "properties": {
+        "provider": {
+          "const": "shamela"
+        },
+        "source_id": {
+          "const": "shamela:book:8180"
+        },
+        "book_id": {
+          "const": 8180
+        },
+        "book_url": {
+          "const": "https://shamela.ws/book/8180"
+        },
+        "work_title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "author_display": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "edition_display": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "editor_display": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "edition_status": {
+          "const": "site_bibliography_only"
+        },
+        "editorial_interventions": {
+          "const": "reported"
+        },
+        "source_bytes_status": {
+          "const": "not_acquired"
+        },
+        "text_rights_status": {
+          "const": "not_assessed_for_use"
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "topic_id",
+          "chapter_heading",
+          "locator",
+          "research_question",
+          "review_status",
+          "methodology_status",
+          "rule_status",
+          "heading_authorship",
+          "heading_provenance",
+          "editorial_warning"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^u02_c[0-9]{3}$"
+          },
+          "topic_id": {
+            "enum": [
+              "generality_with_exception",
+              "mixed_generality_and_particularity",
+              "sunnah_specifies_generality",
+              "ijma_chapter"
+            ]
+          },
+          "chapter_heading": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "locator": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "route_id",
+              "url",
+              "printed_page_on_site",
+              "printed_page_verified_independently"
+            ],
+            "properties": {
+              "route_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 999999999
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https://shamela\\.ws/book/8180/[1-9][0-9]{0,8}$"
+              },
+              "printed_page_on_site": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 999999999
+              },
+              "printed_page_verified_independently": {
+                "const": false
+              }
+            }
+          },
+          "research_question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 550
+          },
+          "review_status": {
+            "const": "unreviewed"
+          },
+          "methodology_status": {
+            "const": "undetermined"
+          },
+          "rule_status": {
+            "const": "not_formalized"
+          },
+          "heading_authorship": {
+            "const": "not_verified_authorial"
+          },
+          "heading_provenance": {
+            "enum": [
+              "printed_variant_reported",
+              "editor_added_heading_reported",
+              "undetermined"
+            ]
+          },
+          "editorial_warning": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 450
+          }
+        }
+      }
+    }
+  }
+}
