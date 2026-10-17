@@ -241,6 +241,42 @@ class TestUsulU01(unittest.TestCase):
         self.assertEqual('UNRECOGNIZED_RULEBOOK', run_frozen_suite(
             cyclic, SUITE, raw_book, raw_cases)['code'])
 
+    def test_frozen_runner_rejects_subclass_equality_spoofing(self):
+        from core.usul.benchmark import run_frozen_suite
+        raw_book = (FIXTURES / 'rulebook-synthetic.json').read_bytes()
+        raw_cases = (FIXTURES / 'test-cases-synthetic.json').read_bytes()
+
+        class ForgedEqualDict(dict):
+            def __eq__(self, _other):
+                return True
+            def __ne__(self, _other):
+                return False
+
+        class ForgedEqualList(list):
+            def __eq__(self, _other):
+                return True
+            def __ne__(self, _other):
+                return False
+
+        changed_root = copy.deepcopy(BOOK)
+        changed_root['methodologies'][0]['rules'].reverse()
+        forged_root = ForgedEqualDict(changed_root)
+        self.assertEqual('UNRECOGNIZED_RULEBOOK',
+                         run_frozen_suite(forged_root, SUITE, raw_book, raw_cases)['code'])
+
+        changed_nested = copy.deepcopy(BOOK)
+        changed_nested['methodologies'] = ForgedEqualList(
+            list(reversed(changed_nested['methodologies']))
+        )
+        self.assertEqual('UNRECOGNIZED_RULEBOOK',
+                         run_frozen_suite(changed_nested, SUITE, raw_book, raw_cases)['code'])
+
+        changed_suite = copy.deepcopy(SUITE)
+        changed_suite['cases'].reverse()
+        forged_suite = ForgedEqualDict(changed_suite)
+        self.assertEqual('UNRECOGNIZED_FIXTURES',
+                         run_frozen_suite(BOOK, forged_suite, raw_book, raw_cases)['code'])
+
     def test_cli_good_and_malformed_json(self):
         normal=subprocess.run([sys.executable,'-m','core.usul',str(FIXTURES/'rulebook-synthetic.json'),str(FIXTURES/'test-cases-synthetic.json'),'--json'],cwd=ROOT,text=True,capture_output=True)
         self.assertEqual(0,normal.returncode,(normal.stderr,normal.stdout))
