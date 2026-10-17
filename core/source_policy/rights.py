@@ -6,6 +6,7 @@ Neither a scholarly attribution nor a public URL proves a reuse license.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import unicodedata
 from typing import Literal
 
 AssetLayer = Literal[
@@ -62,7 +63,7 @@ def _bounded_text(value: object, length: int, *, nonempty: bool = False) -> bool
         return False
     if nonempty and not value.strip():
         return False
-    if any(ord(c) < 32 or 0xD800 <= ord(c) <= 0xDFFF for c in value):
+    if any(unicodedata.category(c) in {"Cc", "Cs", "Cf"} for c in value):
         return False
     return True
 
