@@ -97,6 +97,18 @@ class HeritageSourceRightsTests(unittest.TestCase):
                 self.assertEqual("invalid", self.route(replace(self.base, **change), "local_research"))
         self.assertEqual("invalid", self.route(self.pd, "undefined_use"))
 
+    def test_unicode_directional_spoofing_rejected(self):
+        # A displayed evidence ref must not conceal altered source identity.
+        for field, value in (
+            ("source_id", "synthetic:book:\u202Eevil"),
+            ("evidence_ref", "rights:review:\u2066hidden"),
+            ("source_id", "synthetic:book:\u007Fhidden"),
+        ):
+            with self.subTest(field=field):
+                self.assertEqual(
+                    "invalid", self.route(replace(self.pd, **{field: value}), "local_research")
+                )
+
     def test_no_false_rights_certification_in_response(self):
         result = assess_source_use(self.statutory, "ai_development_copy")
         self.assertEqual("operator_declarations_only", result.assurance)
