@@ -50,3 +50,12 @@
 - Pending **latest-HEAD CI and Codex second pass** (if available). Do not merge without resolving material findings and an explicit maintainer decision. The global Mubin release stays `0.1.0-alpha`.
 
 **Disposition:** Ready for a secondary engineering review **only once the audit-document HEAD's CI is green**. No claim of scientific authenticity or human qualification.
+
+## Secondary Codex P2: programmatic JSON subclass spoofing (2026-10-17)
+
+Codex's first review of `929d3cccd96805a27e0b586dd6e2bcc40892d61c` identified an additional **confirmed** flaw in our old `rulebook != json.loads(pinned_bytes)` check: `dict` or nested `list` subclasses can override `__eq__`/`__ne__`, defeating the object-to-byte binding. Primary maintainer read the HEAD comparison and reproduced this before fixing.
+
+- **Red first:** `dd88c43f72cd13802f9b8aa7f99532b0961e215a` adds `test_frozen_runner_rejects_subclass_equality_spoofing`, including forged root rulebook, nested list, and forged suite. Both [U0.1 CI 39063817571](https://github.com/AIMubin/Mubin/actions/runs/39063817571) and [P0 CI 39063817548](https://github.com/AIMubin/Mubin/actions/runs/39063817548) failed as expected (73 tests, 1 test method failure).
+- **Repair:** `544d0589c32645589b8e9f3004a1af44181ce06a` adds a bounded, iterative `_plain_json_tree` which accepts only exact built-in JSON types, rejecting container/scalar subclasses **before** preflight and equality evaluation. Both [U0.1 CI 39063904866](https://github.com/AIMubin/Mubin/actions/runs/39063904866) and [P0 CI 39063904733](https://github.com/AIMubin/Mubin/actions/runs/39063904733) passed **73/73** on that exact commit.
+- **Scope unchanged:** frozen JSON byte digests, oracle, scholarly no-qualification boundary and H3.9.2 heldouts untouched.
+- **Disposition:** Codex finding is addressed with negative reproduction and two green checks. A second automated review of the repaired HEAD has not yet been observed. This log update is itself a HEAD change and requires latest-HEAD verification. No merge.
