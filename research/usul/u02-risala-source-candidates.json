@@ -1,0 +1,95 @@
+{
+  "contract": "mubin-usul-u02-source-candidates-v1",
+  "scope": "source_candidate_metadata_only",
+  "automatic_promotion": false,
+  "text_storage": "none",
+  "source_partition": "unassigned_no_holdout_access",
+  "book": {
+    "provider": "shamela",
+    "source_id": "shamela:book:8180",
+    "book_id": 8180,
+    "book_url": "https://shamela.ws/book/8180",
+    "work_title": "الرسالة",
+    "author_display": "محمد بن إدريس الشافعي",
+    "edition_display": "تحقيق وشرح أحمد محمد شاكر، الطبعة الأولى ١٣٥٧هـ / ١٩٣٨م، مصطفى البابي الحلبي وأولاد",
+    "editor_display": "أحمد محمد شاكر",
+    "edition_status": "site_bibliography_only",
+    "editorial_interventions": "reported",
+    "source_bytes_status": "not_acquired",
+    "text_rights_status": "not_assessed_for_use"
+  },
+  "candidates": [
+    {
+      "candidate_id": "u02_c001",
+      "topic_id": "generality_with_exception",
+      "chapter_heading": "باب بيان ما نزل من الكتاب عاما يراد به العام ويدخله الخصوص",
+      "locator": {
+        "route_id": 146,
+        "url": "https://shamela.ws/book/8180/146",
+        "printed_page_on_site": 53,
+        "printed_page_verified_independently": false
+      },
+      "research_question": "ما حدود الاستدلال من العموم وما الشروط التي يلزم تحريرها قبل توصيف الخصوص؟",
+      "review_status": "unreviewed",
+      "methodology_status": "undetermined",
+      "rule_status": "not_formalized",
+      "heading_authorship": "not_verified_authorial",
+      "heading_provenance": "printed_variant_reported",
+      "editorial_warning": "الحاشية تصف فروقًا بين نسخ اللفظ؛ العنوان والسياق غير مقابلين مستقلًا بالنسخ الخطية."
+    },
+    {
+      "candidate_id": "u02_c002",
+      "topic_id": "mixed_generality_and_particularity",
+      "chapter_heading": "باب بيان ما أنزل من الكتاب عام الظاهر وهو يجمع العام والخصوص",
+      "locator": {
+        "route_id": 149,
+        "url": "https://shamela.ws/book/8180/149",
+        "printed_page_on_site": 56,
+        "printed_page_verified_independently": false
+      },
+      "research_question": "كيف يُفصل عموم ظاهر الصياغة عن خصوص بعض المدلولات دون نسبة قراءة لم تُراجع؟",
+      "review_status": "unreviewed",
+      "methodology_status": "undetermined",
+      "rule_status": "not_formalized",
+      "heading_authorship": "not_verified_authorial",
+      "heading_provenance": "printed_variant_reported",
+      "editorial_warning": "الحاشية تتناول اختلاف لفظ «الخاص» و«الخصوص» في العنوان بين نسخ مطبوعة وأصل المحقق."
+    },
+    {
+      "candidate_id": "u02_c003",
+      "topic_id": "sunnah_specifies_generality",
+      "chapter_heading": "باب ما نزل عاما دلت السنة خاصة على أنه يراد به الخاص",
+      "locator": {
+        "route_id": 157,
+        "url": "https://shamela.ws/book/8180/157",
+        "printed_page_on_site": 64,
+        "printed_page_verified_independently": false
+      },
+      "research_question": "ما شروط الاستدلال لتخصيص العام بالسنة، وهل عُيّنت أدلة التطبيق والخلاف المنهجي؟",
+      "review_status": "unreviewed",
+      "methodology_status": "undetermined",
+      "rule_status": "not_formalized",
+      "heading_authorship": "not_verified_authorial",
+      "heading_provenance": "printed_variant_reported",
+      "editorial_warning": "الحاشية تشير إلى اختلافات لفظية في نص الباب والنسخ؛ لا تنسب صيغة عنوان إلى أصل مخطوط دون مقابلة."
+    },
+    {
+      "candidate_id": "u02_c004",
+      "topic_id": "ijma_chapter",
+      "chapter_heading": "باب الإجماع",
+      "locator": {
+        "route_id": 556,
+        "url": "https://shamela.ws/book/8180/556",
+        "printed_page_on_site": 471,
+        "printed_page_verified_independently": false
+      },
+      "research_question": "ما التعريف الذي يعتمده الشافعي للإجماع، وما مواضع الخلاف التي تحتاج مقابلة المصدر؟",
+      "review_status": "unreviewed",
+      "methodology_status": "undetermined",
+      "rule_status": "not_formalized",
+      "heading_authorship": "not_verified_authorial",
+      "heading_provenance": "editor_added_heading_reported",
+      "editorial_warning": "المحقق أحمد شاكر ينبه إلى أن عنوان «باب الإجماع» غير مثبت في الأصل، وأنه أثبته من النسخ المطبوعة وأشار إلى الزيادة."
+    }
+  ]
+}
