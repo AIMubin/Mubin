@@ -109,6 +109,18 @@ class HeritageSourceRightsTests(unittest.TestCase):
                     "invalid", self.route(replace(self.pd, **{field: value}), "local_research")
                 )
 
+    def test_policy_documents_and_complaint_template_trigger_ci(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / ".github/workflows/mubin-inference-foundation.yml").read_text(
+            encoding="utf-8"
+        )
+        for path in ('"RIGHTS_NOTICE.md"', '"docs/governance/**"',
+                     '".github/ISSUE_TEMPLATE/**"'):
+            with self.subTest(path=path):
+                # Both pull-request and main push event filters must include path.
+                self.assertGreaterEqual(workflow.count(path), 2)
+
     def test_no_false_rights_certification_in_response(self):
         result = assess_source_use(self.statutory, "ai_development_copy")
         self.assertEqual("operator_declarations_only", result.assurance)
