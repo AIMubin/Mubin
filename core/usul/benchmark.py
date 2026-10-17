@@ -60,11 +60,44 @@ def _invalid_report(code: str, failures: list[str] | None = None) -> dict[str, A
             'failures': failures or []}
 
 
+def _plain_json_tree(value: Any) -> bool:
+    """Reject fake equality methods in JSON container and scalar subclasses.
+
+    Iterative exact-type walk, bounded independently of _preflight. Neither
+    subclass equality nor subclass iteration can influence the pinned-data
+    comparison or the evaluator.
+    """
+    stack: list[tuple[Any, int]] = [(value, 0)]
+    examined = 0
+    while stack:
+        node, depth = stack.pop()
+        examined += 1
+        if examined > 16384 or depth > 48:
+            return False
+        if type(node) is dict:
+            if len(node) > 4096:
+                return False
+            stack.extend((key, depth + 1) for key in node.keys())
+            stack.extend((item, depth + 1) for item in node.values())
+        elif type(node) is list:
+            if len(node) > 4096:
+                return False
+            stack.extend((item, depth + 1) for item in node)
+        elif type(node) not in (str, int, float, bool, type(None)):
+            return False
+    return True
+
+
 def run_frozen_suite(rulebook: Any, suite: Any, raw_rulebook: bytes, raw_suite: bytes) -> dict[str, Any]:
     """No caller can claim U0.1 benchmark pass with substituted fixtures."""
     if sha256(raw_rulebook).hexdigest() != FROZEN_RULEBOOK_SHA256:
         return _invalid_report('UNRECOGNIZED_RULEBOOK')
     if sha256(raw_suite).hexdigest() != FROZEN_CASES_SHA256:
+        return _invalid_report('UNRECOGNIZED_FIXTURES')
+    # Reject adversarial container/scalar subclasses before _preflight or ==.
+    if not _plain_json_tree(rulebook):
+        return _invalid_report('UNRECOGNIZED_RULEBOOK')
+    if not _plain_json_tree(suite):
         return _invalid_report('UNRECOGNIZED_FIXTURES')
     # Exact raw hashes must bind the *objects actually executed* as well.
     # This public runner accepts already-parsed objects from programmatic callers,
