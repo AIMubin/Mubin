@@ -38,4 +38,4 @@ jobs:
           google-chrome --version
           chromedriver --version
       - name: Real browser + live loopback HTTP, synthetic text only
-        run: python qa/quran_browser_smoke.py
+        run: python -m qa.quran_browser_smoke
