@@ -1,0 +1,29 @@
+:root{color-scheme:light;font-family:system-ui,"Noto Naskh Arabic",serif;background:#f7f6f1;color:#162b37}
+*{box-sizing:border-box}
+body{margin:0}
+main{max-width:920px;margin:0 auto;padding:clamp(16px,3vw,44px)}
+a{color:#174f87}
+h1{font-size:clamp(1.5rem,3.4vw,2.5rem);margin:.4rem 0 1rem}
+h2{font-size:1.12rem}
+.eyebrow{font-size:.9rem;color:#2b6c6a;font-weight:700}
+.intro{padding:26px;background:white;border:1px solid #dedfd9;border-radius:16px}
+.warning{border-right:4px solid #ae672a;background:#fff6e9;padding:14px;line-height:1.85}
+.intro-note{line-height:1.9}
+#source-details{word-wrap:break-word;overflow-wrap:anywhere;background:#f1f4f5;border-radius:8px;padding:12px;font-size:.85rem}
+.search-card{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+form,.results,.source-note{padding:20px;background:white;border:1px solid #dedfd9;border-radius:14px}
+label{display:block;font-weight:600;margin-bottom:10px}
+.line{display:flex;gap:8px}
+input[type=text],input:not([type]){font:inherit;min-width:0;flex:1;padding:10px;border:1px solid #a7b5b7;border-radius:6px}
+button{font:inherit;cursor:pointer;background:#16546c;color:white;border:0;border-radius:6px;padding:10px 14px}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #e0a949;outline-offset:2px}
+.check{font-size:.85rem;font-weight:400;margin:14px 0 0}
+.results{min-height:170px;margin-bottom:18px}
+.ayah{border-bottom:1px solid #dedfd9;padding:14px 0}
+.ayah:last-child{border-bottom:0}
+.verse{font-family:"Amiri","Noto Naskh Arabic",serif;font-size:1.55rem;line-height:2.3}
+small{display:block;color:#51626d;overflow-wrap:anywhere}
+#feedback{color:#315e70}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;text-align:left;background:#f1f4f5;padding:10px;border-radius:8px;font-size:.75rem}
+footer{margin:30px 0;color:#526779;text-align:center;font-size:.9rem}
+@media(max-width:680px){.search-card{grid-template-columns:1fr}.line{flex-wrap:wrap}.line input{flex-basis:100%}button{width:100%}}
