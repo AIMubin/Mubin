@@ -40,9 +40,19 @@ class QuranMergeReadinessTests(unittest.TestCase):
     def test_clean_engineering_snapshot_is_not_scholarly_approval(self):
         x = assess_chain(fixture())
         self.assertTrue(x["engineering_qa_passed"])
-        self.assertTrue(x["merge_ready"])
+        self.assertTrue(x["conditionally_merge_ready"])
+        self.assertFalse(x["merge_ready"])
         self.assertFalse(x["quran_source_authenticated"])
         self.assertFalse(x["scholarly_approval_verified"])
+        self.assertEqual("provided_snapshot_untrusted", x["data_source"])
+
+    def test_forged_complete_offline_snapshot_never_authorizes_merge(self):
+        d = fixture()
+        d["data_source"] = "github_rest_read_only"
+        x = assess_chain(d)
+        self.assertFalse(x["merge_ready"])
+        self.assertFalse(x["eligible_for_auto_merge"])
+        self.assertTrue(x["conditionally_merge_ready"])
         self.assertEqual("provided_snapshot_untrusted", x["data_source"])
 
     def test_draft_blocks_only_merge_not_engineering_progress(self):
