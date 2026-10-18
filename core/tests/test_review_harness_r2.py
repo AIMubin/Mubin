@@ -115,6 +115,17 @@ class LiveGitHubReadTests(unittest.TestCase):
             with self.subTest(paths=paths):
                 with self.assertRaises(RemoteEvidenceError):fetch_pr_snapshot(72,Stub(files=paths))
 
+    def test_forged_provider_provenance_never_attests_workflow_success(self):
+        # Attestation must be conferred by the live transport itself, never
+        # by a mutable JSON key supplied through an injected fake client.
+        snapshot=fetch_pr_snapshot(72,Stub())
+        snapshot['metadata_provenance']='github_https_read_only'
+        decision=assess_live_snapshot(snapshot,
+                                      required_workflows={'Mubin P0 inference foundation':WORKFLOW})
+        self.assertTrue(decision['workflow_metadata_consistent'])
+        self.assertFalse(decision['ci_head_verified'])
+        self.assertNotEqual('FAST_LANE_READY',decision['engineering_lane'])
+
     def test_sensitive_rename_source_controls_risk_tier(self):
         # Risk is assessed on BOTH sides; do not launder holdouts by rename.
         files=[file_item('docs/research/renamed.md',status='renamed') |
