@@ -129,7 +129,8 @@ def assess_chain(snapshot: dict[str, Any]) -> dict[str, Any]:
 def _get_api(path: str, token: str | None) -> Any:
     """Only allow predetermined public GitHub REST repository paths."""
     if (type(path) is not str or not path.startswith("/") or
-        "//" in path or ".." in path or "\\\\" in path or
+        "//" in path or "/../" in path or "/./" in path or
+        path.endswith("/..") or path.endswith("/.") or chr(92) in path or
         not re.fullmatch(r"/[a-zA-Z0-9_/?.=&-]+", path)):
         raise ReadinessError("unsafe_api_path")
     url = f"https://api.github.com/repos/{REPO}{path}"
