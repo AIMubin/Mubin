@@ -1,0 +1,193 @@
+{
+  "contract": "mubin-usul-u03-research-questions-v1",
+  "scope": "research_questions_only",
+  "source_docket_sha256": "bf298ea01dc0f121c279b090acecbf229234d22387b0f82f7b13afb1112514f8",
+  "automatic_promotion": false,
+  "text_storage": "none",
+  "cards": [
+    {
+      "card_id": "u03_h001",
+      "candidate_id": "u02_c001",
+      "topic_id": "generality_with_exception",
+      "source_route_id": 146,
+      "heading_provenance": "printed_variant_reported",
+      "question_ar": "ما القرينة التي تحد العموم وتبين الخصوص في هذا الموضع؟",
+      "formulation_provenance": "researcher_question_unverified",
+      "review_status": "not_started",
+      "rule_status": "not_formalized",
+      "conditions_to_check": [
+        "ما النص الموثق الذي يتناول العموم؟",
+        "ما سياق الاستعمال بعد مقابلة الطبعة؟"
+      ],
+      "exceptions_to_check": [
+        "هل توجد قرينة أو مخصص يمنع حمل العموم على جميع الأفراد؟"
+      ],
+      "counterexample_to_check": "هل يوجد سياق تتحقق فيه صيغة العموم ولا يثبت تعميم النتيجة؟",
+      "methodology_disagreements_to_check": "ما أوجه الخلاف في تفسير العام والخاص بين المدارس؟",
+      "evidence_gates": [
+        {
+          "gate_id": "independent_edition_collation",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "author_editor_attribution",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "legal_use_basis_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "methodology_and_disagreement_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "conditions_exceptions_counterexamples",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "two_independent_scholarly_reviews",
+          "status": "not_completed"
+        }
+      ]
+    },
+    {
+      "card_id": "u03_h002",
+      "candidate_id": "u02_c002",
+      "topic_id": "mixed_generality_and_particularity",
+      "source_route_id": 149,
+      "heading_provenance": "printed_variant_reported",
+      "question_ar": "كيف نفصل العموم الظاهر عن بعض وجوه الخصوص دون نسبة قراءة غير محققة؟",
+      "formulation_provenance": "researcher_question_unverified",
+      "review_status": "not_started",
+      "rule_status": "not_formalized",
+      "conditions_to_check": [
+        "ما لفظ العنوان والمتن في الطبعة الموثقة؟",
+        "هل اللفظ محل البحث عام في جميع جهاته؟"
+      ],
+      "exceptions_to_check": [
+        "هل يُقيّد السياق أحد المعاني مع بقاء عموم سواه؟"
+      ],
+      "counterexample_to_check": "هل توجد قراءة بديلة تجعل عموم الظاهر غير مراد في بعض الأفراد؟",
+      "methodology_disagreements_to_check": "ما أثر اختلاف عنوان الباب بين النسخ في فهم السؤال؟",
+      "evidence_gates": [
+        {
+          "gate_id": "independent_edition_collation",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "author_editor_attribution",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "legal_use_basis_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "methodology_and_disagreement_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "conditions_exceptions_counterexamples",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "two_independent_scholarly_reviews",
+          "status": "not_completed"
+        }
+      ]
+    },
+    {
+      "card_id": "u03_h003",
+      "candidate_id": "u02_c003",
+      "topic_id": "sunnah_specifies_generality",
+      "source_route_id": 157,
+      "heading_provenance": "printed_variant_reported",
+      "question_ar": "متى يمكن بحث دلالة السنة على تخصيص عموم نص قرآني؟",
+      "formulation_provenance": "researcher_question_unverified",
+      "review_status": "not_started",
+      "rule_status": "not_formalized",
+      "conditions_to_check": [
+        "ما دليل السنة المعيّن بعد التثبت من نسبته؟",
+        "هل اتحد محل الحكم وسياق الخطاب؟"
+      ],
+      "exceptions_to_check": [
+        "هل يوجد تعارض دلالي أو ضعف في نسبة الدليل يمنع الاحتجاج؟"
+      ],
+      "counterexample_to_check": "هل توجد حالة يتحقق فيها ظاهر التخصيص مع عدم صحة ثبوت الدليل؟",
+      "methodology_disagreements_to_check": "ما مذاهب العلماء في ضوابط تخصيص العموم بالسنة؟",
+      "evidence_gates": [
+        {
+          "gate_id": "independent_edition_collation",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "author_editor_attribution",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "legal_use_basis_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "methodology_and_disagreement_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "conditions_exceptions_counterexamples",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "two_independent_scholarly_reviews",
+          "status": "not_completed"
+        }
+      ]
+    },
+    {
+      "card_id": "u03_h004",
+      "candidate_id": "u02_c004",
+      "topic_id": "ijma_chapter",
+      "source_route_id": 556,
+      "heading_provenance": "editor_added_heading_reported",
+      "question_ar": "كيف نفصل مفهوم الإجماع عن عنوان باب أضافه المحقق؟",
+      "formulation_provenance": "researcher_question_unverified",
+      "review_status": "not_started",
+      "rule_status": "not_formalized",
+      "conditions_to_check": [
+        "ما نص المؤلف الذي يمكن مقابلته مستقلًا؟",
+        "ما الشاهد على التمييز بين نص الأصل وعنوان المحقق؟"
+      ],
+      "exceptions_to_check": [
+        "هل ينتج من اختلاف العنوان عن النص احتمال نسبة لم تثبت؟"
+      ],
+      "counterexample_to_check": "هل يوجد قول منسوب إلى المؤلف لا تؤيده مادته المتحققة؟",
+      "methodology_disagreements_to_check": "ما التعاريف والخلافات المتعلقة بالإجماع التي يلزم تحريرها؟",
+      "evidence_gates": [
+        {
+          "gate_id": "independent_edition_collation",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "author_editor_attribution",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "legal_use_basis_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "methodology_and_disagreement_review",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "conditions_exceptions_counterexamples",
+          "status": "not_completed"
+        },
+        {
+          "gate_id": "two_independent_scholarly_reviews",
+          "status": "not_completed"
+        }
+      ]
+    }
+  ]
+}
