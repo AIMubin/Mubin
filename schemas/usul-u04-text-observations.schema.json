@@ -88,7 +88,7 @@
           },
           "site_page_url": {
             "type": "string",
-            "pattern": "^https://shamela\\\\.ws/book/8180/(146|149|157|556)$"
+            "pattern": "^https://shamela\\.ws/book/8180/(146|149|157|556)$"
           },
           "heading_provenance": {
             "enum": [
