@@ -34,6 +34,8 @@ class Stub:
         self.pr = pr if pr is not None else api_response()
         self.files = files if files is not None else [file_item('core/inference/validator.py'),file_item('core/tests/test_inference_foundation.py')]
         self.runs = runs if runs is not None else [run()]
+        if pr is None:
+            self.pr["changed_files"] = len(self.files)
         self.calls=[]
     def __call__(self, path):
         self.calls.append(path)
@@ -50,9 +52,10 @@ class LiveGitHubReadTests(unittest.TestCase):
         self.assertEqual(['core/inference/validator.py','core/tests/test_inference_foundation.py'],snapshot['changed_paths'])
         decision=assess_live_snapshot(snapshot,required_workflows={'Mubin P0 inference foundation':WORKFLOW})
         self.assertEqual('T1',decision['inferred_tier'])
-        self.assertEqual('FAST_LANE_READY',decision['engineering_lane'])
-        self.assertEqual('observed_github',decision['metadata_provenance'])
-        self.assertTrue(decision['ci_head_verified'])
+        self.assertEqual('FAST_LANE_CANDIDATE',decision['engineering_lane'])
+        self.assertEqual('injected_unverified',decision['metadata_provenance'])
+        self.assertFalse(decision['ci_head_verified'])
+        self.assertTrue(decision['workflow_metadata_consistent'])
         self.assertFalse(decision['eligible_for_auto_merge'])
         self.assertFalse(decision['independent_ai_review_verified'])
         self.assertEqual(0,decision['agent_invocations_performed'])
@@ -62,7 +65,7 @@ class LiveGitHubReadTests(unittest.TestCase):
         s=Stub(files=[file_item('docs/research/experiment.md')])
         result=assess_live_snapshot(fetch_pr_snapshot(72,s),required_workflows={})
         self.assertEqual('T0',result['inferred_tier'])
-        self.assertEqual('FAST_LANE_READY',result['engineering_lane'])
+        self.assertEqual('FAST_LANE_CANDIDATE',result['engineering_lane'])
         self.assertFalse(result['eligible_for_auto_merge'])
 
     def test_t2_t3_do_not_block_parallel_engineering(self):
@@ -112,6 +115,32 @@ class LiveGitHubReadTests(unittest.TestCase):
             with self.subTest(paths=paths):
                 with self.assertRaises(RemoteEvidenceError):fetch_pr_snapshot(72,Stub(files=paths))
 
+    def test_sensitive_rename_source_controls_risk_tier(self):
+        # Risk is assessed on BOTH sides; do not launder holdouts by rename.
+        files=[file_item('docs/research/renamed.md',status='renamed') |
+               {'previous_filename':'engines/hadith/qualification/H3.9.2/HOLDOUT-SEAL.md'}]
+        report=assess_live_snapshot(fetch_pr_snapshot(72,Stub(files=files)),
+                                    required_workflows={'Mubin P0 inference foundation':WORKFLOW})
+        self.assertEqual('T3',report['inferred_tier'])
+        self.assertIn('engines/hadith/qualification/H3.9.2/HOLDOUT-SEAL.md',
+                      fetch_pr_snapshot(72,Stub(files=files))['changed_paths'])
+
+    def test_workflow_pagination_truncation_never_green(self):
+        s=Stub()
+        original=s.__call__
+        def listed(p):
+            v=original(p)
+            if '/actions/runs?' in p:v['total_count']=200
+            return v
+        result=assess_live_snapshot(fetch_pr_snapshot(72,listed),
+                                    required_workflows={'Mubin P0 inference foundation':WORKFLOW})
+        self.assertFalse(result['workflow_metadata_consistent'])
+        self.assertEqual('WAIT_FOR_CI',result['engineering_lane'])
+
+    def test_bad_rename_source_rejected(self):
+        f=file_item('docs/renamed.md',status='renamed')|{'previous_filename':'../private'}
+        with self.assertRaises(RemoteEvidenceError):fetch_pr_snapshot(72,Stub(files=[f]))
+
     def test_bounded_pagination_rejects_excessive_files(self):
         s=Stub(pr=api_response()|{'changed_files':101},files=[file_item('README.md')]*100)
         with self.assertRaises(RemoteEvidenceError):fetch_pr_snapshot(72,s)
@@ -136,7 +165,7 @@ class LiveGitHubReadTests(unittest.TestCase):
 
     def test_draft_PR_can_continue_without_promoting_release(self):
         d=assess_live_snapshot(fetch_pr_snapshot(72,Stub(pr=api_response(draft=True))),required_workflows={'Mubin P0 inference foundation':WORKFLOW})
-        self.assertEqual('FAST_LANE_READY',d['engineering_lane'])
+        self.assertEqual('FAST_LANE_CANDIDATE',d['engineering_lane'])
         self.assertFalse(d['eligible_for_release'])
         self.assertFalse(d['eligible_for_auto_merge'])
 
