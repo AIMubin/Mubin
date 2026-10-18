@@ -167,6 +167,19 @@ class TextObservationTests(unittest.TestCase):
         x["observations"][0]["source_excerpts"][0]["unknown"]={"large":[[[[]]]]}
         self.reject(x)
 
+    def test_parent_binding_report_is_independent_of_excerpt_validity(self):
+        # The supplied parent can remain identical even when an excerpt
+        # is corrupted. Do not incorrectly label a quote failure as a
+        # parent-identity mismatch.
+        changed = copy.deepcopy(self.data)
+        changed["observations"][0]["source_excerpts"][0]["text_ar"] += " زائدة"
+        result = assess_observations(changed, self.cards, self.docket)
+        self.assertFalse(result["valid_metadata"])
+        self.assertTrue(result["parent_bindings_match"])
+        changed["question_cards_sha256"] = "0" * 64
+        result = assess_observations(changed, self.cards, self.docket)
+        self.assertFalse(result["parent_bindings_match"])
+
     def test_cli_valid_but_no_promotion(self):
         cmd=[sys.executable,"-m","core.usul.observations_cli",str(OBS),
              str(CARDS),str(DOCKET),"--json"]
