@@ -106,12 +106,27 @@ def validate_cards(data: Any, source_docket: Any) -> list[str]:
         return ["invalid:incomplete_research_question_set"]
     return []
 
+def _source_docket_fingerprint_matches(data: Any, source_docket: Any) -> bool:
+    """Digest consistency is independent of other card validation errors.
+
+    This compares an untrusted submitted parent with a submitted hash; it is
+    NOT independent source authentication, printed pagination or legal custody.
+    """
+    if type(data) is not dict or not _plain_json_tree(data) or _preflight(data):
+        return False
+    if type(data.get("source_docket_sha256")) is not str:
+        return False
+    if validate_docket(source_docket):
+        return False
+    return data["source_docket_sha256"] == assess_docket(source_docket)["docket_sha256"]
+
+
 def assess_cards(data: Any, source_docket: Any) -> dict[str, Any]:
     errors = validate_cards(data, source_docket)
     result = {
         "scope": "research_questions_only",
         "valid_metadata": not errors,
-        "source_docket_match": not errors,
+        "source_docket_match": _source_docket_fingerprint_matches(data, source_docket),
         "hypothesis_count": 0,
         "pending_evidence_gate_count": 0,
         "review_queue": [],
