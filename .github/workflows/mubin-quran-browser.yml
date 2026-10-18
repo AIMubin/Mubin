@@ -8,6 +8,7 @@ on:
       - "qa/quran_browser_smoke.py"
       - ".github/workflows/mubin-quran-browser.yml"
       - "docs/reviews/QURAN-BROWSER-**"
+      - "docs/reviews/QURAN-Q01D-**"
   push:
     branches: [main]
     paths:
