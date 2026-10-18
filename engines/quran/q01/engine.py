@@ -11,7 +11,8 @@ import hashlib
 import json
 import re
 import unicodedata
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 # Hafs/Kufan numbering convention; metadata reference: Tanzil Quran Metadata v1.0.
 # This table checks numerical topology, not the actual words of the Qur'an.
@@ -134,7 +135,7 @@ def _fold_arabic_marks(s:str)->str:
 
 @dataclass(frozen=True)
 class QuranIndex:
-    manifest:dict[str,Any]
+    manifest:Mapping[str,Any]
     verses:tuple[tuple[int,int,str],...]
     raw_sha256:str
 
@@ -173,6 +174,8 @@ class QuranIndex:
         if type(limit) is not int or not 1<=limit<=100:
             raise SnapshotError('search_limit_outside_bounds')
         q=_fold_arabic_marks(query) if match=='arabic_marks_insensitive' else query
+        if not q.strip():
+            raise SnapshotError('empty_after_search_folding')
         out=[]
         for s,a,txt in self.verses:
             t=_fold_arabic_marks(txt) if match=='arabic_marks_insensitive' else txt
@@ -189,7 +192,7 @@ def load_snapshot(manifest_bytes:bytes,corpus_bytes:bytes)->QuranIndex:
     sha=hashlib.sha256(corpus_bytes).hexdigest()
     if sha!=manifest['raw_sha256']:
         raise SnapshotError('raw_source_digest_mismatch')
-    return QuranIndex(manifest,tuple((x['surah'],x['ayah'],x['text']) for x in corpus['verses']),sha)
+    return QuranIndex(MappingProxyType(dict(manifest)),tuple((x['surah'],x['ayah'],x['text']) for x in corpus['verses']),sha)
 
 
 def assess_snapshot(manifest_bytes:bytes,corpus_bytes:bytes)->dict[str,Any]:
