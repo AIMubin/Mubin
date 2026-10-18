@@ -100,7 +100,7 @@ class Q01bSourceTests(unittest.TestCase):
                 load_raw(encoded(fixture(raw)),raw)
 
     def test_partial_snapshot_can_grow_with_valid_coordinates_but_stays_unverified(self):
-        expanded=SRC+'2|3|نص إضافي\\n'.encode('utf-8')
+        expanded=SRC+'2|3|نص إضافي\n'.encode('utf-8')
         idx=load_raw(encoded(fixture(expanded)),expanded)
         self.assertEqual(5,idx.report()['verse_count'])
         self.assertFalse(idx.report()['source_authenticated'])
