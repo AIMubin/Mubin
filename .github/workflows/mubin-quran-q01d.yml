@@ -5,6 +5,8 @@ on:
     paths:
       - "engines/quran/q01d/**"
       - "core/tests/test_quran_q01d.py"
+      - "core/tests/test_quran_official_probe.py"
+      - "qa/quran_official_probe.py"
       - "docs/research/QURAN-Q01D-**"
       - "docs/reviews/QURAN-Q01D-**"
       - ".github/workflows/mubin-quran-q01d.yml"
@@ -13,6 +15,8 @@ on:
     paths:
       - "engines/quran/q01d/**"
       - "core/tests/test_quran_q01d.py"
+      - "core/tests/test_quran_official_probe.py"
+      - "qa/quran_official_probe.py"
       - "docs/research/QURAN-Q01D-**"
       - "docs/reviews/QURAN-Q01D-**"
       - ".github/workflows/mubin-quran-q01d.yml"
@@ -58,3 +62,11 @@ jobs:
           assert r['rights_verified'] is False
           print(json.dumps({k:r[k] for k in ('comparison','candidate_verse_count','candidate_sha256','candidate_publisher_provenance_verified','rights_verified')},sort_keys=True))
           PY
+
+      - name: Official-domain candidate probe (advisory; no source text persisted)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m qa.quran_official_probe \
+            --manifest engines/quran/q01b/sources/tanzil-mirror-v1.1.json \
+            --mirror "${RUNNER_TEMP}/q01d-unverified-mirror.txt"
