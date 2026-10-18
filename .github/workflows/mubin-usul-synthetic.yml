@@ -1,4 +1,4 @@
-name: Mubin Usul U0.1 synthetic + U0.2 source + U0.3 questions
+name: Mubin Usul U0.1-U0.4 offline research gates
 
 on:
   pull_request:
@@ -7,16 +7,20 @@ on:
       - "core/tests/test_usul_u01.py"
       - "core/tests/test_usul_u02.py"
       - "core/tests/test_usul_u03.py"
+      - "core/tests/test_usul_u04.py"
       - "research/usul/**"
       - "schemas/usul-u01-**"
       - "schemas/usul-u02-**"
       - "schemas/usul-u03-**"
+      - "schemas/usul-u04-**"
       - "docs/research/USUL-U01-**"
       - "docs/research/USUL-U02-**"
       - "docs/research/USUL-U03-**"
+      - "docs/research/USUL-U04-**"
       - "docs/reviews/USUL-U01-**"
       - "docs/reviews/USUL-U02-**"
       - "docs/reviews/USUL-U03-**"
+      - "docs/reviews/USUL-U04-**"
       - ".github/workflows/mubin-usul-synthetic.yml"
   push:
     branches: [main]
@@ -25,16 +29,20 @@ on:
       - "core/tests/test_usul_u01.py"
       - "core/tests/test_usul_u02.py"
       - "core/tests/test_usul_u03.py"
+      - "core/tests/test_usul_u04.py"
       - "research/usul/**"
       - "schemas/usul-u01-**"
       - "schemas/usul-u02-**"
       - "schemas/usul-u03-**"
+      - "schemas/usul-u04-**"
       - "docs/research/USUL-U01-**"
       - "docs/research/USUL-U02-**"
       - "docs/research/USUL-U03-**"
+      - "docs/research/USUL-U04-**"
       - "docs/reviews/USUL-U01-**"
       - "docs/reviews/USUL-U02-**"
       - "docs/reviews/USUL-U03-**"
+      - "docs/reviews/USUL-U04-**"
       - ".github/workflows/mubin-usul-synthetic.yml"
 
 permissions:
@@ -57,3 +65,4 @@ jobs:
       - run: python -m core.usul research/usul/rulebook-synthetic.json research/usul/test-cases-synthetic.json --json
       - run: python -m core.usul.docket_cli research/usul/u02-risala-source-candidates.json --json
       - run: python -m core.usul.claims_cli research/usul/u03-risala-hypothesis-cards.json research/usul/u02-risala-source-candidates.json --json
+      - run: python -m core.usul.observations_cli research/usul/u04-risala-text-observations.json research/usul/u03-risala-hypothesis-cards.json research/usul/u02-risala-source-candidates.json --json
