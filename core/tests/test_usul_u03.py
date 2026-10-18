@@ -137,6 +137,18 @@ class ResearchCardsTests(unittest.TestCase):
         self.assertEqual([], validate_cards(x, self.parent))
         self.assertFalse(assess_cards(x, self.parent)["scholarly_authority_verified"])
 
+    def test_source_digest_match_is_distinct_from_question_validity(self):
+        # A malformed researcher question must not be described as a
+        # different source docket when its parent fingerprint still matches.
+        modified = copy.deepcopy(self.cards)
+        modified["cards"][0]["question_ar"] = "not a question"
+        report = assess_cards(modified, self.parent)
+        self.assertFalse(report["valid_metadata"])
+        self.assertTrue(report["source_docket_match"])
+        modified["source_docket_sha256"] = "0" * 64
+        report = assess_cards(modified, self.parent)
+        self.assertFalse(report["source_docket_match"])
+
     def test_order_stable_digest(self):
         a = assess_cards(self.cards, self.parent)
         x = copy.deepcopy(self.cards)
