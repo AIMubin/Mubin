@@ -170,6 +170,19 @@ class ReviewHarnessTests(unittest.TestCase):
         p["candidate"]["base_sha"] = GOOD
         self.reject(p)
 
+    def test_final_newline_sha_or_url_alias_is_rejected(self):
+        # Python regex $ may match before a final newline. Full identity
+        # fields and supposed CI links must have an exact end-of-string.
+        p = copy.deepcopy(self.packet)
+        p["candidate"]["base_sha"] += "\n"
+        self.reject(p)
+        p = self.complete()
+        p["deterministic_checks"][0]["claimed_run_url"] += "\n"
+        self.reject(p)
+        p = self.complete()
+        p["review_attempts"][0]["attempt_id"] += "\n"
+        self.reject(p)
+
     def test_duplicate_check_rejected(self):
         p = self.complete()
         p["deterministic_checks"].append(copy.deepcopy(p["deterministic_checks"][0]))
@@ -317,7 +330,7 @@ class ReviewHarnessTests(unittest.TestCase):
         doc=json.loads((ROOT/"research/review_harness/public-defect-challenges.json").read_text(encoding="utf-8"))
         self.assertEqual("public_dev_set_not_holdout", doc["split"])
         self.assertEqual(4, len(doc["cases"]))
-        self.assertEqual({"U02-EDITORIAL", "U03-DIGEST", "U04-SPEAKER", "U05-RISK"},
+        self.assertEqual({"U02-EDITORIAL", "U03-DIGEST", "U04-PARENT", "U05-RISK"},
                          {x["challenge_id"] for x in doc["cases"]})
         self.assertTrue(all(x["expected_category"] in ("provenance", "semantic_contract", "speaker_attribution", "methodology") for x in doc["cases"]))
         self.assertFalse(doc["independent_reviewer_model_executed"])
