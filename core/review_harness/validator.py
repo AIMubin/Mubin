@@ -35,6 +35,8 @@ _IMPACT_MIN_TIER = {
     "release_action": 3,
 }
 _SHA = re.compile(r"[a-f0-9]{40}\Z")
+_RUN_URL = re.compile(r"https://github[.]com/AIMubin/Mubin/actions/runs/[0-9]+\Z")
+_ATTEMPT = re.compile(r"[a-z0-9_-]{3,40}\Z")
 _BAD_CODEPOINTS = {0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF}
 
 
@@ -132,11 +134,16 @@ def validate_packet(packet: Any) -> list[str]:
     paths = cand["changed_paths"]
     if len(paths) != len(set(paths)) or not all(map(_safe_path, paths)):
         return ["invalid:unsafe_or_duplicate_path"]
+    if not _SHA.fullmatch(cand["base_sha"]) or not _SHA.fullmatch(cand["head_sha"]):
+        return ["invalid:noncanonical_commit_identity"]
     if cand["base_sha"] == cand["head_sha"]:
         return ["invalid:unchanged_candidate_sha"]
     if len(cand["impact_tags"]) != len(set(cand["impact_tags"])):
         return ["invalid:duplicate_impact_tags"]
     for check in packet["deterministic_checks"]:
+        if (not _SHA.fullmatch(check["target_sha"])
+                or not _RUN_URL.fullmatch(check["claimed_run_url"])):
+            return ["invalid:noncanonical_check_identity_or_url"]
         if check["target_sha"] != cand["head_sha"]:
             return ["invalid:stale_deterministic_check_sha"]
     names = [c["check_id"] for c in packet["deterministic_checks"]]
@@ -149,6 +156,9 @@ def validate_packet(packet: Any) -> list[str]:
     if len(attempt_ids) != len(set(attempt_ids)):
         return ["invalid:duplicate_attempt_id"]
     for review in packet["review_attempts"]:
+        if (not _SHA.fullmatch(review["target_sha"])
+                or not _ATTEMPT.fullmatch(review["attempt_id"])):
+            return ["invalid:noncanonical_attempt_identity"]
         if review["target_sha"] != cand["head_sha"]:
             return ["invalid:stale_review_head_sha"]
         findings = review["findings"]
