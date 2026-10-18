@@ -178,7 +178,7 @@ class ResearchCardsTests(unittest.TestCase):
         x["cards"][0]["question_ar"] = "A" * 100000
         self.reject(x)
         x = copy.deepcopy(self.cards)
-        x["cards"][0]["question_ar"] = "\\ud800"
+        x["cards"][0]["question_ar"] = chr(0xD800)
         self.reject(x)
         x = copy.deepcopy(self.cards)
         x["cards"][0]["conditions_to_check"] = ["x"] * 2000
