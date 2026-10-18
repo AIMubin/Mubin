@@ -158,6 +158,23 @@ class ReviewQueueTests(unittest.TestCase):
         x["reviews"][3]["heading_provenance"]="printed_variant_reported"
         self.invalid(queue=x)
 
+    def test_pilot_risk_and_falsification_text_cannot_be_silently_rewritten(self):
+        # RED-first: accepting an arbitrary replacement still returns
+        # valid metadata, silently dropping critical review obligations.
+        for index in range(4):
+            with self.subTest(record=index, field="editorial_risk_ar"):
+                changed=copy.deepcopy(self.queue)
+                changed["reviews"][index]["editorial_risk_ar"]=(
+                    "لا توجد أي مشكلة تحتاج إلى تحقق إضافي هنا."
+                )
+                self.invalid(queue=changed)
+            with self.subTest(record=index, field="falsification_probe_ar"):
+                changed=copy.deepcopy(self.queue)
+                changed["reviews"][index]["falsification_probe_ar"]=(
+                    "لا حاجة إلى أي مثال ناقض لهذا الحكم."
+                )
+                self.invalid(queue=changed)
+
     def test_canonical_order_independent_queue_digest(self):
         r=assess_review_queue(self.queue,self.observations,self.cards,self.docket)
         x=copy.deepcopy(self.queue);x["reviews"].reverse()
