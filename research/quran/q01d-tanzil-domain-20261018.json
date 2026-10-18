@@ -1,0 +1,26 @@
+{
+  "contract": "mubin-q01d-tanzil-domain-observation-v1",
+  "observed_date": "2026-10-18",
+  "evidence_run_id": 39155112593,
+  "request_method": "GET",
+  "url": "https://tanzil.net/pub/download/index.php",
+  "preset": {
+    "quranType": "uthmani",
+    "outType": "txt-2",
+    "marks": "true",
+    "sajdah": "true",
+    "rub": "true",
+    "tatweel": "true",
+    "agree": "true"
+  },
+  "official_domain_observed_sha256": "7f30c647331a61100ebf24a80507dc0fcdd9f2df97f1312b5b2dfcb982a7f326",
+  "mirror_raw_sha256": "f64fe7657dbe2e185e9995e14f7a67ee6cf1a30773f39184883d7a763d70fb19",
+  "comparison": "verse_equal_bytes_different",
+  "verse_count": 6236,
+  "different_verse_count": 0,
+  "authenticated_publisher_artifact": false,
+  "independently_signed_by_publisher": false,
+  "rights_verified": false,
+  "eligible_for_religious_ruling": false,
+  "source_text_stored_in_repo": false
+}
