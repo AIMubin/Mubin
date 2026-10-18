@@ -13,6 +13,8 @@ on:
       - "qa/quran_official_probe.py"
       - "docs/research/QURAN-Q01D-**"
       - "docs/reviews/QURAN-Q01D-**"
+      - "docs/reviews/QURAN-Q01E-**"
+      - "docs/research/QURAN-Q01E-**"
       - ".github/workflows/mubin-quran-q01d.yml"
   push:
     branches: [main]
@@ -27,6 +29,8 @@ on:
       - "qa/quran_official_probe.py"
       - "docs/research/QURAN-Q01D-**"
       - "docs/reviews/QURAN-Q01D-**"
+      - "docs/reviews/QURAN-Q01E-**"
+      - "docs/research/QURAN-Q01E-**"
       - ".github/workflows/mubin-quran-q01d.yml"
 
 permissions:
