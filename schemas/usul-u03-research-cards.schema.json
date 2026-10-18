@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mubin U0.3 researcher question cards; no source text, rule promotion, or scholarly approval",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "scope",
+    "source_docket_sha256",
+    "automatic_promotion",
+    "text_storage",
+    "cards"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mubin-usul-u03-research-questions-v1"
+    },
+    "scope": {
+      "const": "research_questions_only"
+    },
+    "source_docket_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "automatic_promotion": {
+      "const": false
+    },
+    "text_storage": {
+      "const": "none"
+    },
+    "cards": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "card_id",
+          "candidate_id",
+          "topic_id",
+          "source_route_id",
+          "heading_provenance",
+          "question_ar",
+          "formulation_provenance",
+          "review_status",
+          "rule_status",
+          "conditions_to_check",
+          "exceptions_to_check",
+          "counterexample_to_check",
+          "methodology_disagreements_to_check",
+          "evidence_gates"
+        ],
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "pattern": "^u03_h00[1-4]$"
+          },
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^u02_c00[1-4]$"
+          },
+          "topic_id": {
+            "enum": [
+              "generality_with_exception",
+              "mixed_generality_and_particularity",
+              "sunnah_specifies_generality",
+              "ijma_chapter"
+            ]
+          },
+          "source_route_id": {
+            "enum": [
+              146,
+              149,
+              157,
+              556
+            ]
+          },
+          "heading_provenance": {
+            "enum": [
+              "printed_variant_reported",
+              "editor_added_heading_reported"
+            ]
+          },
+          "question_ar": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 550
+          },
+          "formulation_provenance": {
+            "const": "researcher_question_unverified"
+          },
+          "review_status": {
+            "const": "not_started"
+          },
+          "rule_status": {
+            "const": "not_formalized"
+          },
+          "conditions_to_check": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 380
+            }
+          },
+          "exceptions_to_check": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 380
+            }
+          },
+          "counterexample_to_check": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 500
+          },
+          "methodology_disagreements_to_check": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 500
+          },
+          "evidence_gates": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "gate_id",
+                "status"
+              ],
+              "properties": {
+                "gate_id": {
+                  "enum": [
+                    "independent_edition_collation",
+                    "author_editor_attribution",
+                    "legal_use_basis_review",
+                    "methodology_and_disagreement_review",
+                    "conditions_exceptions_counterexamples",
+                    "two_independent_scholarly_reviews"
+                  ]
+                },
+                "status": {
+                  "const": "not_completed"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
