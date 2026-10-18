@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - "engines/quran/q01d/**"
+      - "engines/quran/q01e/**"
+      - "core/tests/test_quran_q01e.py"
+      - "qa/quran_official_reader_smoke.py"
+      - "qa/quran_official_chrome_smoke.py"
       - "core/tests/test_quran_q01d.py"
       - "core/tests/test_quran_official_probe.py"
       - "qa/quran_official_probe.py"
@@ -14,6 +18,10 @@ on:
     branches: [main]
     paths:
       - "engines/quran/q01d/**"
+      - "engines/quran/q01e/**"
+      - "core/tests/test_quran_q01e.py"
+      - "qa/quran_official_reader_smoke.py"
+      - "qa/quran_official_chrome_smoke.py"
       - "core/tests/test_quran_q01d.py"
       - "core/tests/test_quran_official_probe.py"
       - "qa/quran_official_probe.py"
@@ -73,3 +81,10 @@ jobs:
 
       - name: Start official-domain PINNED local reader and verify 6236-verse APIs
         run: python -m qa.quran_official_reader_smoke
+
+      - name: Exercise the pinned full Quran in an actual local Chrome reader (network-advisory)
+        continue-on-error: true
+        run: |
+          command -v google-chrome
+          command -v chromedriver
+          python -m qa.quran_official_chrome_smoke
