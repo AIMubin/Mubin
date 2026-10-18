@@ -13,7 +13,7 @@ import re
 from typing import Any
 from urllib.parse import urlsplit, parse_qs
 
-from engines.quran.q01b.tanzil import SourceIndex, RawSourceError
+from engines.quran.q01b.tanzil import SourceIndex, RawSourceError, load_raw
 
 _HERE=Path(__file__).resolve().parent
 _FILES={"/":("reader.html","text/html; charset=utf-8"),
@@ -59,10 +59,21 @@ def _decode_query(raw_query:str, allowed:frozenset[str],
         raise ValueError("invalid_query") from exc
 
 def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackServer:
-    if not isinstance(index,SourceIndex) or type(raw) is not bytes:
+    if type(index) is not SourceIndex or type(raw) is not bytes:
         raise RawSourceError("unverified_or_missing_source_index")
     if hashlib.sha256(raw).hexdigest()!=index.raw_sha256:
         raise RawSourceError("source_index_bytes_mismatch")
+    # Re-derive the loaded records from pinned original bytes; an otherwise
+    # well-shaped SourceIndex can be forged by its public constructor.
+    # This is a startup-only cost, not a per-request parser/normalizer.
+    try:
+        manifest_bytes=json.dumps(dict(index.manifest),ensure_ascii=True,
+            sort_keys=True,separators=(",",":")).encode("utf-8","strict")
+    except (TypeError,ValueError,UnicodeError) as exc:
+        raise RawSourceError("untrusted_source_manifest") from exc
+    checked=load_raw(manifest_bytes,raw)
+    if checked.verses!=index.verses or dict(checked.manifest)!=dict(index.manifest):
+        raise RawSourceError("source_index_not_derived_from_pinned_raw_bytes")
     if type(port) is not int or not 0<=port<=65535:
         raise RawSourceError("invalid_loopback_port")
     notice=_notice(index,raw)
