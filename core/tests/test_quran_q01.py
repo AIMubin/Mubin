@@ -198,6 +198,16 @@ class Q01Tests(unittest.TestCase):
             bad=copy.deepcopy(object);bad['pretend_scholar_approval']=True
             self.assertTrue(list(Draft202012Validator(schema['$defs'][name]).iter_errors(bad)))
 
+    def test_diacritic_only_search_must_not_match_all_verses(self):
+        for query in ("\u064b", "\u064b\u0651", "\u06d6"):
+            with self.subTest(query=repr(query)),self.assertRaises(SnapshotError):
+                self.index.find(query,match='arabic_marks_insensitive')
+
+    def test_loaded_provenance_cannot_be_mutated_after_validation(self):
+        with self.assertRaises(TypeError):
+            self.index.manifest['source_id']='external:forged-after-verification'
+        self.assertEqual('synthetic:q01',self.index.get('1:1')['source_id'])
+
     def test_workflow_runs_scope_and_quran_cli(self):
         wf=(ROOT/'.github/workflows/mubin-quran-q01.yml').read_text(encoding='utf-8')
         self.assertIn('core/tests/test_quran_q01.py',wf)
