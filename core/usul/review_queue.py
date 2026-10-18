@@ -24,6 +24,11 @@ _VALIDATOR = Draft202012Validator(_SCHEMA)
 AXES = ["independent_edition_collation","author_editor_attribution","legal_use_basis_review","methodology_and_disagreement_review","conditions_exceptions_counterexamples","two_independent_scholarly_reviews"]
 _IJMA_WARNING = "عنوان «باب الإجماع» أضافه المحقق، وسؤال المحاور ليس قولًا نهائيًا للشافعي."
 
+# Four-slot v1 is a frozen review-task proposal, not a general source corpus.
+# Explicit code review is required to change these researcher hypotheses.
+# Pinning these strings proves local fixture identity, NOT scholarly truth.
+_PILOT_REVIEW_TEXT = {"u05_r001":["الحاشية تشير إلى زيادة اسم القائل في شواهد أخرى، فلا تُنسب كل صياغة إلى المؤلف دون مقابلة.","افترض وجود قرينة في السياق تخصص بعض الأفراد؛ هل يبقى الاستدلال بالعموم المطلق صالحًا؟"],"u05_r002":["اختلاف ألفاظ عنوان الباب «الخاص» و«الخصوص» يقتضي فصل عنوان المحقق عن متن الاستدلال.","افترض اختلافًا معتبرًا بين ألفاظ العنوان والمتن؛ هل يصح بناء نسبة أصل أصولي من العنوان وحده؟"],"u05_r003":["اختلاف لفظ «دلت» و«فدلت» وعنوان الباب لا يثبتان خبرًا معينًا ولا دلالة تخصيص.","افترض عدم ثبوت الخبر أو عدم اتحاد محل الحكم؛ هل يصح جعله مخصصًا للعموم؟"],"u05_r004":["عنوان «باب الإجماع» أضافه المحقق، وسؤال المحاور ليس قولًا نهائيًا للشافعي.","افترض أن المحاور يعترض وأن المؤلف لا يوافق على المقدمة؛ هل يصح جعل السؤال حجية إجماع؟"]}
+
 def _unexpected_fields(document: dict[str, Any]) -> list[str]:
     if any(type(k) is not str or k not in _SCHEMA["properties"] for k in document):
         return ["unknown:root_field"]
@@ -121,8 +126,10 @@ def validate_review_queue(queue: Any, observations: Any, cards: Any, docket: Any
             return ["invalid:review_parent_content_mismatch"]
         if [task["axis_id"] for task in row["evidence_tasks"]] != AXES:
             return ["invalid:noncanonical_evidence_axis_order"]
-        if rid == "u05_r004" and row["editorial_risk_ar"] != _IJMA_WARNING:
-            return ["invalid:ijma_interlocutor_editor_warning_changed"]
+        pinned_risk, pinned_probe = _PILOT_REVIEW_TEXT[rid]
+        if (row["editorial_risk_ar"] != pinned_risk
+                or row["falsification_probe_ar"] != pinned_probe):
+            return ["invalid:pilot_research_risk_or_falsification_downgrade"]
     if ids != {"u05_r001","u05_r002","u05_r003","u05_r004"}:
         return ["invalid:incomplete_review_queue"]
     return []
