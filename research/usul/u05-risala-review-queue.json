@@ -1,0 +1,212 @@
+{
+  "contract": "mubin-usul-u05-review-queue-v1",
+  "scope": "unsubmitted_scholarly_review_queue_only",
+  "automatic_promotion": false,
+  "rights_status": "not_assessed_for_use",
+  "source_docket_sha256": "bf298ea01dc0f121c279b090acecbf229234d22387b0f82f7b13afb1112514f8",
+  "question_cards_sha256": "6f5848f7026d17dbc7ec8abad3f5d268b323c489e7e4a42012176da02dfcd257",
+  "observation_set_sha256": "729b9aa8036c5e71fc255dccbb31c101f6c6f34a852d5bda86137a934e69e164",
+  "reviewer_submissions": [],
+  "reviews": [
+    {
+      "review_id": "u05_r001",
+      "observation_id": "u04_t001",
+      "card_id": "u03_h001",
+      "candidate_id": "u02_c001",
+      "source_route_id": 146,
+      "printed_page_on_site": 53,
+      "heading_provenance": "printed_variant_reported",
+      "research_question_ar": "ما القرينة التي تحد العموم وتبين الخصوص في هذا الموضع؟",
+      "editorial_risk_ar": "الحاشية تشير إلى زيادة اسم القائل في شواهد أخرى، فلا تُنسب كل صياغة إلى المؤلف دون مقابلة.",
+      "falsification_probe_ar": "افترض وجود قرينة في السياق تخصص بعض الأفراد؛ هل يبقى الاستدلال بالعموم المطلق صالحًا؟",
+      "review_status": "not_adjudicated",
+      "admission_status": "no_admission",
+      "reviewer_slots": [
+        "unassigned",
+        "unassigned"
+      ],
+      "evidence_tasks": [
+        {
+          "axis_id": "independent_edition_collation",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "author_editor_attribution",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "legal_use_basis_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "methodology_and_disagreement_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "conditions_exceptions_counterexamples",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "two_independent_scholarly_reviews",
+          "status": "pending",
+          "evidence_refs": []
+        }
+      ]
+    },
+    {
+      "review_id": "u05_r002",
+      "observation_id": "u04_t002",
+      "card_id": "u03_h002",
+      "candidate_id": "u02_c002",
+      "source_route_id": 149,
+      "printed_page_on_site": 56,
+      "heading_provenance": "printed_variant_reported",
+      "research_question_ar": "كيف نفصل العموم الظاهر عن بعض وجوه الخصوص دون نسبة قراءة غير محققة؟",
+      "editorial_risk_ar": "اختلاف ألفاظ عنوان الباب «الخاص» و«الخصوص» يقتضي فصل عنوان المحقق عن متن الاستدلال.",
+      "falsification_probe_ar": "افترض اختلافًا معتبرًا بين ألفاظ العنوان والمتن؛ هل يصح بناء نسبة أصل أصولي من العنوان وحده؟",
+      "review_status": "not_adjudicated",
+      "admission_status": "no_admission",
+      "reviewer_slots": [
+        "unassigned",
+        "unassigned"
+      ],
+      "evidence_tasks": [
+        {
+          "axis_id": "independent_edition_collation",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "author_editor_attribution",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "legal_use_basis_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "methodology_and_disagreement_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "conditions_exceptions_counterexamples",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "two_independent_scholarly_reviews",
+          "status": "pending",
+          "evidence_refs": []
+        }
+      ]
+    },
+    {
+      "review_id": "u05_r003",
+      "observation_id": "u04_t003",
+      "card_id": "u03_h003",
+      "candidate_id": "u02_c003",
+      "source_route_id": 157,
+      "printed_page_on_site": 64,
+      "heading_provenance": "printed_variant_reported",
+      "research_question_ar": "متى يمكن بحث دلالة السنة على تخصيص عموم نص قرآني؟",
+      "editorial_risk_ar": "اختلاف لفظ «دلت» و«فدلت» وعنوان الباب لا يثبتان خبرًا معينًا ولا دلالة تخصيص.",
+      "falsification_probe_ar": "افترض عدم ثبوت الخبر أو عدم اتحاد محل الحكم؛ هل يصح جعله مخصصًا للعموم؟",
+      "review_status": "not_adjudicated",
+      "admission_status": "no_admission",
+      "reviewer_slots": [
+        "unassigned",
+        "unassigned"
+      ],
+      "evidence_tasks": [
+        {
+          "axis_id": "independent_edition_collation",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "author_editor_attribution",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "legal_use_basis_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "methodology_and_disagreement_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "conditions_exceptions_counterexamples",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "two_independent_scholarly_reviews",
+          "status": "pending",
+          "evidence_refs": []
+        }
+      ]
+    },
+    {
+      "review_id": "u05_r004",
+      "observation_id": "u04_t004",
+      "card_id": "u03_h004",
+      "candidate_id": "u02_c004",
+      "source_route_id": 556,
+      "printed_page_on_site": 471,
+      "heading_provenance": "editor_added_heading_reported",
+      "research_question_ar": "كيف نفصل مفهوم الإجماع عن عنوان باب أضافه المحقق؟",
+      "editorial_risk_ar": "عنوان «باب الإجماع» أضافه المحقق، وسؤال المحاور ليس قولًا نهائيًا للشافعي.",
+      "falsification_probe_ar": "افترض أن المحاور يعترض وأن المؤلف لا يوافق على المقدمة؛ هل يصح جعل السؤال حجية إجماع؟",
+      "review_status": "not_adjudicated",
+      "admission_status": "no_admission",
+      "reviewer_slots": [
+        "unassigned",
+        "unassigned"
+      ],
+      "evidence_tasks": [
+        {
+          "axis_id": "independent_edition_collation",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "author_editor_attribution",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "legal_use_basis_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "methodology_and_disagreement_review",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "conditions_exceptions_counterexamples",
+          "status": "pending",
+          "evidence_refs": []
+        },
+        {
+          "axis_id": "two_independent_scholarly_reviews",
+          "status": "pending",
+          "evidence_refs": []
+        }
+      ]
+    }
+  ]
+}

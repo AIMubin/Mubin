@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mubin U0.5 unsubmitted research review tasks, no human attestations or executable rules",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "scope",
+    "automatic_promotion",
+    "rights_status",
+    "source_docket_sha256",
+    "question_cards_sha256",
+    "observation_set_sha256",
+    "reviewer_submissions",
+    "reviews"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mubin-usul-u05-review-queue-v1"
+    },
+    "scope": {
+      "const": "unsubmitted_scholarly_review_queue_only"
+    },
+    "automatic_promotion": {
+      "const": false
+    },
+    "rights_status": {
+      "const": "not_assessed_for_use"
+    },
+    "source_docket_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "question_cards_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "observation_set_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "reviewer_submissions": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "reviews": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "review_id",
+          "observation_id",
+          "card_id",
+          "candidate_id",
+          "source_route_id",
+          "printed_page_on_site",
+          "heading_provenance",
+          "research_question_ar",
+          "editorial_risk_ar",
+          "falsification_probe_ar",
+          "review_status",
+          "admission_status",
+          "reviewer_slots",
+          "evidence_tasks"
+        ],
+        "properties": {
+          "review_id": {
+            "type": "string",
+            "pattern": "^u05_r00[1-4]$"
+          },
+          "observation_id": {
+            "type": "string",
+            "pattern": "^u04_t00[1-4]$"
+          },
+          "card_id": {
+            "type": "string",
+            "pattern": "^u03_h00[1-4]$"
+          },
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^u02_c00[1-4]$"
+          },
+          "source_route_id": {
+            "enum": [
+              146,
+              149,
+              157,
+              556
+            ]
+          },
+          "printed_page_on_site": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99999999
+          },
+          "heading_provenance": {
+            "enum": [
+              "printed_variant_reported",
+              "editor_added_heading_reported"
+            ]
+          },
+          "research_question_ar": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 550
+          },
+          "editorial_risk_ar": {
+            "type": "string",
+            "minLength": 15,
+            "maxLength": 700
+          },
+          "falsification_probe_ar": {
+            "type": "string",
+            "minLength": 15,
+            "maxLength": 700
+          },
+          "review_status": {
+            "const": "not_adjudicated"
+          },
+          "admission_status": {
+            "const": "no_admission"
+          },
+          "reviewer_slots": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "const": "unassigned"
+            }
+          },
+          "evidence_tasks": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "axis_id",
+                "status",
+                "evidence_refs"
+              ],
+              "properties": {
+                "axis_id": {
+                  "enum": [
+                    "independent_edition_collation",
+                    "author_editor_attribution",
+                    "legal_use_basis_review",
+                    "methodology_and_disagreement_review",
+                    "conditions_exceptions_counterexamples",
+                    "two_independent_scholarly_reviews"
+                  ]
+                },
+                "status": {
+                  "const": "pending"
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
