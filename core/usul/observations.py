@@ -126,12 +126,30 @@ def validate_observations(data: Any, cards: Any, docket: Any) -> list[str]:
         return ["invalid:incomplete_observations"]
     return []
 
+def _parent_fingerprints_match(data: Any, cards: Any, docket: Any) -> bool:
+    """Does this ledger name the two supplied valid metadata parents?
+
+    This is deliberately independent of unrelated U0.4 excerpt errors.
+    Matching user-supplied metadata does NOT attest publisher source custody.
+    """
+    if type(data) is not dict or not _plain_json_tree(data) or _preflight(data):
+        return False
+    left = data.get("source_docket_sha256")
+    right = data.get("question_cards_sha256")
+    if type(left) is not str or type(right) is not str:
+        return False
+    if validate_cards(cards, docket):
+        return False
+    return (left == assess_docket(docket)["docket_sha256"]
+            and right == assess_cards(cards, docket)["card_set_sha256"])
+
+
 def assess_observations(data: Any, cards: Any, docket: Any) -> dict[str, Any]:
     errors = validate_observations(data,cards,docket)
     report = {
         "scope":"unverified_site_display_observations_only",
         "valid_metadata":not errors,
-        "parent_bindings_match":not errors,
+        "parent_bindings_match":_parent_fingerprints_match(data,cards,docket),
         "observation_count":0,
         "excerpt_count":0,
         "observation_set_sha256":None,
