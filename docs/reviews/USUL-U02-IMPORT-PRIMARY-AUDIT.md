@@ -56,3 +56,62 @@ laundering, not evidence of real source falsity.
 - CI asserts formal invariants, not philological truth, legal permissions, or sound deduction. The project-wide release stays `0.1.0-alpha`.
 - Codex second pass may begin **only after** this primary audit and latest-HEAD CI are green, with full dispositions to actionable comments. If review quota is unavailable, report maintainer-only fallback, never second-party approval.
 - **Merge hold:** U0.2 remains unmerged and dependent on PR #66; no release or main-branch mutation authorized by tests.
+
+
+## Quota fallback — supplemental maintainer-only adversarial audit (2026-10-18)
+
+**Exact implementation/doc HEAD reviewed:** `396d1ba8932e6f60e236591057bed7dd872bec23`.
+Both final-HEAD CI workflows completed successfully:
+[P0 #39065633357](https://github.com/AIMubin/Mubin/actions/runs/39065633357)
+and [Usul U0.2 #39065633358](https://github.com/AIMubin/Mubin/actions/runs/39065633358).
+The U0.2 tests cover **91 methods**; CLI frozen synthetic fixture and non-executable
+metadata smoke tests passed. The change from RED `05d96e3` to fixed
+`b26bbcc9` was demonstrated in the live runners, not inferred from prior
+artifact logs.
+
+**Codex review status for the above HEAD:** `codex_review=unavailable`;
+the PR conversation explicitly returned *"You have reached your Codex usage
+limits for code reviews"*. No new successful external review is present.
+An earlier automated review summary records `failed` at prior HEAD
+`c53f573`, but the quota response means it cannot be treated as actionable
+findings or as independent acceptance of the repair. The human-maintainer
+fallback below is not a second-party review.
+
+Supplemental adversarial inspection against latest code:
+- **Identity permutations:** candidate IDs, topic IDs and source route IDs
+  cannot be swapped without a validation error; count is exactly four;
+  URL format and provider/book ID are cross-checked.
+- **Editorial provenance downgrade:** `heading_provenance` is pinned to
+  each of the four candidates and the critical Ijma editor-added warning
+  string cannot be replaced silently. Tests capture five failing RED
+  mutation cases before the repair.
+- **Programmatic objects:** root/nested `dict` and `list` subclasses,
+  cycles, aliasing, deep unknown fields, oversize strings and invalid
+  Unicode are denied before schema traversal or canonical hashing.
+- **CLI:** the shared strict byte-reader rejects non-regular files,
+  symlinks, repeated JSON object members, NaN/nonstandard numbers,
+  invalid UTF-8 and >256KiB input; exit code 0 means *valid metadata
+  only*, 1 means invalid record, 2 means unsafe/invalid file input.
+- **Authority separation:** even valid metadata emits
+  `verified_rule_count=0`, `eligible_for_engine=false`,
+  `scholarly_authority_verified=false`, `rights_verified=false` and
+  `edition_authenticated=false`. A local record hash is not source custody.
+- **CI:** the U0.2 schema, tests, implementation, fixture and review docs
+  appear in the synthetic workflow path filters, and source changes
+  also reach the general P0 workflow.
+
+**Residual issues, explicitly not fixed or silently certified:** Other
+descriptive metadata (printed-page display, author/book display, some
+editorial comments and question wording) is still caller-supplied, not
+independently matched against an authenticated edition. If this pilot becomes
+a multi-book corpus, introduce a separate witnessed immutable source
+manifest and versioned provenance transitions rather than generalizing
+the hard-coded four-slot rules. The network/no-follow guarantees are scoped
+to reviewed Python implementation and Linux GitHub CI, not every platform.
+The scholarly and licensing gates remain closed.
+
+**Disposition:** no remaining known *syntactic U0.2 pilot* blocker found
+by maintainer-only review. This is **not** permission to merge into main,
+promote Usul/Fiqh rules, or assert independent review. PR #67 remains
+stacked on unmerged PR #66. After this audit-only commit, confirm new
+exact-HEAD CI again before any new PR or merge decision.
