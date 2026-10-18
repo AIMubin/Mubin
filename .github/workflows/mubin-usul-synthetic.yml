@@ -1,24 +1,32 @@
-name: Mubin U0.1 synthetic Usul engine
+name: Mubin U0.1 synthetic + U0.2 source metadata
 
 on:
   pull_request:
     paths:
       - "core/usul/**"
       - "core/tests/test_usul_u01.py"
+      - "core/tests/test_usul_u02.py"
       - "research/usul/**"
       - "schemas/usul-u01-**"
+      - "schemas/usul-u02-**"
       - "docs/research/USUL-U01-**"
+      - "docs/research/USUL-U02-**"
       - "docs/reviews/USUL-U01-**"
+      - "docs/reviews/USUL-U02-**"
       - ".github/workflows/mubin-usul-synthetic.yml"
   push:
     branches: [main]
     paths:
       - "core/usul/**"
       - "core/tests/test_usul_u01.py"
+      - "core/tests/test_usul_u02.py"
       - "research/usul/**"
       - "schemas/usul-u01-**"
+      - "schemas/usul-u02-**"
       - "docs/research/USUL-U01-**"
+      - "docs/research/USUL-U02-**"
       - "docs/reviews/USUL-U01-**"
+      - "docs/reviews/USUL-U02-**"
       - ".github/workflows/mubin-usul-synthetic.yml"
 
 permissions:
@@ -39,3 +47,4 @@ jobs:
       - run: python -m compileall -q core/usul core/tests
       - run: python -m unittest discover -s core/tests -v
       - run: python -m core.usul research/usul/rulebook-synthetic.json research/usul/test-cases-synthetic.json --json
+      - run: python -m core.usul.docket_cli research/usul/u02-risala-source-candidates.json --json
