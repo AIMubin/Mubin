@@ -126,6 +126,25 @@ class ReaderTests(unittest.TestCase):
         r=subprocess.run([sys.executable,'-m','engines.quran.q01c','--bind','0.0.0.0'],
                          cwd=ROOT,capture_output=True,text=True,timeout=10)
         self.assertNotEqual(0,r.returncode)
+    def test_forged_index_cannot_serve_unpinned_verse_text(self):
+        # Public build_http_server must not trust a manually constructed
+        # SourceIndex merely because the raw source hash agrees.
+        from engines.quran.q01b.tanzil import SourceIndex, RawSourceError
+        forged=SourceIndex(self.idx.manifest,
+                           ((1,1,"نص مختلق خارج ملف المصدر"),),
+                           self.idx.raw_sha256)
+        with self.assertRaises(RawSourceError):
+            build_http_server(forged,RAW,port=0)
+
+    def test_reject_source_index_subclasses(self):
+        from engines.quran.q01b.tanzil import SourceIndex, RawSourceError
+        class PretendIndex(SourceIndex):
+            pass
+        fake=PretendIndex(self.idx.manifest,self.idx.verses,
+                         self.idx.raw_sha256)
+        with self.assertRaises(RawSourceError):
+            build_http_server(fake,RAW,port=0)
+
     def test_workflow_contract(self):
         wf=(ROOT/'.github/workflows/mubin-quran-q01c.yml').read_text('utf8')
         self.assertIn('core/tests/test_quran_q01c.py',wf)
