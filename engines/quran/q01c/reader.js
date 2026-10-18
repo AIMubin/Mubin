@@ -21,7 +21,9 @@ function renderHit(item){
   const meta=document.createElement("small");
   meta.textContent=(sourceType==="synthetic_fixture" ?
     "نص اصطناعي للتجربة؛ ليس آية قرآنية" :
-    "نص مرآة غير موثّقة رسميًا؛ منسوب إلى Tanzil")
+    (sourceType==="tanzil_domain_unattested_export" ?
+      "نص من استجابة نطاق Tanzil، مثبت البصمة؛ ليس إصدارًا معتمدًا" :
+      "نص مرآة غير موثّقة رسميًا؛ منسوب إلى Tanzil"))
     +" · مصدر: "+item.source_id;
   card.append(ref,text,meta);hits.append(card);
 }

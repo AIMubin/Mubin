@@ -70,3 +70,6 @@ jobs:
           python -m qa.quran_official_probe \
             --manifest engines/quran/q01b/sources/tanzil-mirror-v1.1.json \
             --mirror "${RUNNER_TEMP}/q01d-unverified-mirror.txt"
+
+      - name: Start official-domain PINNED local reader and verify 6236-verse APIs
+        run: python -m qa.quran_official_reader_smoke
