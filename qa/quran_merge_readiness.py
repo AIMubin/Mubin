@@ -49,6 +49,7 @@ def assess_chain(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Classify *asserted* provider data; NOT proof of live API provenance."""
     blockers: list[str] = []
     qa_blockers: list[str] = []
+    review_advisories: list[str] = []
     if type(snapshot) is not dict:
         raise ReadinessError("invalid_snapshot")
     main = snapshot.get("main")
@@ -106,7 +107,7 @@ def assess_chain(snapshot: dict[str, Any]) -> dict[str, Any]:
                    type(_nested(review, "user", "login")) is str and
                    _nested(review, "user", "login") != author
                    for review in reviews):
-            blockers.append(f"PR{n}_NO_EXACT_HEAD_CODE_REVIEW")
+            review_advisories.append(f"PR{n}_NO_EXACT_HEAD_CODE_REVIEW")
         prev = head
     # Only an advisory on an asserted snapshot; NOT a trusted external release gate.
     return {
@@ -117,6 +118,8 @@ def assess_chain(snapshot: dict[str, Any]) -> dict[str, Any]:
         "merge_ready": False,
         "conditionally_merge_ready": not blockers,
         "blockers": sorted(set(blockers)),
+        "review_advisories": sorted(set(review_advisories)),
+        "mandatory_independent_code_review_assumed": False,
         "eligible_for_auto_merge": False,
         "merges_performed": 0,
         "quran_source_authenticated": False,
