@@ -1,0 +1,33 @@
+{
+  "contract": "mubin-rh-public-calibration-v0.1",
+  "split": "public_dev_set_not_holdout",
+  "independent_reviewer_model_executed": false,
+  "replayed_original_broken_code": false,
+  "limitations": "Historical documented defects are represented as public taxonomy/test design examples. This file does not execute a reviewer, replay old broken code, or measure defect detection recall.",
+  "cases": [
+    {
+      "challenge_id": "U02-EDITORIAL", "expected_category": "provenance",
+      "question": "Can a candidate with editor-added Ijma heading be relabeled as authorial evidence while passing structural validation?",
+      "observed_red_run": "https://github.com/AIMubin/Mubin/actions/runs/39065501922",
+      "observed_repair_commit": "b26bbcc99d983b7d30821913be9b2f7f99746715"
+    },
+    {
+      "challenge_id": "U03-DIGEST", "expected_category": "semantic_contract",
+      "question": "Can an invalid researcher question be incorrectly reported as a changed parent source digest?",
+      "observed_red_run": "https://github.com/AIMubin/Mubin/actions/runs/39093414608",
+      "observed_repair_commit": "3bb21eb421d0b2a674e4047c55098f0c0ac908e3"
+    },
+    {
+      "challenge_id": "U04-SPEAKER", "expected_category": "speaker_attribution",
+      "question": "Can an interlocutor/editor snippet be recast as an authorial conclusion? Test the role pin invariants.",
+      "observed_red_run": "https://github.com/AIMubin/Mubin/actions/runs/39100006061",
+      "observed_repair_commit": "cb45ea8330bad6bb43ac6daaef37683187c9368a"
+    },
+    {
+      "challenge_id": "U05-RISK", "expected_category": "methodology",
+      "question": "Can analyst risk/falsification prompts be replaced by non-review claims while metadata remains valid?",
+      "observed_red_run": "https://github.com/AIMubin/Mubin/actions/runs/39102180257",
+      "observed_repair_commit": "780927585189310963d82dbb413729b889fbf642"
+    }
+  ]
+}
