@@ -26,7 +26,7 @@ EXPECTED = {
          "Mubin Quran Q0.1d publisher-candidate comparison (unverified)",
          "Mubin Quran actual Chrome browser smoke"),
 }
-_SHA = re.compile(r"[a-f0-9]{40}\\Z")
+_SHA = re.compile(r"[a-f0-9]{40}")
 _MAX_REPLY = 3 * 1024 * 1024
 
 class ReadinessError(ValueError):
