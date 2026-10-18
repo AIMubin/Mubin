@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>مُبين | قارئ النص القرآني التجريبي</title>
+  <link rel="stylesheet" href="/reader.css">
+  <script src="/reader.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="intro">
+      <div class="eyebrow">مُبين · Q0.1c</div>
+      <h1>البحث والاسترجاع في النص القرآني</h1>
+      <p class="warning">نسخة بحثية محلية: أصالة ملف المصدر لم تُعتمد بعد. عند استخدام بيانات اختبار اصطناعية، فالنص المعروض ليس آيات قرآنية.</p>
+      <p class="intro-note">نص المرآة منسوب إلى <a href="https://tanzil.net" rel="noreferrer noopener" target="_blank">مشروع تنزيل (Tanzil Project)</a>. يشترط المصدر نسبة النص والمحافظة عليه كما هو وذكر إشعار الحقوق. بيانات التفسير والاستنباط غير مدرجة هنا.</p>
+      <div id="source-details" role="status" aria-live="polite">جارٍ قراءة حالة ملف المصدر المحلي…</div>
+    </header>
+    <section class="search-card" aria-label="أدوات البحث">
+      <form id="lookup-form">
+        <label for="reference">رقم السورة والآية</label>
+        <div class="line">
+          <input id="reference" name="reference" dir="ltr" inputmode="text" required
+             pattern="[1-9][0-9]{0,2}:[1-9][0-9]{0,2}"
+             placeholder="2:1" maxlength="7" autocomplete="off">
+          <button type="submit">عرض الآية</button>
+        </div>
+      </form>
+      <form id="search-form">
+        <label for="query">ابحث بكلمة أو جزء من النص</label>
+        <div class="line">
+          <input id="query" name="query" maxlength="256" required placeholder="كلمة البحث" autocomplete="off">
+          <button type="submit">بحث</button>
+        </div>
+        <label class="check"><input type="checkbox" id="fold-marks"> تجاهل علامات التشكيل في المطابقة فقط (دون تغيير النص المعروض)</label>
+      </form>
+    </section>
+    <section aria-label="نتائج الاسترجاع" class="results">
+      <h2>النتائج</h2>
+      <p id="feedback" role="status" aria-live="polite">اختر رقم آية أو اكتب كلمة بحث.</p>
+      <div id="hits"></div>
+    </section>
+    <section class="source-note">
+      <h2>بيانات النسخة وحقوقها</h2>
+      <p>هوية النص الرقمية تساعد في كشف التغيير، لكنها لا تثبت وحدها أصالة الطبعة أو سلامة الأحكام المستنبطة منها. جميع القراءات من ملف محلي سبق التحقق من مطابقته لبصمة التسجيل الخاصة به.</p>
+      <details id="notice-details"><summary>إشعار المصدر من الملف الأصلي (عند توفره)</summary>
+        <pre id="source-notice"></pre>
+      </details>
+    </section>
+    <footer>واجهة تطويرية محلية للقراءة فقط · لا تنشر أحكامًا شرعية ولا تنزّل نصوصًا تلقائيًا.</footer>
+  </main>
+</body>
+</html>
