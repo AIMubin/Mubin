@@ -76,17 +76,29 @@ class QuranMergeReadinessTests(unittest.TestCase):
         d["reviews"][75] = []
         x = assess_chain(d)
         self.assertFalse(x["merge_ready"])
-        self.assertIn("PR75_NO_EXACT_HEAD_CODE_REVIEW", x["blockers"])
+        self.assertIn("PR75_NO_EXACT_HEAD_CODE_REVIEW", x["review_advisories"])
+        self.assertNotIn("PR75_NO_EXACT_HEAD_CODE_REVIEW", x["blockers"])
 
     def test_review_on_old_commit_does_not_count(self):
         d = fixture()
         d["reviews"][74][0]["commit_id"] = "f" * 40
-        self.assertIn("PR74_NO_EXACT_HEAD_CODE_REVIEW", assess_chain(d)["blockers"])
+        self.assertIn("PR74_NO_EXACT_HEAD_CODE_REVIEW", assess_chain(d)["review_advisories"])
 
     def test_author_self_approval_does_not_count(self):
         d = fixture()
         d["reviews"][73][0]["user"]["login"] = "author"
-        self.assertIn("PR73_NO_EXACT_HEAD_CODE_REVIEW", assess_chain(d)["blockers"])
+        self.assertIn("PR73_NO_EXACT_HEAD_CODE_REVIEW", assess_chain(d)["review_advisories"])
+
+    def test_no_independent_reviewer_is_advisory_for_research_prs(self):
+        d = fixture()
+        for n in CHAIN:
+            d["reviews"][n] = []
+        x = assess_chain(d)
+        self.assertTrue(x["engineering_qa_passed"])
+        self.assertTrue(x["conditionally_merge_ready"])
+        self.assertFalse(x["merge_ready"])
+        self.assertEqual(4, len(x["review_advisories"]))
+        self.assertEqual([], x["blockers"])
 
     def test_pending_ci_no_false_green(self):
         d = fixture()
