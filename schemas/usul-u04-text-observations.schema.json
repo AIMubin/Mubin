@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mubin U0.4 tiny site excerpts: source display only, no textual authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "scope",
+    "automatic_promotion",
+    "text_storage",
+    "licensed_corpus",
+    "source_docket_sha256",
+    "question_cards_sha256",
+    "observations"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mubin-usul-u04-text-observations-v1"
+    },
+    "scope": {
+      "const": "unverified_site_display_observations_only"
+    },
+    "automatic_promotion": {
+      "const": false
+    },
+    "text_storage": {
+      "const": "bounded_public_display_quotes_only"
+    },
+    "licensed_corpus": {
+      "const": false
+    },
+    "source_docket_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "question_cards_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "observation_id",
+          "card_id",
+          "candidate_id",
+          "source_route_id",
+          "printed_page_on_site",
+          "site_page_url",
+          "heading_provenance",
+          "analyst_note_ar",
+          "inference_limit_ar",
+          "analyst_provenance",
+          "rule_formalization_status",
+          "human_review_status",
+          "author_attribution_status",
+          "source_excerpts"
+        ],
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "pattern": "^u04_t00[1-4]$"
+          },
+          "card_id": {
+            "type": "string",
+            "pattern": "^u03_h00[1-4]$"
+          },
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^u02_c00[1-4]$"
+          },
+          "source_route_id": {
+            "enum": [
+              146,
+              149,
+              157,
+              556
+            ]
+          },
+          "printed_page_on_site": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9999999
+          },
+          "site_page_url": {
+            "type": "string",
+            "pattern": "^https://shamela\\\\.ws/book/8180/(146|149|157|556)$"
+          },
+          "heading_provenance": {
+            "enum": [
+              "printed_variant_reported",
+              "editor_added_heading_reported"
+            ]
+          },
+          "analyst_note_ar": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 750
+          },
+          "inference_limit_ar": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 700
+          },
+          "analyst_provenance": {
+            "const": "researcher_interpretation_not_adjudicated"
+          },
+          "rule_formalization_status": {
+            "const": "not_formalized"
+          },
+          "human_review_status": {
+            "const": "not_performed"
+          },
+          "author_attribution_status": {
+            "const": "not_verified"
+          },
+          "source_excerpts": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "excerpt_id",
+                "voice_role",
+                "text_ar",
+                "local_excerpt_sha256",
+                "quote_provenance",
+                "rights_review_status"
+              ],
+              "properties": {
+                "excerpt_id": {
+                  "type": "string",
+                  "pattern": "^u04_t00[1-4]_e0[1-2]$"
+                },
+                "voice_role": {
+                  "enum": [
+                    "author_discussion",
+                    "editor_footnote",
+                    "unverified_heading",
+                    "interlocutor_question"
+                  ]
+                },
+                "text_ar": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "local_excerpt_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "quote_provenance": {
+                  "const": "site_display_unverified_print"
+                },
+                "rights_review_status": {
+                  "const": "not_assessed_for_redistribution"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

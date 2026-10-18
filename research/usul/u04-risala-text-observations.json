@@ -1,0 +1,143 @@
+{
+  "contract": "mubin-usul-u04-text-observations-v1",
+  "scope": "unverified_site_display_observations_only",
+  "automatic_promotion": false,
+  "text_storage": "bounded_public_display_quotes_only",
+  "licensed_corpus": false,
+  "source_docket_sha256": "bf298ea01dc0f121c279b090acecbf229234d22387b0f82f7b13afb1112514f8",
+  "question_cards_sha256": "6f5848f7026d17dbc7ec8abad3f5d268b323c489e7e4a42012176da02dfcd257",
+  "observations": [
+    {
+      "observation_id": "u04_t001",
+      "card_id": "u03_h001",
+      "candidate_id": "u02_c001",
+      "source_route_id": 146,
+      "printed_page_on_site": 53,
+      "site_page_url": "https://shamela.ws/book/8180/146",
+      "heading_provenance": "printed_variant_reported",
+      "analyst_note_ar": "تظهر بداية مناقشة عموم اللفظ واستشهاد قرآني، مع تنبيه تحريري متعلق بإضافة اسم القائل في بعض النسخ.",
+      "inference_limit_ar": "لا يستفاد من المقتطف حكم أصولي مطلق ولا تصح منه نسبة لفظ جميع النسخ.",
+      "analyst_provenance": "researcher_interpretation_not_adjudicated",
+      "rule_formalization_status": "not_formalized",
+      "human_review_status": "not_performed",
+      "author_attribution_status": "not_verified",
+      "source_excerpts": [
+        {
+          "excerpt_id": "u04_t001_e01",
+          "voice_role": "author_discussion",
+          "text_ar": "وقال الله تبارك و تعالى",
+          "local_excerpt_sha256": "252c544c32fe33d7f7ce2cec31dfa3cae6c5b6410cd47c895dfba4056a4fecb1",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        },
+        {
+          "excerpt_id": "u04_t001_e02",
+          "voice_role": "editor_footnote",
+          "text_ar": "هنا في ب و ج زيادة قال الشافعي وليست في الأصل",
+          "local_excerpt_sha256": "4df863eadaba711c382b5afe57f005068f3b8af652893c56dc36726641b3b876",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        }
+      ]
+    },
+    {
+      "observation_id": "u04_t002",
+      "card_id": "u03_h002",
+      "candidate_id": "u02_c002",
+      "source_route_id": 149,
+      "printed_page_on_site": 56,
+      "site_page_url": "https://shamela.ws/book/8180/149",
+      "heading_provenance": "printed_variant_reported",
+      "analyst_note_ar": "تظهر عبارة تتعلق بالعموم والخصوص، وتذكر الحاشية اختلاف صيغ العنوان المطبوع.",
+      "inference_limit_ar": "لا يثبت من الملاحظة أن صيغة عنوان بعينها هي لفظ المؤلف الأصلي.",
+      "analyst_provenance": "researcher_interpretation_not_adjudicated",
+      "rule_formalization_status": "not_formalized",
+      "human_review_status": "not_performed",
+      "author_attribution_status": "not_verified",
+      "source_excerpts": [
+        {
+          "excerpt_id": "u04_t002_e01",
+          "voice_role": "author_discussion",
+          "text_ar": "فبيَّنَ في كتاب الله أنَّ في هاتين الآيتين العموم والخصوص",
+          "local_excerpt_sha256": "5a4545d3c3f322356aabd58d255f7d65ddbefa2cb67543a2a0fde593cd76c053",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        },
+        {
+          "excerpt_id": "u04_t002_e02",
+          "voice_role": "editor_footnote",
+          "text_ar": "في كل النسخ المطبوعة والخاص بدل والخصوص",
+          "local_excerpt_sha256": "31b547e5dd5eade8cd930ff37c97998af3d9be598f08ba1108ed4384e6eb1102",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        }
+      ]
+    },
+    {
+      "observation_id": "u04_t003",
+      "card_id": "u03_h003",
+      "candidate_id": "u02_c003",
+      "source_route_id": 157,
+      "printed_page_on_site": 64,
+      "site_page_url": "https://shamela.ws/book/8180/157",
+      "heading_provenance": "printed_variant_reported",
+      "analyst_note_ar": "عنوان ظاهر يتعلق بالتخصيص بالسنة، وحاشية تشير إلى اختلاف دلت وفدلت.",
+      "inference_limit_ar": "لا يثبت من العنوان ثبوت حديث معين أو صحة استعماله مخصصًا.",
+      "analyst_provenance": "researcher_interpretation_not_adjudicated",
+      "rule_formalization_status": "not_formalized",
+      "human_review_status": "not_performed",
+      "author_attribution_status": "not_verified",
+      "source_excerpts": [
+        {
+          "excerpt_id": "u04_t003_e01",
+          "voice_role": "unverified_heading",
+          "text_ar": "باب ما نزل عاماًّ دلت السنة خاصة على أنه يراد به الخاص",
+          "local_excerpt_sha256": "98969d965c2c0881284e773707dbe20374c350fb917cc9ca28cf8f3e569836cc",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        },
+        {
+          "excerpt_id": "u04_t003_e02",
+          "voice_role": "editor_footnote",
+          "text_ar": "في ب فدلت وهو مخالف للأصل",
+          "local_excerpt_sha256": "5dbb25b83d1a312be9edcbbe25c4d491ccc2dc33f6bc81ec36168df1d7b0ba15",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        }
+      ]
+    },
+    {
+      "observation_id": "u04_t004",
+      "card_id": "u03_h004",
+      "candidate_id": "u02_c004",
+      "source_route_id": 556,
+      "printed_page_on_site": 471,
+      "site_page_url": "https://shamela.ws/book/8180/556",
+      "heading_provenance": "editor_added_heading_reported",
+      "analyst_note_ar": "افتتاح المناقشة سؤال من محاور، وحاشية المحقق تصرح بأن عنوان باب الإجماع زائد عن الأصل.",
+      "inference_limit_ar": "سؤال المحاور ليس نتيجة المؤلف، والعنوان المضاف ليس نصًا متحقق النسبة.",
+      "analyst_provenance": "researcher_interpretation_not_adjudicated",
+      "rule_formalization_status": "not_formalized",
+      "human_review_status": "not_performed",
+      "author_attribution_status": "not_verified",
+      "source_excerpts": [
+        {
+          "excerpt_id": "u04_t004_e01",
+          "voice_role": "interlocutor_question",
+          "text_ar": "فما حجتك في أن تَتْبع ما اجتمع",
+          "local_excerpt_sha256": "4c6d4b1d310a0c569d6f08f53f52f39c6d236cc90b3370b7901e298f971f6114",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        },
+        {
+          "excerpt_id": "u04_t004_e02",
+          "voice_role": "editor_footnote",
+          "text_ar": "العنوان لم يذكر في الأصل، وثبت في النسخ المطبوعة",
+          "local_excerpt_sha256": "a59c49c79d62b9cb353302417864ca94afd0769a08079fa202cface849419f6e",
+          "quote_provenance": "site_display_unverified_print",
+          "rights_review_status": "not_assessed_for_redistribution"
+        }
+      ]
+    }
+  ]
+}
