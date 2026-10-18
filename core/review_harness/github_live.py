@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
+import weakref
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -31,6 +33,25 @@ STATUS = frozenset({'added','modified','removed','renamed','copied','changed'})
 MAX_BYTES = 1024*1024
 MAX_FILES = 100
 MAX_RUNS = 100
+
+class _AuthenticatedLiveSnapshot(dict):
+    """Ephemeral in-process capability; NEVER serializable as a trust claim.
+
+    The only ordinary constructor path is the built-in GitHub HTTPS reader.
+    Copying its JSON fields, including the apparent provenance string, does
+    not transfer the capability to an injected/untrusted snapshot.
+    """
+    __slots__ = ("_cap", "__weakref__")
+
+
+_LIVE_SNAPSHOTS = weakref.WeakValueDictionary()
+
+
+def _observed_live(snapshot: Any) -> bool:
+    return (type(snapshot) is _AuthenticatedLiveSnapshot
+            and type(snapshot._cap) is str
+            and _LIVE_SNAPSHOTS.get(snapshot._cap) is snapshot)
+
 
 class RemoteEvidenceError(ValueError):
     """Unsafe, ambiguous, stale or unavailable provider fact: fail closed."""
@@ -176,12 +197,18 @@ def fetch_pr_snapshot(pr_number: int, get_json: Callable[[str], Any] | None = No
                 or rr['total_count'] < len(rr['workflow_runs'])):
             raise RemoteEvidenceError('malformed workflow run list')
         # Each entry is explicitly selected from an exact-head provider call.
-        return {'repository':REPO,'pr_number':pr_number, 'draft':pr['draft'],
-                'head_sha':head,'base_sha':base_obj['sha'],
-                'changed_paths':sorted(set(paths)),
-                'workflow_runs':rr['workflow_runs'],
-                'workflow_runs_truncated':rr['total_count'] > MAX_RUNS,
-                'metadata_provenance':'github_https_read_only' if live else 'injected_unverified'}
+        data={'repository':REPO,'pr_number':pr_number, 'draft':pr['draft'],
+              'head_sha':head,'base_sha':base_obj['sha'],
+              'changed_paths':sorted(set(paths)),
+              'workflow_runs':rr['workflow_runs'],
+              'workflow_runs_truncated':rr['total_count'] > MAX_RUNS,
+              'metadata_provenance':'github_https_read_only' if live else 'injected_unverified'}
+        if live:
+            snap = _AuthenticatedLiveSnapshot(data)
+            snap._cap = secrets.token_hex(24)
+            _LIVE_SNAPSHOTS[snap._cap] = snap
+            return snap
+        return data
     except (TypeError,KeyError,IndexError,RecursionError) as exc:
         raise RemoteEvidenceError('invalid or incomplete GitHub provider structure') from exc
 
@@ -193,7 +220,11 @@ def assess_live_snapshot(snapshot: dict[str,Any], *,
     Failed reported CI overrides fast/parallel review. Pending CI does not
     prevent working on independent engineering branches.
     """
-    if (type(snapshot) is not dict or not _safe_plain_tree(snapshot)
+    # Built-in HTTPS snapshots carry an unforgeable-for-JSON process-local
+    # capability. A caller can change `metadata_provenance` but cannot mint
+    # that capability simply by constructing the same data dictionary.
+    plain = dict(snapshot) if type(snapshot) is _AuthenticatedLiveSnapshot else snapshot
+    if (type(plain) is not dict or not _safe_plain_tree(plain)
             or not _sha(snapshot.get('head_sha'))
             or snapshot.get('repository') != REPO
             or type(snapshot.get('changed_paths')) is not list
@@ -223,7 +254,7 @@ def assess_live_snapshot(snapshot: dict[str,Any], *,
                               else 'failure' if last.get('status')=='completed' and last.get('conclusion')=='failure'
                               else 'pending_or_inconclusive')
     consistent = bool(required) and not snapshot['workflow_runs_truncated'] and all(v=='success' for v in outcomes.values())
-    live=snapshot.get('metadata_provenance')=='github_https_read_only'
+    live=_observed_live(snapshot)
     failing=any(v=='failure' for v in outcomes.values())
     missing=bool(required) and not consistent
     if failing:lane='FAIL_REPORTED'
@@ -232,7 +263,7 @@ def assess_live_snapshot(snapshot: dict[str,Any], *,
     else:lane='FAST_LANE_READY' if live else 'FAST_LANE_CANDIDATE'
     return {
         'repository':REPO,'pr_number':snapshot.get('pr_number'),
-        'head_sha':head,'metadata_provenance':snapshot.get('metadata_provenance'),
+        'head_sha':head,'metadata_provenance':'github_https_read_only' if live else 'injected_unverified',
         'inferred_tier':f'T{tier}', 'engineering_lane':lane,
         'engineering_can_continue':True,'workflow_outcomes':outcomes,
         'workflow_metadata_consistent':consistent,
