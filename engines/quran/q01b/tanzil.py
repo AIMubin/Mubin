@@ -37,7 +37,7 @@ class RawSourceError(SnapshotError):
 
 def read_regular_file(path: str | Path, limit: int) -> bytes:
     """Read bounded, non-symlink leaf through one file descriptor (Linux CI)."""
-    if type(path) not in (str, Path) or type(limit) is not int or limit <= 0:
+    if not isinstance(path, (str, Path)) or type(limit) is not int or limit <= 0:
         raise RawSourceError('unsafe_path_or_limit')
     name = os.fspath(path)
     if not name or '\x00' in name:
@@ -145,7 +145,7 @@ def _source_text_lines(raw: bytes, kind: str) -> tuple[tuple[int,int,str], ...]:
                       'CHANGING IT IS NOT ALLOWED.', 'tanzil.net'):
             if token not in tail:raise RawSourceError('missing_original_source_notice')
         if len(records)!=6236:raise RawSourceError('mirror_incomplete')
-    elif footer and any(ln for ln in footer):
+    elif footer:
         raise RawSourceError('unexpected_synthetic_footer')
     previous=(0,0)
     counts=[0]*114

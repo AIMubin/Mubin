@@ -93,11 +93,18 @@ class Q01bSourceTests(unittest.TestCase):
             with self.subTest(raw=raw[:20]),self.assertRaises(RawSourceError):
                 load_raw(encoded(m),raw)
 
-    def test_reject_extra_comment_and_missing_verse_even_with_recomputed_hash(self):
-        for raw in (SRC+b'\n',SRC+b'# external editorial text\n',
-                    SRC+'2|3|نص إضافي\n'.encode('utf-8'),SRC.replace(b'2|2|',b'2|1|',1)):
+    def test_reject_extra_comment_or_duplicate_with_recomputed_hash(self):
+        for raw in (SRC+b'\\n', SRC+b'# external editorial text\\n',
+                    SRC.replace(b'2|2|',b'2|1|',1)):
             with self.subTest(tail=raw[-40:]),self.assertRaises(RawSourceError):
                 load_raw(encoded(fixture(raw)),raw)
+
+    def test_partial_snapshot_can_grow_with_valid_coordinates_but_stays_unverified(self):
+        expanded=SRC+'2|3|نص إضافي\\n'.encode('utf-8')
+        idx=load_raw(encoded(fixture(expanded)),expanded)
+        self.assertEqual(5,idx.report()['verse_count'])
+        self.assertFalse(idx.report()['source_authenticated'])
+        self.assertFalse(idx.report()['rights_verified'])
 
     def test_attempt_source_authentication_or_rights_laundering(self):
         for key,value in [('rights_status','approved'),('authority_status','authenticated'),
