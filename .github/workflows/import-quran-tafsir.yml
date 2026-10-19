@@ -87,6 +87,21 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
               out.write("\n".join(lines) + "\n")
           PY
+      - name: Analyze pinned Quran witness with basmala boundaries
+        if: steps.tanzil.outcome == 'success'
+        run: python -m corpus.quran_witness_analysis --reference corpus-data/reference/tanzil-uthmani.txt
+      - name: Verify surah-opening basmala is separate from verse text
+        if: steps.tanzil.outcome == 'success'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from corpus.query import get_ayah
+          result = get_ayah(Path("corpus-data/linked/quran_tafsir.db"), 2, 1,
+                            Path("corpus-data/reference/tanzil-uthmani.txt"))
+          assert result["opening_basmala"], "Opening basmala not separated"
+          assert not result["text"].startswith(result["opening_basmala"])
+          assert not result["scholarly_verification"]
+          PY
       - name: Retain verbatim Tanzil witness and attribution
         if: steps.tanzil.outcome == 'success'
         uses: actions/upload-artifact@v4
@@ -131,6 +146,7 @@ jobs:
             corpus-data/linked/derived-quran-quality.json
             corpus-data/linked/quran-comparison-summary.json
             corpus-data/linked/quran-triage.json
+            corpus-data/linked/quran-witness-analysis.json
             corpus-data/reference/tanzil-manifest.json
           if-no-files-found: warn
           retention-days: 30
