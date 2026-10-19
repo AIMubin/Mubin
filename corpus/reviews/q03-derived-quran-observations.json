@@ -1,0 +1,18 @@
+{
+  "audit": "Q0.3 derived Quran reconstruction safety",
+  "input_database": "tafsircenter/tafsir-mcp-data linked SQLite",
+  "linked_sqlite_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "verses_checked": 6236,
+  "verses_containing_slash_character": 364,
+  "slash_occurrences": 371,
+  "examples": [
+    "2:21",
+    "2:33",
+    "2:35",
+    "33:9"
+  ],
+  "classification": "RECONSTRUCTED_UNVERIFIED_TEXT_NOT_CANONICAL",
+  "explanation": "The upstream word reconstruction joins its word field unchanged. Certain entries contain '/' inside strings such as يا/أيها.",
+  "policy": "Never automatically delete, split or reinterpret '/' in Quranic source text. Retrieve pinned original reference for public display; allow derived text only by explicit developer opt-in.",
+  "scholarly_verification": false
+}
