@@ -20,12 +20,27 @@ jobs:
         run: python -m pip install 'huggingface_hub>=0.25,<2'
       - name: Download, pin and import source database
         run: python -m corpus.import_tafsircenter --download
+      - name: Audit linked Quran and five tafsirs
+        run: python -m corpus.audit_linked
+      - name: Smoke-test read-only verse retrieval
+        run: python -m corpus.query 1 1 --database corpus-data/linked/quran_tafsir.db > /dev/null
+      - name: Retain temporary access-controlled corpus database
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-tafsir-staging-sqlite
+          path: corpus-data/linked/quran_tafsir.db
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
       - name: Print and upload provenance report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: quran-tafsir-import-report
-          path: corpus-data/linked/import-manifest.json
+          path: |
+            corpus-data/linked/import-manifest.json
+            corpus-data/linked/audit-report.json
           if-no-files-found: warn
           retention-days: 30
       # Do not publish text extracts or source DB as artifacts until rights resolved.
