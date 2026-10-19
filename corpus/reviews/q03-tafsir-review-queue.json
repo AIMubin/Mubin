@@ -71,7 +71,13 @@
       "issue": "POSSIBLE_TRUNCATION_32767",
       "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
       "printed_edition_verified": false,
-      "editorial_replacement_approved": false
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "DIGITAL_CONTINUATION_ONLY",
+      "local_campaign_reported_unique_anchor_chars": 51,
+      "local_campaign_reported_following_witness_characters": 1906,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false
     },
     {
       "source": "baghawy",
@@ -79,7 +85,13 @@
       "issue": "POSSIBLE_TRUNCATION_32767",
       "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
       "printed_edition_verified": false,
-      "editorial_replacement_approved": false
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "DIGITAL_CONTINUATION_ONLY",
+      "local_campaign_reported_unique_anchor_chars": 320,
+      "local_campaign_reported_following_witness_characters": 4291,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false
     },
     {
       "source": "baghawy",
@@ -87,7 +99,14 @@
       "issue": "POSSIBLE_TRUNCATION_32767",
       "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
       "printed_edition_verified": false,
-      "editorial_replacement_approved": false
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "ALIGNMENT_AMBIGUOUS",
+      "local_campaign_reported_unique_anchor_chars": null,
+      "local_campaign_reported_following_witness_characters": null,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false,
+      "ocr_or_edition_difference_unresolved": true
     },
     {
       "source": "baghawy",
@@ -95,7 +114,13 @@
       "issue": "POSSIBLE_TRUNCATION_32767",
       "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
       "printed_edition_verified": false,
-      "editorial_replacement_approved": false
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "DIGITAL_CONTINUATION_ONLY",
+      "local_campaign_reported_unique_anchor_chars": 77,
+      "local_campaign_reported_following_witness_characters": 853,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false
     }
   ],
   "cautions": [
@@ -113,13 +138,20 @@
     "baghawy_4_43_digital_comparator": "q03-baghawy-4-43-digital-continuation.json",
     "baghawy_four_digital_continuations": "q03-baghawy-four-digital-continuations.json",
     "baghawy_source_length_ceiling": "q03-baghawy-length-ceiling.json",
-    "baghawy_edition_review_runbook": "q03-baghawy-edition-verification-runbook.md"
+    "baghawy_edition_review_runbook": "q03-baghawy-edition-verification-runbook.md",
+    "local_campaign_report": "q03-baghawy-local-campaign-summary.json",
+    "original_summary_sha256": "06014e047b3288e7a0a12c2ea30b21bace56415cfb997f90e62be6342833146f"
   },
   "last_corpus_ci": {
-    "run_id": 39302590191,
+    "run_id": 39311029761,
+    "workflow": "Corpus integrity checks",
+    "os": [
+      "ubuntu-latest",
+      "windows-latest"
+    ],
     "result": "success",
-    "tests_passed": 37,
-    "tests_total": 37,
-    "commit": "b524aa3cf5ae7657e2cc60cf35fbc1bb36d8541b"
+    "tests_passed_per_os": 39,
+    "tests_total_per_os": 39,
+    "commit": "7a06c490fc50ab5194a4bb0076e874bc594619b3"
   }
 }
