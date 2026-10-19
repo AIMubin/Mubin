@@ -54,7 +54,7 @@
         "65535": 0
       },
       "above_32767": 57,
-      "above_65535": 8
+      "above_65535": 10
     }
   },
   "inference": "Baghawy uniquely has a 32767-character ceiling within these five sources: 4 fields at exactly 32767 and none longer. Katheer and Tabary have values longer than this. Upstream-to-import field identity has been independently documented in Q0.3.",
