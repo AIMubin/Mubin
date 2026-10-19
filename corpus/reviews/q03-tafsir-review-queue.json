@@ -1,0 +1,75 @@
+{
+  "audit_version": "Q0.3",
+  "source_db_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "status": "EDITORIAL_REVIEW_REQUIRED",
+  "verified_scholarly": false,
+  "observed": {
+    "verse_rows": 6236,
+    "tafsir_rows": 31180,
+    "markup_only_tabary": 7,
+    "possible_truncation_baghawy": 4
+  },
+  "issues": [
+    {
+      "source": "tabary",
+      "verse_id": "4:168",
+      "issue": "MARKUP_ONLY"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:16",
+      "issue": "MARKUP_ONLY"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:205",
+      "issue": "MARKUP_ONLY"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:25",
+      "issue": "MARKUP_ONLY"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:62",
+      "issue": "MARKUP_ONLY"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:103",
+      "issue": "MARKUP_ONLY"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "50:13",
+      "issue": "MARKUP_ONLY"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "4:43",
+      "issue": "POSSIBLE_TRUNCATION_32767"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "17:4",
+      "issue": "POSSIBLE_TRUNCATION_32767"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "18:10",
+      "issue": "POSSIBLE_TRUNCATION_32767"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "33:9",
+      "issue": "POSSIBLE_TRUNCATION_32767"
+    }
+  ],
+  "cautions": [
+    "Markup-only can reflect cross-verse continuation and does not prove missing tafsir in the work.",
+    "Exactly 32767 characters is a truncation warning, not a proven defect.",
+    "Publisher, editor, volume and page details require separate edition attestation.",
+    "Neither tafsir nor derived Quran text is scholarly authenticated."
+  ]
+}
