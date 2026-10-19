@@ -5,8 +5,8 @@ system:
 
 components:
   quran_engine:
-    milestone: Q0.0
-    maturity: planned
+    milestone: Q0.3
+    maturity: in_progress_not_qualified
   hadith_engine:
     milestone: H3.9.2
     maturity: qualification
