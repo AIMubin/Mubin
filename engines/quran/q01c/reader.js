@@ -11,6 +11,58 @@ async function api(path){
   if(!response.ok)throw new Error(data.error||"Request rejected");
   return data;
 }
+// External citations are navigation only: NO KSU scraping, embedding, or tafsir API.
+const AYAT_BASE="https://quran.ksu.edu.sa/index.php";
+const REAL_SOURCES=new Set(["unverified_github_mirror","tanzil_domain_unattested_export"]);
+function addText(parent,tag,message,className){
+  const el=document.createElement(tag);
+  if(className)el.className=className;
+  el.textContent=message;
+  parent.appendChild(el);
+  return el;
+}
+function addExternal(parent,label,url){
+  const a=document.createElement("a");
+  a.href=url;
+  a.textContent=label;
+  a.target="_blank";
+  a.rel="noopener noreferrer";
+  a.referrerPolicy="no-referrer";
+  parent.appendChild(a);
+}
+function renderTafsir(item,card){
+  const tafsir=document.createElement("section");
+  tafsir.className="tafsir-links";
+  tafsir.setAttribute("aria-label","مصادر التفسير الخارجية");
+  addText(tafsir,"h3","التفسير — إحالات خارجية");
+  const m=typeof item.reference==="string"?
+    /^([1-9][0-9]{0,2}):([1-9][0-9]{0,2})$/.exec(item.reference):null;
+  if(!REAL_SOURCES.has(sourceType)||!m||Number(m[1])>114||Number(m[2])>286){
+    addText(tafsir,"p",sourceType==="synthetic_fixture"?
+      "مراجع التفسير غير متاحة للبيانات الاصطناعية؛ النص المعروض ليس آية.":
+      "روابط التفسير معطّلة: مصدر النص أو مرجع الآية غير مؤهل للإحالة.",
+      "tafsir-warning");
+  }else{
+    const verseHash="#aya="+m[1]+"_"+m[2]+"&m=hafs";
+    addText(tafsir,"p","الإحالة إلى مشروع «آيات» بجامعة الملك سعود؛ التفسير يبقى في الموقع الخارجي ولا يُنقل إلى مُبين. قد تتغير إعدادات الموقع.","tafsir-note");
+    const links=document.createElement("div");
+    links.className="tafsir-outbound";
+    addExternal(links,"عرض الآية مع خيار التفسير الميسر على «آيات»",
+      AYAT_BASE+verseHash+"&qaree=husary&trans=ar_mu");
+    addExternal(links,"فتح الآية واختيار تفسير آخر في «آيات»",
+      AYAT_BASE+verseHash);
+    tafsir.appendChild(links);
+    addText(tafsir,"p","يوفر الموقع اختيار تفاسير مثل السعدي والبغوي وابن كثير والقرطبي والطبري. أسماء الكتب هنا مرجع للتصفح، وليست نصوصًا مستوردة أو موافقات حقوق.","tafsir-note");
+    addText(tafsir,"small","مصدر منصة آيات: جامعة الملك سعود؛ تسند المنصة أصول التفاسير إلى mosshaf.com، والنص القرآني إلى Tanzil.");
+  }
+  card.appendChild(tafsir);
+  const ai=document.createElement("section");
+  ai.className="ai-explanation";
+  ai.setAttribute("aria-label","التحليل الآلي");
+  addText(ai,"h3","التحليل الآلي — منفصل عن التفسير");
+  addText(ai,"p","غير مفعّل. لم يُنشئ مُبين تفسيرًا آليًا أو حكمًا شرعيًا لهذه الآية.");
+  card.appendChild(ai);
+}
 function renderHit(item){
   const card=document.createElement("article");card.className="ayah";
   const ref=document.createElement("small");
@@ -25,7 +77,13 @@ function renderHit(item){
       "نص من استجابة نطاق Tanzil، مثبت البصمة؛ ليس إصدارًا معتمدًا" :
       "نص مرآة غير موثّقة رسميًا؛ منسوب إلى Tanzil"))
     +" · مصدر: "+item.source_id;
-  card.append(ref,text,meta);hits.append(card);
+  const scripture=document.createElement("section");
+  scripture.className="quran-text-block";
+  scripture.setAttribute("aria-label","النص القرآني وبيانات مصدره");
+  scripture.append(ref,text,meta);
+  card.appendChild(scripture);
+  renderTafsir(item,card);
+  hits.append(card);
 }
 function renderMany(results){
   clearHits();
