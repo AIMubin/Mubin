@@ -24,6 +24,25 @@ jobs:
         run: python -m corpus.audit_linked
       - name: Smoke-test read-only verse retrieval
         run: python -m corpus.query 1 1 --database corpus-data/linked/quran_tafsir.db > /dev/null
+      - name: Download independent Tanzil reference
+        run: python -m corpus.fetch_tanzil
+      - name: Compare Quran verses against independent reference
+        shell: bash
+        run: |
+          set +e
+          python -m corpus.compare_quran --reference corpus-data/reference/tanzil-uthmani.txt
+          result=$?
+          set -e
+          if [ "$result" -ne 0 ] && [ "$result" -ne 2 ]; then exit "$result"; fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("corpus-data/linked/quran-comparison.json")
+          d = json.loads(p.read_text(encoding="utf-8"))
+          d.pop("differences", None)
+          Path("corpus-data/linked/quran-comparison-summary.json").write_text(
+              json.dumps(d, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+          PY
       - name: Run corpus unit tests
         run: python -m unittest discover -s corpus/tests -v
       - name: Retain temporary access-controlled corpus database
@@ -43,6 +62,8 @@ jobs:
           path: |
             corpus-data/linked/import-manifest.json
             corpus-data/linked/audit-report.json
+            corpus-data/linked/quran-comparison-summary.json
+            corpus-data/reference/tanzil-manifest.json
           if-no-files-found: warn
           retention-days: 30
       # Do not publish text extracts or source DB as artifacts until rights resolved.
