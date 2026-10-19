@@ -53,11 +53,14 @@ def inspect_cutoff(database, sura, aya, witness_text, witness_metadata,
                 raise ValueError(f"Printed edition witness requires {key}")
     if min_anchor < 32 or min_continuation < 16:
         raise ValueError("Insufficient minimum diagnostic context")
-    with sqlite3.connect(Path(database).resolve().as_uri() + "?mode=ro", uri=True) as conn:
+    conn = sqlite3.connect(Path(database).resolve().as_uri() + "?mode=ro", uri=True)
+    try:
         conn.execute("PRAGMA query_only=ON")
         row = conn.execute(
             "SELECT text FROM tafsirs WHERE source=? AND sura=? AND aya=?",
             ("baghawy", sura, aya)).fetchone()
+    finally:
+        conn.close()
     if row is None or not isinstance(row[0], str) or len(row[0]) != 32767:
         raise ValueError("Expected original 32,767-character Baghawi record")
     original = row[0]
