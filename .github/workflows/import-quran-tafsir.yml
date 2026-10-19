@@ -25,8 +25,23 @@ jobs:
       - name: Smoke-test read-only verse retrieval
         run: python -m corpus.query 1 1 --database corpus-data/linked/quran_tafsir.db > /dev/null
       - name: Download independent Tanzil reference
+        id: tanzil
+        continue-on-error: true
         run: python -m corpus.fetch_tanzil
+      - name: Record missing witness explicitly
+        if: steps.tanzil.outcome != 'success'
+        run: |
+          echo 'Tanzil retrieval failed: independent Quran comparison NOT COMPLETED.' >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("corpus-data/linked/quran-comparison-summary.json")
+          p.parent.mkdir(parents=True, exist_ok=True)
+          p.write_text(json.dumps({"comparison_status":"NOT_RUN_REFERENCE_UNAVAILABLE",
+            "canonical_quran_verified":False,"scholarly_verified":False}, indent=2) + "\\n")
+          PY
       - name: Compare Quran verses against independent reference
+        if: steps.tanzil.outcome == 'success'
         shell: bash
         run: |
           set +e
