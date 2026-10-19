@@ -46,3 +46,18 @@ The **complete** machine-generated upstream comparison JSON has since been recei
 
 **Editorial source verification remains open.** This is not a claim that every row is complete or that the linked text is a print-edition transcription.
  
+
+
+## Q0.3 Baghawi four-record cutoff corroboration
+
+A read-only census of all 31,180 linked tafsir entries shows a **source-specific 32767-codepoint ceiling** in Baghawi: exactly four entries equal the ceiling, none longer. In contrast, Tabari has 57 entries above 32767, and Ibn Kathir 13. The four suspicious Baghawi records (4:43, 17:4, 18:10, 33:9) all terminate abruptly. Independently accessible digital tafsir pages from KSU show additional text after each affected source cutoff. This strongly favors **probable upstream digital truncation**, though we have not identified the responsible software operation or verified precise continuation against a matching printed edition.
+
+- [Four digital-continuation evidence cases](../../corpus/reviews/q03-baghawy-four-digital-continuations.json)
+- [Five-source text-length distribution](../../corpus/reviews/q03-baghawy-length-ceiling.json)
+- [Reproducible read-only length audit](../../corpus/audit_tafsir_length_distribution.py)
+- [Metadata-only cutoff/witness alignment](../../corpus/audit_baghawy_cutoff.py)
+- [Edition review procedure](../../corpus/reviews/q03-baghawy-edition-verification-runbook.md)
+
+A separately indexed fourth Dar Taybah edition is dated 1417 H (1997), whereas the Waqfeya scan of the earlier edition is 1409 H (1989); never conflate print edition or page numbers. Printed pages, edition identity and permissions **remain unverified**. Original tafsir strings have not been changed.
+
+The corpus-checks GitHub Actions [run 39302590191](https://github.com/AIMubin/Mubin/actions/runs/39302590191) completed successfully: **37/37 tests**. One previously failing synthetic Quran test fixture was corrected to provide the real basmala baseline rather than weakening first-verse validation. This CI result is for test code and synthetic fixtures, not an edition-level scholarly approval.
