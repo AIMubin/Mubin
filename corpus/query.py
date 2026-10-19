@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 
 from corpus.audit_tafsir_quality import plaintext
-from corpus.compare_quran import witness
+from corpus.quran_witness_analysis import read_witness, segment_first_verse, file_sha256
 from corpus.triage_quran import REFERENCE_SHA256
 from corpus.verify_quran import EXPECTED_COUNTS
 
@@ -35,15 +35,17 @@ def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = N
     quran_text = None
     classification = "REFERENCE_REQUIRED_NO_QURAN_TEXT"
     reference_sha256 = None
+    opening_basmala = None
     if reference_path is not None:
-        verses, reference_sha256 = witness(reference_path)
-        if reference_sha256.lower() != expected_reference_sha256.lower():
-            raise ValueError("Independent Quran witness hash mismatch")
+        verses = read_witness(reference_path, expected_reference_sha256)
+        reference_sha256 = file_sha256(reference_path)
         expected = {(s, a) for s, n in enumerate(EXPECTED_COUNTS, 1) for a in range(1, n + 1)}
         if set(verses) != expected:
             raise ValueError("Independent Quran witness coverage mismatch")
-        quran_text = verses[(sura, aya)]
-        classification = "VERBATIM_TANZIL_WITNESS_NOT_SCHOLARLY_APPROVED"
+        quran_text, opening_basmala = segment_first_verse(
+            sura, aya, verses[(sura, aya)], verses[(1, 1)])
+        classification = ("VERBATIM_TANZIL_VERSE_SEGMENT_NOT_SCHOLARLY_APPROVED"
+                          if opening_basmala else "VERBATIM_TANZIL_WITNESS_NOT_SCHOLARLY_APPROVED")
     elif allow_unverified_derived_text:
         quran_text = raw[0]
         classification = "DERIVED_FROM_WORDS_NOT_CANONICALLY_VERIFIED"
@@ -74,6 +76,8 @@ def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = N
         "text": quran_text,
         "text_classification": classification,
         "reference_sha256": reference_sha256,
+        "opening_basmala": opening_basmala,
+        "reference_segment_is_literal_substring": bool(reference_sha256),
         "quran_text_attribution": "Tanzil Project (https://tanzil.net)" if reference_sha256 else (
             "Derived from Tafsir Center word data; internal diagnostics only" if allow_unverified_derived_text else None),
         "source_database": "tafsircenter/tafsir-mcp-data",
