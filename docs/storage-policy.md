@@ -60,6 +60,12 @@ Create a snapshot for each significant corpus baseline, and verify backup copies
 
 GitHub cannot directly save files to an offline local workstation. The local machine must run pull and mirror, manually or through its own Task Scheduler. GitHub-hosted artifacts remain temporary.
 
+## Operational acceptance: Q0.3 local backup/restore (19 October 2026)
+
+**Storage and recovery gate: PASSED as documented by the local operator.** The [recovery evidence record](../corpus/reviews/q03-local-backup-recovery.json) distinguishes remotely verified GitHub run facts from execution results supplied by the local assistant. GitHub run `39267807115` completed successfully, and all three expected artifacts are present. The local assistant reported that a verified full snapshot, containing the pinned upstream source and Tanzil witness, was mirrored to two *different physical disks*. Verification directly from the secondary disk, restore to a new directory, SQLite structural audit of restored data, and query `2:21` using the restored Tanzil witness all returned exit code 0.
+
+This closes **local backup/restore readiness**, not Quran textual or tafsir edition acceptance. The two disks share a machine and remain exposed to common-mode loss; an offline or offsite encrypted copy is recommended when feasible. Keep the snapshot immutable and retain GitHub metadata/lock outside it where possible. Hashes inside an editable unsigned `snapshot.json` detect accidental damage but do not provide cryptographic proof against an attacker who can modify both data and manifest. A provider for permanent online publication remains deferred.
+
 ## Release readiness gate (deferred)
 
 Select online hosting only when publication is being prepared. Evaluate license/redistribution eligibility, capacity, query traffic, recovery targets, auditability, costs, regional needs, security and exportability. The Quran-text fidelity review and known 11 tafsir quality issues remain open regardless of backup success.
