@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "stage": "DIAGNOSTIC_NOT_SCHOLARLY_VERIFIED",
+  "actual_files_examined": true,
+  "source_db_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "independent_witness_sha256": "b9027e22eb7e69d326f1eb7467fed8b7bc1eccbe1a894887ed2b3feb4ef5fc90",
+  "verses": 6236,
+  "reference_first_verse_records_with_non_ayah_opening_basmala": 112,
+  "first_verse_records_with_alternate_opening_diacritics": [
+    "95:1",
+    "97:1"
+  ],
+  "imported_slash_marked_verse_count": 364,
+  "imported_slash_occurrences": 371,
+  "counts_after_literal_boundary_segmentation": {
+    "exact": 1,
+    "marks_only_candidate": 436,
+    "alef_variants_candidate": 829,
+    "additional_script_variants_candidate": 917,
+    "unresolved_script_difference": 4053
+  },
+  "cumulative_diagnostic_matches": {
+    "marks_stripped": 437,
+    "alef_variants": 1266,
+    "extended_script_changes": 2183
+  },
+  "conclusions": [
+    "A direct byte-exact diff reporting 0/6236 does not account for script and first-verse basmala record conventions",
+    "Opening basmala in 112 first-verse records must not be conflated with ayah text",
+    "Character normalization categories are diagnostic candidates and are NOT religious or editorial equivalence",
+    "Neither Quran source authenticity nor tafsir edition fidelity is qualified by these results"
+  ],
+  "original_texts_modified": false,
+  "scholarly_verified": false,
+  "public_redistribution_approved": false
+}
