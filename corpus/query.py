@@ -67,6 +67,7 @@ def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = N
         "text": quran_text,
         "text_classification": classification,
         "reference_sha256": reference_sha256,
+        "quran_text_attribution": "Tanzil Project (https://tanzil.net)" if reference_sha256 else "Derived from Tafsir Center word data",
         "source_database": "tafsircenter/tafsir-mcp-data",
         "scholarly_verification": False,
         "tafsirs": tafsirs,
