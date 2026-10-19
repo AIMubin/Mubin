@@ -1,0 +1,99 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "status": "ALL_SEVEN_HAVE_ADJACENT_SHARED_HEADING_CANDIDATES",
+  "method": "Read-only SQL on previously provided linked SQLite, inspecting immediate adjacent Tafsir al-Tabari records and extracting explicit numbered ayah references from the first <br>-delimited heading only.",
+  "linked_sqlite_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "source_original_text_mutated": false,
+  "records": [
+    {
+      "verse_id": "4:168",
+      "entry_literal": "<br>",
+      "adjacent_verse_id": "4:169",
+      "heading_verse_numbers": [
+        168,
+        169
+      ],
+      "adjacent_text_sha256": "267c3f0c1508aa69a6528163432aea48e11696646afae02dfef6f88d88e22f45",
+      "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
+    },
+    {
+      "verse_id": "26:16",
+      "entry_literal": "<br>",
+      "adjacent_verse_id": "26:15",
+      "heading_verse_numbers": [
+        15,
+        16,
+        17
+      ],
+      "adjacent_text_sha256": "a5e68d82fc80a804682ad725c2e8060ec5e7696f2e3a6aed0de3fb0184a14eca",
+      "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
+    },
+    {
+      "verse_id": "26:205",
+      "entry_literal": "<br>",
+      "adjacent_verse_id": "26:206",
+      "heading_verse_numbers": [
+        205,
+        206,
+        207
+      ],
+      "adjacent_text_sha256": "985eb8756cf39a2bb7414ef213c732d0ab639f1c97d4b8e1bc54eb54b2cbf335",
+      "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
+    },
+    {
+      "verse_id": "37:25",
+      "entry_literal": "<br>",
+      "adjacent_verse_id": "37:24",
+      "heading_verse_numbers": [
+        24,
+        25,
+        26,
+        27
+      ],
+      "adjacent_text_sha256": "4940bc168482d24c935f7178f43dee481045bcf7d93f9ec37bd43ce3a8b21f53",
+      "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
+    },
+    {
+      "verse_id": "37:62",
+      "entry_literal": "<br>",
+      "adjacent_verse_id": "37:63",
+      "heading_verse_numbers": [
+        62,
+        63,
+        64,
+        65,
+        66
+      ],
+      "adjacent_text_sha256": "2a7a78f7e681de55bdd0cad523a92f5b94f07d3bd5f642f5064c9df19abf8f3f",
+      "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
+    },
+    {
+      "verse_id": "37:103",
+      "entry_literal": "<br>",
+      "adjacent_verse_id": "37:104",
+      "heading_verse_numbers": [
+        103,
+        104,
+        105,
+        106
+      ],
+      "adjacent_text_sha256": "afb984896b7e2a4076ccc2b52fbcefa8e4f5eab8c7e849d4f0eee0f8d8b4bacf",
+      "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
+    },
+    {
+      "verse_id": "50:13",
+      "entry_literal": "<br>",
+      "adjacent_verse_id": "50:12",
+      "heading_verse_numbers": [
+        12,
+        13,
+        14
+      ],
+      "adjacent_text_sha256": "6c61e471925d4885978fdc3ee6e6decd4c4900fd3f5fa649ee7304e18153dabc",
+      "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
+    }
+  ],
+  "conclusion": "All seven previously empty-looking Tabari records have a neighboring record whose explicit multi-ayah introductory heading cites the target ayah; this supports cross-verse representation instead of seven wholly absent tafsir passages.",
+  "caveat": "Headings do not demonstrate exact passage boundaries or rule out textual loss elsewhere. Verify against independently identified edition, with full paragraph/verse mapping and rights review."
+}
