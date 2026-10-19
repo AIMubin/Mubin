@@ -119,6 +119,9 @@ def main():
               "return document.querySelector('article.ayah').textContent.includes('مراجع التفسير غير متاحة للبيانات الاصطناعية')"),
               'Synthetic source needs explicit no-tafsir notice')
         check(script(driver,sid,
+              "return document.querySelectorAll('article.ayah .tafsir-bibliography li').length")==0,
+              'Synthetic Quran text must not receive bibliographic tafsir candidates')
+        check(script(driver,sid,
               "return document.querySelector('article.ayah .ai-explanation')?.textContent.includes('غير مفعّل')"),
               'Missing separate disabled AI analysis zone')
         script(driver,sid,"document.querySelector('#query').value='سلام';document.querySelector('#fold-marks').click();document.querySelector('#search-form button').click();")
