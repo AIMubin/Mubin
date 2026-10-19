@@ -116,13 +116,29 @@
     "scan_ocr": "archive.org OCR, not a substitute for visual review",
     "local_windows_test_report": "38 passed of 39; test_compare_quran.test_partial_ref_rejected raises WinError 32 on temp cleanup",
     "windows_test_fix_commit": "0192942c4990c7fd40f7ced84e959fba5b3362ce",
-    "cross_os_ci_added_commit": "7a06c490fc50ab5194a4bb0076e874bc594619b3"
+    "cross_os_ci_added_commit": "7a06c490fc50ab5194a4bb0076e874bc594619b3",
+    "cross_os_ci_verified": {
+      "workflow_run_id": 39311029761,
+      "commit": "7a06c490fc50ab5194a4bb0076e874bc594619b3",
+      "ubuntu_latest": {
+        "passed": 39,
+        "total": 39,
+        "conclusion": "success"
+      },
+      "windows_latest": {
+        "passed": 39,
+        "total": 39,
+        "conclusion": "success"
+      },
+      "source": "GitHub Actions fetched workflow jobs and job logs"
+    }
   },
   "next_required_evidence": [
     "Full 64-digit SHA-256 for each PDF and each selected PNG, cross-checked against the uploaded locally generated attestation.json",
     "Visible scan title/imprint page confirming this specific printed edition",
     "Human visual review of identified PDF pages, with actual printed page numeral and commentary passage boundaries",
     "For 18:10 specifically, independent visual discrimination of ثلثمائة/ثلاثمائة and أنى/أتى from OCR artifacts",
-    "Review and approval of lawful downstream display before creating an editorial overlay"
+    "Review and approval of lawful downstream display before creating an editorial overlay",
+    "Check individual attestation file and PNG page hashes offline; the two uploaded summary files alone contain only shortened PDF digests"
   ]
 }
