@@ -42,6 +42,9 @@ jobs:
           p.write_text(json.dumps({"comparison_status":"NOT_RUN_REFERENCE_UNAVAILABLE",
             "canonical_quran_verified":False,"scholarly_verified":False}, indent=2) + "\\n")
           PY
+      - name: Smoke-test pinned Tanzil text retrieval
+        if: steps.tanzil.outcome == 'success'
+        run: python -m corpus.query 1 1 --reference corpus-data/reference/tanzil-uthmani.txt > /dev/null
       - name: Compare Quran verses against independent reference
         if: steps.tanzil.outcome == 'success'
         shell: bash
