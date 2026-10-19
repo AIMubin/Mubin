@@ -38,3 +38,8 @@ footer{margin:30px 0;color:#526779;text-align:center;font-size:.9rem}
 .tafsir-warning{color:#814926}
 .ai-explanation{margin-top:10px;padding:12px 14px;background:#f8f7f4;border:1px dashed #c4c5ba;border-radius:10px}
 @media(max-width:680px){.tafsir-outbound{display:block}.tafsir-outbound a+a{margin-top:9px}}
+
+.tafsir-links h4{font-size:.94rem;margin:13px 0 5px;color:#23485a}
+.tafsir-bibliography{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tafsir-bibliography li{border:1px solid #d9e2e8;border-radius:6px;padding:8px 9px;background:#fff;font-size:.85rem;line-height:1.8;overflow-wrap:anywhere}
+@media(max-width:680px){.tafsir-bibliography{grid-template-columns:1fr}}
