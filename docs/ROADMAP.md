@@ -29,3 +29,8 @@ Typed source/evidence/claim/rule/inference/proof/objection/historical-availabili
 ## P0 maintainer review exit conditions
 
 The PR cannot merge solely on passing its original 19 tests. Maintainer-originated adversarial additions must exercise qiyas-rule laundering, forced-empty bundles, open and falsely answered objections, source-verified digest changes, distinct claim modality, mismatched historical identities, CI execution and CLI failure exit codes. Codex is an **independent second pass after** maintainer review and fixes; if unavailable or quota-limited, record an explicit maintainer-only fallback audit rather than fabricate a second approval.
+
+## P1 staged delivery
+
+- **P1.0 — offline snapshot provenance pilot:** Byte-exact anchored quotations against operator-selected local UTF-8 snapshots; deterministic unsigned receipts, rights declaration as an explicit gate, and adversarial CI. Implementation in `core/provenance`. **Does not meet the full P1 exit condition.**
+- **P1.1 — source trust & corpus qualification:** Authoritative acquisition channel, version/edition identity, externally verifiable digests or signed manifests, actual text-position/citation verification, licensing determination, and source-disjoint evidence holdouts. No real Quran/Hadith/fiqh corpus is claimed by the P1.0 synthetic tests.
