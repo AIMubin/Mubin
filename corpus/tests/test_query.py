@@ -44,6 +44,7 @@ class QueryTests(unittest.TestCase):
                              for s,n in enumerate(EXPECTED_COUNTS,1) for a in range(1,n+1)), encoding='utf-8')
         h=hashlib.sha256(p.read_bytes()).hexdigest()
         self.assertEqual(get_ayah(self.db,1,1,p,h)['text'], 'VERBATIM SYNTHETIC')
+        self.assertIn('tanzil.net',get_ayah(self.db,1,1,p,h)['quran_text_attribution'])
         self.assertFalse(get_ayah(self.db,1,1,p,h)['scholarly_verification'])
         with self.assertRaises(ValueError): get_ayah(self.db,1,1,p,'a'*64)
 
