@@ -28,7 +28,8 @@ class QueryTests(unittest.TestCase):
     def test_provenance_flags(self):
         response = get_ayah(self.db, 1, 1)
         self.assertFalse(response["scholarly_verification"])
-        self.assertIn("DERIVED", response["text_classification"])
+        self.assertEqual(response["text_classification"], "REFERENCE_REQUIRED_NO_QURAN_TEXT")
+        self.assertIsNone(response["text"])
         tafsirs = {x['source_id']:x for x in response['tafsirs']}
         self.assertFalse(tafsirs['tabary']['displayable'])
         self.assertIsNone(tafsirs['tabary']['text'])
