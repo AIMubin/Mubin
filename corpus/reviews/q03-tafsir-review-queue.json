@@ -69,29 +69,33 @@
       "source": "baghawy",
       "verse_id": "4:43",
       "issue": "POSSIBLE_TRUNCATION_32767",
-      "provisional_interpretation": "PROBABLE_TRUNCATION_SUPPORTED_BY_INDEPENDENT_ONLINE_CONTINUATION_NOT_PRINT_CONFIRMED",
-      "printed_edition_verified": false
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false
     },
     {
       "source": "baghawy",
       "verse_id": "17:4",
       "issue": "POSSIBLE_TRUNCATION_32767",
-      "provisional_interpretation": "POSSIBLE_TRUNCATION_AT_32767_SOURCE_CHARACTERS",
-      "printed_edition_verified": false
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false
     },
     {
       "source": "baghawy",
       "verse_id": "18:10",
       "issue": "POSSIBLE_TRUNCATION_32767",
-      "provisional_interpretation": "POSSIBLE_TRUNCATION_AT_32767_SOURCE_CHARACTERS",
-      "printed_edition_verified": false
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false
     },
     {
       "source": "baghawy",
       "verse_id": "33:9",
       "issue": "POSSIBLE_TRUNCATION_32767",
-      "provisional_interpretation": "POSSIBLE_TRUNCATION_AT_32767_SOURCE_CHARACTERS",
-      "printed_edition_verified": false
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false
     }
   ],
   "cautions": [
@@ -106,6 +110,16 @@
     "primary_upstream_report": "q03-tafsir-upstream-machine-report.json",
     "primary_report_sha256": "22e2a0f058d6d168e6a8352365a90780c1f3703da7aebf11d279c533400f602c",
     "tabary_adjacent_shared_heading_report": "q03-tabary-adjacent-headings.json",
-    "baghawy_4_43_digital_comparator": "q03-baghawy-4-43-digital-continuation.json"
+    "baghawy_4_43_digital_comparator": "q03-baghawy-4-43-digital-continuation.json",
+    "baghawy_four_digital_continuations": "q03-baghawy-four-digital-continuations.json",
+    "baghawy_source_length_ceiling": "q03-baghawy-length-ceiling.json",
+    "baghawy_edition_review_runbook": "q03-baghawy-edition-verification-runbook.md"
+  },
+  "last_corpus_ci": {
+    "run_id": 39302590191,
+    "result": "success",
+    "tests_passed": 37,
+    "tests_total": 37,
+    "commit": "b524aa3cf5ae7657e2cc60cf35fbc1bb36d8541b"
   }
 }
