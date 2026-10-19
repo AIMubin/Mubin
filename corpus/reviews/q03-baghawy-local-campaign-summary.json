@@ -1,0 +1,128 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "review_id": "baghawy-four-local-print-campaign",
+  "report_date": "2026-10-19",
+  "campaign_state": "LOCAL_ARTIFACTS_PREPARED_VISUAL_EDITION_GATE_OPEN",
+  "evidence_provenance": {
+    "supplied_via_chat": [
+      "SUMMARY.md",
+      "summary.json"
+    ],
+    "summary_md_sha256": "56e2d7c8f8016aa6421c5a63cc98996581c655389528a28503323287938c2288",
+    "summary_json_sha256": "06014e047b3288e7a0a12c2ea30b21bace56415cfb997f90e62be6342833146f",
+    "summaries_parsed_in_assistant_sandbox": true,
+    "full_campaign_package_uploaded": false,
+    "original_scans_or_attestation_page_images_uploaded": false,
+    "pdf_sha256_values_provided_in_summaries": "ABBREVIATED_ONLY",
+    "local_original_archive_preserved": true,
+    "report_mode": "SECONDARY_REPORT_OF_LOCAL_TOOL_EXECUTION_NOT_REMOTE_VISUAL_VERIFICATION"
+  },
+  "dataset": {
+    "run_id": 39267807115,
+    "linked_sqlite_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+    "suspected_digital_cutoff_characters": 32767,
+    "raw_source_modified": false
+  },
+  "pdf_volumes": {
+    "2": {
+      "pdf_sha256_abbreviated": "20bfd900…fa1bb",
+      "full_sha256_provided": false
+    },
+    "5": {
+      "pdf_sha256_abbreviated": "a9191af5…692f",
+      "full_sha256_provided": false
+    },
+    "6": {
+      "pdf_sha256_abbreviated": "3dad5ea9…72d",
+      "full_sha256_provided": false
+    }
+  },
+  "cases": [
+    {
+      "verse_id": "4:43",
+      "volume": 2,
+      "pdf_page_indices_1based": [
+        228,
+        229
+      ],
+      "printed_page_candidate": 215,
+      "printed_page_method": "automatically_detected_unreviewed",
+      "printed_page_verified": false,
+      "witness_unique_anchor_chars": 51,
+      "reported_witness_continuation_chars": 1906,
+      "reported_status": "DIGITAL_CONTINUATION_ONLY"
+    },
+    {
+      "verse_id": "17:4",
+      "volume": 5,
+      "pdf_page_indices_1based": [
+        76,
+        77
+      ],
+      "printed_page_candidate": null,
+      "printed_page_verified": false,
+      "witness_unique_anchor_chars": 320,
+      "witness_max_anchor_chars": 320,
+      "reported_witness_continuation_chars": 4291,
+      "reported_status": "DIGITAL_CONTINUATION_ONLY"
+    },
+    {
+      "verse_id": "18:10",
+      "volume": 5,
+      "pdf_page_indices_1based": [
+        154,
+        155
+      ],
+      "printed_page_candidate": null,
+      "printed_page_verified": false,
+      "witness_unique_anchor_chars": null,
+      "reported_witness_continuation_chars": null,
+      "reported_orthographic_or_ocr_discrepancies": [
+        "ثلثمائة/ثلاثمائة",
+        "أنى/أتى"
+      ],
+      "ocr_error_not_excluded": true,
+      "reported_status": "ALIGNMENT_AMBIGUOUS"
+    },
+    {
+      "verse_id": "33:9",
+      "volume": 6,
+      "pdf_page_indices_1based": [
+        330,
+        331
+      ],
+      "printed_page_candidate": 135,
+      "printed_page_method": "automatically_detected_unreviewed",
+      "printed_page_verified": false,
+      "witness_unique_anchor_chars": 77,
+      "reported_witness_continuation_chars": 853,
+      "reported_status": "DIGITAL_CONTINUATION_ONLY"
+    }
+  ],
+  "verification_gates": {
+    "digital_read_only_campaign_reported_completed": true,
+    "independently_verified_page_image_sha256": false,
+    "publisher_edition_title_page_visually_verified": false,
+    "exact_printed_page_numbers_verified": false,
+    "original_pdf_full_sha256_independently_verified": false,
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "editorial_overlay_replacement_approved": false
+  },
+  "environment_notes": {
+    "islamweb_available_to_local_assistant": false,
+    "digital_witness": "King Saud University tafsir pages",
+    "scan_ocr": "archive.org OCR, not a substitute for visual review",
+    "local_windows_test_report": "38 passed of 39; test_compare_quran.test_partial_ref_rejected raises WinError 32 on temp cleanup",
+    "windows_test_fix_commit": "0192942c4990c7fd40f7ced84e959fba5b3362ce",
+    "cross_os_ci_added_commit": "7a06c490fc50ab5194a4bb0076e874bc594619b3"
+  },
+  "next_required_evidence": [
+    "Full 64-digit SHA-256 for each PDF and each selected PNG, cross-checked against the uploaded locally generated attestation.json",
+    "Visible scan title/imprint page confirming this specific printed edition",
+    "Human visual review of identified PDF pages, with actual printed page numeral and commentary passage boundaries",
+    "For 18:10 specifically, independent visual discrimination of ثلثمائة/ثلاثمائة and أنى/أتى from OCR artifacts",
+    "Review and approval of lawful downstream display before creating an editorial overlay"
+  ]
+}
