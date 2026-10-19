@@ -113,6 +113,14 @@ def main():
               'XSS: malicious HTML parsed instead of displayed as text')
         check(script(driver,sid,"return document.querySelector('article.ayah').textContent.includes('ليس آية قرآنية')"),
               'Invented text not flagged as synthetic')
+        check(script(driver,sid,"return document.querySelectorAll('article.ayah .tafsir-links a').length")==0,
+              'A fabricated synthetic verse must not link to real Quran tafsir')
+        check(script(driver,sid,
+              "return document.querySelector('article.ayah').textContent.includes('مراجع التفسير غير متاحة للبيانات الاصطناعية')"),
+              'Synthetic source needs explicit no-tafsir notice')
+        check(script(driver,sid,
+              "return document.querySelector('article.ayah .ai-explanation')?.textContent.includes('غير مفعّل')"),
+              'Missing separate disabled AI analysis zone')
         script(driver,sid,"document.querySelector('#query').value='سلام';document.querySelector('#fold-marks').click();document.querySelector('#search-form button').click();")
         wait(driver,sid,"return document.querySelector('#feedback').textContent.includes('1') && document.querySelectorAll('article.ayah').length===1")
         check(script(driver,sid,"return document.querySelector('article.ayah .verse').textContent")==displayed,
