@@ -1,6 +1,5 @@
 {
   "audit_version": "Q0.3",
-  "source_db_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
   "status": "EDITORIAL_REVIEW_REQUIRED",
   "verified_scholarly": false,
   "observed": {
@@ -71,5 +70,7 @@
     "Exactly 32767 characters is a truncation warning, not a proven defect.",
     "Publisher, editor, volume and page details require separate edition attestation.",
     "Neither tafsir nor derived Quran text is scholarly authenticated."
-  ]
+  ],
+  "linked_db_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "upstream_source_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27"
 }
