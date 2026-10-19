@@ -13,7 +13,8 @@ SOURCES = ("tabary", "katheer", "baghawy", "saadi", "moyassar")
 
 
 def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = None,
-             expected_reference_sha256: str = REFERENCE_SHA256):
+             expected_reference_sha256: str = REFERENCE_SHA256,
+             allow_unverified_derived_text: bool = False):
     if type(sura) is not int or not 1 <= sura <= 114:
         raise ValueError("Invalid sura")
     if type(aya) is not int or not 1 <= aya <= EXPECTED_COUNTS[sura - 1]:
@@ -31,33 +32,39 @@ def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = N
             (sura, aya)).fetchall()
     finally:
         connection.close()
-    quran_text = raw[0]
-    classification = "DERIVED_FROM_WORDS_NOT_CANONICALLY_VERIFIED"
+    quran_text = None
+    classification = "REFERENCE_REQUIRED_NO_QURAN_TEXT"
     reference_sha256 = None
     if reference_path is not None:
         verses, reference_sha256 = witness(reference_path)
         if reference_sha256.lower() != expected_reference_sha256.lower():
             raise ValueError("Independent Quran witness hash mismatch")
-        expected = sum(EXPECTED_COUNTS)
-        if len(verses) != expected or (sura, aya) not in verses:
+        expected = {(s, a) for s, n in enumerate(EXPECTED_COUNTS, 1) for a in range(1, n + 1)}
+        if set(verses) != expected:
             raise ValueError("Independent Quran witness coverage mismatch")
         quran_text = verses[(sura, aya)]
         classification = "VERBATIM_TANZIL_WITNESS_NOT_SCHOLARLY_APPROVED"
+    elif allow_unverified_derived_text:
+        quran_text = raw[0]
+        classification = "DERIVED_FROM_WORDS_NOT_CANONICALLY_VERIFIED"
     tafsirs = []
     for source, text in entries:
         if source not in SOURCES:
             continue
         flags = []
         value = text if isinstance(text, str) else ""
-        if not plaintext(value):
+        display_text = plaintext(value)
+        if not display_text:
             flags.append("NO_DISPLAYABLE_TEXT")
         if len(value) == 32767:
             flags.append("POSSIBLE_TRUNCATION_32767")
         tafsirs.append({
             "source_id": source,
             "verse_id": f"{sura}:{aya}",
-            "text": value if "NO_DISPLAYABLE_TEXT" not in flags else None,
-            "displayable": "NO_DISPLAYABLE_TEXT" not in flags,
+            "text": value if display_text else None,
+            "display_text": display_text or None,
+            "displayable": bool(display_text),
+            "render_as_plain_text": True,
             "quality_flags": flags,
             "edition_metadata": "NOT_YET_VERIFIED",
             "scholarly_verification": False,
@@ -67,7 +74,8 @@ def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = N
         "text": quran_text,
         "text_classification": classification,
         "reference_sha256": reference_sha256,
-        "quran_text_attribution": "Tanzil Project (https://tanzil.net)" if reference_sha256 else "Derived from Tafsir Center word data",
+        "quran_text_attribution": "Tanzil Project (https://tanzil.net)" if reference_sha256 else (
+            "Derived from Tafsir Center word data; internal diagnostics only" if allow_unverified_derived_text else None),
         "source_database": "tafsircenter/tafsir-mcp-data",
         "scholarly_verification": False,
         "tafsirs": tafsirs,
@@ -81,9 +89,11 @@ def main():
     p.add_argument("--database", type=Path, default=Path("corpus-data/linked/quran_tafsir.db"))
     p.add_argument("--reference", type=Path)
     p.add_argument("--expected-reference-sha256", default=REFERENCE_SHA256)
+    p.add_argument("--allow-unverified-derived-text", action="store_true")
     args = p.parse_args()
     print(json.dumps(get_ayah(args.database, args.sura, args.aya, args.reference,
-                              args.expected_reference_sha256), ensure_ascii=False, indent=2))
+                              args.expected_reference_sha256, args.allow_unverified_derived_text),
+                     ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
