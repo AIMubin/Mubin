@@ -1,0 +1,38 @@
+name: Mubin Tafsir Center private 214MB sidecar verification
+
+on:
+  pull_request:
+    paths:
+      - "qa/tafsircenter_sidecar_v01.py"
+      - "core/tests/test_tafsircenter_sidecar_v01.py"
+      - ".github/workflows/mubin-tafsircenter-sidecar.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  private-sidecar-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Test metadata receipt behavior and fail-closed source checks
+        run: python -m unittest core.tests.test_tafsircenter_sidecar_v01 -v
+      - name: Fetch exact published Tafsir Center SQLite bytes into private runner only
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          FILE="${RUNNER_TEMP}/tafsircenter-quran.db"
+          trap 'rm -f "${FILE}"' EXIT
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --retry 2 --retry-delay 3 --connect-timeout 20 --max-time 280 \
+            --max-filesize 335544320 \
+            'https://huggingface.co/datasets/tafsircenter/tafsir-mcp-data/resolve/main/quran.db?download=true' \
+            --output "${FILE}"
+          python -m qa.tafsircenter_sidecar_v01 --file "${FILE}"
+          # No artifact upload, no git add, no PR comment containing texts.

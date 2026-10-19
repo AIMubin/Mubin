@@ -27,3 +27,19 @@ small{display:block;color:#51626d;overflow-wrap:anywhere}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;text-align:left;background:#f1f4f5;padding:10px;border-radius:8px;font-size:.75rem}
 footer{margin:30px 0;color:#526779;text-align:center;font-size:.9rem}
 @media(max-width:680px){.search-card{grid-template-columns:1fr}.line{flex-wrap:wrap}.line input{flex-basis:100%}button{width:100%}}
+
+/* Quran text, third-party tafsir references, and AI output are separate trust zones. */
+.quran-text-block{border-right:3px solid #216d7b;padding-right:14px}
+.tafsir-links{margin-top:16px;padding:14px;background:#f2f6fa;border:1px solid #d4e2e9;border-radius:10px}
+.tafsir-links h3,.ai-explanation h3{font-size:1rem;margin:0 0 8px}
+.tafsir-note,.tafsir-warning,.ai-explanation p{line-height:1.8;font-size:.9rem;margin:7px 0}
+.tafsir-outbound{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.tafsir-outbound a{display:block;max-width:100%;font-size:.91rem;padding:9px 12px;border:1px solid #aac9dd;border-radius:7px;background:white;overflow-wrap:anywhere}
+.tafsir-warning{color:#814926}
+.ai-explanation{margin-top:10px;padding:12px 14px;background:#f8f7f4;border:1px dashed #c4c5ba;border-radius:10px}
+@media(max-width:680px){.tafsir-outbound{display:block}.tafsir-outbound a+a{margin-top:9px}}
+
+.tafsir-links h4{font-size:.94rem;margin:13px 0 5px;color:#23485a}
+.tafsir-bibliography{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tafsir-bibliography li{border:1px solid #d9e2e8;border-radius:6px;padding:8px 9px;background:#fff;font-size:.85rem;line-height:1.8;overflow-wrap:anywhere}
+@media(max-width:680px){.tafsir-bibliography{grid-template-columns:1fr}}

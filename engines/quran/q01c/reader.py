@@ -66,12 +66,18 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackSer
     # Re-derive the loaded records from pinned original bytes; an otherwise
     # well-shaped SourceIndex can be forged by its public constructor.
     # This is a startup-only cost, not a per-request parser/normalizer.
-    try:
-        manifest_bytes=json.dumps(dict(index.manifest),ensure_ascii=True,
-            sort_keys=True,separators=(",",":")).encode("utf-8","strict")
-    except (TypeError,ValueError,UnicodeError) as exc:
-        raise RawSourceError("untrusted_source_manifest") from exc
-    checked=load_raw(manifest_bytes,raw)
+    if index.manifest.get("source_kind")=="tanzil_domain_unattested_export":
+        # No caller-supplied manifest can authorize this source kind: recompute
+        # both structure and exact pinned bytes in the dedicated source adapter.
+        from engines.quran.q01e.official import load_official_candidate
+        checked=load_official_candidate(raw)
+    else:
+        try:
+            manifest_bytes=json.dumps(dict(index.manifest),ensure_ascii=True,
+                sort_keys=True,separators=(",",":")).encode("utf-8","strict")
+        except (TypeError,ValueError,UnicodeError) as exc:
+            raise RawSourceError("untrusted_source_manifest") from exc
+        checked=load_raw(manifest_bytes,raw)
     if checked.verses!=index.verses or dict(checked.manifest)!=dict(index.manifest):
         raise RawSourceError("source_index_not_derived_from_pinned_raw_bytes")
     if type(port) is not int or not 0<=port<=65535:
@@ -116,7 +122,8 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackSer
             try:
                 p=urlsplit(self.path)
                 if p.scheme or p.netloc or p.fragment or p.path not in {*_FILES,
-                    "/api/status","/api/get","/api/find","/api/notice"}:
+                    "/api/status","/api/get","/api/find","/api/notice",
+                    "/api/tafsir-catalog"}:
                     return self._deny(404,"route_not_found")
                 if p.path in _FILES:
                     _decode_query(p.query,frozenset(),frozenset())
@@ -135,6 +142,19 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackSer
                     return self._json(200,{"notice":notice,
                         "source_kind":index.manifest["source_kind"],
                         "from_verified_publisher":False})
+                if p.path=="/api/tafsir-catalog":
+                    from engines.quran.tafsir.catalog import catalog_for_ref, CatalogError
+                    if index.manifest["source_kind"] not in (
+                            "unverified_github_mirror","tanzil_domain_unattested_export"):
+                        return self._deny(403,"unqualified_source_for_tafsir_catalog")
+                    try:
+                        args=_decode_query(p.query,frozenset({"ref"}),frozenset({"ref"}))
+                        if not index.get(args["ref"])["found"]:
+                            return self._deny(404,"verse_not_in_loaded_source")
+                        return self._json(200,catalog_for_ref(
+                            args["ref"],index.manifest["source_kind"]))
+                    except (CatalogError,ValueError,TypeError,UnicodeError):
+                        return self._deny(400,"invalid_catalog_reference")
                 if p.path=="/api/get":
                     params=_decode_query(p.query,frozenset({"ref"}),frozenset({"ref"}))
                     return self._json(200,{"result":index.get(params["ref"]),

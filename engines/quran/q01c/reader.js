@@ -11,6 +11,101 @@ async function api(path){
   if(!response.ok)throw new Error(data.error||"Request rejected");
   return data;
 }
+// External citations are navigation only: NO KSU scraping, embedding, or tafsir API.
+const AYAT_BASE="https://quran.ksu.edu.sa/index.php";
+const REAL_SOURCES=new Set(["unverified_github_mirror","tanzil_domain_unattested_export"]);
+function addText(parent,tag,message,className){
+  const el=document.createElement(tag);
+  if(className)el.className=className;
+  el.textContent=message;
+  parent.appendChild(el);
+  return el;
+}
+function addExternal(parent,label,url){
+  const a=document.createElement("a");
+  a.href=url;
+  a.textContent=label;
+  a.target="_blank";
+  a.rel="noopener noreferrer";
+  a.referrerPolicy="no-referrer";
+  parent.appendChild(a);
+}
+// Bibliographic data is same-origin metadata, NOT licensed tafsir text.
+async function renderBibliography(ref,list){
+  try{
+    const data=await api("/api/tafsir-catalog?ref="+encodeURIComponent(ref));
+    if(!list.isConnected)return;
+    if(data.use_scope!=="external_navigation_only"||
+       data.text_import_allowed!==false||data.p1_admitted!==false||
+       data.rights_verified!==false||data.edition_verified!==false||
+       data.ai_tafsir_generated!==false||!Array.isArray(data.sources)||
+       data.sources.length!==6)throw new Error("invalid catalog trust status");
+    while(list.firstChild)list.removeChild(list.firstChild);
+    for(const source of data.sources){
+      if(source.source_status!=="metadata_only_unreviewed"||
+         source.rights_status!=="not_verified"||source.edition!==null||
+         source.text_ingested!==false||source.p1_eligible!==false||
+         source.allowed_for_local_quotation!==false){
+        throw new Error("unqualified bibliographic record");
+      }
+      const row=document.createElement("li");
+      const label=source.title_ar+
+        (source.author_ar?" — "+source.author_ar:" — المؤلف غير محدد بالسجل")+
+        " · الطبعة: غير محددة · الحقوق: غير متحقق منها";
+      row.textContent=label;
+      list.appendChild(row);
+    }
+  }catch(_err){
+    if(!list.isConnected)return;
+    while(list.firstChild)list.removeChild(list.firstChild);
+    const failure=document.createElement("li");
+    failure.textContent="بيانات المصادر الوصفية غير متاحة؛ لا يوجد نص تفسير مُعتمد هنا.";
+    list.appendChild(failure);
+  }
+}
+function renderTafsir(item,card){
+  const tafsir=document.createElement("section");
+  tafsir.className="tafsir-links";
+  tafsir.setAttribute("aria-label","مصادر التفسير الخارجية");
+  addText(tafsir,"h3","التفسير — إحالات خارجية");
+  const m=typeof item.reference==="string"?
+    /^([1-9][0-9]{0,2}):([1-9][0-9]{0,2})$/.exec(item.reference):null;
+  if(!REAL_SOURCES.has(sourceType)||!m||Number(m[1])>114||Number(m[2])>286){
+    addText(tafsir,"p",sourceType==="synthetic_fixture"?
+      "مراجع التفسير غير متاحة للبيانات الاصطناعية؛ النص المعروض ليس آية.":
+      "روابط التفسير معطّلة: مصدر النص أو مرجع الآية غير مؤهل للإحالة.",
+      "tafsir-warning");
+  }else{
+    const verseHash="#aya="+m[1]+"_"+m[2]+"&m=hafs";
+    addText(tafsir,"p","الإحالة إلى مشروع «آيات» بجامعة الملك سعود؛ التفسير يبقى في الموقع الخارجي ولا يُنقل إلى مُبين. قد تتغير إعدادات الموقع.","tafsir-note");
+    const links=document.createElement("div");
+    links.className="tafsir-outbound";
+    addExternal(links,"عرض الآية مع خيار التفسير الميسر على «آيات»",
+      AYAT_BASE+verseHash+"&qaree=husary&trans=ar_mu");
+    addExternal(links,"فتح الآية واختيار تفسير آخر في «آيات»",
+      AYAT_BASE+verseHash);
+    tafsir.appendChild(links);
+    addText(tafsir,"p","يوفر الموقع اختيار تفاسير مثل السعدي والبغوي وابن كثير والقرطبي والطبري. أسماء الكتب هنا مرجع للتصفح، وليست نصوصًا مستوردة أو موافقات حقوق.","tafsir-note");
+    addText(tafsir,"small","مصدر منصة آيات: جامعة الملك سعود؛ تسند المنصة أصول التفاسير إلى mosshaf.com، والنص القرآني إلى Tanzil.");
+    addText(tafsir,"h4","فهرس كتب التفسير — بيانات وصفية غير محققة");
+    addText(tafsir,"p","الكتب التالية مراجع وصفية مرشحة، دون تحديد طبعاتها أو ترخيص نسخ نصوصها.","tafsir-note");
+    const bibliography=document.createElement("ul");
+    bibliography.className="tafsir-bibliography";
+    bibliography.setAttribute("aria-label","فهرس مصادر التفسير");
+    tafsir.appendChild(bibliography);
+    // Network stays on the localhost Quran reader; no request to KSU is made.
+    // Errors cannot be silently upgraded to a bibliography with approval.
+    renderBibliography(item.reference,bibliography);
+
+  }
+  card.appendChild(tafsir);
+  const ai=document.createElement("section");
+  ai.className="ai-explanation";
+  ai.setAttribute("aria-label","التحليل الآلي");
+  addText(ai,"h3","التحليل الآلي — منفصل عن التفسير");
+  addText(ai,"p","غير مفعّل. لم يُنشئ مُبين تفسيرًا آليًا أو حكمًا شرعيًا لهذه الآية.");
+  card.appendChild(ai);
+}
 function renderHit(item){
   const card=document.createElement("article");card.className="ayah";
   const ref=document.createElement("small");
@@ -21,9 +116,17 @@ function renderHit(item){
   const meta=document.createElement("small");
   meta.textContent=(sourceType==="synthetic_fixture" ?
     "نص اصطناعي للتجربة؛ ليس آية قرآنية" :
-    "نص مرآة غير موثّقة رسميًا؛ منسوب إلى Tanzil")
+    (sourceType==="tanzil_domain_unattested_export" ?
+      "نص من استجابة نطاق Tanzil، مثبت البصمة؛ ليس إصدارًا معتمدًا" :
+      "نص مرآة غير موثّقة رسميًا؛ منسوب إلى Tanzil"))
     +" · مصدر: "+item.source_id;
-  card.append(ref,text,meta);hits.append(card);
+  const scripture=document.createElement("section");
+  scripture.className="quran-text-block";
+  scripture.setAttribute("aria-label","النص القرآني وبيانات مصدره");
+  scripture.append(ref,text,meta);
+  card.appendChild(scripture);
+  renderTafsir(item,card);
+  hits.append(card);
 }
 function renderMany(results){
   clearHits();

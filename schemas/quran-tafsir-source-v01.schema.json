@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AIMubin/Mubin/blob/main/schemas/quran-tafsir-source-v01.schema.json",
+  "title": "Mubin Quran tafsir source metadata, explicitly unverified and text-free",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "platform",
+    "sources"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mubin-tafsir-metadata-v0.1"
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_ar",
+        "navigation_base",
+        "origin_reported",
+        "rights_status"
+      ],
+      "properties": {
+        "id": {
+          "const": "ksu_ayat"
+        },
+        "display_ar": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 150
+        },
+        "navigation_base": {
+          "const": "https://quran.ksu.edu.sa/index.php"
+        },
+        "origin_reported": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 250
+        },
+        "rights_status": {
+          "const": "not_verified"
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title_ar",
+          "author_ar",
+          "edition",
+          "source_status",
+          "rights_status",
+          "text_ingested",
+          "allowed_for_local_quotation",
+          "p1_eligible",
+          "link_scope"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "tafsir_muyassar",
+              "tafsir_saadi",
+              "tafsir_baghawi",
+              "tafsir_ibn_kathir",
+              "tafsir_qurtubi",
+              "tafsir_tabari"
+            ]
+          },
+          "title_ar": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 150
+          },
+          "author_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "edition": {
+            "type": "null"
+          },
+          "source_status": {
+            "const": "metadata_only_unreviewed"
+          },
+          "rights_status": {
+            "const": "not_verified"
+          },
+          "text_ingested": {
+            "const": false
+          },
+          "allowed_for_local_quotation": {
+            "const": false
+          },
+          "p1_eligible": {
+            "const": false
+          },
+          "link_scope": {
+            "const": "ksu_navigation_not_book_text"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "contract": "mubin-corpus-acquisition-queue-v0.1",
+  "as_of": "2026-10-19",
+  "policy": "ingest_for_authorized_internal_research_now_public_release_gated_separately",
+  "entries": [
+    {
+      "id": "tanzil_uthmani",
+      "family": "QURAN",
+      "reading_or_scope": "hafs_kufan",
+      "state": "IMPORTED_IN_PRIVATE_CI",
+      "published_digest_or_evidence": "sha256:7f30c647331a61100ebf24a80507dc0fcdd9f2df97f1312b5b2dfcb982a7f326",
+      "source_index_url": "https://tanzil.net/pub/download/index.php",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "quranenc_four_arabic",
+      "family": "TAFSIR",
+      "reading_or_scope": "arabic",
+      "state": "IMPORTED_IN_PRIVATE_CI",
+      "published_digest_or_evidence": "four sha256 in import-sources-v01.json",
+      "source_index_url": "https://github.com/m-alhamry/Quran-text-assets",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "tafsircenter_quran_db",
+      "family": "MULTI_CORPUS",
+      "reading_or_scope": "5_classical_tafsirs_qiraat_linguistics",
+      "state": "VERIFIED_PRIVATE_SIDECAR_IN_CI",
+      "published_digest_or_evidence": "sha256:10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+      "source_index_url": "https://huggingface.co/datasets/tafsircenter/tafsir-mcp-data",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "kfg_hafs_uthmani",
+      "family": "QURAN",
+      "reading_or_scope": "hafs",
+      "state": "QUEUED_SOURCE_DOWNLOAD",
+      "published_digest_or_evidence": "sha1:36EA5AB0D7EA1702F17FF43F9B50924CCCD77EBF",
+      "source_index_url": "https://qurancomplex.gov.sa/en/techquran/dev/",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "kfg_hafs_smart",
+      "family": "QURAN",
+      "reading_or_scope": "hafs_smart_unicode",
+      "state": "QUEUED_SOURCE_DOWNLOAD",
+      "published_digest_or_evidence": "sha1:1dbeae3847880b1c21a956dcfdc0a2d9d490e729",
+      "source_index_url": "https://qurancomplex.gov.sa/en/techquran/dev/",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "kfg_warsh_uthmani",
+      "family": "QURAN",
+      "reading_or_scope": "warsh_an_nafi",
+      "state": "QUEUED_SOURCE_DOWNLOAD",
+      "published_digest_or_evidence": "sha1:44ecea8feb23817fdc01a8ee2162a6a0cf08cae7",
+      "source_index_url": "https://qurancomplex.gov.sa/en/techquran/dev/",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "kfg_qalun_uthmani",
+      "family": "QURAN",
+      "reading_or_scope": "qalun_an_nafi",
+      "state": "QUEUED_SOURCE_DOWNLOAD",
+      "published_digest_or_evidence": "sha1:81733666be17742e13c9fa4c7d26d42b1adc67c8",
+      "source_index_url": "https://qurancomplex.gov.sa/en/techquran/dev/",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "kfg_susi_uthmani",
+      "family": "QURAN",
+      "reading_or_scope": "susi_an_abi_amr",
+      "state": "QUEUED_SOURCE_DOWNLOAD",
+      "published_digest_or_evidence": "sha1:e52dbc6d8b43797a8faa0fd1ec1d8e5000265674",
+      "source_index_url": "https://qurancomplex.gov.sa/en/techquran/dev/",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "kfg_tafsir_muyassar",
+      "family": "TAFSIR",
+      "reading_or_scope": "hafs",
+      "state": "QUEUED_SOURCE_DOWNLOAD",
+      "published_digest_or_evidence": "sha1:5f533113c2f54f32eded734bb49e6a5837965722",
+      "source_index_url": "https://qurancomplex.gov.sa/en/techquran/dev/",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "kfg_muyassar_ghareeb",
+      "family": "LEXICON",
+      "reading_or_scope": "quran_word_explanations",
+      "state": "QUEUED_SOURCE_DOWNLOAD",
+      "published_digest_or_evidence": "sha1:055A908C6EC7F06912C33BD00920406C665CC5F9",
+      "source_index_url": "https://qurancomplex.gov.sa/en/techquran/dev/",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "classic_tafsir_edition_collation",
+      "family": "TAFSIR",
+      "reading_or_scope": "tabari_ibnkathir_baghawi_qurtubi_saadi",
+      "state": "EDITION_ATTRIBUTION_AUDIT_QUEUED",
+      "published_digest_or_evidence": "not_fetched",
+      "source_index_url": "https://github.com/tafsircenter/tafsir-mcp",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "hadith_authoritative_text",
+      "family": "HADITH",
+      "reading_or_scope": "sanad_matn_scholarly_evaluation",
+      "state": "EXISTING_SEPARATE_H392_PROCESS",
+      "published_digest_or_evidence": "not_imported_by_this_pipeline",
+      "source_index_url": "https://github.com/AIMubin/Mubin",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    },
+    {
+      "id": "usul_fiqh_madhhab_corpora",
+      "family": "USUL_FIQH",
+      "reading_or_scope": "original_editions_madhahib",
+      "state": "PLANNED_SEPARATE_SOURCE_ADAPTER",
+      "published_digest_or_evidence": "not_imported",
+      "source_index_url": "https://github.com/AIMubin/Mubin",
+      "rights_status": "legal_review_pending",
+      "publishable_now": false,
+      "mubin_scholarly_qualified": false
+    }
+  ]
+}

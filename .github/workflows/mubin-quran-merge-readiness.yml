@@ -1,0 +1,31 @@
+name: Mubin Quran stacked PR advisory (read-only)
+
+on:
+  pull_request:
+    paths:
+      - "qa/quran_merge_readiness.py"
+      - "core/tests/test_quran_merge_readiness.py"
+      - "docs/reviews/QURAN-MERGE-READINESS-**"
+      - ".github/workflows/mubin-quran-merge-readiness.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  portfolio-advisory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Test exact-HEAD stack review safety
+        run: python -m unittest discover -s core/tests -p "test_quran_merge_readiness.py" -v
+      - name: Query GitHub read-only and print blocked/advisory state
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m qa.quran_merge_readiness --json
