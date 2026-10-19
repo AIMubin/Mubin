@@ -1,0 +1,111 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "q03-tafsir-upstream-fidelity",
+  "assessment": "IMPORT_PRESERVATION_CONFIRMED_BY_LOCAL_REPORT",
+  "evidence_provenance": "User-supplied report of locally executed corpus.audit_tafsir_upstream; full machine-generated JSON not supplied to this chat",
+  "local_report_location": "C:\\AI\\Mubin\\tafsir-upstream-comparison.json",
+  "audit_exit_code_reported": 0,
+  "comparison_reported": "ALL_SOURCE_ROWS_IDENTICAL_TO_IMPORTED_ROWS",
+  "upstream_database_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+  "linked_database_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "tafsir_sources": {
+    "tabary": {
+      "rows_identical": 6236
+    },
+    "katheer": {
+      "rows_identical": 6236
+    },
+    "baghawy": {
+      "rows_identical": 6236
+    },
+    "saadi": {
+      "rows_identical": 6236
+    },
+    "moyassar": {
+      "rows_identical": 6236
+    }
+  },
+  "flagged_records": [
+    {
+      "source": "baghawy",
+      "verse_id": "4:43",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "17:4",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "18:10",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "33:9",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "4:168",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "MARKUP_ONLY_OR_CROSS_VERSE_CONTINUATION_UNVERIFIED"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:16",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "MARKUP_ONLY_OR_CROSS_VERSE_CONTINUATION_UNVERIFIED"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:205",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "MARKUP_ONLY_OR_CROSS_VERSE_CONTINUATION_UNVERIFIED"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:25",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "MARKUP_ONLY_OR_CROSS_VERSE_CONTINUATION_UNVERIFIED"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:62",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "MARKUP_ONLY_OR_CROSS_VERSE_CONTINUATION_UNVERIFIED"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:103",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "MARKUP_ONLY_OR_CROSS_VERSE_CONTINUATION_UNVERIFIED"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "50:13",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "MARKUP_ONLY_OR_CROSS_VERSE_CONTINUATION_UNVERIFIED"
+    }
+  ],
+  "assertion_scope": "The importer preserves all 31,180 tafsir text field values from the pinned Tafsir Center source under the audited version; equality is text-field equality, not proof of printed-edition authenticity or validation of every upstream editorial decision.",
+  "source_edition_verified": false,
+  "scholarly_verified": false,
+  "next_gate": "Compare each flagged record with a precisely identified edition, reference page and passage boundaries; retain source and edition texts unchanged."
+}
