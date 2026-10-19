@@ -14,8 +14,9 @@ class BaghawyCutoffTests(unittest.TestCase):
         try:
             conn.execute("CREATE TABLE tafsirs(source TEXT,sura INT,aya INT,text TEXT)")
             # Synthetic data must NEVER be mistaken for a tafsir edition.
-            self.original = "تَجْرِبَةُ مُقَارَنَةِ النُّصُوصِ " * 1300
-            self.original = (self.original + "أخبرنا أبو القاسم بن جعفر الهاشمي أنا أب")[:32767]
+            suffix = "أخبرنا أبو القاسم بن جعفر الهاشمي أنا أب"
+            padding = ("تَجْرِبَةُ مُقَارَنَةِ النُّصُوصِ " * 1300)
+            self.original = padding[:32767 - len(suffix)] + suffix
             assert len(self.original) == 32767
             conn.execute("INSERT INTO tafsirs VALUES ('baghawy',4,43,?)", (self.original,))
             conn.commit()
