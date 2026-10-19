@@ -36,7 +36,7 @@ def request(url, method='GET', payload=None, headers=None):
     body = None if payload is None else json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(url, data=body, method=method,
         headers={'Content-Type':'application/json', **(headers or {})})
-    with urllib.request.urlopen(req,timeout=10) as res:
+    with urllib.request.urlopen(req,timeout=30) as res:
         b=res.read(262144)
         return json.loads(b) if b else None
 
