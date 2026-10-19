@@ -26,3 +26,13 @@ A real staging SQLite artifact has been inspected independently: 6,236 **derived
 **Fail-closed read path:** `python -m corpus.query 2 21` returns tafsir references but `text=null` when no pinned Tanzil witness is supplied. Pass `--reference corpus-data/reference/tanzil-uthmani.txt` for a pinned witness; `--allow-unverified-derived-text` is reserved for diagnostic use. `python -m corpus.audit_quran_derived` records reconstruction anomalies. Never patch scripture by stripping `/` automatically.
 
 For first-ayah retrieval outside al-Fatihah and al-Tawbah, the pinned witness may carry an unnumbered surah-opening basmala in the same raw record. `corpus.query` now returns that literal opening separately as `opening_basmala` and uses only the unchanged verse substring for `text`; it fails closed on unknown first-verse layouts. Original witness bytes and provenance remain preserved.
+
+## Q0.3 upstream tafsir fidelity audit (local operator report)
+
+The local operator ran `python -m corpus.audit_tafsir_upstream` on a read-only pinned Tafsir Center source and the linked Mubin SQLite. The reported result was **all 31,180 tafsir field values identical** (6,236 per source), with exit code 0 and expected SHA-256 checks. This is **import fidelity**, not byte-wise equality of SQLite database files and not equivalence to a printed edition. The seven al-Tabari entries containing only HTML and four al-Baghawi entries at 32,767 characters already occur upstream. An exact source-side truncation cause is not proven by length alone.
+
+- [Upstream-fidelity evidence summary](../../corpus/reviews/q03-tafsir-upstream-comparison.json) — describes the operator-supplied report; complete machine-generated JSON still resides locally.
+- [Printed-edition candidates](../../corpus/reviews/q03-tafsir-edition-candidates.json) — independent bibliographic comparators, **not** upstream edition identities.
+- [Baghawi review issue](https://github.com/AIMubin/Mubin/issues/77) and [Tabari review issue](https://github.com/AIMubin/Mubin/issues/78) — editorial verification pending.
+
+No raw imported tafsir strings have been replaced or corrected. 
