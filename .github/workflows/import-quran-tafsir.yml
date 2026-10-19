@@ -1,10 +1,7 @@
 name: Import Quran and Tafsir Center corpus
+# Full ~214 MB data refresh is explicit, never on ordinary code or docs push.
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'corpus/**'
-      - '.github/workflows/import-quran-tafsir.yml'
 concurrency:
   group: quran-corpus-${{ github.ref }}
   cancel-in-progress: true
