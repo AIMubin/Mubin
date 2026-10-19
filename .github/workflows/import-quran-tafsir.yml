@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'corpus/import_tafsircenter.py'
+      - 'corpus/**'
       - '.github/workflows/import-quran-tafsir.yml'
 permissions:
   contents: read
@@ -58,6 +58,29 @@ jobs:
           Path("corpus-data/linked/quran-comparison-summary.json").write_text(
               json.dumps(d, ensure_ascii=False, indent=2) + chr(10), encoding="utf-8")
           PY
+      - name: Classify Quran differences conservatively
+        if: steps.tanzil.outcome == 'success'
+        run: |
+          python -m corpus.triage_quran --reference corpus-data/reference/tanzil-uthmani.txt
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path("corpus-data/linked/quran-triage.json").read_text(encoding="utf-8"))
+          lines = ["## Quran witness diagnostic (not scholarly validation)", "", f"Compared {report['verses_compared']} verses"]
+          lines.extend(f"- {name}: {value}" for name, value in report["class_counts"].items())
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              out.write("\n".join(lines) + "\n")
+          PY
+      - name: Retain verbatim Tanzil witness and attribution
+        if: steps.tanzil.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tanzil-reference-witness
+          path: |
+            corpus-data/reference/tanzil-uthmani.txt
+            corpus-data/reference/tanzil-manifest.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Run corpus unit tests
         run: python -m unittest discover -s corpus/tests -v
       - name: Retain temporary access-controlled corpus database
@@ -78,7 +101,8 @@ jobs:
             corpus-data/linked/import-manifest.json
             corpus-data/linked/audit-report.json
             corpus-data/linked/quran-comparison-summary.json
+            corpus-data/linked/quran-triage.json
             corpus-data/reference/tanzil-manifest.json
           if-no-files-found: warn
           retention-days: 30
-      # Do not publish text extracts or source DB as artifacts until rights resolved.
+      # Staging artifacts expire; they are NOT persistent storage or publication approval.
