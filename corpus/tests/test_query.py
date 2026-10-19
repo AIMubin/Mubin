@@ -51,8 +51,15 @@ class QueryTests(unittest.TestCase):
         with self.assertRaises(ValueError): get_ayah(self.db,1,1,p,'a'*64)
         opening = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
         other = Path(self.directory.name)/'reference_with_basmala.txt'
+        def synthetic_verse(s, a):
+            if (s, a) == (1, 1):
+                return opening  # The segmentation baseline must be an actual basmala.
+            if (s, a) == (2, 1):
+                return opening + " VERBATIM SYNTHETIC"
+            return "VERBATIM SYNTHETIC"
+
         other.write_text(''.join(
-            f"{s}|{a}|{opening + ' ' if s == 2 and a == 1 else ''}VERBATIM SYNTHETIC\n"
+            f"{s}|{a}|{synthetic_verse(s, a)}\n"
             for s,n in enumerate(EXPECTED_COUNTS,1) for a in range(1,n+1)
         ), encoding='utf-8')
         h2=hashlib.sha256(other.read_bytes()).hexdigest()
