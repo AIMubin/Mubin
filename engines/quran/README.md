@@ -61,3 +61,11 @@ A read-only census of all 31,180 linked tafsir entries shows a **source-specific
 A separately indexed fourth Dar Taybah edition is dated 1417 H (1997), whereas the Waqfeya scan of the earlier edition is 1409 H (1989); never conflate print edition or page numbers. Printed pages, edition identity and permissions **remain unverified**. Original tafsir strings have not been changed.
 
 The corpus-checks GitHub Actions [run 39302590191](https://github.com/AIMubin/Mubin/actions/runs/39302590191) completed successfully: **37/37 tests**. One previously failing synthetic Quran test fixture was corrected to provide the real basmala baseline rather than weakening first-verse validation. This CI result is for test code and synthetic fixtures, not an edition-level scholarly approval.
+
+## Q0.3 print-scanned edition evidence gate (prepared, not closed)
+
+The Waqfeya listing independently identifies the 1409 H / 1989 Dar Taybah eight-volume printed edition. Precise source PDF locators for volumes 2 (4:43), 5 (17:4, 18:10), and 6 (33:9) are now recorded in [q03-baghawy-scan-page-locators.json](../../corpus/reviews/q03-baghawy-scan-page-locators.json). Remote PDF download was unavailable during this review; no printed-page images were examined. The electronic Islamweb reader gives provisional site-pagination leads for 4:43 (volume 2/site page 220) and 17:4 (volume 5/site page 67), but their equivalence to the 1409 H printed pages is unverified.
+
+The [local PDF evidence capture utility](../../corpus/attest_tafsir_print_pdf.py) renders selected PDF pages and records immutable-source and page-image SHA-256, with explicit fail-closed acceptance fields. See [edition runbook](../../corpus/reviews/q03-baghawy-edition-verification-runbook.md). Scanned images and local witness transcriptions remain outside git, under ignored corpus-data.
+
+GitHub Actions [run 39307310854](https://github.com/AIMubin/Mubin/actions/runs/39307310854) passed **39/39 synthetic and structural tests**, including the actual PyMuPDF page-rendering tests. This verifies tooling, **not** the printed-edition review.
