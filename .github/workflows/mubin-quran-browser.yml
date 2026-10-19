@@ -5,6 +5,8 @@ on:
     paths:
       - "engines/quran/q01c/**"
       - "engines/quran/q01b/**"
+      - "engines/quran/tafsir/**"
+      - "core/tests/test_quran_tafsir_metadata.py"
       - "qa/quran_browser_smoke.py"
       - ".github/workflows/mubin-quran-browser.yml"
       - "docs/reviews/QURAN-BROWSER-**"
@@ -14,6 +16,8 @@ on:
     paths:
       - "engines/quran/q01c/**"
       - "engines/quran/q01b/**"
+      - "engines/quran/tafsir/**"
+      - "core/tests/test_quran_tafsir_metadata.py"
       - "qa/quran_browser_smoke.py"
       - ".github/workflows/mubin-quran-browser.yml"
 
