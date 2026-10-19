@@ -44,3 +44,8 @@ Q0.3 tools: `python -m corpus.audit_tafsir_quality`, `python -m corpus.triage_qu
 ## Q0.3 derived-text display safeguard
 
 Direct inspection of the linked SQLite release revealed **364 verse records containing 371 literal slash characters**, including `2:21` rendered `يا/أيها`. The importer's joined-word strings are *not* suitable as Quranic display text. Read operations now return `text=null` by default without a pinned Tanzil witness; diagnostic access to unverified derived text requires `--allow-unverified-derived-text`. This is separate from the outstanding independent scholarly approval and license review. [Audit record](reviews/q03-derived-quran-observations.json).
+
+
+## Storage decision: GitHub + local vault (19 October 2026)
+
+GitHub tracks code, tests, metadata and review ledgers. **No provider is selected for public, permanent online storage yet.** GitHub Actions artifacts are temporary transport only; the full import workflow is invoked manually to avoid repeatedly downloading large corpora after ordinary code edits. The local vault is described in [storage policy](../docs/storage-policy.md) and managed by [local_vault.py](local_vault.py). It validates imported SQLite/checksums; a full snapshot requires the original SHA-256-pinned Tafsir Center source. Mirroring to a separate local drive and testing restoration are explicit operations. **The local machine has not yet been backed up by this chat.** No storage decision changes canonical-text or scientific verification status.
