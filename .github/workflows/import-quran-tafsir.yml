@@ -5,6 +5,9 @@ on:
     paths:
       - 'corpus/**'
       - '.github/workflows/import-quran-tafsir.yml'
+concurrency:
+  group: quran-corpus-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
