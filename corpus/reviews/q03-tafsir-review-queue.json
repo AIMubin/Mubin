@@ -1,6 +1,6 @@
 {
   "audit_version": "Q0.3",
-  "status": "EDITORIAL_REVIEW_REQUIRED",
+  "status": "SOURCE_FIDELITY_PASSED_EDITORIAL_VERIFICATION_OPEN",
   "verified_scholarly": false,
   "observed": {
     "verse_rows": 6236,
@@ -12,57 +12,86 @@
     {
       "source": "tabary",
       "verse_id": "4:168",
-      "issue": "MARKUP_ONLY"
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "4:169",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
     },
     {
       "source": "tabary",
       "verse_id": "26:16",
-      "issue": "MARKUP_ONLY"
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "26:15",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
     },
     {
       "source": "tabary",
       "verse_id": "26:205",
-      "issue": "MARKUP_ONLY"
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "26:206",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
     },
     {
       "source": "tabary",
       "verse_id": "37:25",
-      "issue": "MARKUP_ONLY"
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "37:24",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
     },
     {
       "source": "tabary",
       "verse_id": "37:62",
-      "issue": "MARKUP_ONLY"
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "37:63",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
     },
     {
       "source": "tabary",
       "verse_id": "37:103",
-      "issue": "MARKUP_ONLY"
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "37:104",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
     },
     {
       "source": "tabary",
       "verse_id": "50:13",
-      "issue": "MARKUP_ONLY"
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "50:12",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
     },
     {
       "source": "baghawy",
       "verse_id": "4:43",
-      "issue": "POSSIBLE_TRUNCATION_32767"
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "PROBABLE_TRUNCATION_SUPPORTED_BY_INDEPENDENT_ONLINE_CONTINUATION_NOT_PRINT_CONFIRMED",
+      "printed_edition_verified": false
     },
     {
       "source": "baghawy",
       "verse_id": "17:4",
-      "issue": "POSSIBLE_TRUNCATION_32767"
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "POSSIBLE_TRUNCATION_AT_32767_SOURCE_CHARACTERS",
+      "printed_edition_verified": false
     },
     {
       "source": "baghawy",
       "verse_id": "18:10",
-      "issue": "POSSIBLE_TRUNCATION_32767"
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "POSSIBLE_TRUNCATION_AT_32767_SOURCE_CHARACTERS",
+      "printed_edition_verified": false
     },
     {
       "source": "baghawy",
       "verse_id": "33:9",
-      "issue": "POSSIBLE_TRUNCATION_32767"
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "POSSIBLE_TRUNCATION_AT_32767_SOURCE_CHARACTERS",
+      "printed_edition_verified": false
     }
   ],
   "cautions": [
@@ -72,5 +101,11 @@
     "Neither tafsir nor derived Quran text is scholarly authenticated."
   ],
   "linked_db_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
-  "upstream_source_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27"
+  "upstream_source_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+  "evidence": {
+    "primary_upstream_report": "q03-tafsir-upstream-machine-report.json",
+    "primary_report_sha256": "22e2a0f058d6d168e6a8352365a90780c1f3703da7aebf11d279c533400f602c",
+    "tabary_adjacent_shared_heading_report": "q03-tabary-adjacent-headings.json",
+    "baghawy_4_43_digital_comparator": "q03-baghawy-4-43-digital-continuation.json"
+  }
 }
