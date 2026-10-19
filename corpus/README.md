@@ -37,4 +37,6 @@ P2: qira'at/riwayat, asbab al-nuzul, nasikh-mansukh, ulum al-Quran, Arabic lexic
 
 ## Operational status
 
-Registry scaffold: created. Remote acquisition: not yet run. Corpus imports: none confirmed. Scholarly verification: not started. Public redistribution: not approved.
+Registry scaffold and importers: implemented. A real pinned Tafsir Center download was imported in GitHub Actions and independently inspected from user-supplied staging SQLite (source DB SHA-256 `a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0`). Coverage: 6,236 derived Quran verses and 31,180 non-NULL tafsir entries across five sources. A prior Tanzil comparison found 0 byte-exact verse matches; diagnostic categories are **not yet established**. The staging Quran text is **not** an authenticated verbatim Uthmani witness. Editorial audit identified seven al-Tabari HTML-only entries and four al-Baghawi 32,767-character truncation candidates; see [review queue](reviews/q03-tafsir-review-queue.json). Independent edition checking and scholarly verification remain pending. GitHub Actions artifacts expire after 30 days and are not permanent storage. Rights status remains under review; publication is not approved.
+
+Q0.3 tools: `python -m corpus.audit_tafsir_quality`, `python -m corpus.triage_quran --reference corpus-data/reference/tanzil-uthmani.txt` and `python -m corpus.query 1 1 --reference corpus-data/reference/tanzil-uthmani.txt`. All diagnostics preserve original files; classification does **not** establish scriptural equivalence.
