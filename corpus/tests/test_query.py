@@ -16,6 +16,7 @@ class QueryTests(unittest.TestCase):
             connection.execute("CREATE TABLE verses(sura INTEGER,aya INTEGER,text TEXT)")
             connection.execute("CREATE TABLE tafsirs(source TEXT,sura INTEGER,aya INTEGER,text TEXT)")
             connection.execute("INSERT INTO verses VALUES (1,1,'SYNTHETIC NOT QURAN')")
+            connection.execute("INSERT INTO verses VALUES (2,1,'SYNTHETIC NOT QURAN')")
             connection.executemany("INSERT INTO tafsirs VALUES (?,?,?,?)", [
                 ('tabary', 1, 1, '<br>'), ('baghawy', 1, 1, 'س'*32767)])
             connection.commit()
@@ -48,6 +49,19 @@ class QueryTests(unittest.TestCase):
         self.assertIn('tanzil.net',get_ayah(self.db,1,1,p,h)['quran_text_attribution'])
         self.assertFalse(get_ayah(self.db,1,1,p,h)['scholarly_verification'])
         with self.assertRaises(ValueError): get_ayah(self.db,1,1,p,'a'*64)
+        opening = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
+        other = Path(self.directory.name)/'reference_with_basmala.txt'
+        other.write_text(''.join(
+            f"{s}|{a}|{opening + ' ' if s == 2 and a == 1 else ''}VERBATIM SYNTHETIC\n"
+            for s,n in enumerate(EXPECTED_COUNTS,1) for a in range(1,n+1)
+        ), encoding='utf-8')
+        h2=hashlib.sha256(other.read_bytes()).hexdigest()
+        segmented=get_ayah(self.db,2,1,other,h2)
+        self.assertEqual(segmented['text'], 'VERBATIM SYNTHETIC')
+        self.assertEqual(segmented['opening_basmala'], opening)
+        self.assertIn('VERSE_SEGMENT', segmented['text_classification'])
+        self.assertFalse(segmented['scholarly_verification'])
+
 
 
 if __name__ == '__main__': unittest.main()
