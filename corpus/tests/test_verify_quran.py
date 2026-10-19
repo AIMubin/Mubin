@@ -13,7 +13,7 @@ class QuranStructuralTests(unittest.TestCase):
         # Deliberately synthetic. Passing MUST NOT imply authentic Quran text.
         with tempfile.TemporaryDirectory() as directory:
             p = Path(directory) / "synthetic.txt"
-            content = "".join(f"{s}|{a}|TEST ONLY\\n" for s,n in enumerate(EXPECTED_COUNTS,1) for a in range(1,n+1))
+            content = "".join(f"{s}|{a}|TEST ONLY\n" for s,n in enumerate(EXPECTED_COUNTS,1) for a in range(1,n+1))
             p.write_bytes(content.encode())
             sha = hashlib.sha256(p.read_bytes()).hexdigest()
             result = verify(p, sha)
