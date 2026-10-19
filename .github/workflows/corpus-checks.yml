@@ -1,0 +1,20 @@
+name: Corpus integrity checks
+on:
+  push:
+    paths:
+      - 'corpus/**'
+      - '.github/workflows/corpus-checks.yml'
+  pull_request:
+    paths:
+      - 'corpus/**'
+      - '.github/workflows/corpus-checks.yml'
+jobs:
+  structural-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute corpus tests
+        run: python -m unittest discover -s corpus/tests -v
