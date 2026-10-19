@@ -86,6 +86,17 @@ def main():
             check(item["target"]=="_blank" and "noopener" in item["rel"] and
                   "noreferrer" in item["rel"] and item["policy"]=="no-referrer",
                   "External tafsir link missing browser privacy boundaries")
+        wait(driver,sid,
+            "return document.querySelectorAll('article.ayah .tafsir-bibliography li').length===6")
+        check(script(driver,sid,
+            "return document.querySelector('article.ayah .tafsir-bibliography').textContent.includes('الطبعة: غير محددة')"),
+            "Unknown tafsir edition cannot be silently promoted")
+        check(script(driver,sid,
+            "return document.querySelector('article.ayah .tafsir-bibliography').textContent.includes('الحقوق: غير متحقق منها')"),
+            "Tafsir rights must remain explicitly unverified")
+        check(script(driver,sid,
+            "return document.querySelectorAll('article.ayah .tafsir-bibliography a').length")==0,
+            "Unverified tafsir books cannot silently acquire unlicensed per-book links")
         check(script(driver,sid,
             "return document.querySelector('article.ayah .ai-explanation')?.textContent.includes('غير مفعّل')"),
             "AI interpretation has to remain disabled and separate")
