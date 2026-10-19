@@ -1,0 +1,56 @@
+name: Mubin private Quran and tafsir full corpus import (nonpublishing)
+
+on:
+  pull_request:
+    paths:
+      - "qa/corpus_ingest_v01.py"
+      - "core/tests/test_corpus_ingest_v01.py"
+      - "research/corpora/import-sources-v01.json"
+      - "docs/research/PRIVATE-CORPUS-IMPORT-V01.md"
+      - ".github/workflows/mubin-private-corpus-import.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  private-import-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Fail-closed unit and adversarial tests
+        run: python -m unittest core.tests.test_corpus_ingest_v01 -v
+      - name: Import five complete source files into private runner storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "${RUNNER_TEMP}/mubin-corpora-raw"
+          python -m qa.corpus_ingest_v01 \
+            --manifest research/corpora/import-sources-v01.json \
+            --input-dir "${RUNNER_TEMP}/mubin-corpora-raw" \
+            --output-db "${RUNNER_TEMP}/mubin-private-corpora.sqlite3" \
+            --download
+          python - "${RUNNER_TEMP}/mubin-private-corpora.sqlite3" <<'PY'
+          import json, sqlite3, sys
+          db=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True)
+          sources=db.execute('SELECT source_id,COUNT(*) FROM corpus_entries GROUP BY source_id ORDER BY source_id').fetchall()
+          count=sum(n for _,n in sources)
+          assert len(sources)==5 and count==31180,(sources,count)
+          assert all(n==6236 for _,n in sources),sources
+          assert db.execute('SELECT SUM(publication_enabled),SUM(p1_admitted),SUM(source_authenticated) FROM corpus_sources').fetchone() == (0,0,0)
+          assert db.execute('PRAGMA quick_check').fetchone()[0]=='ok'
+          print(json.dumps({'result':'PASS','source_count':len(sources),
+                            'quran_verses':6236,'tafsir_entries':24944,
+                            'total_rows':count,'publication_enabled':False,
+                            'p1_admitted':False,'scholarly_approved':False,
+                            'raw_corpus_artifact_uploaded':False},sort_keys=True))
+          PY
+          # Raw source data and SQLite database must remain runner-local.
+          # Never use upload-artifact, gh-release upload, or git add here.
+          rm -rf "${RUNNER_TEMP}/mubin-corpora-raw"
+          rm -f "${RUNNER_TEMP}/mubin-private-corpora.sqlite3"
