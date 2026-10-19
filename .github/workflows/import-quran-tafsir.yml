@@ -56,7 +56,7 @@ jobs:
           d = json.loads(p.read_text(encoding="utf-8"))
           d.pop("differences", None)
           Path("corpus-data/linked/quran-comparison-summary.json").write_text(
-              json.dumps(d, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+              json.dumps(d, ensure_ascii=False, indent=2) + chr(10), encoding="utf-8")
           PY
       - name: Run corpus unit tests
         run: python -m unittest discover -s corpus/tests -v
