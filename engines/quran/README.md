@@ -35,4 +35,14 @@ The local operator ran `python -m corpus.audit_tafsir_upstream` on a read-only p
 - [Printed-edition candidates](../../corpus/reviews/q03-tafsir-edition-candidates.json) — independent bibliographic comparators, **not** upstream edition identities.
 - [Baghawi review issue](https://github.com/AIMubin/Mubin/issues/77) and [Tabari review issue](https://github.com/AIMubin/Mubin/issues/78) — editorial verification pending.
 
-No raw imported tafsir strings have been replaced or corrected. 
+No raw imported tafsir strings have been replaced or corrected.
+
+### Q0.3 independent forensic follow-up
+
+The **complete** machine-generated upstream comparison JSON has since been received, inspected and archived unchanged as [primary evidence](../../corpus/reviews/q03-tafsir-upstream-machine-report.json), original file SHA-256 `22e2a0f058d6d168e6a8352365a90780c1f3703da7aebf11d279c533400f602c`. The local Windows test was reported to pass after explicit SQLite connection closure (`Ran 1 test ... OK`); this does not substitute for an independently observed Windows CI run.
+
+- [Seven al-Tabari shared-heading candidates](../../corpus/reviews/q03-tabary-adjacent-headings.json): each markup-only entry has a neighboring tafsir whose introductory heading explicitly cites that ayah. This suggests a **cross-verse indexing/segmentation representation**, not seven wholly lost tafsir passages. Exact commentary boundaries require printed-edition checks. [Reproducible audit tool](../../corpus/audit_tafsir_crossverse.py).
+- [Al-Baghawi 4:43 digital comparator](../../corpus/reviews/q03-baghawy-4-43-digital-continuation.json): an independent online transcription continues the narrator citation after the 32,767-character source cutoff. This supports probable upstream truncation in that particular record but is not verified against the same printed edition; there is no approved source mutation or textual completion.
+
+**Editorial source verification remains open.** This is not a claim that every row is complete or that the linked text is a print-edition transcription.
+ 
