@@ -40,7 +40,7 @@ jobs:
           p = Path("corpus-data/linked/quran-comparison-summary.json")
           p.parent.mkdir(parents=True, exist_ok=True)
           p.write_text(json.dumps({"comparison_status":"NOT_RUN_REFERENCE_UNAVAILABLE",
-            "canonical_quran_verified":False,"scholarly_verified":False}, indent=2) + "\\n")
+            "canonical_quran_verified":False,"scholarly_verified":False}, indent=2) + chr(10))
           PY
       - name: Smoke-test pinned Tanzil text retrieval
         if: steps.tanzil.outcome == 'success'
