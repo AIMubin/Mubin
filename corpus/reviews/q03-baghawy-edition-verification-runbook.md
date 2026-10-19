@@ -48,3 +48,18 @@ Witness edition.json example:
 For each of the four entries: identify the actual printed edition and page(s); show independent continuation beyond the exact cutoff; verify full per-ayah paragraph boundaries; record reviewer and rights decision; preserve provenance and original text.
 
 The four KSU digital continuations and the statistical 32767 boundary DO NOT close this printed-edition gate.
+
+## Local PDF scan attestation (Q0.3, prepared)
+
+Independent catalogue: https://waqfeya.net/books/معالم-التنزيل-تفسير-البغوي-ط-دار-طيبة-62a02391d9854b00bceb37bd84e94365
+
+Printed pages have **not yet been inspected**. Download locators are archived in [q03-baghawy-scan-page-locators.json](q03-baghawy-scan-page-locators.json). PDF volume sources: https://archive.org/download/FP3457/malimt2.pdf (volume 2); https://archive.org/download/FP3457/malimt5.pdf (volume 5); https://archive.org/download/FP3457/malimt6.pdf (volume 6).
+
+Use a local Windows machine with PyMuPDF 1.26.x to capture selected PDF **page indices** into an ignored corpus-data directory:
+
+    python -m pip install "PyMuPDF>=1.26,<1.27"
+    python -m corpus.attest_tafsir_print_pdf --pdf D:\MubinEditions\malimt2.pdf --verse-id 4:43 --volume 2 --pages 1,2 --edition-metadata corpus-data\editorial\baghawy\vol2\edition.json --out-dir corpus-data\editorial\baghawy\vol2\pages
+
+The indices 1,2 are COMMAND PLACEHOLDERS, not actual identified pages. The JSON metadata needs work, publisher, publication_year, edition, scan_url; capture produces PDF SHA-256, PNG page hashes, render version and per-page metadata. It intentionally leaves printed pagination, edition identity, paragraph boundary review, rights approval, and scholarly verification false.
+
+The external digital index Islamweb indicates volume 2 / site page 220 for verse 4:43 and volume 5 / site page 67 for 17:4. **These are candidate finding aids, not verified printed page numbers of the Dar Taybah 1409 scan.** No source text or scans are approved for public commit. Review rendered pages locally and record printed folio/page, source-imprint confirmation and reviewer acceptance separately.
