@@ -27,6 +27,17 @@ jobs:
         run: python -m corpus.audit_linked
       - name: Audit tafsir editorial quality (warning report)
         run: python -m corpus.audit_tafsir_quality
+      - name: Inspect noncanonical slash artifacts in derived Quran
+        run: python -m corpus.audit_quran_derived
+      - name: Verify Quran retrieval fails closed without a trusted witness
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from corpus.query import get_ayah
+          result = get_ayah(Path("corpus-data/linked/quran_tafsir.db"), 2, 21)
+          assert result["text"] is None, "Derived verse text leaked without a witness"
+          assert result["text_classification"] == "REFERENCE_REQUIRED_NO_QURAN_TEXT"
+          PY
       - name: Smoke-test read-only verse retrieval
         run: python -m corpus.query 1 1 --database corpus-data/linked/quran_tafsir.db > /dev/null
       - name: Download independent Tanzil reference
@@ -120,6 +131,7 @@ jobs:
             corpus-data/linked/import-manifest.json
             corpus-data/linked/audit-report.json
             corpus-data/linked/tafsir-quality.json
+            corpus-data/linked/derived-quran-quality.json
             corpus-data/linked/quran-comparison-summary.json
             corpus-data/linked/quran-triage.json
             corpus-data/reference/tanzil-manifest.json
