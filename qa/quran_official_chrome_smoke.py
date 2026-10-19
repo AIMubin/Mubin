@@ -73,6 +73,25 @@ def main():
         check(script(driver,sid,
             "return document.querySelector('article.ayah').textContent.includes('استجابة نطاق Tanzil')"),
             "mislabels an official-domain export as a GitHub mirror")
+        tafsir_links=script(driver,sid,
+            "return Array.from(document.querySelectorAll('article.ayah .tafsir-links a')).map(a=>({href:a.href,target:a.target,rel:a.rel,policy:a.referrerPolicy}))")
+        check(len(tafsir_links)==2,"Expected two external Ayat citation links, not copied tafsir text")
+        check(tafsir_links[0]["href"] ==
+            "https://quran.ksu.edu.sa/index.php#aya=2_1&m=hafs&qaree=husary&trans=ar_mu",
+            "Wrong Quran verse-to-Ayat al-Muyassar deep link")
+        check(tafsir_links[1]["href"] ==
+            "https://quran.ksu.edu.sa/index.php#aya=2_1&m=hafs",
+            "Other tafsir navigation must not claim a selected commentary source")
+        for item in tafsir_links:
+            check(item["target"]=="_blank" and "noopener" in item["rel"] and
+                  "noreferrer" in item["rel"] and item["policy"]=="no-referrer",
+                  "External tafsir link missing browser privacy boundaries")
+        check(script(driver,sid,
+            "return document.querySelector('article.ayah .ai-explanation')?.textContent.includes('غير مفعّل')"),
+            "AI interpretation has to remain disabled and separate")
+        check(script(driver,sid,
+            "return document.querySelectorAll('article.ayah .tafsir-links iframe').length")==0,
+            "Must never embed or fetch KSU tafsir as if licensed locally")
         script(driver,sid,"document.querySelector('#notice-details summary').click()")
         wait(driver,sid,
             "return document.querySelector('#source-notice').textContent.includes('PLEASE DO NOT REMOVE')")
