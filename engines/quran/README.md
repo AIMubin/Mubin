@@ -6,7 +6,7 @@ Mubin system version remains `0.1.0-alpha`.
 ## Source-connected components
 
 - [Tafsir Center pinned importer](../../corpus/import_tafsircenter.py) (6,236 verse IDs, five tafsir sources)
-- [Quran read-only retrieval](../../corpus/query.py) (derived text by default; optional verbatim pin-checked Tanzil witness)
+- [Quran read-only retrieval](../../corpus/query.py) (no Quran text by default; explicit pinned Tanzil witness required for display, derived text requires developer diagnostic opt-in)
 - [Linked SQLite audit](../../corpus/audit_linked.py)
 - [Conservative witness difference triage](../../corpus/triage_quran.py)
 - [Editorial tafsir-quality audit](../../corpus/audit_tafsir_quality.py)
