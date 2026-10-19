@@ -32,8 +32,14 @@ class UpstreamComparisonTests(unittest.TestCase):
             self.assertFalse(report["scholarly_verified"])
             with self.assertRaises(ValueError):
                 compare(original,linked,"f"*64)
-            with sqlite3.connect(linked) as db:
+            # sqlite3.Connection.__exit__ only commits/rolls back; it does not
+            # close the file handle. Explicit close is required on Windows.
+            db = sqlite3.connect(linked)
+            try:
                 db.execute("UPDATE tafsirs SET text='CORRUPTED' WHERE source='tabary' AND sura=4 AND aya=168")
+                db.commit()
+            finally:
+                db.close()
             with self.assertRaises(ValueError):
                 compare(original,linked,sha)
 
