@@ -1,6 +1,6 @@
 # Quran Engine
 
-Current internal milestone: `Q0.3` **in progress** — not accepted or released.
+Current internal milestone: `Q0.3` **in progress** — internal technical exit distinct from public release. See [Q0.3 engineering exit contract](Q0.3-ENGINEERING-EXIT.md).
 Mubin system version remains `0.1.0-alpha`.
 
 ## Source-connected components
@@ -21,7 +21,7 @@ Mubin system version remains `0.1.0-alpha`.
 
 A real staging SQLite artifact has been inspected independently: 6,236 **derived**, unvocalized verse strings and 31,180 nonempty tafsir entries. All five tafsir keys cover every verse ID. Seven al-Tabari entries have only HTML markup; four al-Baghawi texts are exactly 32,767 characters and need source-edition verification. A legacy raw-row comparison found 0/6,236 byte-exact matches. A new analysis of the pinned verbatim Tanzil txt-2 witness identifies 112 first-verse records with prefixed surah-opening basmala (suras 95 and 97 have alternate opening diacritics). Once these *record* prefixes are separated by literal substring boundaries, candidate comparisons across 6,236 ayahs yield 1 exact match, 436 marks-only candidates, 829 alef-variant candidates, 917 additional-script candidates and 4,053 differences not resolved by those simple transforms. These groupings are **not** Quranic equivalence judgments; the data includes 364 derived records with slash artifacts. Additional review of the imported SQLite SHA-256 `a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0` found 364 derived verses with 371 literal `/` marks, for example `2:21` contains `يا/أيها`. These are unacceptable as a canonical display rendering. See [derived text safety review](../../corpus/reviews/q03-derived-quran-observations.json).
 
-**Hard gate:** Nothing in Q0.3 proves Quranic canonicality, authenticity of any modern tafsir edition, complete tafsir coverage beyond database keys, or authorization to redistribute each edition. Use pinned verbatim Quran witness for provisional reading only, preserve provenance, and require independent scholarly and rights review for a release.
+**Action-specific hard gates:** Nothing in Q0.3 proves Quranic canonicality, authenticity of any modern tafsir edition, complete tafsir coverage beyond database keys, or authorization to redistribute each edition. Use a pinned, complete, independently checked Quran witness for provisional reading; preserve provenance. **Engineering exit requires reproducible technical evidence, not blanket human scholarly signoff.** Public text display still requires source/witness integrity and rights; novel authoritative scholarly conclusions or editorial reconstructions require their own qualified approvals. See [risk-based assurance](../../docs/RISK_BASED_ASSURANCE.md).
 
 **Fail-closed read path:** `python -m corpus.query 2 21` returns tafsir references but `text=null` when no pinned Tanzil witness is supplied. Pass `--reference corpus-data/reference/tanzil-uthmani.txt` for a pinned witness; `--allow-unverified-derived-text` is reserved for diagnostic use. `python -m corpus.audit_quran_derived` records reconstruction anomalies. Never patch scripture by stripping `/` automatically.
 
@@ -81,3 +81,9 @@ The private scanned-page handoff was ZIP-integrity and PNG-SHA verified (8 evide
 **Scholarly human review, precise edition-to-source identification for all three volumes, copyright clearance and editorial override approval remain open.** The system version remains `0.1.0-alpha`; these safety changes do not advance the Quran Engine milestone from `Q0.3`.
 
 GitHub Actions [run 39395967179](https://github.com/AIMubin/Mubin/actions/runs/39395967179) passed **41/41 corpus tests on Ubuntu and 41/41 on Windows**, including the four-case suppression and local diagnostic override tests.
+
+## Current policy update — 2026-10-20
+
+The earlier notes above document stages of the evidence campaign, not today's total review status. Four Baghawi printed continuations were visually checked on privately supplied images; the 18:10 high-resolution scan reads `ثلاثمائة` and `أتى`. The private corrected evidence v2 is hash-consistent (19/19), and the four suspect upstream fields remain held back by default. [High-resolution evidence report](../../corpus/reviews/q03-baghawy-18-10-highres-review.json).
+
+[Q0.3 engineering exit conditions](Q0.3-ENGINEERING-EXIT.md) are **now action-specific**: internal technical closure requires reproducible real-data checks and green CI, not a scholarly committee. Source text publication, restoration from a printed edition, authoritative interpretive claims and reproduction rights retain their independent gates. `VERSION.yaml` remains unchanged until technical criteria are measured and recorded.
