@@ -58,3 +58,18 @@ CLI exit **0** means a valid bridge execution with no refused input, **1** repor
 **Known semantic gap:** A `machine_checkable` P0 rule and its supplemental propositional spec have not been proven mathematically or philologically equivalent to its free-text `preconditions`, `exceptions`, or `expression`. The P0 evidence label `verified` confirms an internal metadata claim and excerpt hash check, not external source authentication. This remains a **research-only technical bridge**, not an engine capable of issuing or validating fiqh.
 
 The next priority is a versioned and independently testable **semantic binding** between the typed P0 rule and the executable spec, then bounded rules with verified provenance and negative tests. Specialized `qiyas/tarjih` semantics should be developed separately and remain rejected until demonstrated; do not make their absence a blocker to testing the limited deduction bridge.
+
+## Source-use policy and structurally bound demo
+
+Mubin now uses source-attributed evidence without requiring blanket manual scholarly review for engineering. Source **work title, edition, exact locator, evidence ID and digests** are carried in `source_citations`; cited provenance does not by itself authorize redistribution or validate an inference. See [source attribution policy](../../docs/SOURCE_ATTRIBUTION_POLICY.md).
+
+The [semantic binding contract](semantic_binding.py) is optional for compatibility with old synthetic tests. New executable specifications should include `binding.version=0.1.0`, `binding.rule_sha256`, one P0 label/claim per premise, one P0 label/evidence record per exception, and the actual P0 inference conclusion claim ID. It rejects stale/missing/renamed clauses and bound evidence errors. **It does not assert equivalence of a P0 prose statement and a machine predicate**; `semantic_equivalence_verified=false` is mandatory.
+
+Run the bound-source example:
+
+```bash
+python -m pip install -r core/requirements-test.txt
+python -m engines.usul.p0_bridge engines/usul/examples/p0-bridge-demo-bundle.json engines/usul/examples/p0-bridge-demo-bound-specs.json engines/usul/examples/p0-bridge-demo-facts.json
+```
+
+The result reports `STRUCTURALLY_BOUND` and an explicit bibliography. The printed/source edition in this example is **synthetic**. For actual classical source use, supply real titles, identified editions and precise locators, verify the applicable conditions, then preserve the difference between internal citation and textual publication.
