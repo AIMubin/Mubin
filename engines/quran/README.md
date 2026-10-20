@@ -69,3 +69,15 @@ The Waqfeya listing independently identifies the 1409 H / 1989 Dar Taybah eight-
 The [local PDF evidence capture utility](../../corpus/attest_tafsir_print_pdf.py) renders selected PDF pages and records immutable-source and page-image SHA-256, with explicit fail-closed acceptance fields. See [edition runbook](../../corpus/reviews/q03-baghawy-edition-verification-runbook.md). Scanned images and local witness transcriptions remain outside git, under ignored corpus-data.
 
 GitHub Actions [run 39307310854](https://github.com/AIMubin/Mubin/actions/runs/39307310854) passed **39/39 synthetic and structural tests**, including the actual PyMuPDF page-rendering tests. This verifies tooling, **not** the printed-edition review.
+
+## Q0.3 downstream read-path safety: suspected incomplete al-Baghawi
+
+The original Tafsir Center and linked SQLite files remain **unchanged**. However, **4:43, 17:4, 18:10, 33:9**, and any new al-Baghawi entry reaching the suspicious 32,767-character ceiling, are **withheld by default** from tafsir read responses. Ordinary `get_ayah()` sets `displayable=false`, `text=null` and `display_text=null` and identifies `display_status=WITHHELD_PENDING_EDITORIAL_VERIFICATION`. This is not a statement that no interpretation exists in the printed work; it means the current imported entry is suspected incomplete. Every other tafsir is handled independently.
+
+For **authorized local diagnosis only**, an explicit `--allow-flagged-tafsir-text` CLI option (or the corresponding `allow_flagged_tafsir_text=True` internal parameter) permits examination of the original raw text while retaining `DIAGNOSTIC_UNVERIFIED_SOURCE_TEXT` and `scholarly_verification=false`. **Do not expose this override to a public consumer interface.** This flag is not an approved editorial restoration and does not remove copyright restrictions.
+
+The private scanned-page handoff was ZIP-integrity and PNG-SHA verified (8 evidentiary + 9 edition identity images) and visually inspected by an AI assistant; [evidence ledger](../../corpus/reviews/q03-baghawy-assistant-visual-review.json). Vol. 2 copyright page identifies first edition **1409 H / 1989 CE**. The printed folios shown in the selected images are **228–229**, **76–77**, **154–155**, **330–331** for the four cases. The original PDF files themselves were **not** inside the handoff, and page rendering was 120 dpi. In 18:10 the image reads **أتى** where an OCR output read أنى; the 300dpi letter-form and cross-edition alignment question around ثلثمائة/ثلاثمائة remains open.
+
+**Scholarly human review, precise edition-to-source identification for all three volumes, copyright clearance and editorial override approval remain open.** The system version remains `0.1.0-alpha`; these safety changes do not advance the Quran Engine milestone from `Q0.3`.
+
+GitHub Actions [run 39395967179](https://github.com/AIMubin/Mubin/actions/runs/39395967179) passed **41/41 corpus tests on Ubuntu and 41/41 on Windows**, including the four-case suppression and local diagnostic override tests.
