@@ -1,6 +1,7 @@
 """Read-only Quran and tafsir lookup with explicit provenance and quality flags."""
 import argparse
 import json
+import hashlib
 import sqlite3
 from pathlib import Path
 
@@ -10,6 +11,15 @@ from corpus.triage_quran import REFERENCE_SHA256
 from corpus.verify_quran import EXPECTED_COUNTS
 
 SOURCES = ("tabary", "katheer", "baghawy", "saadi", "moyassar")
+# Work labels identify upstream dataset keys, not independently attested editions.
+SOURCE_WORK_LABELS = {
+    "tabary": "جامع البيان (الطبري)",
+    "katheer": "تفسير القرآن العظيم (ابن كثير)",
+    "baghawy": "معالم التنزيل (البغوي)",
+    "saadi": "تيسير الكريم الرحمن (السعدي)",
+    "moyassar": "التفسير الميسر",
+}
+
 # Investigation flags are not permission to replace original text.
 # Suppress suspect incomplete Tafsir Baghawi records in ordinary retrieval.
 BAGHAWY_Q03_REVIEW_HOLD = {(4, 43), (17, 4), (18, 10), (33, 9)}
@@ -86,6 +96,17 @@ def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = N
                 "SOURCE_TEXT_UNVERIFIED_EDITION"
             ),
             "diagnostic_override_active": bool(editorial_hold and allow_flagged_tafsir_text),
+            "source_citation": {
+                "work_label": SOURCE_WORK_LABELS[source],
+                "source_dataset": "tafsircenter/tafsir-mcp-data",
+                "dataset_source_key": source,
+                "verse_locator": f"{sura}:{aya}",
+                "imported_text_sha256": hashlib.sha256(value.encode("utf-8")).hexdigest(),
+                "edition_identity": "NOT_YET_VERIFIED",
+                "rights": "UNKNOWN_UNLESS_SEPARATELY_ESTABLISHED",
+                "verification_scope": "IMPORTED_RECORD_METADATA_NOT_PRINT_EDITION_AUTHENTICATION",
+                "content_displayed": bool(display_text) and not withheld,
+            },
             "edition_metadata": "NOT_YET_VERIFIED",
             "scholarly_verification": False,
         })
