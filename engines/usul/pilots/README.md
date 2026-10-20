@@ -43,3 +43,26 @@ The pilot builds a P0 bundle, uses existing strict semantic-binding and source-r
 ## Next measurable improvement
 
 A future source-attestation subsystem can fetch a **licensed pinned witness or private byte-exact copy**, verify exact passage boundaries and source URL against a frozen independent checksum, and bind the witness in a signed provenance ledger. Such a check should upgrade only the **text correspondence** status. It cannot by itself upgrade semantic equivalence or grant publication rights. Avoid opening a general human-review queue just to run these engineering experiments.
+
+## Stage 02 — Evidence-scoped qarinah checks
+
+The new [scoped evidence assessment](../exception_evidence.py) and [four-scenario pilot](scoped_amr_pilot.py) make a critical three-way distinction:
+
+| Assessment | Technical meaning | Pilot consequence |
+| --- | --- | --- |
+| `PRESENT` | A *synthetic test item* claims a discovered diverting indicator and cites a known P0 evidence ID | `BLOCKED_BY_EXCEPTION` |
+| `ABSENT_IN_DECLARED_SCOPE` | Every **listed test-scope item** is marked inspected; a cited P0 evidence ID supports the *synthetic assessment record* | `CONDITIONALLY_SUPPORTED` **inside the simulation only** |
+| `NOT_CHECKED` | No inspection has been performed | `UNDETERMINED` |
+
+Even when every *declared* synthetic item has been inspected, this is **not** a proof that the declared set contains all relevant textual/contextual evidence. The code explicitly rejects `real_world` scope assertions and never sets `real_world_absence_verified=true`. P0 `verified` denotes a claim within the input bundle, not independent primary-source verification. Thus the absence claim remains a **bounded research assumption**, not a universal conclusion about `qarā'in`.
+
+Strict mode does not accept direct `true`/`false` values for an exception atom; instead a schema-checked assessment must cite existing P0 evidence and identify a declared, inspected synthetic scope. Incomplete coverage, missing or unverified evidence, contradictory direct facts, duplicate assessments and unrecognized scope kinds are refused with a nonzero CLI exit.
+
+```bash
+python -m engines.usul.pilots.scoped_amr_pilot
+python -m unittest discover -s engines/usul/tests -v
+```
+
+For machine callers, the P0 bridge also accepts an optional assessment JSON array and the flags `--exception-assessments /path/to/array.json --require-semantic-binding --require-evidence-exceptions`. The old `ALLOW_LEGACY_EXPLICIT_FACTS` mode remains for backward-compatible experiments and is **not** evidence-certified. The output preserves the work, section, edition caveat, evidence locator and SHA-256 without reproducing the source passage or granting publication permission.
+
+**No implementation of legal qarīnah detection, semantic comprehension of a source, rule priority, qiyās, tarjīḥ or issuance of fatāwā is claimed.**
