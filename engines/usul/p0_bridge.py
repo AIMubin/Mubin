@@ -21,6 +21,7 @@ from core.inference.validator import validate_bundle
 from engines.usul.executor import evaluate
 from engines.usul.exception_evidence import ExceptionEvidenceError, materialize_exception_assessments
 from engines.usul.semantic_binding import BindingError, cited_sources, validate_binding
+from engines.usul.source_scope_index import examine
 
 BRIDGE_VERSION = "p0-usul-u0.1/0.1.0"
 EXECUTABLE_KINDS = {"deduction"}
@@ -67,7 +68,8 @@ def _spec_cycle(specs_by_id):
 
 
 def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=False,
-                  exception_assessments=None, require_evidence_exceptions=False):
+                  exception_assessments=None, require_evidence_exceptions=False,
+                  pinned_scope_index=None, require_pinned_scope_index=False):
     """Return the full derivation record; never mutates the bundle."""
     structural_errors = validate_bundle(bundle)
     # Invalid bundles can omit rules entirely; do not dereference them before
@@ -91,6 +93,8 @@ def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=Fa
                                       if require_evidence_exceptions else "ALLOW_LEGACY_EXPLICIT_FACTS"),
         "exception_assessment_trace": [],
         "real_world_absence_verified": False,
+        "pinned_scope_index_proof": None,
+        "index_validation_scope": "PINNED_SYNTHETIC_FIXTURE_NOT_CANONICAL_SOURCE",
         "citation_scope": "SOURCE_METADATA_ONLY_NO_TEXT_OR_RIGHTS_GRANTED",
         "semantic_equivalence_verified": False,
         "external_source_authentication_verified": False,
@@ -187,6 +191,33 @@ def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=Fa
             "detail": "Provide an explicit scoped assessment; direct exception facts are not admissible",
         }
         return derivation
+    # Stronger mode: a caller cannot self-declare an inspected item list.
+    # We instead scan a fixed source-index fixture pinned by a code-side SHA256
+    # and verify every indexed document's own hash before admitting negatives.
+    if require_pinned_scope_index and (
+        pinned_scope_index is None or not require_evidence_exceptions
+        or not require_semantic_binding
+    ):
+        derivation["derivation_refused"] = {
+            "code": "PINNED_INDEX_MODE_INCOMPLETE",
+            "detail": "Pinned mode requires pinned index, semantic binding, and strict exception evidence",
+        }
+        return derivation
+    if pinned_scope_index is not None:
+        if exception_assessments is not None or not require_pinned_scope_index:
+            derivation["derivation_refused"] = {
+                "code": "PINNED_INDEX_MODE_INCOMPLETE",
+                "detail": "No mixing caller assessments and pinned-scanner observations",
+            }
+            return derivation
+        try:
+            exception_assessments, index_proof = examine(bundle, pinned_scope_index)
+        except (ExceptionEvidenceError, OSError, ValueError, TypeError) as exc:
+            derivation["derivation_refused"] = {
+                "code": "PINNED_SOURCE_INDEX_REJECTED", "detail": str(exc),
+            }
+            return derivation
+        derivation["pinned_scope_index_proof"] = index_proof
     if exception_assessments is not None:
         try:
             generated, trace = materialize_exception_assessments(
@@ -298,6 +329,10 @@ def main():
                         help="Optional JSON synthetic-scope exception observation array")
     parser.add_argument("--require-evidence-exceptions", action="store_true",
                         help="Reject direct exception facts; only synthetic scoped assessments are accepted")
+    parser.add_argument("--pinned-scope-index", choices=["absent", "present", "not_checked"],
+                        help="Use built-in hash-pinned source-index fixture instead of caller-claimed scope")
+    parser.add_argument("--require-pinned-scope-index", action="store_true",
+                        help="Demand trusted synthetic index scanning with binding and evidence gates")
     args = parser.parse_args()
     try:
         result = build_and_run(
@@ -308,7 +343,9 @@ def main():
             exception_assessments=(
                 json.loads(args.exception_assessments.read_text(encoding="utf-8"))
                 if args.exception_assessments else None),
-            require_evidence_exceptions=args.require_evidence_exceptions)
+            require_evidence_exceptions=args.require_evidence_exceptions,
+            pinned_scope_index=args.pinned_scope_index,
+            require_pinned_scope_index=args.require_pinned_scope_index)
     except (OSError, ValueError) as exc:
         print(json.dumps({"status": "INVALID_INPUT", "error_type": type(exc).__name__,
                           "scholarly_verified": False}, ensure_ascii=False, indent=2))
