@@ -13,19 +13,20 @@
 | **P6** | Fiqh F0.1 bounded integration | question → cited sources → rule → inference → criticism/abstention |
 | **P7** | Evaluation, robustness, release audit | preregistered source/family-disjoint tests, provenance and limitations |
 
-P1/P2 can partly run in parallel with the design of P3/P4, but operational reasoning depends on verified evidence and a defined methodology. The initial 90-day plan is a *pilot target*, not a promise of complete Hadith 'ilal or universal fiqh.
+P1/P2 can run in parallel with design and controlled technical implementation of P3/P4. **A human scholarly signoff is not a general engineering milestone gate.** Operative reasoning served as an authoritative conclusion still depends on verified evidence, methodology and action-specific scholarly approval. See [risk-based assurance](RISK_BASED_ASSURANCE.md). The initial 90-day plan is a *pilot target*, not a promise of complete Hadith 'ilal or universal fiqh.
 
 ### Preserved research program
 
 - H3.9.2 Schema 31 stays frozen: 158 pending human decisions; no reviewers currently available. **No machine may impersonate a reviewer or auto-promote pending rows to gold.**
 - H4.0 **development** may proceed, but H4.0 **qualification/release** retains benchmark/architecture requirements.
 - Machine-only evaluation, if introduced, is a separately versioned, preregistered `source_attributed`/formal-testing track, never a backdoor into the old human-reviewed pool.
+- **Avoid unnecessary reviewer bottlenecks:** structural progress, source discrepancy investigations and guarded prototypes may complete by reproducible machine tests. Human/editorial decisions are requested only for particular publication or scientifically authoritative assertions.
 - No system version bump until an end-to-end, evidence-bound vertical slice succeeds.
 
 ### P0 release checklist
 
-Typed source/evidence/claim/rule/inference/proof/objection/historical-availability schema; a negative-test-heavy structural validator; a separate CI workflow; no changes to Hadith qualification assets; Codex review of the new PR.
+Typed source/evidence/claim/rule/inference/proof/objection/historical-availability schema; a negative-test-heavy structural validator; a separate CI workflow; no changes to Hadith qualification assets; risk-based maintainer engineering review; optional Codex second-pass for high-impact changes.
 
 ## P0 maintainer review exit conditions
 
-The PR cannot merge solely on passing its original 19 tests. Maintainer-originated adversarial additions must exercise qiyas-rule laundering, forced-empty bundles, open and falsely answered objections, source-verified digest changes, distinct claim modality, mismatched historical identities, CI execution and CLI failure exit codes. Codex is an **independent second pass after** maintainer review and fixes; if unavailable or quota-limited, record an explicit maintainer-only fallback audit rather than fabricate a second approval.
+The PR cannot merge solely on passing its original 19 tests. Maintainer-originated adversarial additions must exercise qiyas-rule laundering, forced-empty bundles, open and falsely answered objections, source-verified digest changes, distinct claim modality, mismatched historical identities, CI execution and CLI failure exit codes. For high-impact changes Codex may provide a **second engineering pass after** maintainer review and fixes; if unavailable or quota-limited, record an explicit maintainer-only fallback audit rather than fabricate a second approval.
