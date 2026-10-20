@@ -76,6 +76,26 @@ class QueryTests(unittest.TestCase):
         self.assertIsNone(b["text"])
         self.assertEqual(b["display_status"], "WITHHELD_PENDING_EDITORIAL_VERIFICATION")
 
+    def test_source_citation_provenance_preserved_when_text_withheld(self):
+        response = get_ayah(self.db, 1, 1)
+        tafsirs = {item["source_id"]: item for item in response["tafsirs"]}
+        flagged = tafsirs["baghawy"]
+        citation = flagged["source_citation"]
+        self.assertEqual(citation["work_label"], "معالم التنزيل (البغوي)")
+        self.assertEqual(citation["source_dataset"], "tafsircenter/tafsir-mcp-data")
+        self.assertEqual(citation["verse_locator"], "1:1")
+        self.assertEqual(citation["edition_identity"], "NOT_YET_VERIFIED")
+        self.assertEqual(citation["rights"], "UNKNOWN_UNLESS_SEPARATELY_ESTABLISHED")
+        self.assertFalse(citation["content_displayed"])
+        self.assertEqual(citation["imported_text_sha256"],
+                         hashlib.sha256(("س" * 32767).encode("utf-8")).hexdigest())
+        self.assertIsNone(flagged["display_text"])
+        diagnostic = {x["source_id"]: x for x in get_ayah(
+            self.db, 1, 1, allow_flagged_tafsir_text=True)["tafsirs"]}["baghawy"]
+        self.assertEqual(diagnostic["source_citation"]["imported_text_sha256"],
+                         citation["imported_text_sha256"])
+        self.assertTrue(diagnostic["source_citation"]["content_displayed"])
+
     def test_reject_invalid_verse(self):
         with self.assertRaises(ValueError):
             get_ayah(self.db, 1, 8)
