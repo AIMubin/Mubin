@@ -90,10 +90,11 @@
         13,
         14
       ],
-      "adjacent_text_sha256": "6c61e471925d4885978fdc3ee6e6decd4c4900fd3f5fa649ee7304e18153dabc",
+      "adjacent_text_sha256": "9c61e471925d4885978fdc3ee6e6decd4c4900fd3f5fa649ee7304e18153dabc",
       "editorial_status": "SHARED_HEADING_CANDIDATE_UNVERIFIED_AGAINST_PRINTED_EDITION"
     }
   ],
   "conclusion": "All seven previously empty-looking Tabari records have a neighboring record whose explicit multi-ayah introductory heading cites the target ayah; this supports cross-verse representation instead of seven wholly absent tafsir passages.",
-  "caveat": "Headings do not demonstrate exact passage boundaries or rule out textual loss elsewhere. Verify against independently identified edition, with full paragraph/verse mapping and rights review."
+  "caveat": "Headings do not demonstrate exact passage boundaries or rule out textual loss elsewhere. Verify against independently identified edition, with full paragraph/verse mapping and rights review.",
+  "integrity_note": "All seven adjacent SHA-256 fields rechecked against exact UTF-8 text values in linked SQLite SHA-256 a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0 (2026-10-20). The 50:12 prior digest began with an incorrect leading digit; this record replaces it without modifying source text."
 }
