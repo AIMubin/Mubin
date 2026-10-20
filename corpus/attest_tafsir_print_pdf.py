@@ -32,7 +32,7 @@ def capture(pdf, verse_id, volume, page_indices, output_dir, edition_metadata, d
         type(i) is not int or i < 1 for i in page_indices
     ) or len(set(page_indices)) != len(page_indices):
         raise ValueError("PDF page indices must be unique, 1-based positive integers")
-    if not 96 <= dpi <= 220:
+    if not 96 <= dpi <= 360:
         raise ValueError("DPI outside bounded review range")
     for key in ("work", "publisher", "publication_year", "edition", "scan_url"):
         if not isinstance(edition_metadata.get(key), str) or not edition_metadata[key].strip():
