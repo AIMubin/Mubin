@@ -3,10 +3,12 @@ on:
   push:
     paths:
       - 'engines/usul/**'
+      - '.gitattributes'
       - '.github/workflows/usul-checks.yml'
   pull_request:
     paths:
       - 'engines/usul/**'
+      - '.gitattributes'
       - '.github/workflows/usul-checks.yml'
 jobs:
   usul-prototype:
