@@ -264,5 +264,41 @@ class BridgeIntegrationTests(unittest.TestCase):
         self.assertFalse(first["scholarly_verified"])
 
 
+    def test_cli_rejection_returns_nonzero_not_false_success(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = [
+                bundle([rule("demo:rule1")]),
+                spec(),
+                [{"atom": "demo:premise", "truth": "true",
+                  "source_evidence_ids": ["demo:missing_evidence"]}],
+            ]
+            paths = [root / f"case{j}.json" for j in range(3)]
+            for path, document in zip(paths, docs):
+                path.write_text(json.dumps(document), encoding="utf-8")
+            process = subprocess.run(
+                [sys.executable, "-m", "engines.usul.p0_bridge",
+                 *(str(p) for p in paths)],
+                capture_output=True, text=True, cwd=str(REPO), check=False)
+            self.assertEqual(process.returncode, 1, process.stderr)
+            result = json.loads(process.stdout)
+            self.assertEqual(result["attribution"]["facts_rejected"][0]["reason"],
+                             "REJECTED_UNKNOWN_EVIDENCE")
+            self.assertFalse(result["scholarly_verified"])
+
+    def test_malformed_p0_bundle_refuses_without_crash(self):
+        output = build_and_run({"contract_version": "0.1.0"}, {}, [])
+        self.assertFalse(output["structural_validation"]["passed"])
+        self.assertEqual(output["derivation_refused"]["code"], "STRUCTURAL_VALIDATION_FAILED")
+
+    def test_bridge_rejects_invalid_spec_or_fact_collections(self):
+        valid = bundle([rule("demo:rule1")])
+        for specs, fact_rows in (([], []), ({}, {})):
+            outcome = build_and_run(valid, specs, fact_rows)
+            self.assertEqual(outcome["derivation_refused"]["code"], "INVALID_EXECUTION_INPUT")
+            self.assertIsNone(outcome["usul_result"])
+
+
 if __name__ == "__main__":
     unittest.main()
