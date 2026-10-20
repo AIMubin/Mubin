@@ -66,3 +66,25 @@ python -m unittest discover -s engines/usul/tests -v
 For machine callers, the P0 bridge also accepts an optional assessment JSON array and the flags `--exception-assessments /path/to/array.json --require-semantic-binding --require-evidence-exceptions`. The old `ALLOW_LEGACY_EXPLICIT_FACTS` mode remains for backward-compatible experiments and is **not** evidence-certified. The output preserves the work, section, edition caveat, evidence locator and SHA-256 without reproducing the source passage or granting publication permission.
 
 **No implementation of legal qarīnah detection, semantic comprehension of a source, rule priority, qiyās, tarjīḥ or issuance of fatāwā is claimed.**
+
+## Stage 03 — Hash-pinned synthetic index, automatic full scan
+
+The [source scope index scanner](../source_scope_index.py) replaces the caller's self-declared `checked_items` list in the **new pinned mode** with a deterministic scan of two deliberately tiny **synthetic** test datasets:
+
+- [Absent-token fixture](data/absent-index.json) — two indexed items, neither contains the marker `[[QARINAH]]`.
+- [Present-token fixture](data/present-index.json) — the second item contains that exact marker.
+
+Both fixture manifest files are pinned by independent SHA-256 constants in scanner code; each indexed item also has its own UTF-8 text digest. [`.gitattributes`](../../../.gitattributes) enforces LF on both operating systems to keep byte-level hashes identical across checkouts. If an item, index hash, related P0 synthetic source metadata, or fixture integrity changes, execution **fails closed**.
+
+A caller cannot inject a checked-list report into pinned mode. The scanner itself visits **all** immutable indexed items, records their IDs/digests and the matching item IDs, and then feeds the existing `PRESENT / ABSENT_IN_DECLARED_SCOPE / NOT_CHECKED` contract. The `not_checked` case explicitly yields no negative finding even though the index identity remains available.
+
+```bash
+python -m engines.usul.pilots.indexed_amr_pilot
+python -m unittest discover -s engines/usul/tests -v
+```
+
+Or use the [P0 bridge](../p0_bridge.py) with `--require-semantic-binding --require-evidence-exceptions --require-pinned-scope-index --pinned-scope-index absent` (also `present` and `not_checked`).
+
+**Critical limits:** the scanned strings contain a **toy literal marker**, not an automatically detected Arabic legal `qarīnah`. The indexed text is **not** a part of the historical al-Waraqat witness: the genuine text is only the **source attribution for the modelled rule**, while the search dataset is a **separately identified synthetic fixture**. The indexed completeness claim means only that every item in **that fixed toy index** was scanned; it does not establish corpus exhaustiveness, correct indexing of a historical book, source authenticity, or absence of a diverting indicator in a real source. The pinned manifest and digest protect reproducibility and casual tampering, not malicious updates to both the manifest and its trusted code-side hash.
+
+Next stage: accept a **licensed, independently pinned original source snapshot** with a reproducible segment extractor and auditable corpus coverage contract, then compare extracted segments against the index; until then only test fixtures are eligible for machine-computed absence claims. This is engineering work, not a blanket human scholarly signoff requirement.
