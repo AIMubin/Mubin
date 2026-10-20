@@ -93,6 +93,9 @@ class RiskBasedReviewGateTests(unittest.TestCase):
             {"action": "engineering_change", **BASE, "scholarly_verified": True},
             {"action": "engineering_change", "machine_checks_passed": "true"},
             {"action": "publish_verbatim_source", "rights": "free_online"},
+            {"action": [], "machine_checks_passed": True},
+            {"action": "publish_verbatim_source", "rights": []},
+            {"action": "publish_verbatim_source", "source_kind": []},
         ]:
             with self.subTest(request=request):
                 with self.assertRaises(ValueError):
