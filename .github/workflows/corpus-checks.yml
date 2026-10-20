@@ -3,6 +3,9 @@ on:
   push:
     paths:
       - 'corpus/**'
+      - 'core/review_gate.py'
+      - 'docs/RISK_BASED_ASSURANCE.md'
+      - 'docs/REVIEW_POLICY.md'
       - '.github/workflows/corpus-checks.yml'
   pull_request:
     paths:
