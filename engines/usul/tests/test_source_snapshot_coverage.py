@@ -88,7 +88,8 @@ class SnapshotCoverageTests(unittest.TestCase):
         self.assertEqual(result, self.audited())
 
     def test_snapshot_mutation_fails(self):
-        self.source.write_bytes(self.source.read_bytes().replace("الأمر".encode(), b"REPLACED"))
+        # Keep byte count unchanged so this tests the digest gate, not size.
+        self.source.write_bytes(self.source.read_bytes().replace(b"\n", b"!", 1))
         with self.assertRaisesRegex(SnapshotContractError, "SHA-256 mismatch"):
             self.audited()
 
