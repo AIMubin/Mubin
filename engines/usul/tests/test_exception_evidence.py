@@ -93,7 +93,7 @@ class ScopedExceptionEvidenceTests(unittest.TestCase):
             modified, example_spec(modified), scenarios()["indicator_unknown"],
             require_semantic_binding=True, exception_assessments=assessment(),
             require_evidence_exceptions=True)
-        self.assertEqual(result["derivation_refused"]["code"], "STRUCTURAL_VALIDATION_FAILED")
+        # P0 permits unverified evidence for an UNKNOWN exception check; the\n        # stricter execution layer must refuse to promote it as a negative finding.\n        self.assertEqual(result["derivation_refused"]["code"], "INVALID_EXCEPTION_ASSESSMENT")
 
     def test_real_world_scope_is_explicitly_unsupported(self):
         result = run(assessment(kind="real_world"))
