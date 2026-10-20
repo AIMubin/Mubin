@@ -7,7 +7,7 @@ Mubin is a system composed of independently maturing knowledge and reasoning eng
 ## Current status
 
 - **Mubin system:** `0.1.0-alpha` — foundation stage
-- **Quran Engine:** `Q0.3` — in progress (technical review, not public content clearance)
+- **Quran Engine:** `Q0.3` — engineering-qualified for pinned import/read-path scope; public content clearance not granted
 - **Hadith Engine:** `H3.9.2` — qualification stage
 - **Usul Engine:** `U0.1` — experimental, one-step simulator (not qualified)
 - **Fiqh Engine:** `F0.0` — planned
@@ -44,6 +44,6 @@ Subsystem milestone numbers never imply Mubin system maturity. A system release 
 
 ## Workstream progress (2026-10-20)
 
-- Quran Q0.3 technical qualification has a [reproducible pinned-vault replay](engines/quran/Q0.3-ENGINEERING-EXIT.md); the linked database passed direct source-independent checks, while fresh replay against the pinned upstream original is pending. The original tafsir and Quran bytes are preserved.
+- Quran Q0.3 technical qualification has a [reproducible pinned-vault replay](engines/quran/Q0.3-ENGINEERING-EXIT.md); the local operator completed a 9/9 pinned source-and-linked-database replay and recorded [limited-scope engineering qualification](corpus/reviews/q03-engineering-qualification.json); public text and editorial review gates remain separate. The original tafsir and Quran bytes are preserved.
 - Usul U0.1 has an [explicitly non-juristic one-step rule simulator](engines/usul/README.md) with negative tests. It is *not* a full rule formalization, qiyas or fatwa engine.
 - Historical H3.9.2 frozen review requirements, rights restrictions and Mubin system version are unchanged.
