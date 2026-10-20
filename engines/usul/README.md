@@ -69,7 +69,9 @@ Run the bound-source example:
 
 ```bash
 python -m pip install -r core/requirements-test.txt
-python -m engines.usul.p0_bridge engines/usul/examples/p0-bridge-demo-bundle.json engines/usul/examples/p0-bridge-demo-bound-specs.json engines/usul/examples/p0-bridge-demo-facts.json
+python -m engines.usul.p0_bridge engines/usul/examples/p0-bridge-demo-bundle.json engines/usul/examples/p0-bridge-demo-bound-specs.json engines/usul/examples/p0-bridge-demo-facts.json --require-semantic-binding
 ```
 
 The result reports `STRUCTURALLY_BOUND` and an explicit bibliography. The printed/source edition in this example is **synthetic**. For actual classical source use, supply real titles, identified editions and precise locators, verify the applicable conditions, then preserve the difference between internal citation and textual publication.
+
+For each accepted result, `conclusion_citations` now lists the evidence actually linked to supporting rule IDs, and `rule_citations` lists references for each executed rule. `source_citations` is only the combined diagnostic inventory and must **not** be interpreted as every source supporting every conclusion. Use `--require-semantic-binding` for source-driven runs; without it legacy synthetic examples remain labelled `LEGACY_UNBOUND`. CLI refusals are nonzero and cannot be interpreted as accepted derivations.
