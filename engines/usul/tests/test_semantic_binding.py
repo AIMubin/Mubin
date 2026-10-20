@@ -145,13 +145,8 @@ class BoundSourceCitationTests(unittest.TestCase):
 
     def test_conclusion_citations_include_only_supporting_rules(self):
         data, specs, asserted = bound_scenario()
-        # The source evidence on a rule which is NOT applicable should not
-        # appear as backing for the accepted conclusion.
-        extra = rule("demo:rule2", evidence=("demo:ev3",))
-        data["rules"].append(extra)
-        # P0 bundle needs a matching inference for a new rule; use a simpler
-        # model with a single qualified rule and a supplemental unrelated fact.
-        data, specs, asserted = bound_scenario()
+        # An unrelated asserted fact may be present in the overall evidence
+        # inventory without becoming a citation for this rule's conclusion.
         asserted.append({"atom": "demo:unrelated", "truth": "true",
                          "source_evidence_ids": ["demo:ev3"]})
         outcome = build_and_run(data, specs, asserted)
