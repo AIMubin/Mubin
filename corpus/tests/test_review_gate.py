@@ -108,6 +108,37 @@ class RiskBasedReviewGateTests(unittest.TestCase):
                                   "source_untouched": True})
         self.assertIn("REDISTRIBUTION_RIGHTS_NOT_VERIFIED", result["blockers"])
 
+    def test_cli_exit_codes_are_not_scholarly_certificates(self):
+        import json
+        import subprocess
+        import sys
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as folder:
+            file = Path(folder) / "decision.json"
+            def run(payload):
+                file.write_text(json.dumps(payload), encoding="utf-8")
+                return subprocess.run(
+                    [sys.executable, "-m", "core.review_gate", str(file)],
+                    capture_output=True, text=True, check=False)
+            good = run({"action": "engineering_change", **BASE})
+            self.assertEqual(good.returncode, 0)
+            self.assertEqual(json.loads(good.stdout)["decision"], "ELIGIBLE")
+            self.assertFalse(json.loads(good.stdout)["scholarly_verified"])
+
+            restricted = run({"action": "publish_verbatim_source", **BASE,
+                              "source_kind": "tafsir", "provenance_verified": True,
+                              "source_untouched": True, "rights": "unknown"})
+            self.assertEqual(restricted.returncode, 1)
+            self.assertEqual(json.loads(restricted.stdout)["decision"], "BLOCKED")
+
+            invalid = run({"action": "system_release",
+                           "machine_checks_passed": "true"})
+            self.assertEqual(invalid.returncode, 2)
+            self.assertEqual(json.loads(invalid.stdout)["decision"], "INVALID")
+
+
 
 if __name__ == "__main__":
     unittest.main()
