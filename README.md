@@ -38,6 +38,10 @@ No derived claim should exist without a traceable path back to its evidence, met
 
 Risk-proportionate gates: [engineering and source/action review](docs/RISK_BASED_ASSURANCE.md). Thematic human scholarly review does not block routine engineering; human editorial approval, frozen H3.9.2 qualification decisions and publication rights remain specific requirements where applicable. No system-version bump has been made.
 
+## Sourced research and citation
+
+Use established sources with mandatory attribution and exact provenance (work, edition, locator and hashes). [Source-use policy](docs/SOURCE_ATTRIBUTION_POLICY.md) permits bounded internal research without blanket scholarly gates; attribution does not grant redistribution rights or attest text authenticity.
+
 ## Development rule
 
 Subsystem milestone numbers never imply Mubin system maturity. A system release is cut only from integrated, qualified capabilities across the required engines.
