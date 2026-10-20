@@ -1,6 +1,6 @@
 # Mubin — risk-proportionate assurance, no blanket human-review gate
 
-**Effective:** 2026-10-20. **System:** `0.1.0-alpha`. **Quran Engine:** `Q0.3` in progress until its *engineering* exit criteria are actually met.
+**Effective:** 2026-10-20. **System:** `0.1.0-alpha`. **Quran Engine:** `Q0.3` engineering-qualified for the pinned ingestion/read-path scope only; source publication, canonical Quran display and scholarly conclusions retain independent action-specific gates.
 
 ## Principle
 
