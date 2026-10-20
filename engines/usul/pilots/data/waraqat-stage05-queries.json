@@ -1,0 +1,27 @@
+[
+  {
+    "id": "pilot:amr-keyword",
+    "literal": "الأمر",
+    "profile": "literal_exact_v1"
+  },
+  {
+    "id": "pilot:qarinah-keyword",
+    "literal": "القرينة",
+    "profile": "literal_exact_v1"
+  },
+  {
+    "id": "pilot:wujub-keyword",
+    "literal": "الوجوب",
+    "profile": "literal_exact_v1"
+  },
+  {
+    "id": "pilot:nadb-keyword",
+    "literal": "الندب",
+    "profile": "literal_exact_v1"
+  },
+  {
+    "id": "pilot:ibaha-keyword",
+    "literal": "الإباحة",
+    "profile": "literal_exact_v1"
+  }
+]
