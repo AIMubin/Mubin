@@ -132,7 +132,23 @@
       "pdf_page_images_hash_verified_from_private_package": true,
       "independent_human_print_review_completed": false,
       "visually_read_ocr_correction": "أتى (OCR incorrectly read أنى)",
-      "number_orthography_needs_higher_dpi": true
+      "number_orthography_needs_higher_dpi": true,
+      "reported_highres_visual_observations": {
+        "image_printed_number": "ثلاثمائة",
+        "image_printed_verb": "أتى",
+        "archive_ocr_number": "ثلهائة",
+        "archive_ocr_verb": "أنى",
+        "printed_page_number": 154,
+        "review_type": "AI_IMAGE_REVIEW_NOT_HUMAN_EDITION_APPROVAL"
+      },
+      "remaining_issues": [
+        "Formal suffix alignment NOT_ALIGNED",
+        "Independently authenticate the source edition and passage boundaries",
+        "Private ZIP has SHA256 manifest discrepancy for real-data-safety-test.json",
+        "No human/editorial rights signoff"
+      ],
+      "formal_alignment_status": "NOT_ALIGNED",
+      "scholarship_verified": false
     },
     {
       "source": "baghawy",
@@ -176,18 +192,21 @@
     "local_campaign_report": "q03-baghawy-local-campaign-summary.json",
     "original_summary_sha256": "06014e047b3288e7a0a12c2ea30b21bace56415cfb997f90e62be6342833146f",
     "assistant_visual_review": "q03-baghawy-assistant-visual-review.json",
-    "user_uploaded_private_zip_sha256": "1a7ec8d041767f3f4ab6b14d8c280905ac7faa5b5c221b65f9f8e29feb33067c"
+    "user_uploaded_private_zip_sha256": "1a7ec8d041767f3f4ab6b14d8c280905ac7faa5b5c221b65f9f8e29feb33067c",
+    "baghawy_18_10_highres": "q03-baghawy-18-10-highres-review.json",
+    "private_highres_zip_sha256": "a5ca89d0de68dbb87cfbdfab35a5fa1ff6f03a348a65e68ed4c8ffe2ea0d5f45",
+    "private_highres_zip_manifest_integrity": "FAILED_ONE_HASH_AND_SIZE_MISMATCH"
   },
   "last_corpus_ci": {
-    "run_id": 39311029761,
+    "run_id": 39404137364,
     "workflow": "Corpus integrity checks",
     "os": [
       "ubuntu-latest",
       "windows-latest"
     ],
     "result": "success",
-    "tests_passed_per_os": 39,
-    "tests_total_per_os": 39,
-    "commit": "7a06c490fc50ab5194a4bb0076e874bc594619b3"
+    "tests_passed_per_os": 44,
+    "tests_total_per_os": 44,
+    "commit": "f1c4c14c3289def1e2a83f1a62e1859afc5b156b"
   }
 }
