@@ -7,7 +7,7 @@ Mubin is a system composed of independently maturing knowledge and reasoning eng
 ## Current status
 
 - **Mubin system:** `0.1.0-alpha` — foundation stage
-- **Quran Engine:** `Q0.0` — planned
+- **Quran Engine:** `Q0.3` — in progress (technical review, not public content clearance)
 - **Hadith Engine:** `H3.9.2` — qualification stage
 - **Usul Engine:** `U0.0` — planned
 - **Fiqh Engine:** `F0.0` — planned
@@ -33,6 +33,10 @@ Mubin/
 ## Core invariant
 
 No derived claim should exist without a traceable path back to its evidence, method, and interpretive context.
+
+## Review and qualification
+
+Risk-proportionate gates: [engineering and source/action review](docs/RISK_BASED_ASSURANCE.md). Thematic human scholarly review does not block routine engineering; human editorial approval, frozen H3.9.2 qualification decisions and publication rights remain specific requirements where applicable. No system-version bump has been made.
 
 ## Development rule
 
