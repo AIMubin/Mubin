@@ -65,7 +65,7 @@ def _spec_cycle(specs_by_id):
     return any(visit(node) for node in graph)
 
 
-def build_and_run(bundle, specs, fact_assertions):
+def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=False):
     """Return the full derivation record; never mutates the bundle."""
     structural_errors = validate_bundle(bundle)
     # Invalid bundles can omit rules entirely; do not dereference them before
@@ -82,6 +82,9 @@ def build_and_run(bundle, specs, fact_assertions):
         "derivation_refused": None,
         "semantic_bindings": {},
         "source_citations": [],
+        "rule_citations": {},
+        "conclusion_citations": {},
+        "binding_policy": "REQUIRE_BOUND" if require_semantic_binding else "ALLOW_LABELLED_LEGACY",
         "citation_scope": "SOURCE_METADATA_ONLY_NO_TEXT_OR_RIGHTS_GRANTED",
         "semantic_equivalence_verified": False,
         "external_source_authentication_verified": False,
@@ -128,6 +131,12 @@ def build_and_run(bundle, specs, fact_assertions):
                 or spec is None):
             structural_only.append({"id": rule["id"],
                                     "reason": "REPRESENTATION_ONLY_NO_EXECUTABLE_SPEC"})
+            continue
+        if require_semantic_binding and (
+            not isinstance(spec, dict) or "binding" not in spec
+        ):
+            rejected.append({"id": rule["id"], "reason": "REJECTED_UNBOUND_RULE",
+                             "detail": "strict source-driven evaluation requires a versioned structural binding"})
             continue
         try:
             binding_result = validate_binding(bundle, rule, spec)
@@ -190,6 +199,29 @@ def build_and_run(bundle, specs, fact_assertions):
     for objection in objections:
         used_evidence.update(objection["source_evidence_ids"])
     derivation["source_citations"] = cited_sources(bundle, used_evidence)
+    # Cite supporting provenance at its actual scope. A source referenced by
+    # an unrelated rule must not be misrepresented as supporting a conclusion.
+    for rule in executable:
+        rid = rule["id"]
+        ids = set(rule["source_evidence_ids"])
+        bound = specs_by_id[rid].get("binding")
+        if bound is not None:
+            for clause in bound["preconditions"]:
+                claim = next(c for c in bundle["claims"] if c["id"] == clause["claim_id"])
+                ids.update(claim["evidence_ids"])
+            for clause in bound["exceptions"]:
+                ids.update(clause["source_evidence_ids"])
+        relevant_atoms = {
+            x["atom"] for x in specs_by_id[rid]["if_all"] +
+            specs_by_id[rid].get("unless_any", [])
+        }
+        for fact in facts:
+            if fact["atom"] in relevant_atoms:
+                ids.update(fact["source_evidence_ids"])
+        for objection in objections:
+            if objection["rule_id"] == rid:
+                ids.update(objection["source_evidence_ids"])
+        derivation["rule_citations"][rid] = cited_sources(bundle, ids)
 
     methodology = methodologies[bundle["rules"][0]["methodology_id"]] if bundle["rules"] else None
     derivation["attribution"]["rules_executable"] = sorted(specs_by_id)
@@ -210,6 +242,16 @@ def build_and_run(bundle, specs, fact_assertions):
                   for rule in executable],
         "objections": objections,
     })
+    for atom, outcome in derivation["usul_result"]["conclusions"].items():
+        references = {}
+        for rid in outcome["supporting_rule_ids"]:
+            for citation in derivation["rule_citations"].get(rid, []):
+                references[citation["evidence_id"]] = citation
+        derivation["conclusion_citations"][atom] = {
+            "supporting_rule_ids": outcome["supporting_rule_ids"],
+            "source_references": [references[k] for k in sorted(references)],
+            "scope": "RECORD_PROVENANCE_ONLY_NOT_SEMANTIC_ENTAILMENT",
+        }
     return derivation
 
 
@@ -218,12 +260,15 @@ def main():
     parser.add_argument("bundle", type=Path)
     parser.add_argument("specs", type=Path)
     parser.add_argument("facts", type=Path)
+    parser.add_argument("--require-semantic-binding", action="store_true",
+                        help="Reject executable rules without versioned P0 clause binding")
     args = parser.parse_args()
     try:
         result = build_and_run(
             json.loads(args.bundle.read_text(encoding="utf-8")),
             json.loads(args.specs.read_text(encoding="utf-8")),
-            json.loads(args.facts.read_text(encoding="utf-8")))
+            json.loads(args.facts.read_text(encoding="utf-8")),
+            require_semantic_binding=args.require_semantic_binding)
     except (OSError, ValueError) as exc:
         print(json.dumps({"status": "INVALID_INPUT", "error_type": type(exc).__name__,
                           "scholarly_verified": False}, ensure_ascii=False, indent=2))
