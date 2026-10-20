@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "methodology_id": "demo:profile",
+  "facts": [
+    {
+      "atom": "demo:premise",
+      "truth": "true",
+      "source_evidence_ids": [
+        "demo:ev1"
+      ]
+    },
+    {
+      "atom": "demo:exception",
+      "truth": "false",
+      "source_evidence_ids": [
+        "demo:ev2"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "demo:rule",
+      "methodology_id": "demo:profile",
+      "rule_kind": "propositional_demo",
+      "if_all": [
+        {
+          "atom": "demo:premise",
+          "truth": "true"
+        }
+      ],
+      "unless_any": [
+        {
+          "atom": "demo:exception",
+          "truth": "true"
+        }
+      ],
+      "then": {
+        "atom": "demo:output",
+        "truth": "true"
+      },
+      "source_evidence_ids": [
+        "demo:ev3"
+      ]
+    }
+  ],
+  "objections": []
+}
