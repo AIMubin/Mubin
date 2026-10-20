@@ -19,6 +19,7 @@ from pathlib import Path
 
 from core.inference.validator import validate_bundle
 from engines.usul.executor import evaluate
+from engines.usul.semantic_binding import BindingError, cited_sources, validate_binding
 
 BRIDGE_VERSION = "p0-usul-u0.1/0.1.0"
 EXECUTABLE_KINDS = {"deduction"}
@@ -79,6 +80,12 @@ def build_and_run(bundle, specs, fact_assertions):
         "methodology_isolation": {"methodologies_seen": sorted({r["methodology_id"] for r in rule_list if isinstance(r, dict) and isinstance(r.get("methodology_id"), str)}),
                                   "cross_methodology_reconciliation": "not_supported_in_u0.1"},
         "derivation_refused": None,
+        "semantic_bindings": {},
+        "source_citations": [],
+        "citation_scope": "SOURCE_METADATA_ONLY_NO_TEXT_OR_RIGHTS_GRANTED",
+        "semantic_equivalence_verified": False,
+        "external_source_authentication_verified": False,
+        "public_fatwa_authorized": False,
         "usul_result": None,
         "reproducible_offline": True,
         "scholarly_verified": False,
@@ -123,6 +130,7 @@ def build_and_run(bundle, specs, fact_assertions):
                                     "reason": "REPRESENTATION_ONLY_NO_EXECUTABLE_SPEC"})
             continue
         try:
+            binding_result = validate_binding(bundle, rule, spec)
             evaluate({"schema_version": "0.1.0", "methodology_id": rule["methodology_id"],
                       "facts": [], "rules": [{
                           "id": rule["id"], "methodology_id": rule["methodology_id"],
@@ -131,10 +139,12 @@ def build_and_run(bundle, specs, fact_assertions):
                           "then": spec["then"],
                           "source_evidence_ids": rule["source_evidence_ids"]}],
                       "objections": []})
-        except (ValueError, KeyError) as exc:
-            rejected.append({"id": rule["id"], "reason": "REJECTED_INVALID_SPEC",
+        except (BindingError, ValueError, KeyError, TypeError) as exc:
+            rejected.append({"id": rule["id"],
+                             "reason": "REJECTED_INVALID_SEMANTIC_BINDING" if isinstance(exc, BindingError) else "REJECTED_INVALID_SPEC",
                              "detail": str(exc)})
             continue
+        derivation["semantic_bindings"][rule["id"]] = binding_result
         specs_by_id[rule["id"]] = spec
         executable.append(rule)
 
@@ -162,6 +172,24 @@ def build_and_run(bundle, specs, fact_assertions):
             objections.append({"id": f"{objection['id']}.on.{rule_id}", "rule_id": rule_id,
                                "status": objection["status"],
                                "source_evidence_ids": objection["evidence_ids"]})
+
+    # Preserve a source reference trail for each executed rule and accepted fact.
+    # Never copy evidence excerpts into the output or infer redistribution rights.
+    used_evidence = set()
+    for rule in executable:
+        used_evidence.update(rule["source_evidence_ids"])
+        binding = specs_by_id[rule["id"]].get("binding")
+        if binding is not None:
+            for clause in binding["preconditions"]:
+                claim = next(c for c in bundle["claims"] if c["id"] == clause["claim_id"])
+                used_evidence.update(claim["evidence_ids"])
+            for clause in binding["exceptions"]:
+                used_evidence.update(clause["source_evidence_ids"])
+    for fact in facts:
+        used_evidence.update(fact["source_evidence_ids"])
+    for objection in objections:
+        used_evidence.update(objection["source_evidence_ids"])
+    derivation["source_citations"] = cited_sources(bundle, used_evidence)
 
     methodology = methodologies[bundle["rules"][0]["methodology_id"]] if bundle["rules"] else None
     derivation["attribution"]["rules_executable"] = sorted(specs_by_id)
