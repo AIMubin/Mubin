@@ -36,6 +36,46 @@ class QueryTests(unittest.TestCase):
         self.assertIsNone(tafsirs['tabary']['text'])
         self.assertIn('POSSIBLE_TRUNCATION_32767', tafsirs['baghawy']['quality_flags'])
 
+    def test_suspect_baghawy_fails_closed_for_every_review_case(self):
+        from corpus.query import BAGHAWY_Q03_REVIEW_HOLD
+        connection = sqlite3.connect(self.db)
+        try:
+            for sura, aya in sorted(BAGHAWY_Q03_REVIEW_HOLD):
+                connection.execute("INSERT INTO verses VALUES (?,?,?)",
+                                   (sura, aya, "SYNTHETIC NOT QURAN"))
+                connection.execute("INSERT INTO tafsirs VALUES (?,?,?,?)",
+                                   ("baghawy", sura, aya, "SYNTHETIC NOT A REAL TAFSIR"))
+            connection.execute("INSERT INTO tafsirs VALUES (?,?,?,?)",
+                               ("tabary", 4, 43, "SYNTHETIC COMPARISON"))
+            connection.commit()
+        finally:
+            connection.close()
+        for sura, aya in sorted(BAGHAWY_Q03_REVIEW_HOLD):
+            value = {row["source_id"]: row for row in get_ayah(self.db, sura, aya)["tafsirs"]}["baghawy"]
+            self.assertFalse(value["displayable"])
+            self.assertIsNone(value["text"])
+            self.assertIsNone(value["display_text"])
+            self.assertEqual(value["display_status"], "WITHHELD_PENDING_EDITORIAL_VERIFICATION")
+            self.assertIn("EDITORIAL_HOLD_SUSPECTED_INCOMPLETE_UPSTREAM_TEXT", value["quality_flags"])
+            self.assertFalse(value["diagnostic_override_active"])
+            reviewer_value = {row["source_id"]: row for row in get_ayah(
+                self.db, sura, aya, allow_flagged_tafsir_text=True)["tafsirs"]}["baghawy"]
+            self.assertTrue(reviewer_value["displayable"])
+            self.assertTrue(reviewer_value["diagnostic_override_active"])
+            self.assertEqual(reviewer_value["display_status"], "DIAGNOSTIC_UNVERIFIED_SOURCE_TEXT")
+            self.assertFalse(reviewer_value["scholarly_verification"])
+        tabary = {row["source_id"]: row for row in get_ayah(self.db, 4, 43)["tafsirs"]}["tabary"]
+        self.assertTrue(tabary["displayable"])
+        self.assertFalse(tabary["editorial_review_required"])
+
+    def test_32767_baghawy_unlisted_verse_is_also_withheld(self):
+        # A new upstream ceiling-bound record must not leak just because the
+        # four original issue IDs were the only known cases at review time.
+        b = {row["source_id"]: row for row in get_ayah(self.db, 1, 1)["tafsirs"]}["baghawy"]
+        self.assertFalse(b["displayable"])
+        self.assertIsNone(b["text"])
+        self.assertEqual(b["display_status"], "WITHHELD_PENDING_EDITORIAL_VERIFICATION")
+
     def test_reject_invalid_verse(self):
         with self.assertRaises(ValueError):
             get_ayah(self.db, 1, 8)
