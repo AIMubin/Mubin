@@ -140,9 +140,9 @@ class SnapshotCoverageTests(unittest.TestCase):
     def test_overlapping_ranges_are_refused(self):
         value = manifest()
         value["sections"][1]["start_line"] = "صيغة الأمر"
-        value["sections"][1]["expected_line_count"] = 3
+        value["sections"][1]["expected_line_count"] = 4
         value["sections"][1]["section_sha256"] = sha(
-            "صيغة الأمر\nاختبار اصطناعي\nالنهي\n".encode("utf-8")
+            "صيغة الأمر\nاختبار اصطناعي\nالنهي\nصيغة النهي\n".encode("utf-8")
         )
         self.save_manifest(value)
         with self.assertRaisesRegex(SnapshotContractError, "overlap"):
