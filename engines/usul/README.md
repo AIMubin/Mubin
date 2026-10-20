@@ -103,3 +103,10 @@ Read [pilot source notes and truth table](pilots/README.md). A fully checked **d
 The first intended real witness is [al-Waraqat, heading الأمر through heading النهي](pilots/SOURCE_SNAPSHOT_COVERAGE.md). Exact raw HTML capture and original-to-UTF8 export mapping **have not been supplied** in this assistant environment; real-source replay is therefore **pending** rather than certified. The CI tests use only entirely synthetic Arabic UTF-8 fixtures, including tamper, overlapping sections and missing-manifest cases.
 
 A source snapshot/section PASS establishes **bitwise conformity with a specified text export and declared extraction bounds**, not print-edition identity, semantic equivalence of legal rules, exhaustiveness of juristic exceptions or the right to republish a hosted edition. System version `0.1.0-alpha` and Usul prototype non-authoritative gates remain unchanged.
+
+
+## U0.1 Stage 05 — byte-anchored source retrieval and literal search
+
+[Stage05 lexical indexer](source_lexical_index.py) now regenerates a complete line/byte-offset index from a Stage04-pinned UTF-8 section **after rechecking the trusted source manifest and section coverage**. A test query uses `literal_exact_v1`, returning every UTF-8 byte span, section locator, source attribution and digest; results contain no original book text or query string. Zero hits are explicitly `NO_EXACT_LITERAL_MATCH_IN_PINNED_SECTION`, **not** evidence that no juridical `qarīnah` exists.
+
+The [real al-Waraqat operator runner](pilots/waraqat_stage05.py) additionally requires the original HTML bytes and `waraqat-extract/1.0.0` replay, and compares raw HTML, snapshot, chapter and manifest digests with the published Stage04 receipt. [Operator guide](pilots/STAGE05_LEXICAL_REPLAY.md) and [metadata-only keyword query fixture](pilots/data/waraqat-stage05-queries.json) are available. **CI runs on synthetic sources; do not mark the private Stage05 real-source replay complete until the local operator supplies its exact-pinned metadata-only report.** Neither `U0.1` engineering qualification nor scholastic/rights clearance is implied.
