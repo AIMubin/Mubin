@@ -87,3 +87,9 @@ GitHub Actions [run 39395967179](https://github.com/AIMubin/Mubin/actions/runs/3
 The earlier notes above document stages of the evidence campaign, not today's total review status. Four Baghawi printed continuations were visually checked on privately supplied images; the 18:10 high-resolution scan reads `ثلاثمائة` and `أتى`. The private corrected evidence v2 is hash-consistent (19/19), and the four suspect upstream fields remain held back by default. [High-resolution evidence report](../../corpus/reviews/q03-baghawy-18-10-highres-review.json).
 
 [Q0.3 engineering exit conditions](Q0.3-ENGINEERING-EXIT.md) are **now action-specific**: internal technical closure requires reproducible real-data checks and green CI, not a scholarly committee. Source text publication, restoration from a printed edition, authoritative interpretive claims and reproduction rights retain their independent gates. `VERSION.yaml` remains unchanged until technical criteria are measured and recorded.
+
+## Source citations on Tafsir retrieval (2026-10-20)
+
+Every returned tafsir row now includes `source_citation` with the dataset key, a work label, the exact sura:ayah locator, SHA-256 of its imported text field, and explicit `NOT_YET_VERIFIED` edition and `UNKNOWN_UNLESS_SEPARATELY_ESTABLISHED` rights labels. The citation remains visible even when the source's text is quarantined (e.g., the four Baghawi suspected cutoff records), without changing the suppression behavior or mutating the original database. The label identifies the imported Tafsir Center source key, **not** an independently verified printed edition.
+
+These citations aid reproducible use and research; they do not automatically authorize reproducing protected editorial content. See [source-use policy](../../docs/SOURCE_ATTRIBUTION_POLICY.md). The Q0.3 internal engineering qualification scope remains unchanged.
