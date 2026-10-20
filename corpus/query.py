@@ -10,11 +10,15 @@ from corpus.triage_quran import REFERENCE_SHA256
 from corpus.verify_quran import EXPECTED_COUNTS
 
 SOURCES = ("tabary", "katheer", "baghawy", "saadi", "moyassar")
+# Investigation flags are not permission to replace original text.
+# Suppress suspect incomplete Tafsir Baghawi records in ordinary retrieval.
+BAGHAWY_Q03_REVIEW_HOLD = {(4, 43), (17, 4), (18, 10), (33, 9)}
 
 
 def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = None,
              expected_reference_sha256: str = REFERENCE_SHA256,
-             allow_unverified_derived_text: bool = False):
+             allow_unverified_derived_text: bool = False,
+             allow_flagged_tafsir_text: bool = False):
     if type(sura) is not int or not 1 <= sura <= 114:
         raise ValueError("Invalid sura")
     if type(aya) is not int or not 1 <= aya <= EXPECTED_COUNTS[sura - 1]:
@@ -60,14 +64,28 @@ def get_ayah(db_path: Path, sura: int, aya: int, reference_path: Path | None = N
             flags.append("NO_DISPLAYABLE_TEXT")
         if len(value) == 32767:
             flags.append("POSSIBLE_TRUNCATION_32767")
+        editorial_hold = source == "baghawy" and (
+            (sura, aya) in BAGHAWY_Q03_REVIEW_HOLD or len(value) == 32767
+        )
+        if editorial_hold:
+            flags.append("EDITORIAL_HOLD_SUSPECTED_INCOMPLETE_UPSTREAM_TEXT")
+        withheld = editorial_hold and not allow_flagged_tafsir_text
         tafsirs.append({
             "source_id": source,
             "verse_id": f"{sura}:{aya}",
-            "text": value if display_text else None,
-            "display_text": display_text or None,
-            "displayable": bool(display_text),
+            "text": value if display_text and not withheld else None,
+            "display_text": display_text if display_text and not withheld else None,
+            "displayable": bool(display_text) and not withheld,
             "render_as_plain_text": True,
             "quality_flags": flags,
+            "editorial_review_required": editorial_hold,
+            "display_status": (
+                "WITHHELD_PENDING_EDITORIAL_VERIFICATION" if withheld else
+                "DIAGNOSTIC_UNVERIFIED_SOURCE_TEXT" if editorial_hold else
+                "NO_DISPLAYABLE_TEXT" if not display_text else
+                "SOURCE_TEXT_UNVERIFIED_EDITION"
+            ),
+            "diagnostic_override_active": bool(editorial_hold and allow_flagged_tafsir_text),
             "edition_metadata": "NOT_YET_VERIFIED",
             "scholarly_verification": False,
         })
@@ -94,9 +112,12 @@ def main():
     p.add_argument("--reference", type=Path)
     p.add_argument("--expected-reference-sha256", default=REFERENCE_SHA256)
     p.add_argument("--allow-unverified-derived-text", action="store_true")
+    p.add_argument("--allow-flagged-tafsir-text", action="store_true",
+                   help="LOCAL DIAGNOSTICS ONLY: return potentially truncated Tafsir Baghawi text")
     args = p.parse_args()
     print(json.dumps(get_ayah(args.database, args.sura, args.aya, args.reference,
-                              args.expected_reference_sha256, args.allow_unverified_derived_text),
+                              args.expected_reference_sha256, args.allow_unverified_derived_text,
+                              args.allow_flagged_tafsir_text),
                      ensure_ascii=False, indent=2))
 
 
