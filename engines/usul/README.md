@@ -41,4 +41,20 @@ Expected result: `demo:output` has status `CONDITIONALLY_SUPPORTED`. The output 
 4. Evaluate on published precedents and bounded counterexamples without turning structural validity into scholarly correctness.
 5. Keep [risk-based assurance](../../docs/RISK_BASED_ASSURANCE.md): routine execution and evaluation do not require blanket human signoff, but authoritative scholarly conclusions require accountable review.
 
-The next work item is **P0 → U0.1 typed rule semantics bridge**, not releasing this prototype as an usul opinion engine.
+## P0 bridge implemented (2026-10-20)
+
+The [typed P0 bridge](p0_bridge.py) now validates inference bundles using `core.inference.validator`, checks that cited evidence identifiers exist and carry the bundle's `verified` labels, and executes only independently specified, `machine_checkable` **deduction** rules. It neither authenticates those P0 evidence labels against external editions nor interprets free-text `Rule.expression`. Rules labeled `qiyas` and `tarjih` are explicitly rejected, and cross-methodology combinations cannot execute.
+
+A [synthetic integration fixture](examples/p0-bridge-demo-bundle.json) exercises `Source → Evidence → Methodology → Rule → Execution → Trace` reproducibly and offline. Run:
+
+```bash
+python -m pip install -r core/requirements-test.txt
+python -m engines.usul.p0_bridge engines/usul/examples/p0-bridge-demo-bundle.json engines/usul/examples/p0-bridge-demo-specs.json engines/usul/examples/p0-bridge-demo-facts.json
+python -m unittest discover -s engines/usul/tests -v
+```
+
+CLI exit **0** means a valid bridge execution with no refused input, **1** reports a rejected derivation or source assertion, and **2** denotes malformed input. The output and any positive rule result never constitute a scholarly verdict.
+
+**Known semantic gap:** A `machine_checkable` P0 rule and its supplemental propositional spec have not been proven mathematically or philologically equivalent to its free-text `preconditions`, `exceptions`, or `expression`. The P0 evidence label `verified` confirms an internal metadata claim and excerpt hash check, not external source authentication. This remains a **research-only technical bridge**, not an engine capable of issuing or validating fiqh.
+
+The next priority is a versioned and independently testable **semantic binding** between the typed P0 rule and the executable spec, then bounded rules with verified provenance and negative tests. Specialized `qiyas/tarjih` semantics should be developed separately and remain rejected until demonstrated; do not make their absence a blocker to testing the limited deduction bridge.
