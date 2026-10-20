@@ -1,0 +1,2 @@
+# Byte-hash pinned synthetic source-index fixtures: checkout must preserve LF on Windows.
+engines/usul/pilots/data/*.json text eol=lf
