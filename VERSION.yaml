@@ -11,8 +11,8 @@ components:
     milestone: H3.9.2
     maturity: qualification
   usul_engine:
-    milestone: U0.0
-    maturity: planned
+    milestone: U0.1
+    maturity: experimental_prototype_not_qualified
   fiqh_engine:
     milestone: F0.0
     maturity: planned
