@@ -67,12 +67,16 @@ def _spec_cycle(specs_by_id):
 def build_and_run(bundle, specs, fact_assertions):
     """Return the full derivation record; never mutates the bundle."""
     structural_errors = validate_bundle(bundle)
+    # Invalid bundles can omit rules entirely; do not dereference them before
+    # returning the P0 structural rejection.
+    rule_list = bundle.get("rules", []) if isinstance(bundle, dict) else []
+    rule_list = rule_list if isinstance(rule_list, list) else []
     derivation = {
         "bridge": BRIDGE_VERSION,
         "structural_validation": {"passed": not structural_errors, "errors": structural_errors},
         "attribution": {"rules_executable": [], "rules_structural_only": [],
                         "rules_rejected": [], "facts_rejected": []},
-        "methodology_isolation": {"methodologies_seen": sorted({r["methodology_id"] for r in bundle["rules"]}),
+        "methodology_isolation": {"methodologies_seen": sorted({r["methodology_id"] for r in rule_list if isinstance(r, dict) and isinstance(r.get("methodology_id"), str)}),
                                   "cross_methodology_reconciliation": "not_supported_in_u0.1"},
         "derivation_refused": None,
         "usul_result": None,
@@ -83,6 +87,10 @@ def build_and_run(bundle, specs, fact_assertions):
     if structural_errors:
         derivation["derivation_refused"] = {"code": "STRUCTURAL_VALIDATION_FAILED",
                                             "errors": structural_errors}
+        return derivation
+    if not isinstance(specs, dict) or not isinstance(fact_assertions, list):
+        derivation["derivation_refused"] = {"code": "INVALID_EXECUTION_INPUT",
+                                            "detail": "specs must be an object and fact assertions an array"}
         return derivation
 
     methodologies = {m["id"]: m for m in bundle["methodologies"]}
@@ -193,7 +201,15 @@ def main():
                           "scholarly_verified": False}, ensure_ascii=False, indent=2))
         return 2
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0
+    # Never signal successful derivation to shell-based automation when any
+    # policy denial or evidence rejection remains. Partial execution is not
+    # an implicit authorization for the rejected inputs.
+    has_rejection = bool(
+        result["derivation_refused"]
+        or result["attribution"]["rules_rejected"]
+        or result["attribution"]["facts_rejected"]
+    )
+    return 1 if has_rejection else 0
 
 
 if __name__ == "__main__":
