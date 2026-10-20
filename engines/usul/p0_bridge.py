@@ -313,7 +313,9 @@ def main():
         print(json.dumps({"status": "INVALID_INPUT", "error_type": type(exc).__name__,
                           "scholarly_verified": False}, ensure_ascii=False, indent=2))
         return 2
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # Keep JSON CLI portable to legacy Windows cp1252 consoles without
+    # changing the underlying Unicode source or its digest.
+    print(json.dumps(result, ensure_ascii=True, indent=2))
     # Never signal successful derivation to shell-based automation when any
     # policy denial or evidence rejection remains. Partial execution is not
     # an implicit authorization for the rejected inputs.
