@@ -95,3 +95,11 @@ python -m engines.usul.pilots.scoped_amr_pilot
 ```
 
 Read [pilot source notes and truth table](pilots/README.md). A fully checked **declared synthetic scope** permits conditional support *for the simulation only*. It does not prove the nonexistence of a textual `qarīnah`, source validity or a juristic obligation. Existing one-step explicit facts remain accessible in `ALLOW_LEGACY_EXPLICIT_FACTS` compatibility mode but must not be described as evidence-backed exception investigations. The Mubin system version, Hadith frozen gold qualification and all scholarly/republication holds are unchanged.
+
+## Stage 04 — private source snapshot and section coverage contract
+
+[Source snapshot auditor](source_snapshot_coverage.py) and [separate draft manifest preparer](source_snapshot_prepare.py) now support exact byte-pinned **UTF-8 text exports** from private source captures, with unique chapter boundaries, complete source-line byte partitioning, digest per indexed source line and no source text in result reports. The preparer returns `DRAFT_NOT_ATTESTED`; only a subsequent verification using an **independently frozen manifest digest** may return `SNAPSHOT_COVERAGE_PASS`.
+
+The first intended real witness is [al-Waraqat, heading الأمر through heading النهي](pilots/SOURCE_SNAPSHOT_COVERAGE.md). Exact raw HTML capture and original-to-UTF8 export mapping **have not been supplied** in this assistant environment; real-source replay is therefore **pending** rather than certified. The CI tests use only entirely synthetic Arabic UTF-8 fixtures, including tamper, overlapping sections and missing-manifest cases.
+
+A source snapshot/section PASS establishes **bitwise conformity with a specified text export and declared extraction bounds**, not print-edition identity, semantic equivalence of legal rules, exhaustiveness of juristic exceptions or the right to republish a hosted edition. System version `0.1.0-alpha` and Usul prototype non-authoritative gates remain unchanged.
