@@ -168,16 +168,28 @@ def evaluate(model):
             "missing_premises": [x["atom"] for x, s in zip(rule["if_all"], pre) if s == "unknown"],
             "unresolved_exceptions": [x["atom"] for x, s in zip(rule["unless_any"], exceptions) if s == "unknown"],
             "unresolved_objections": unresolved,
+            "rule_source_evidence_ids": list(rule["source_evidence_ids"]),
+            "premise_source_evidence_ids": {
+                x["atom"]: next(
+                    (list(fact["source_evidence_ids"]) for fact in model["facts"]
+                     if fact["atom"] == x["atom"]), [])
+                for x in rule["if_all"]
+            },
             "reasoning_scope": "one_step_synthetic_propositional_only",
         })
     # Only return conclusions for targeted rule outputs, never inferred facts.
     results = {}
     for atom in sorted({r["then"]["atom"] for r in model["rules"]}):
         supported = candidates.get(atom, set())
+        conflicts_with_asserted_fact = bool(
+            supported and atom in known and any(v != known[atom] for v in supported)
+        )
+        contested = len(supported) > 1 or conflicts_with_asserted_fact
         results[atom] = {
-            "status": "CONTESTED" if len(supported) > 1 else
+            "status": "CONTESTED" if contested else
                       "CONDITIONALLY_SUPPORTED" if supported else "UNDETERMINED",
-            "supported_truth": next(iter(supported)) if len(supported) == 1 else None,
+            "supported_truth": next(iter(supported)) if len(supported) == 1 and not contested else None,
+            "conflicts_with_explicit_input_fact": conflicts_with_asserted_fact,
             "supporting_rule_ids": sorted(contested_by.get(atom, set())),
         }
     return {
