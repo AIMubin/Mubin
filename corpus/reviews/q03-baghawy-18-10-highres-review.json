@@ -1,0 +1,84 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "review_id": "baghawy-18-10-highres-review-with-integrity-exception",
+  "received_date": "2026-10-20",
+  "reviewer_kind": "AI_ASSISTED_INDEPENDENT_IMAGE_INSPECTION",
+  "source_private_package": {
+    "filename": "Q03-18-10-HighRes-Review.zip",
+    "sha256_verified": "a5ca89d0de68dbb87cfbdfab35a5fa1ff6f03a348a65e68ed4c8ffe2ea0d5f45",
+    "zip_crc_test": "PASS",
+    "zip_member_count": 20,
+    "manifest_listed_member_count": 19,
+    "manifest_self_exclusion_expected": true,
+    "verified_listed_members": 18,
+    "manifest_discrepant_members": 1,
+    "integrity_gate": "FAIL_MANIFEST_HASH_AND_SIZE_MISMATCH",
+    "discrepancy": {
+      "member": "real-data-safety-test.json",
+      "sha256_actual": "a859cf979f59d41263ec85d01e470d3f7ef242f6084576ede2312a426f591b74",
+      "actual_bytes": 1845,
+      "listed_bytes": 961,
+      "listed_hash_does_not_match": true
+    },
+    "note": "The package contains 19 payload members and its manifest as member 20. This is normal. The single manifest conflict must be reconciled before integrity of all payload entries can be attested."
+  },
+  "high_resolution_pages": {
+    "source_pdf_reported_sha256": "a9191af575d27ca9b959d06a537ca02ac18fa6ec84e0516906a5490e5ab7692f",
+    "source_pdf_bytes_in_package": false,
+    "pdf_original_hash_recomputed_by_reviewer": false,
+    "render_dpi_reported": 300,
+    "page_154_png_sha256_verified": "7363643a7d3c73dca8b1f28ba7ed5965d97aa405fabf3bc7993f2746384821a9",
+    "page_155_png_sha256_verified": "12f5326e43e49ce4c85fe7ee6a9dae90acf343cee93046bd2843cd5fe1c3972e",
+    "page_154_png_dimensions": [
+      2206,
+      3179
+    ],
+    "page_155_png_dimensions": [
+      2205,
+      3180
+    ]
+  },
+  "visual_reading": {
+    "verse_id": "18:10",
+    "volume": 5,
+    "printed_pages_read": [
+      154,
+      155
+    ],
+    "number_in_scan": "ثلاثمائة",
+    "verb_in_scan": "أتى",
+    "archive_ocr_number": "ثلهائة",
+    "archive_ocr_verb": "أنى",
+    "reported_tafsircenter_source_number": "ثلثمائة",
+    "reported_ksu_number": "ثلاثمائة",
+    "assessment": "Visible scan corroborates ثلاثمائة and أتى. OCR readings are erroneous. Tafsir Center spelling may be an orthographic variant relative to this scan; the upstream original was not supplied in this handoff for direct independent text-field verification.",
+    "formal_diagnostic_alignment": "NOT_ALIGNED",
+    "source_editions_identical_verified": false,
+    "passage_boundary_human_attested": false,
+    "scientific_authorization": false
+  },
+  "real_data_query_tests": {
+    "local_operator_report": "PASS FOUR SUPPRESSED BAGHAWY RECORDS; DIAGNOSTIC OVERRIDE RETAINS LABEL; CONTROL TABARY/KATHEER DISPLAY AS NORMAL",
+    "report_present_in_zip": true,
+    "report_hash_matches_manifest": false,
+    "independently_reexecuted_on_local_windows_vault": false,
+    "db_sha256_operator_reported": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+    "unit_tests_reported": "41/41 Windows OK"
+  },
+  "gates": {
+    "package_manifest_integrity": false,
+    "scanned_page_png_evidence_integrity": true,
+    "highres_visual_review": true,
+    "independent_qualified_human_editor_review": false,
+    "redistribution_approved": false,
+    "scholarly_verified": false,
+    "original_tafsir_modified": false
+  },
+  "next_actions": [
+    "Regenerate sha256-manifest.json from final frozen payloads and create a new versioned ZIP; do not mutate or silently replace the original ZIP.",
+    "Run corpus.verify_evidence_package on the rebuilt ZIP; must report PASS for all listed files.",
+    "Verify printed edition provenance and the orthographic decision with an independent qualified human reviewer.",
+    "Do not promote diagnostic text or rights status based only on the high-resolution AI reading."
+  ]
+}
