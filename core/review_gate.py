@@ -127,3 +127,30 @@ def evaluate_action(request: dict) -> dict:
         "rights_granted_by_this_check": False,
         "note": "Eligibility does not verify inputs, publish content, attest a printed edition or waive licenses.",
     }
+
+
+def main():
+    """Policy triage CLI: exit 0 eligible; 1 blocked; 2 invalid input."""
+    import argparse
+    import json
+    from pathlib import Path
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("request", type=Path, help="UTF-8 JSON policy request")
+    arguments = parser.parse_args()
+    try:
+        size = arguments.request.stat().st_size
+        if size > 65536:
+            raise ValueError("Request exceeds 64 KiB policy input limit")
+        request = json.loads(arguments.request.read_text(encoding="utf-8"))
+        decision = evaluate_action(request)
+    except (OSError, ValueError) as exc:
+        print(json.dumps({"decision": "INVALID", "errors": [str(exc)]},
+                         ensure_ascii=False, indent=2))
+        return 2
+    print(json.dumps(decision, ensure_ascii=False, indent=2))
+    return 0 if decision["decision"] == "ELIGIBLE" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
