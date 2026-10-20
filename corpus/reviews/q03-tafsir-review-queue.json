@@ -77,7 +77,15 @@
       "local_campaign_reported_following_witness_characters": 1906,
       "printed_page_visually_verified": false,
       "printed_edition_identity_visually_verified": false,
-      "rights_verified": false
+      "rights_verified": false,
+      "pdf_scanned_volume": 2,
+      "visually_read_printed_pages": [
+        228,
+        229
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false
     },
     {
       "source": "baghawy",
@@ -91,7 +99,15 @@
       "local_campaign_reported_following_witness_characters": 4291,
       "printed_page_visually_verified": false,
       "printed_edition_identity_visually_verified": false,
-      "rights_verified": false
+      "rights_verified": false,
+      "pdf_scanned_volume": 5,
+      "visually_read_printed_pages": [
+        76,
+        77
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false
     },
     {
       "source": "baghawy",
@@ -106,7 +122,17 @@
       "printed_page_visually_verified": false,
       "printed_edition_identity_visually_verified": false,
       "rights_verified": false,
-      "ocr_or_edition_difference_unresolved": true
+      "ocr_or_edition_difference_unresolved": true,
+      "pdf_scanned_volume": 5,
+      "visually_read_printed_pages": [
+        154,
+        155
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false,
+      "visually_read_ocr_correction": "أتى (OCR incorrectly read أنى)",
+      "number_orthography_needs_higher_dpi": true
     },
     {
       "source": "baghawy",
@@ -120,7 +146,15 @@
       "local_campaign_reported_following_witness_characters": 853,
       "printed_page_visually_verified": false,
       "printed_edition_identity_visually_verified": false,
-      "rights_verified": false
+      "rights_verified": false,
+      "pdf_scanned_volume": 6,
+      "visually_read_printed_pages": [
+        330,
+        331
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false
     }
   ],
   "cautions": [
@@ -140,7 +174,9 @@
     "baghawy_source_length_ceiling": "q03-baghawy-length-ceiling.json",
     "baghawy_edition_review_runbook": "q03-baghawy-edition-verification-runbook.md",
     "local_campaign_report": "q03-baghawy-local-campaign-summary.json",
-    "original_summary_sha256": "06014e047b3288e7a0a12c2ea30b21bace56415cfb997f90e62be6342833146f"
+    "original_summary_sha256": "06014e047b3288e7a0a12c2ea30b21bace56415cfb997f90e62be6342833146f",
+    "assistant_visual_review": "q03-baghawy-assistant-visual-review.json",
+    "user_uploaded_private_zip_sha256": "1a7ec8d041767f3f4ab6b14d8c280905ac7faa5b5c221b65f9f8e29feb33067c"
   },
   "last_corpus_ci": {
     "run_id": 39311029761,
