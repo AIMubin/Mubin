@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1.0",
+  "index_id": "pilot:absent-index",
+  "index_kind": "synthetic_fixture",
+  "related_p0_source_id": "pilot:synthetic-fixture",
+  "related_p0_source_sha256": "2658f2a384a3722712c9f2b5e80407b3739526d507c33d79258a1e260a2dead8",
+  "marker": "[[QARINAH]]",
+  "items": [
+    {
+      "id": "pilot:case-part1",
+      "locator": "pilot:absent-index/pilot:case-part1",
+      "text": "sample synthetic line one: COMMAND_FORM\n",
+      "text_sha256": "32053c9f288f5f560d7e540b4c7d780ee17a50dffb9a3144ad1add7ce50b997d"
+    },
+    {
+      "id": "pilot:case-part2",
+      "locator": "pilot:absent-index/pilot:case-part2",
+      "text": "sample synthetic line two: CONTEXT_ONLY\n",
+      "text_sha256": "c427ffbdb1b5a228cffafa7b449b19197b0befe0895cfad6a81fde0c1c9a5437"
+    }
+  ]
+}
