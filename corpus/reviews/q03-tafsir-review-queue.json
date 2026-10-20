@@ -195,7 +195,17 @@
     "user_uploaded_private_zip_sha256": "1a7ec8d041767f3f4ab6b14d8c280905ac7faa5b5c221b65f9f8e29feb33067c",
     "baghawy_18_10_highres": "q03-baghawy-18-10-highres-review.json",
     "private_highres_zip_sha256": "a5ca89d0de68dbb87cfbdfab35a5fa1ff6f03a348a65e68ed4c8ffe2ea0d5f45",
-    "private_highres_zip_manifest_integrity": "FAILED_ONE_HASH_AND_SIZE_MISMATCH"
+    "private_highres_zip_manifest_integrity": "FAILED_ONE_HASH_AND_SIZE_MISMATCH",
+    "baghawy_18_10_highres_v2_private": {
+      "filename": "Q03-18-10-HighRes-Review-v2.zip",
+      "sha256": "58570b34d82eb58b49fcf3edcbec196eea8e2e48642b478c9d03915553471ae4",
+      "verified_payloads": 19,
+      "integrity_gate": "PASS",
+      "v1_manifest_still_failed": true,
+      "source_pdf_hash_recomputed": false,
+      "scholarly_verified": false,
+      "rights_approved": false
+    }
   },
   "last_corpus_ci": {
     "run_id": 39404137364,
