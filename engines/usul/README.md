@@ -83,3 +83,15 @@ The first bounded **real-source-attributed research pilot** is [`engines/usul/pi
 Run `python -m engines.usul.pilots.amr_default` after installing `core/requirements-test.txt`. The four cases demonstrate a default conditional support, a blocking diverting indicator, an unknown diverting indicator and an absent command premise. Tests check the P0 structural bundle, strict semantic binding, citation separation between historical text and synthetic inputs, Unicode-safe Windows output, and the absence of fatwa/scholarly approval flags.
 
 This is **not** independent authentication of the entire source edition or proof that the machine representation expresses all linguistic and jurisprudential restrictions in the original. A short excerpt checksum does not verify the digital site's full HTML, full work or publisher's rights. Continue to maintain `U0.1=experimental_prototype_not_qualified` until engineering acceptance is explicitly scoped and measured.
+
+## U0.1 evidence-scoped exceptions (research-only)
+
+The experimental [exception evidence contract](exception_evidence.py) rejects the false inference **"not found" ⇒ "does not exist"**. In strict execution mode, exception assertions are accepted only as documented inspection of an **enumerated synthetic test scope**, citing P0 evidence records; an uninspected exception remains `UNDETERMINED`. Claimed real-world exhaustiveness, partial inspection presented as total absence, missing evidence and direct Boolean overrides are rejected.
+
+Use [the next-stage al-Waraqat scenario](pilots/scoped_amr_pilot.py):
+
+```bash
+python -m engines.usul.pilots.scoped_amr_pilot
+```
+
+Read [pilot source notes and truth table](pilots/README.md). A fully checked **declared synthetic scope** permits conditional support *for the simulation only*. It does not prove the nonexistence of a textual `qarīnah`, source validity or a juristic obligation. Existing one-step explicit facts remain accessible in `ALLOW_LEGACY_EXPLICIT_FACTS` compatibility mode but must not be described as evidence-backed exception investigations. The Mubin system version, Hadith frozen gold qualification and all scholarly/republication holds are unchanged.
