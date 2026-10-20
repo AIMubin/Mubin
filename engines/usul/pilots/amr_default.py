@@ -203,7 +203,7 @@ def run_pilot() -> dict:
 
 
 def main() -> int:
-    print(json.dumps(run_pilot(), ensure_ascii=False, indent=2))
+    # JSON Unicode escapes survive Windows consoles using legacy cp1252.\n    print(json.dumps(run_pilot(), ensure_ascii=True, indent=2))
     return 0
 
 
