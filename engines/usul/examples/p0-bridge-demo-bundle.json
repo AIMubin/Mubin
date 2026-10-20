@@ -1,0 +1,122 @@
+{
+  "contract_version": "0.1.0",
+  "sources": [
+    {
+      "id": "demo:src",
+      "kind": "usul",
+      "work_title": "synthetic usul workbook",
+      "edition": "demo edition",
+      "locator": "p1",
+      "content_sha256": "b2a5ce4fa952eac4169705f6cfbe8865d1a7149bd3909416186aa9f8297054a3"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "demo:ev-premise-source",
+      "source_id": "demo:src",
+      "locator": "p1",
+      "excerpt": "synthetic excerpt",
+      "excerpt_sha256": "b50fc68b7db0df2fdbed70e9fee9bfeaef64e7f7e130cb8f35e58afb7e9ed550",
+      "verification_status": "verified",
+      "verification_method": "exact_source_match"
+    },
+    {
+      "id": "demo:ev-rule-source",
+      "source_id": "demo:src",
+      "locator": "p2",
+      "excerpt": "synthetic excerpt",
+      "excerpt_sha256": "b50fc68b7db0df2fdbed70e9fee9bfeaef64e7f7e130cb8f35e58afb7e9ed550",
+      "verification_status": "verified",
+      "verification_method": "exact_source_match"
+    },
+    {
+      "id": "demo:ev-fact",
+      "source_id": "demo:src",
+      "locator": "p3",
+      "excerpt": "synthetic excerpt",
+      "excerpt_sha256": "b50fc68b7db0df2fdbed70e9fee9bfeaef64e7f7e130cb8f35e58afb7e9ed550",
+      "verification_status": "verified",
+      "verification_method": "exact_source_match"
+    }
+  ],
+  "methodologies": [
+    {
+      "id": "demo:profile",
+      "label": "synthetic propositional profile",
+      "version": "0.1.0",
+      "source_evidence_ids": [
+        "demo:ev-rule-source"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "demo:c-premise",
+      "statement": "synthetic premise holds",
+      "claim_type": "source_attributed",
+      "conclusion_kind": "source_derived",
+      "evidence_ids": [
+        "demo:ev-premise-source"
+      ],
+      "modality": "actual",
+      "assessment_status": "no_recorded_objection"
+    },
+    {
+      "id": "demo:c-conclusion",
+      "statement": "synthetic conclusion follows",
+      "claim_type": "inferred",
+      "conclusion_kind": "rule_derived",
+      "evidence_ids": [
+        "demo:ev-rule-source"
+      ],
+      "inference_id": "demo:inf1",
+      "modality": "actual",
+      "assessment_status": "no_recorded_objection"
+    }
+  ],
+  "rules": [
+    {
+      "id": "demo:rule1",
+      "methodology_id": "demo:profile",
+      "rule_type": "deduction",
+      "expression": "IF synthetic premise THEN synthetic output (documentation only)",
+      "preconditions": [
+        "demo:precondition"
+      ],
+      "exceptions": [],
+      "source_evidence_ids": [
+        "demo:ev-rule-source"
+      ],
+      "formalization_status": "machine_checkable"
+    }
+  ],
+  "inferences": [
+    {
+      "id": "demo:inf1",
+      "inference_kind": "deduction",
+      "methodology_id": "demo:profile",
+      "rule_ids": [
+        "demo:rule1"
+      ],
+      "premise_claim_ids": [
+        "demo:c-premise"
+      ],
+      "conclusion_claim_id": "demo:c-conclusion",
+      "exception_checks": []
+    }
+  ],
+  "objections": [],
+  "proofs": [
+    {
+      "id": "demo:proof1",
+      "conclusion_claim_id": "demo:c-conclusion",
+      "inference_ids": [
+        "demo:inf1"
+      ],
+      "methodology_id": "demo:profile",
+      "verification_scope": "structural_only",
+      "verification_status": "structurally_checked"
+    }
+  ],
+  "historical_availability": []
+}
