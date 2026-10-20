@@ -41,6 +41,11 @@ class PrintAttestationTests(unittest.TestCase):
             self.assertTrue(page["searchable_text_detected"])
         with self.assertRaises(FileExistsError):
             capture(self.pdf, "4:43", 2, [1], out, self.metadata)
+        high_res = capture(self.pdf, "4:43", 2, [1], self.root / "hires",
+                           self.metadata, dpi=300)
+        self.assertEqual(high_res["render_dpi"], 300)
+        self.assertGreater(high_res["pages"][0]["rendered_width_pixels"],
+                           report["pages"][0]["rendered_width_pixels"])
 
     def test_reject_wrong_volume_and_page(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -53,6 +58,9 @@ class PrintAttestationTests(unittest.TestCase):
                 capture(self.pdf, "4:43", 2, [9], self.root / "bad", self.metadata)
             with self.assertRaises(ValueError):
                 capture(self.pdf, "4:43", 2, [1, 1], self.root / "bad", self.metadata)
+            with self.assertRaises(ValueError):
+                capture(self.pdf, "4:43", 2, [1], self.root / "bad", self.metadata,
+                        dpi=600)
 
 
 if __name__ == "__main__":
