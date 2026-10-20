@@ -19,6 +19,7 @@ from pathlib import Path
 
 from core.inference.validator import validate_bundle
 from engines.usul.executor import evaluate
+from engines.usul.exception_evidence import ExceptionEvidenceError, materialize_exception_assessments
 from engines.usul.semantic_binding import BindingError, cited_sources, validate_binding
 
 BRIDGE_VERSION = "p0-usul-u0.1/0.1.0"
@@ -65,7 +66,8 @@ def _spec_cycle(specs_by_id):
     return any(visit(node) for node in graph)
 
 
-def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=False):
+def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=False,
+                  exception_assessments=None, require_evidence_exceptions=False):
     """Return the full derivation record; never mutates the bundle."""
     structural_errors = validate_bundle(bundle)
     # Invalid bundles can omit rules entirely; do not dereference them before
@@ -85,6 +87,10 @@ def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=Fa
         "rule_citations": {},
         "conclusion_citations": {},
         "binding_policy": "REQUIRE_BOUND" if require_semantic_binding else "ALLOW_LABELLED_LEGACY",
+        "exception_evidence_policy": ("REQUIRE_SYNTHETIC_SCOPED_ATTESTATIONS"
+                                      if require_evidence_exceptions else "ALLOW_LEGACY_EXPLICIT_FACTS"),
+        "exception_assessment_trace": [],
+        "real_world_absence_verified": False,
         "citation_scope": "SOURCE_METADATA_ONLY_NO_TEXT_OR_RIGHTS_GRANTED",
         "semantic_equivalence_verified": False,
         "external_source_authentication_verified": False,
@@ -168,6 +174,32 @@ def build_and_run(bundle, specs, fact_assertions, *, require_semantic_binding=Fa
                                f"facts[{assertion['atom']}]", facts_rejected):
             continue
         facts.append(assertion)
+
+    # Strict experiments cannot take an ordinary positive/negative assertion
+    # about a qarinah as verified without a scoped, traceable assessment.
+    all_exception_atoms = {
+        pred["atom"] for spec in specs_by_id.values()
+        for pred in spec.get("unless_any", [])
+    }
+    if require_evidence_exceptions and any(f["atom"] in all_exception_atoms for f in facts):
+        derivation["derivation_refused"] = {
+            "code": "UNSCOPED_EXCEPTION_FACT_REFUSED",
+            "detail": "Provide an explicit scoped assessment; direct exception facts are not admissible",
+        }
+        return derivation
+    if exception_assessments is not None:
+        try:
+            generated, trace = materialize_exception_assessments(
+                bundle, specs_by_id, exception_assessments, facts,
+            )
+        except (ExceptionEvidenceError, TypeError, KeyError) as exc:
+            derivation["derivation_refused"] = {
+                "code": "INVALID_EXCEPTION_ASSESSMENT",
+                "detail": str(exc),
+            }
+            return derivation
+        facts.extend(generated)
+        derivation["exception_assessment_trace"] = trace
 
     objections = []
     for objection in bundle.get("objections", []):
@@ -262,13 +294,21 @@ def main():
     parser.add_argument("facts", type=Path)
     parser.add_argument("--require-semantic-binding", action="store_true",
                         help="Reject executable rules without versioned P0 clause binding")
+    parser.add_argument("--exception-assessments", type=Path,
+                        help="Optional JSON synthetic-scope exception observation array")
+    parser.add_argument("--require-evidence-exceptions", action="store_true",
+                        help="Reject direct exception facts; only synthetic scoped assessments are accepted")
     args = parser.parse_args()
     try:
         result = build_and_run(
             json.loads(args.bundle.read_text(encoding="utf-8")),
             json.loads(args.specs.read_text(encoding="utf-8")),
             json.loads(args.facts.read_text(encoding="utf-8")),
-            require_semantic_binding=args.require_semantic_binding)
+            require_semantic_binding=args.require_semantic_binding,
+            exception_assessments=(
+                json.loads(args.exception_assessments.read_text(encoding="utf-8"))
+                if args.exception_assessments else None),
+            require_evidence_exceptions=args.require_evidence_exceptions)
     except (OSError, ValueError) as exc:
         print(json.dumps({"status": "INVALID_INPUT", "error_type": type(exc).__name__,
                           "scholarly_verified": False}, ensure_ascii=False, indent=2))
