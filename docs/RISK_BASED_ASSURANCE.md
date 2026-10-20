@@ -68,3 +68,7 @@ These are *feature/action-specific* holds. They do **not** halt work on Quran Q0
 - If a human check is required but unavailable, publish only the safer permitted operation (e.g. the source locator or diagnostic *status*, without unpublished source content or an authoritative legal opinion).
 - **Existing H3.9.2 Schema-31 acceptance thresholds and 158 pending cases remain frozen.** Changing their qualification protocol would require a separate explicit, auditable protocol version, never an implicit policy migration.
 - This policy does not automatically relax [corpus.registry.can_publish](../corpus/registry.py), the existing conservative registry publication function. A separate action-specific source-publication implementation and external attestation checks are needed before deploying broader read access.
+
+## Source-use clarification
+
+Use and cite identified sources proactively in development, evaluation and bounded research; do not wait for a blanket human corpus approval. Require actual provenance data per conclusion and explicit publication checks for the copied text. **Attribution alone is neither an external authenticity finding nor permission for redistribution.** See [source-use and attribution policy](SOURCE_ATTRIBUTION_POLICY.md) and the U0.1 structural semantic binding.
