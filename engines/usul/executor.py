@@ -204,3 +204,30 @@ def evaluate(model):
         "conclusions": results,
         "trace": trace,
     }
+
+
+def main():
+    """Exit 0 = simulated, 2 = invalid input; neither means valid fiqh."""
+    import argparse
+    import json
+    from pathlib import Path
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("scenario", type=Path)
+    args = parser.parse_args()
+    try:
+        if args.scenario.stat().st_size > 131072:
+            raise ContractError("Input exceeds U0.1 prototype 128 KiB limit")
+        scenario = json.loads(args.scenario.read_text(encoding="utf-8"))
+        result = evaluate(scenario)
+    except (OSError, ValueError, RecursionError) as exc:
+        print(json.dumps({"status": "INVALID_SCENARIO", "error_type": type(exc).__name__,
+                          "scholarly_verified": False, "valid_juristic_ruling": False},
+                         ensure_ascii=False, indent=2))
+        return 2
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
