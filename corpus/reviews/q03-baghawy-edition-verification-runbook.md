@@ -63,3 +63,21 @@ Use a local Windows machine with PyMuPDF 1.26.x to capture selected PDF **page i
 The indices 1,2 are COMMAND PLACEHOLDERS, not actual identified pages. The JSON metadata needs work, publisher, publication_year, edition, scan_url; capture produces PDF SHA-256, PNG page hashes, render version and per-page metadata. It intentionally leaves printed pagination, edition identity, paragraph boundary review, rights approval, and scholarly verification false.
 
 The external digital index Islamweb indicates volume 2 / site page 220 for verse 4:43 and volume 5 / site page 67 for 17:4. **These are candidate finding aids, not verified printed page numbers of the Dar Taybah 1409 scan.** No source text or scans are approved for public commit. Review rendered pages locally and record printed folio/page, source-imprint confirmation and reviewer acceptance separately.
+
+## Q0.3 follow-up: high-resolution verification of al-Kahf 18:10
+
+The initial private image handoff contained 120-dpi rendered pages 154–155 of the vol.5 candidate scan, from which an AI visual review read `فلما أتى الملك الخبر` (where archive OCR read `أنى`). The letter form in `ثلثمائة/ثلاثمائة` is **not yet securely adjudicated**, and the normalised textual witness does not have a unique suffix alignment; do not mark it VERIFIED.
+
+The print-scanning tool now permits 300-dpi renders (bounded 96–360 dpi). This must be a fresh render **from the original PDF**, not image upscaling. On the user's Windows system, run the following after updating the repository:
+
+~~~powershell
+python -m corpus.attest_tafsir_print_pdf `
+  --pdf "D:\MubinEditions\malimt5.pdf" `
+  --verse-id "18:10" --volume 5 --pages "154,155" --dpi 300 `
+  --edition-metadata "corpus-data\editorial\baghawy\18-10\edition.json" `
+  --out-dir "corpus-data\editorial\baghawy\18-10\print-proof-300dpi"
+~~~
+
+The destination must not already exist. Verify the original PDF SHA-256 `a9191af575d27ca9b959d06a537ca02ac18fa6ec84e0516906a5490e5ab7692f` against the local scanned volume before proceeding. Return only the two newly rendered PNGs, their full SHA-256 values, and the metadata JSON for private visual review. Do not commit images or copyrighted text to GitHub.
+
+Human reviewer signs off separately on the exact number spelling, edition imprint and paragraph boundaries; CLI output cannot assert scholarly or redistribution approval.
