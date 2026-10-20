@@ -43,15 +43,15 @@ def evaluate_action(request: dict) -> dict:
     if not isinstance(request, dict):
         raise ValueError("Review request must be a mapping")
     action = request.get("action")
-    if action not in ACTIONS:
+    if not isinstance(action, str) or action not in ACTIONS:
         raise ValueError("Unknown or missing review action")
     allowed_keys = {"action", "rights", "source_kind"} | BOOLEAN_EVIDENCE
     unknown = set(request) - allowed_keys
     if unknown:
         raise ValueError("Unrecognized assurance fields: " + ", ".join(sorted(unknown)))
-    if "rights" in request and request["rights"] not in RIGHTS:
+    if "rights" in request and (not isinstance(request["rights"], str) or request["rights"] not in RIGHTS):
         raise ValueError("Unknown rights state")
-    if "source_kind" in request and request["source_kind"] not in KINDS:
+    if "source_kind" in request and (not isinstance(request["source_kind"], str) or request["source_kind"] not in KINDS):
         raise ValueError("Unknown source kind")
     for key in BOOLEAN_EVIDENCE & set(request):
         if type(request[key]) is not bool:
