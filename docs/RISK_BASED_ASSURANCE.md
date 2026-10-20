@@ -1,6 +1,6 @@
 # Mubin — risk-proportionate assurance, no blanket human-review gate
 
-**Effective:** 2026-10-20. **System:** \`0.1.0-alpha\`. **Quran Engine:** \`Q0.3\` in progress until its *engineering* exit criteria are actually met.
+**Effective:** 2026-10-20. **System:** `0.1.0-alpha`. **Quran Engine:** `Q0.3` in progress until its *engineering* exit criteria are actually met.
 
 ## Principle
 
@@ -25,10 +25,10 @@ Separate these statements, and never substitute one for another:
 | Publish canonical Quran witness | Pinned, verified full witness/riwayah/numbering and specific display integrity; rights checked | Do not auto-repair text (including the 364 slash-derived anomalies) |
 | Publish an editorial **completion or reconstruction** | Document source alignment, text boundaries, approval of the particular editorial alteration, rights | Accountable editorial reviewer when judgment is involved; never silently alter Quran text |
 | Publish *an original scholarly conclusion* as authoritative | Source/methodology/proof chain + scientific quality | Qualified scholarly review or classify as non-authoritative research hypothesis |
-| Promote historical Hadith \`H3.9.2\` Schema-31 gold | Frozen original benchmark protocol **and** independent-human requirements | **Do not alter 158 pending decisions or relabel AI-sourced answers as gold** |
+| Promote historical Hadith `H3.9.2` Schema-31 gold | Frozen original benchmark protocol **and** independent-human requirements | **Do not alter 158 pending decisions or relabel AI-sourced answers as gold** |
 | Mubin system release | Integrated evaluation and relevant content-level gates | Not blocked by unrelated pending cases; no automatic promotion of scholarly or rights flags |
 
-A separate implementation in [core/review_gate.py](../core/review_gate.py) validates *declared* prerequisites and returns \`ELIGIBLE\` / \`BLOCKED\`. It is a **policy triage**, not an external attestation service. Its boolean assertions must be supplied from independently checked evidence; a self-declared \`true\` never authenticates a source, transfers rights, or constitutes a human signoff.
+A separate implementation in [core/review_gate.py](../core/review_gate.py) validates *declared* prerequisites and returns `ELIGIBLE` / `BLOCKED`. It is a **policy triage**, not an external attestation service. Its boolean assertions must be supplied from independently checked evidence; a self-declared `true` never authenticates a source, transfers rights, or constitutes a human signoff.
 
 ## Q0.3 concrete split
 
@@ -36,7 +36,7 @@ A separate implementation in [core/review_gate.py](../core/review_gate.py) valid
 
 - 31,180 source tafsir text fields match their pinned upstream values (operator report and machine-readable records).
 - Four Baghawi upstream fields end at 32,767 characters, with independent digital/image continuation evidence.
-- The 18:10 high-resolution scan reads \`ثلاثمائة\` and \`أتى\`, while mechanical suffix alignment remains \`NOT_ALIGNED\`; original SQLite is unchanged.
+- The 18:10 high-resolution scan reads `ثلاثمائة` and `أتى`, while mechanical suffix alignment remains `NOT_ALIGNED`; original SQLite is unchanged.
 - The **corrected** private evidence ZIP v2 passed 19/19 member-hash checks; original v1's manifest remains defective.
 - Default query hides suspect Baghawi entries; four-case tests and other-source regression tests pass.
 
@@ -56,8 +56,8 @@ These are *feature/action-specific* holds. They do **not** halt work on Quran Q0
 
 1. Declare the **engineering scope** and regression/evidence checklist before evaluating. Identify exact source versions and test commands.
 2. Run deterministic checks in CI (Linux/Windows where relevant). Record hashes and observable results, not just the presence of a report.
-3. For any defect, state the bounded effect: \`quarantined\`, \`exposed with uncertainty\`, or \`release blocker\`. A quarantined optional tafsir entry is not a reason to block unrelated engineering.
-4. Mark \`engineering_qualified\` for that *narrow workstream* only if all stated technical checks pass; leave \`scholarly_verified=false\` and \`redistribution_approved=false\` where no direct proof exists.
+3. For any defect, state the bounded effect: `quarantined`, `exposed with uncertainty`, or `release blocker`. A quarantined optional tafsir entry is not a reason to block unrelated engineering.
+4. Mark `engineering_qualified` for that *narrow workstream* only if all stated technical checks pass; leave `scholarly_verified=false` and `redistribution_approved=false` where no direct proof exists.
 5. Run scholarly/editorial or rights review **asynchronously per contested publication action**, not as an undifferentiated gate on every commit.
 6. For an integrated public release, evaluate the actual features included. No project-wide version increment solely on Quran/ Hadith internal milestones.
 
