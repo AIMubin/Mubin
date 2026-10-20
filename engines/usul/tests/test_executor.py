@@ -73,6 +73,23 @@ class UsulPrototypeTests(unittest.TestCase):
         self.assertEqual(result["conclusions"]["demo:output"]["status"], "CONTESTED")
         self.assertIsNone(result["conclusions"]["demo:output"]["supported_truth"])
 
+    def test_rule_conclusion_conflicting_with_explicit_fact_is_contested(self):
+        case = scenario()
+        case["facts"].append({
+            "atom": "demo:output", "truth": "false",
+            "source_evidence_ids": ["demo:contradictory_fact"],
+        })
+        result = evaluate(case)
+        self.assertEqual(result["conclusions"]["demo:output"]["status"], "CONTESTED")
+        self.assertTrue(result["conclusions"]["demo:output"]["conflicts_with_explicit_input_fact"])
+        self.assertIsNone(result["conclusions"]["demo:output"]["supported_truth"])
+
+    def test_trace_preserves_evidence_identifiers_without_verifying_them(self):
+        result = evaluate(scenario())
+        self.assertEqual(result["trace"][0]["rule_source_evidence_ids"], ["demo:ev3"])
+        self.assertEqual(result["trace"][0]["premise_source_evidence_ids"]["demo:premise"], ["demo:ev1"])
+        self.assertFalse(result["input_evidence_ids_externally_verified"])
+
     def test_rule_chaining_does_not_occur(self):
         case = scenario()
         second = copy.deepcopy(case["rules"][0])
