@@ -104,5 +104,33 @@ class BoundSourceCitationTests(unittest.TestCase):
         self.assertFalse(out["external_source_authentication_verified"])
 
 
+    def test_bound_cli_example_uses_metadata_citations_and_no_fatwa(self):
+        import json
+        import subprocess
+        import sys
+        from pathlib import Path
+        repo = Path(__file__).resolve().parents[3]
+        directory = repo / "engines" / "usul" / "examples"
+        names = (
+            "p0-bridge-demo-bundle.json",
+            "p0-bridge-demo-bound-specs.json",
+            "p0-bridge-demo-facts.json",
+        )
+        proc = subprocess.run(
+            [sys.executable, "-m", "engines.usul.p0_bridge",
+             *(str(directory / name) for name in names)],
+            capture_output=True, text=True, cwd=repo, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        output = json.loads(proc.stdout)
+        self.assertEqual(output["semantic_bindings"]["demo:rule1"]["status"],
+                         "STRUCTURALLY_BOUND")
+        self.assertTrue(output["source_citations"])
+        self.assertEqual(output["usul_result"]["conclusions"]["demo:output"]["status"],
+                         "CONDITIONALLY_SUPPORTED")
+        self.assertFalse(output["scholarly_verified"])
+        self.assertFalse(output["external_source_authentication_verified"])
+        self.assertFalse(output["public_fatwa_authorized"])
+
+
 if __name__ == "__main__":
     unittest.main()
