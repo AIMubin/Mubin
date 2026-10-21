@@ -23,6 +23,9 @@ from engines.usul.evidence_context_graph import build_context_graph
 from engines.usul.pilots.waraqat_extract import (
     CONTENT_START, extract as extract_w1, TOOL_VERSION,
 )
+from engines.usul.pilots.waraqat_chapter_crosswalk import (
+    candidate_crosswalk, HeadingCrosswalkError,
+)
 from engines.usul.pilots.waraqat_stage06 import (
     W1_EXPORT_SHA, W1_RAW_SHA, W1_SECTION_SHA, W1_URL,
 )
@@ -175,7 +178,7 @@ def inventory(raw_html: bytes, export: bytes, *, raw_pin, export_pin):
     }
 
 
-def campaign(raw_html, export, queries, *, raw_pin, export_pin):
+def campaign(raw_html, export, queries, *, raw_pin, export_pin, secondary_html=None):
     """One pass over all W1 chapters. Failed isolated chapters stay visible."""
     _validate_queries(queries)
     index = inventory(raw_html, export, raw_pin=raw_pin, export_pin=export_pin)
@@ -238,6 +241,17 @@ def campaign(raw_html, export, queries, *, raw_pin, export_pin):
                     "w2_alignment": "PENDING_COMPARATOR_CHAPTER_INVENTORY",
                 })
     passed = sum(x["status"] == "PRIMARY_INDEX_AND_CONTEXT_GRAPH_PASS" for x in results)
+    comparison = None
+    if secondary_html is not None:
+        try:
+            comparison = candidate_crosswalk(index, secondary_html)
+        except (ValueError, UnicodeError) as exc:
+            comparison = {
+                "status": "W2_HEADING_CROSSWALK_BLOCKED",
+                "reason_code": type(exc).__name__,
+                "w2_chapter_byte_extraction_verified": False,
+                "full_witness_comparison_qualified": False,
+            }
     result = {
         "engine": VERSION,
         "status": ("PRIMARY_WITNESS_BATCH_COVERAGE_PASS"
@@ -245,6 +259,7 @@ def campaign(raw_html, export, queries, *, raw_pin, export_pin):
                    else "PRIMARY_WITNESS_BATCH_PARTIAL"),
         "inventory": index,
         "chapter_results": results,
+        "w2_heading_crosswalk": comparison,
         "chapters_processed": index["chapter_count"],
         "chapters_passed": passed,
         "chapters_blocked": index["chapter_count"] - passed,
@@ -269,6 +284,7 @@ def main():
     p.add_argument("--primary-html", required=True, type=Path)
     p.add_argument("--primary-export", required=True, type=Path)
     p.add_argument("--queries", required=True, type=Path)
+    p.add_argument("--secondary-html", type=Path)
     p.add_argument("--report", required=True, type=Path)
     args = p.parse_args()
     try:
@@ -284,9 +300,17 @@ def main():
             export_data = args.primary_export.read_bytes()
             _need(len(html_data) <= 8_388_608 and len(export_data) <= 8_388_608,
                   "input larger than W1 contract")
+            if args.secondary_html is not None and not args.secondary_html.is_file():
+                raise BatchCoverageError("requested secondary HTML is missing")
+            secondary = (args.secondary_html.read_bytes()
+                         if args.secondary_html is not None else None)
             report = campaign(html_data, export_data, queries,
-                              raw_pin=W1_RAW_SHA, export_pin=W1_EXPORT_SHA)
-            code = 0 if report["status"] == "PRIMARY_WITNESS_BATCH_COVERAGE_PASS" else 2
+                              raw_pin=W1_RAW_SHA, export_pin=W1_EXPORT_SHA,
+                              secondary_html=secondary)
+            code = (0 if report["status"] == "PRIMARY_WITNESS_BATCH_COVERAGE_PASS"
+                    and (report["w2_heading_crosswalk"] is None or
+                         report["w2_heading_crosswalk"]["status"] ==
+                         "W2_HEADING_CROSSWALK_CANDIDATES_ONLY") else 2)
     except (OSError, ValueError, UnicodeError) as exc:
         report, code = {"status": "FAIL", "reason_code": type(exc).__name__,
                         "source_text_included": False}, 1
