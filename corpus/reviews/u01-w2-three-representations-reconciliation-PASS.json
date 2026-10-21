@@ -1,0 +1,73 @@
+{
+  "delta_accounting": {
+    "archived_claimed_cr_added": 10,
+    "archived_legacy_lf_only_bytes": 1700,
+    "historical_field_corrected_via_additive_erratum": true,
+    "legacy_lf_minus_hardened": 0,
+    "legacy_windows_minus_hardened": 10,
+    "legacy_windows_minus_legacy_lf": 10,
+    "measured_cr_added": 10,
+    "measured_legacy_lf_only_bytes": 1696,
+    "stage06_minus_hardened": 6
+  },
+  "engine": "waraqat-w2-receipt-reconcile/0.1.0",
+  "legacy_lf_only": {
+    "bytes": 1696,
+    "linefeed_count": 10,
+    "sha256": "6e88c20addae4744be5d3754fe17e46965d96793f98f869c6d1027f7c343981f"
+  },
+  "pairwise_text_profiles": {
+    "legacy_full_vs_hardened_full": {
+      "nonempty_lines_identical": true,
+      "nonwhitespace_codepoints_identical": true,
+      "whitespace_delimited_tokens_identical": true
+    },
+    "stage06_vs_hardened_full": {
+      "nonempty_lines_identical": true,
+      "nonwhitespace_codepoints_identical": true,
+      "whitespace_delimited_tokens_identical": true
+    },
+    "stage06_vs_legacy_full": {
+      "nonempty_lines_identical": true,
+      "nonwhitespace_codepoints_identical": true,
+      "whitespace_delimited_tokens_identical": true
+    }
+  },
+  "pinned_html_sha256": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+  "private_audit_report_sha256": "840b9eeb41726e10f5417188272d74b1e90c70d0a93718a3379661c4f87dbd0c",
+  "provenance_correction": {
+    "basis": "pinned-private-audit-exact-replay",
+    "historical_hardened_digest_was_prefix_only": true,
+    "historical_legacy_digest_was_prefix_only": true,
+    "historical_legacy_lf_only_bytes": 1700,
+    "historical_receipt_unchanged": true,
+    "measured_legacy_lf_only_bytes": 1696
+  },
+  "public_fatwa_authorized": false,
+  "receipt_sha256": "e9fce615e93fa9159e353841789e5729dad2263de99d7e414104874441b264aa",
+  "redistribution_approved": false,
+  "review_id": "u01-w2-three-representations-reconciliation-erratum",
+  "schema_version": "0.1.0",
+  "scholarly_verified": false,
+  "semantic_equivalence_verified": false,
+  "semantic_rules_qualified": false,
+  "source_text_included": false,
+  "status": "EVIDENCE_RECONCILIATION_PASS",
+  "superseded_receipt_review_id": "u01-w2-three-representations-final-audit",
+  "superseded_receipt_sha256": "d7a914e9ee6964f78d864c34cd7cd0dcfa240cd6b667d2ec01068088c2927168",
+  "supersedes_interpretation_only": true,
+  "three_representations": {
+    "hardened_full": {
+      "bytes": 1696,
+      "sha256": "6e88c20addae4744be5d3754fe17e46965d96793f98f869c6d1027f7c343981f"
+    },
+    "legacy_full": {
+      "bytes": 1706,
+      "sha256": "e0f621b46da271756a3c548864fcb144519a063674784ca16fe6b070bf246da2"
+    },
+    "stage06": {
+      "bytes": 1702,
+      "sha256": "db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358"
+    }
+  }
+}

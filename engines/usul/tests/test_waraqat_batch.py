@@ -151,6 +151,50 @@ class FullBookBatchTests(unittest.TestCase):
         with self.assertRaisesRegex(BatchCoverageError, "listed section hash"):
             batch_retrieve_and_graph(exported, meta, QUERIES)
 
+    def test_deleted_sections_rejected_even_when_inventory_digest_recomputed(self):
+        for removed in (0, 1, -1):
+            with self.subTest(removed=removed):
+                exported, meta = self.inv(n=4)
+                altered = copy.deepcopy(meta)
+                altered["sections"].pop(removed)
+                altered["partition_count_including_prelude"] = len(altered["sections"])
+                altered["chapter_heading_count"] = len(altered["sections"])-1
+                altered["inventory_sha256"] = _digest(
+                    json.dumps({k:v for k,v in altered.items()
+                                if k != "inventory_sha256"},
+                               ensure_ascii=False, sort_keys=True,
+                               separators=(",", ":"), allow_nan=False).encode("utf-8"))
+                with self.assertRaises(BatchCoverageError):
+                    batch_retrieve_and_graph(exported, altered, QUERIES)
+
+    def test_reordered_duplicate_and_coordinate_tampering_rejected(self):
+        exported, meta = self.inv(n=4)
+        for change in ("duplicate", "reorder", "overlap", "line", "digest"):
+            with self.subTest(change=change):
+                altered = copy.deepcopy(meta)
+                if change == "duplicate":
+                    altered["sections"][2]["id"] = altered["sections"][1]["id"]
+                elif change == "reorder":
+                    altered["sections"][1], altered["sections"][2] = (
+                        altered["sections"][2], altered["sections"][1])
+                elif change == "overlap":
+                    altered["sections"][2]["source_byte_start"] -= 1
+                elif change == "line":
+                    altered["sections"][2]["source_line_start"] += 1
+                else:
+                    altered["inventory_sha256"] = "0"*64
+                with self.assertRaises(BatchCoverageError):
+                    batch_retrieve_and_graph(exported, altered, QUERIES)
+
+    def test_independent_trusted_digest_anchor(self):
+        from engines.usul.waraqat_batch import validate_inventory
+        exported, meta = self.inv(n=4)
+        self.assertTrue(validate_inventory(exported, meta,
+                                          trusted_export_sha=_digest(exported),
+                                          trusted_html_sha=meta["source_raw_html_sha256"]))
+        with self.assertRaisesRegex(BatchCoverageError, "trusted source digest"):
+            validate_inventory(exported, meta, trusted_export_sha="0"*64)
+
     def test_missing_private_source_does_not_claim_pass(self):
         with tempfile.TemporaryDirectory() as name:
             p = Path(name)
