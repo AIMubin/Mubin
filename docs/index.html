@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="theme-color" content="#122e2d">
+  <title>مُبين | معاينة بحثية مفتوحة</title>
+  <meta name="description" content="مُبين: معاينة عامة لبنية التوثيق والبحث في البيانات الوصفية، دون فتاوى آلية أو نشر لمتون غير معتمدة.">
+  <link rel="stylesheet" href="./preview.css">
+  <script src="./preview.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">الانتقال إلى المحتوى</a>
+  <header class="masthead">
+    <div class="container headbar">
+      <a href="./" class="wordmark" aria-label="مُبين، الصفحة الرئيسية">مُبين <span>MUBIN</span></a>
+      <nav aria-label="التنقل">
+        <a href="#engines">المحركات</a><a href="#explore">تجربة البحث</a><a href="#limits">حدود النسخة</a>
+        <a href="https://github.com/AIMubin/Mubin" rel="noopener noreferrer">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <section class="hero container">
+      <div class="eyebrow">معاينة تقنية عامة · Public research preview</div>
+      <h1>المعرفة تبدأ<br><em>بأثرٍ يمكن تتبّعه.</em></h1>
+      <p class="lead">نطوّر بنية بحثية تربط النصوص بمصادرها وسياقاتها، وتفصل بين المطابقة اللغوية والتفسير العلمي. هذه النسخة تستعرض <strong>بيانات وصفية فقط</strong> دون نشر الكتب المحفوظة محليًا أو إصدار أحكام شرعية.</p>
+      <div class="meta" id="statusline" aria-live="polite">جارٍ تحميل البيانات الوصفية المثبتة…</div>
+      <div class="hero-links">
+        <a class="primary-link" href="#explore">استكشف تجربة البحث ←</a>
+        <a class="subtle-link" href="https://github.com/AIMubin/Mubin/blob/main/docs/RISK_BASED_ASSURANCE.md" rel="noopener noreferrer">سياسة الاعتماد والحقوق ↗</a>
+      </div>
+    </section>
+    <section class="statstrip" aria-label="مقاييس تجريبية">
+      <div class="container stats">
+        <div><strong id="metric-nodes">—</strong><span>عقد توثيقية</span></div>
+        <div><strong id="metric-edges">—</strong><span>رابطًا بنيويًا</span></div>
+        <div><strong>2</strong><span>شاهدان رقميان مستقلان</span></div>
+        <div><strong>0</strong><span>فتاوى مولّدة أو معتمدة</span></div>
+      </div>
+    </section>
+    <section id="engines" class="container section">
+      <div class="section-lead"><div class="eyebrow">System map</div><h2>المحركات وحالة الإتاحة</h2><p>لا يحوّل نضج أي محرك داخلي إلى تصريح بنشر محتواه أو استخدامه في استنباط شرعي.</p></div>
+      <div id="engine-grid" class="engine-grid" aria-live="polite"></div>
+    </section>
+    <section id="explore" class="explore">
+      <div class="container section">
+        <div class="section-lead"><div class="eyebrow">Evidence lab · Metadata only</div><h2>كيف نجد أثر اللفظ؟</h2><p>مثال بحثي محدود في <em>باب الأمر</em> من <em>الورقات</em>، يعرض أعداد المطابقات في شاهدين محفوظين ببصمات مستقلة. اختلاف التطبيع لا يثبت تطابق المعنى.</p></div>
+        <div class="explorer">
+          <div class="explorer-head">
+            <label for="query-filter">استعرض الاستعلامات المعروفة</label>
+            <input type="search" id="query-filter" autocomplete="off" placeholder="ابحث عن: الأمر، القرينة، الوجوب…" aria-describedby="search-note">
+          </div>
+          <p id="search-note" class="hint">هذه تجربة تصفية لنتائج ثابتة ومُدقّقة مسبقًا؛ ليست بحثًا مباشرًا في نصوص الكتب.</p>
+          <div id="query-results" class="results" aria-live="polite"><p class="hint">جارٍ تحميل سجل البحث…</p></div>
+          <div class="sources">
+            <h3>المراجع الرقمية</h3>
+            <div id="source-links"></div>
+            <p class="hint">وجود عبارة في شاهد رقمي لا يثبت صحة طبعة أو اعتماد تفسير أو غياب قرينة شرعية.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="limits" class="container section limits">
+      <div class="section-lead"><div class="eyebrow">Publication boundary</div><h2>ما الذي لم يُنشر؟</h2></div>
+      <div class="limit-grid">
+        <article><h3>نصوص القرآن والتفسير</h3><p>لا تُعرض النصوص التي تحتاج تحققًا مستقلًا من سلامة النسخة والحقوق الخاصة بالنشر.</p></article>
+        <article><h3>تأهيل أحاديث جديد</h3><p>لم تتحول مراجعات الحديث البشرية المعلقة إلى قرارات آلية، ولم تتغير المعايير المجمدة.</p></article>
+        <article><h3>فتاوى أو ترجيحات آلية</h3><p>لا يصدر الموقع أحكامًا شرعية. العلاقات المعروضة علاقات بحث واستشهاد وصفية لا أكثر.</p></article>
+      </div>
+      <p class="english">English: This is a non-authoritative, read-only metadata preview. It does not publish restricted texts, certify interpretations, issue fatwas, or verify printed editions.</p>
+    </section>
+  </main>
+  <footer class="footer"><div class="container footrow"><span>مُبين · Mubin — مشروع بحثي مفتوح المصدر</span><span>لا تعتمد هذه المعاينة لإصدار حكم شرعي · <a href="https://github.com/AIMubin/Mubin" rel="noopener noreferrer">المستودع والمصادر ↗</a></span></div></footer>
+</body>
+</html>
