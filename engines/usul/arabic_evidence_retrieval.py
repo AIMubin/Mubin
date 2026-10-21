@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import unicodedata
 from pathlib import Path
 
 from engines.usul.witness_alignment import (
@@ -62,7 +63,7 @@ def _validate_queries(queries):
                  "invalid or repeated query ID")
         seen.add(qid)
         _require(type(literal) is str and 1 <= len(literal) <= MAX_QUERY_CHARS
-                 and literal.strip() and not any(ord(c) < 32 or ord(c) == 127
+                 and literal.strip() and not any(unicodedata.category(c) in ("Cc", "Zl", "Zp")
                                                  for c in literal),
                  "invalid literal (empty, overlarge or contains control characters)")
         _require(type(selected) is list and len(selected) == len(set(
