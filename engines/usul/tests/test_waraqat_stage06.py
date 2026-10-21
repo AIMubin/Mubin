@@ -91,6 +91,21 @@ class WaraqatComparativeRunnerTests(unittest.TestCase):
                                  "STAGE06_TEXT_ALIGNMENT_PROVENANCE_PARTIAL")
                 self.assertTrue(result["primary_html_to_section_replay_verified"])
                 self.assertFalse(result["secondary_html_to_section_replay_verified"])
+                with patch.object(runner, "extract_witness2",
+                                  return_value=(actual_section, {"status": "synthetic"})):
+                    strict = runner.compare_captured_witnesses(
+                        *files, hashlib.sha256(right_section.read_bytes()).hexdigest(),
+                        verify_secondary_extraction=True)
+                    self.assertEqual(strict["status"], "STAGE06_DUAL_SOURCE_EXTRACTION_REPLAY_PASS")
+                    self.assertTrue(strict["secondary_html_to_section_replay_verified"])
+                    self.assertFalse(strict["full_witness_comparison_qualified"])
+                with patch.object(runner, "extract_witness2",
+                                  return_value=(b"altered", {"status": "synthetic"})):
+                    with self.assertRaisesRegex(WitnessAlignmentError,
+                                                "secondary section is not reproduced"):
+                        runner.compare_captured_witnesses(
+                            *files, hashlib.sha256(right_section.read_bytes()).hexdigest(),
+                            verify_secondary_extraction=True)
                 self.assertFalse(result["full_witness_comparison_qualified"])
                 self.assertFalse(result["zero_lexical_difference_certified"])
                 # Mutating W2's supposedly frozen raw capture must fail.
