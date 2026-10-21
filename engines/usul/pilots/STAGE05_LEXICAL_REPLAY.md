@@ -1,6 +1,6 @@
 # U0.1 Stage 05 — Evidence Retrieval & Lexical Analysis
 
-**Status:** `ENGINEERING_IMPLEMENTED_SYNTHETIC_CI_PASS`; **private real-witness replay pending**. This is an exact-text evidence locator, not a semantic `qarīnah` detector or fiqh ruling engine.
+**Status:** `STAGE05_REAL_SOURCE_LEXICAL_REPLAY_PASS` **on the locally captured, independently pinned digital witness, as reported by the local operator and recorded in the [Stage05 metadata-only receipt](../../../corpus/reviews/u01-stage05-waraqat-lexical-replay.json)**. Public cross-OS CI validates software on synthetic fixtures, not a second independent replay of the private captured files. This is an exact-text evidence locator, not a semantic `qarīnah` detector or fiqh ruling engine.
 
 ## Source and release boundary
 
@@ -60,6 +60,23 @@ python -m unittest discover -s core/tests -v
 
 Cross-OS CI uses **synthetic Arabic UTF-8 files**. Tests include multi-hit byte offsets, match hashes, no-hit semantics, exact vs unaccented spelling, source/manifest tampering, absent sections, missing private files, raw HTML re-extraction mismatch, bounded query schema, deterministic results, and Windows ASCII-safe CLI JSON output.
 
-**Stage05 real-source data acceptance is not granted by CI alone.** The local operator must run the dedicated runner on the private Stage04-pinned source and return the metadata-only report. The report can be added to GitHub only after confirming no protected text is included.
+**Stage05 real-source data acceptance cannot be inferred from CI alone.** The local Windows operator has since reported a successful dedicated replay and committed a [metadata-only receipt](../../../corpus/reviews/u01-stage05-waraqat-lexical-replay.json). The private original and executable per-match raw bytes were not uploaded and thus cannot be independently replayed in public CI. Do not conflate the operator's independently checked 10 match offsets with a fresh auditor-run recheck on those same bytes.
 
 **Deferred by design:** comparison with the islam.ms witness (needs independently pinned source), broader book coverage (one section per accepted manifest entry), Arabic morphological search, semantic exceptions, qiyās, tarjīḥ, and rights-cleared excerpt display. All require their own evidence contracts; none block this limited lexical engineering task. `scholarly_verified=false`, `redistribution_approved=false`, `valid_juristic_ruling=false`.
+
+
+## 2026-10-21 — real source closure evidence and digital comparator
+
+The operator's [Stage05 receipt](../../../corpus/reviews/u01-stage05-waraqat-lexical-replay.json), created in commit [`1281f5d`](https://github.com/AIMubin/Mubin/commit/1281f5d8b6666c196527f15c060c93270a0ef467), reports `STAGE05_REAL_SOURCE_LEXICAL_REPLAY_PASS` (exit 0), 22 indexed lines spanning section bytes 3735–4967, and line-index SHA-256 `ed4379957d90878e47eec4076e436b7e671e523dcb2948da034bcf1923215951`.
+
+The five literal-only query counts in the private, pinned *Bab al-Amr* snapshot were `6/1/1/1/1` (total **10**); metadata-only references preserve each query digest and the source/section pins. Operator-reported replay twice produced identical results. Reports deliberately contain no source excerpts. No juridical or semantic conclusion is authorized by positive or zero hits.
+
+[Usul CI 39480249778](https://github.com/AIMubin/Mubin/actions/runs/39480249778) passed **124/124 on both Windows and Ubuntu** on the code baseline `c7e1d20`. Later data-only commits adding the Stage05 receipt and comparator record did not trigger the Usul path-filtered workflow. [Corpus CI 39528699905](https://github.com/AIMubin/Mubin/actions/runs/39528699905) passed **62/62 on both OSes** after the comparator receipt.
+
+### Comparator — useful evidence, not normalized text identity
+
+[The second digital witness record](../../../corpus/reviews/u01-stage05-witness2-comparison.json) reports a separate capture from `islam.ms`, 37,259 bytes and SHA-256 `3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa`. Its Bab al-Amr comparison reported 127 versus 126 whitespace-delimited words, vocalization, editorial brackets, and token segmentation differences (`و أما` vs `وأما`). The record also states **`identical_after_normalization=false`** while reporting **`lexical_word_differences=0`**.
+
+Therefore treat “0 lexical differences” as **the operator's conditional, editorial/token-aligned assessment**, NOT a bytewise identical match, NOT a direct equality of the normalized token arrays, and NOT independently reproduced in public CI. A future reproducible comparison should pin both raw witnesses, specify and version the transformation/alignment profiles, report unmatched spans explicitly, and test that meaning-bearing alterations are **never normalized away**. None of this reopens the Stage05 one-witness lexical closure.
+
+**No** signature/third-party provenance claim follows from a pinned SHA-256 alone; scholarly interpretation, print-edition authentication, redistribution and fatwa authority all remain unapproved.
