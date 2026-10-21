@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from engines.usul.arabic_evidence_retrieval import (
-    EXACT, ArabicRetrievalError, retrieve,
+    EXACT, QUERY_ID, retrieve,
 )
 
 VERSION = "usul-evidence-context-graph/0.1.0"
@@ -64,16 +64,19 @@ def _validate_pointers(pointers, witness_ids, query_ids):
             "id", "kind", "reference_id", "witness_id", "query_id",
             "review_status"
         }, "invalid research pointer contract")
-        _need(type(row["id"]) is str and 3 <= len(row["id"]) <= 128
-              and row["id"] not in seen, "invalid or duplicate pointer ID")
+        _need(type(row["id"]) is str and
+              QUERY_ID.fullmatch(row["id"]) is not None and
+              row["id"] not in seen, "invalid or duplicate pointer ID")
         seen.add(row["id"])
-        _need(row["kind"] in POINTER_TYPES
+        _need(type(row["kind"]) is str and row["kind"] in POINTER_TYPES
               and row["review_status"] == "UNASSESSED",
               "only unassessed research navigation is allowed")
         _need(type(row["reference_id"]) is str and
-              3 <= len(row["reference_id"]) <= 128,
+              QUERY_ID.fullmatch(row["reference_id"]) is not None,
               "invalid referenced rule/objection identifier")
-        _need(row["witness_id"] in witness_ids and row["query_id"] in query_ids,
+        _need(type(row["witness_id"]) is str and
+              type(row["query_id"]) is str and
+              row["witness_id"] in witness_ids and row["query_id"] in query_ids,
               "research pointer must cite a declared witness/query pair")
 
 
