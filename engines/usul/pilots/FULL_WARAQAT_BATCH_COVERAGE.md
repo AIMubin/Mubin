@@ -49,3 +49,18 @@ D. Scholarship/rights: independent publication gate for semantic/legal conclusio
 Run tests with python -m unittest discover -s engines/usul/tests -v and python -m unittest discover -s core/tests -v.
 
 Keep project system version 0.1.0-alpha, Usul U0.1 experimental_prototype_not_qualified, Quran Q0.3 and frozen Hadith H3.9.2 unchanged. The limited public metadata preview remains independent of chapter research.
+
+
+## Optional W2 digital-witness heading campaign (independent)
+
+An additional [W2 heading-mapping prototype](../waraqat_w2_heading_map.py) now reads the pinned W2 original HTML (SHA-256 3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa) and the already created W1 inventory. It computes h2 title hashes and conservative Arabic-mark-folded hashes. A candidate pair requires a **unique title key in both witnesses and preserved heading order**.
+
+On the private Windows machine, after W1 inventory generation, invoke:
+
+~~~powershell
+python -m engines.usul.pilots.waraqat_w2_title_map --secondary-html "D:\MubinSources\waraqat\witness2-original.html" --w1-inventory "D:\MubinSources\waraqat\waraqat-full-w1-inventory.json" --report "D:\MubinSources\waraqat\waraqat-w2-title-candidates.json"
+~~~
+
+Unpaired, duplicated and out-of-order headings are recorded for review, not guessed. The h2 list is extracted from the **full W2 HTML document**, and no claim of article-only title coverage or identical section spans is made until independently replayed against that frozen original document and its article boundaries.
+
+A successful candidate mapping explicitly includes w2_section_extraction_verified=false and whole_book_comparison_verified=false. It is **not** a full two-source chapter extraction or comparison result. W1 indexing and the separate metadata preview remain nonblocked.
