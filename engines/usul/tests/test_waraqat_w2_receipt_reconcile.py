@@ -23,10 +23,10 @@ class ReceiptReconciliationTests(unittest.TestCase):
             "pinned_w2_html_sha256": W2_RAW_SHA,
             "historical_lengths_verified": True,
             "source_text_included": False,
-            "legacy_lf_serialized_bytes": 1700,
-            "legacy_lf_linefeed_count": 6,
-            "legacy_windows_extra_cr_bytes": 6,
-            "legacy_lf_sha256": sha(b"synthetic-lf-only"),
+            "legacy_lf_serialized_bytes": 1696,
+            "legacy_lf_linefeed_count": 10,
+            "legacy_windows_extra_cr_bytes": 10,
+            "legacy_lf_sha256": HARDENED_PIN,
             "variants": {
                 "stage06": {"bytes": 1702, "sha256": STAGE06_PIN},
                 "legacy_full": {"bytes": 1706, "sha256": self.legacy_sha},
@@ -64,16 +64,19 @@ class ReceiptReconciliationTests(unittest.TestCase):
                          private_report_sha256=self.audit_sha,
                          previous_receipt_sha256=self.receipt_sha)
 
-    def test_old_ten_byte_claim_corrected_to_six_cr_and_four_formatting(self):
+    def test_immutable_1700_error_reconciled_with_measured_1696(self):
         result = self.build()
         self.assertEqual(result["status"], "EVIDENCE_RECONCILIATION_PASS")
         parts = result["delta_accounting"]
         self.assertEqual(parts["archived_claimed_cr_added"], 10)
-        self.assertEqual(parts["corrected_cr_added"], 6)
-        self.assertEqual(parts["legacy_windows_minus_legacy_lf"], 6)
-        self.assertEqual(parts["legacy_lf_minus_hardened"], 4)
+        self.assertEqual(parts["measured_cr_added"], 10)
+        self.assertEqual(parts["archived_legacy_lf_only_bytes"], 1700)
+        self.assertEqual(parts["measured_legacy_lf_only_bytes"], 1696)
+        self.assertEqual(parts["legacy_windows_minus_legacy_lf"], 10)
+        self.assertEqual(parts["legacy_lf_minus_hardened"], 0)
         self.assertEqual(parts["legacy_windows_minus_hardened"], 10)
         self.assertEqual(parts["stage06_minus_hardened"], 6)
+        self.assertTrue(result["provenance_correction"]["historical_receipt_unchanged"])
         for record in result["three_representations"].values():
             self.assertRegex(record["sha256"], re.compile(r"^[0-9a-f]{64}$"))
         self.assertFalse(result["source_text_included"])
@@ -85,16 +88,36 @@ class ReceiptReconciliationTests(unittest.TestCase):
                                     "ARCHIVED_RECEIPT_PROVENANCE_MISMATCH"):
             self.build()
 
-    def test_report_cannot_claim_ten_new_carriage_returns(self):
-        self.audit_report["legacy_windows_extra_cr_bytes"] = 10
+    def test_report_cannot_claim_six_new_carriage_returns(self):
+        self.audit_report["legacy_windows_extra_cr_bytes"] = 6
         with self.assertRaisesRegex(ReceiptReconciliationError,
                                     "WINDOWS_NEWLINE_ACCOUNTING_INVALID"):
             self.build()
 
-    def test_lf_count_forgery_blocked_even_if_windows_delta_is_six(self):
-        self.audit_report["legacy_lf_linefeed_count"] = 10
+    def test_lf_count_forgery_blocked(self):
+        self.audit_report["legacy_lf_linefeed_count"] = 6
         with self.assertRaisesRegex(ReceiptReconciliationError,
                                     "WINDOWS_NEWLINE_ACCOUNTING_INVALID"):
+            self.build()
+
+    def test_unrecognized_historical_erratum_not_silently_accepted(self):
+        self.previous["representations"]["legacy_full_windows"]["legacy_lf_only_bytes"] = 1701
+        with self.assertRaisesRegex(ReceiptReconciliationError,
+                                    "HISTORICAL_RECEIPT_NOT_KNOWN_ERRATUM"):
+            self.build()
+
+    def test_previously_measured_new_source_must_equal_hardened_sha(self):
+        self.audit_report["legacy_lf_sha256"] = sha(b"other-1696-byte-file")
+        with self.assertRaisesRegex(ReceiptReconciliationError,
+                                    "LEGACY_LF_HARDENED_PIN_MISMATCH"):
+            self.build()
+
+    def test_legacy_lf_is_not_allowed_to_drift_from_pinned_hardened_length(self):
+        self.audit_report["legacy_lf_serialized_bytes"] = 1697
+        self.audit_report["legacy_windows_extra_cr_bytes"] = 9
+        self.audit_report["legacy_lf_linefeed_count"] = 9
+        with self.assertRaisesRegex(ReceiptReconciliationError,
+                                    "LEGACY_LF_HARDENED_PIN_MISMATCH"):
             self.build()
 
     def test_incomplete_sha256_refused(self):

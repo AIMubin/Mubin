@@ -2,19 +2,33 @@
 
 Current status: **PRIVATE EVIDENCE RECONCILIATION REQUIRED**.
 
-The historical final-audit receipt
-corpus/reviews/u01-w2-three-representations-final-audit.json is immutable
-historical evidence but has two verifiable recording errors:
+The historical final-audit receipt at
+corpus/reviews/u01-w2-three-representations-final-audit.json is immutable.
+The independent private replay recorded in the later failed receipt at
+corpus/reviews/u01-w2-three-representations-reconciliation-erratum.json
+found a **historical, manually inferred field**: 1700 LF-only bytes.
+The privately measured value is **1696** (10 LF linefeeds) and its SHA-256
+matches the independently frozen hardened W2 section pin.
 
-1. Legacy Windows section: 1706 bytes; legacy LF-only section: 1700 bytes.
-   Therefore **exactly 6 bytes of added CR**, not 10.
-2. The 1706 vs 1696 overall delta is 10 bytes: **6 CRLF bytes + 4 LF-only
-   legacy-vs-hardened formatting bytes**. Stage06 vs hardened: 1702−1696=6.
-   The old "10 CR" narrative must not be used for merge approval.
-3. The historical receipt truncates the Legacy Windows and Hardened SHA-256
-   fields to 16 hex characters. Full 64-hex digests are mandatory for the
-   new evidence receipt, never guessed. The complete Hardened source pin
-   already exists in the earlier W1/W2 closure receipt.
+Observed true accounting:
+
+| representation | bytes | difference |
+| --- | ---: | --- |
+| Stage06 HTMLParser | 1702 | 6 extra LF relative to hardened |
+| Legacy full-book Windows file | 1706 | 10 CR bytes added by Windows text-mode write |
+| Legacy full-book LF-only serialization | 1696 | byte-identical to hardened |
+| Hardened full-book LF-only serialization | 1696 | independently frozen digest |
+
+The *old* receipt incorrectly said legacy LF-only was 1700, which created
+a false arithmetic narrative of 6 CR + 4 LF formatting bytes. The actual
+source replay proves **10 CR + 0 LF formatting bytes**, plus Stage06's
+separate 6 LF extra paragraph separators.
+
+**Do not mutate the historical record.** The reconciler now permits only
+this exact documented 1700→1696 error, and only if the private audit JSON
+matches an independently replayed pinned W2 HTML source and its original
+private-report digest matches the frozen receipt. The addendum preserves
+both recorded and corrected values and publishes full SHA-256 values.
 
 ## What is now automated
 
@@ -28,8 +42,10 @@ The verifier:
 - Compares the recomputed JSON data against the original private audit JSON.
 - Checks the exact private audit file SHA-256 against the original archived
   receipt, protecting the chain of provenance.
-- Verifies 1702/1706/1696 and 1700 arithmetic and both independent full
-  pinned Stage06/Hardened digests.
+- Verifies 1702/1706/1696 against the 1696-byte **measured** legacy LF
+  serialization, 10 LF→CRLF translations and both independent full
+  pinned Stage06/Hardened digests. The historical 1700 field is preserved
+  as evidence of the error, not treated as truth.
 - Checks all 3 pairwise token, nonempty-line and nonwhitespace codepoint
   equality profiles.
 - Requires 64-digit SHA-256 for the reconstructed Legacy Windows digest
@@ -47,9 +63,10 @@ From the up-to-date feature branch, while in the repository root:
 
 Expected status: EVIDENCE_RECONCILIATION_PASS.
 
-Inspect the metadata-only output. It must show corrected_cr_added=6,
-legacy_lf_minus_hardened=4, legacy_windows_minus_hardened=10,
-stage06_minus_hardened=6, and all three full SHA-256 digests.
+Inspect the metadata-only output. It must show measured_cr_added=10,
+legacy_lf_minus_hardened=0, legacy_windows_minus_hardened=10,
+stage06_minus_hardened=6, archived_legacy_lf_only_bytes=1700,
+measured_legacy_lf_only_bytes=1696 and all three full SHA-256 digests.
 
 After verifying no source text or private locations were included, copy ONLY
 this JSON receipt to:

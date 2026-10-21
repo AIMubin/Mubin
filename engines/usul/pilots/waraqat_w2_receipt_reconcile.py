@@ -99,12 +99,25 @@ def reconcile(report, previous, *, private_report_sha256,
     require(all(type(x) is int and x >= 0 for x in (lf_bytes, lf_count, cr_added))
             and lf_count == cr_added
             and lf_bytes + cr_added == variants["legacy_full"]["bytes"]
-            and full_digest(report.get("legacy_lf_sha256"))
-            and lf_bytes == old["legacy_full_windows"]["legacy_lf_only_bytes"],
+            and full_digest(report.get("legacy_lf_sha256")),
             "WINDOWS_NEWLINE_ACCOUNTING_INVALID")
     hard_bytes = variants["hardened_full"]["bytes"]
     stage_bytes = variants["stage06"]["bytes"]
     legacy_win = variants["legacy_full"]["bytes"]
+    # The frozen receipt contains a KNOWN recording error: it lists 1700
+    # LF-only bytes and claims 10 added CR bytes. Those two numbers could
+    # not have produced the measured Windows file length of 1706. Preserve
+    # the erroneous original, but permit exactly this documented erratum,
+    # only after main() independently replays the byte-pinned source HTML.
+    archived_lf = old["legacy_full_windows"].get("legacy_lf_only_bytes")
+    archived_cr = previous.get("lf_to_crf_translations_on_windows")
+    require(type(archived_lf) is int and archived_lf == 1700
+            and type(archived_cr) is int and archived_cr == 10,
+            "HISTORICAL_RECEIPT_NOT_KNOWN_ERRATUM")
+    require(lf_bytes == hard_bytes and lf_bytes == 1696
+            and cr_added == 10 and lf_count == 10
+            and report["legacy_lf_sha256"] == variants["hardened_full"]["sha256"],
+            "LEGACY_LF_HARDENED_PIN_MISMATCH")
     require((legacy_win - hard_bytes) ==
             (lf_bytes - hard_bytes) + cr_added,
             "TOTAL_DELTA_DECOMPOSITION_INVALID")
@@ -144,9 +157,19 @@ def reconcile(report, previous, *, private_report_sha256,
             "legacy_lf_minus_hardened": lf_bytes - hard_bytes,
             "legacy_windows_minus_hardened": legacy_win - hard_bytes,
             "stage06_minus_hardened": stage_bytes - hard_bytes,
-            "archived_claimed_cr_added": previous.get(
-                "lf_to_crf_translations_on_windows"),
-            "corrected_cr_added": cr_added,
+            "archived_claimed_cr_added": archived_cr,
+            "measured_cr_added": cr_added,
+            "archived_legacy_lf_only_bytes": archived_lf,
+            "measured_legacy_lf_only_bytes": lf_bytes,
+            "historical_field_corrected_via_additive_erratum": True,
+        },
+        "provenance_correction": {
+            "historical_receipt_unchanged": True,
+            "historical_legacy_lf_only_bytes": archived_lf,
+            "measured_legacy_lf_only_bytes": lf_bytes,
+            "basis": "pinned-private-audit-exact-replay",
+            "historical_legacy_digest_was_prefix_only": True,
+            "historical_hardened_digest_was_prefix_only": True,
         },
         "pairwise_text_profiles": {
             key: {name: profiles[key][name]
