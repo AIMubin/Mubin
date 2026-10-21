@@ -14,6 +14,7 @@ from pathlib import Path
 
 from engines.usul.source_snapshot_coverage import audit
 from engines.usul.pilots.waraqat_extract import extract
+from engines.usul.pilots.waraqat_witness2_extract import extract as extract_witness2, VERSION as W2_EXTRACT_VERSION
 from engines.usul.witness_alignment import align_sections, WitnessAlignmentError
 
 W1_RAW_SHA = "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044"
@@ -33,7 +34,7 @@ def _need(condition, msg):
 
 def compare_captured_witnesses(primary_html, primary_export, primary_manifest,
                                primary_section, secondary_html, secondary_section,
-                               secondary_section_pin):
+                               secondary_section_pin, *, verify_secondary_extraction=False):
     """Outputs raw-source identity, section text alignment, NOT W2 extraction proof."""
     _need(type(secondary_section_pin) is str and len(secondary_section_pin) == 64,
           "independent secondary section SHA256 required")
@@ -60,6 +61,16 @@ def compare_captured_witnesses(primary_html, primary_export, primary_manifest,
     target = exported[3735:4967]
     _need(Path(primary_section).read_bytes() == target,
           "primary chapter file differs from original byte slice")
+    second_conversion = False
+    if verify_secondary_extraction:
+        try:
+            repeat_section, w2_stats = extract_witness2(second_raw)
+        except (ValueError, UnicodeError) as exc:
+            raise WitnessAlignmentError("Stage06 secondary HTML section extraction refused") from exc
+        _need(repeat_section == Path(secondary_section).read_bytes(),
+              "secondary section is not reproduced by frozen W2 HTML capture")
+        second_conversion = True
+
     comparison = align_sections(
         primary_section, secondary_section,
         left_sha256=W1_SECTION_SHA, right_sha256=secondary_section_pin,
@@ -70,11 +81,13 @@ def compare_captured_witnesses(primary_html, primary_export, primary_manifest,
     )
     return {
         **comparison,
-        "status": "STAGE06_TEXT_ALIGNMENT_PROVENANCE_PARTIAL",
+        "status": ("STAGE06_DUAL_SOURCE_EXTRACTION_REPLAY_PASS" if second_conversion
+                   else "STAGE06_TEXT_ALIGNMENT_PROVENANCE_PARTIAL"),
         "raw_html_witness1_sha256": W1_RAW_SHA,
         "raw_html_witness2_sha256": W2_RAW_SHA,
         "primary_html_to_section_replay_verified": True,
-        "secondary_html_to_section_replay_verified": False,
+        "secondary_html_to_section_replay_verified": second_conversion,
+        "secondary_extractor": (W2_EXTRACT_VERSION if second_conversion else None),
         "secondary_section_pin_origin": "OPERATOR_SUPPLIED_INDEPENDENT_ANCHOR",
         "witness_urls": [W1_URL, W2_URL],
         "comparison_scope": "TWO_PINNED_SECTION_EXPORTS_ONLY",
@@ -91,6 +104,8 @@ def main():
               "report"):
         p.add_argument("--" + k, required=True, type=Path)
     p.add_argument("--secondary-section-sha256", required=True)
+    p.add_argument("--require-secondary-extraction", action="store_true",
+                   help="Reproduce the exact W2 section from the separately pinned W2 raw HTML")
     a = p.parse_args()
     try:
         inputs = (a.primary_html, a.primary_export, a.primary_manifest,
@@ -103,6 +118,7 @@ def main():
         else:
             data = compare_captured_witnesses(
                 *inputs, a.secondary_section_sha256,
+                verify_secondary_extraction=a.require_secondary_extraction,
             )
             code = 0
     except (OSError, ValueError, UnicodeError) as exc:
