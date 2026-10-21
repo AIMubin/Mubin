@@ -43,5 +43,7 @@ jobs:
           python-version: '3.11'
       - name: Rebuild check against committed metadata reviews
         run: python -m release.public_preview --check
+      - name: Browser script syntax smoke check
+        run: node --check docs/preview.js
       - name: Negative gate regression tests
         run: python -m unittest discover -s release/tests -v
