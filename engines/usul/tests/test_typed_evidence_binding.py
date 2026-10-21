@@ -19,6 +19,9 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
+MISSING = object()
+
+
 class TypedBindingTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
@@ -60,12 +63,12 @@ class TypedBindingTests(unittest.TestCase):
             "review_status": "UNASSESSED",
         }]
 
-    def bind(self, graph=None, bundle=None, proposals=None, pin=None):
+    def bind(self, graph=None, bundle=None, proposals=MISSING, pin=None):
         return bind_exact_observations(
             self.graph if graph is None else graph,
             self.graph["graph_sha256"] if pin is None else pin,
             self.bundle if bundle is None else bundle,
-            self.proposals if proposals is None else proposals,
+            self.proposals if proposals is MISSING else proposals,
         )
 
     def test_positive_exact_byte_binding_has_zero_promotion(self):
