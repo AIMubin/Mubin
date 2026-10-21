@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from engines.usul.arabic_evidence_retrieval import (
-    FOLD_BRACKETS, FOLD_MARKS, FOLD_SPACES, retrieve,
+    ArabicRetrievalError, FOLD_BRACKETS, FOLD_MARKS, FOLD_SPACES, retrieve,
 )
 from engines.usul.evidence_context_graph import (
     ContextGraphError, build_context_graph,
