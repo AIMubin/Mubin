@@ -87,7 +87,7 @@ def _validate_witnesses(witnesses):
                  and QUERY_ID.fullmatch(w["source_id"])
                  and w["source_id"] not in seen, "invalid/duplicate witness ID")
         seen.add(w["source_id"])
-        _require(type(w["section_path"]) in (str, Path),
+        _require(isinstance(w["section_path"], (str, Path)),
                  "invalid local section path")
         _require(type(w["section_sha256"]) is str
                  and SHA.fullmatch(w["section_sha256"]), "untrusted section digest")
