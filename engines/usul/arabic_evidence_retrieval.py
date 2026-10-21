@@ -16,6 +16,8 @@ from pathlib import Path
 from engines.usul.witness_alignment import (
     ARABIC_MARKS, EDITORIAL_BRACKETS, SPACE, SHA, MAX_SECTION_BYTES,
 )
+# U+0653..0655 encode combining madda/hamza: never silently drop them.
+SAFE_DIAGNOSTIC_MARKS = ARABIC_MARKS - {0x0653, 0x0654, 0x0655}
 
 VERSION = "usul-arabic-evidence/0.1.0"
 EXACT = "literal_exact_v1"
@@ -105,7 +107,7 @@ def _validate_witnesses(witnesses):
 
 
 def _fold_char(ch, profile):
-    if ord(ch) in ARABIC_MARKS:
+    if ord(ch) in SAFE_DIAGNOSTIC_MARKS:
         return ""
     if profile in (FOLD_BRACKETS, FOLD_SPACES) and ch in EDITORIAL_BRACKETS:
         return ""
@@ -234,6 +236,15 @@ def retrieve(witnesses, queries):
                         candidates[profile].append(hit)
                         _require(len(candidates[profile]) <= MAX_MATCHES,
                                  "candidate match set exceeds bound")
+            # Attach explicitly named source-export coordinates only when
+            # applicable. W2 has section-relative coordinates, not HTML offsets.
+            for hit in strict + [hit for p in candidates.values() for hit in p]:
+                hit["source_coordinate_basis"] = w["offset_basis"]
+                hit["source_byte_start"] = w["source_byte_base"] + hit["section_byte_start"]
+                hit["source_byte_end_exclusive"] = (
+                    w["source_byte_base"] + hit["section_byte_end_exclusive"]
+                )
+                hit["source_line_number"] = w["source_line_base"] + hit["section_line_number"] - 1
             entries.append({
                 "query_id": query["id"],
                 "query_utf8_sha256": query_digest,
