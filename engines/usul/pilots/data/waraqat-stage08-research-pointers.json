@@ -1,0 +1,18 @@
+[
+  {
+    "id": "pilot:amr-rule-research-pointer",
+    "kind": "RULE_RESEARCH_POINTER",
+    "reference_id": "pilot:rule-amr-default",
+    "witness_id": "pilot:waraqat-primary",
+    "query_id": "pilot:amr-term",
+    "review_status": "UNASSESSED"
+  },
+  {
+    "id": "pilot:qarinah-objection-research-pointer",
+    "kind": "OBJECTION_RESEARCH_POINTER",
+    "reference_id": "pilot:qarinah-objection-unassessed",
+    "witness_id": "pilot:waraqat-comparator",
+    "query_id": "pilot:qarinah-term",
+    "review_status": "UNASSESSED"
+  }
+]
