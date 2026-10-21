@@ -218,7 +218,7 @@ def build_context_graph(stage07_report, witnesses, queries, pointers=None, *,
                          semantic_equivalence_verified=False)
     for p in pointers:
         qid = next(
-            (_id("query", p["witness_id"], q["query_id"],
+            (_id("query", p["witness_id"], q["id"],
                  _sha(q["literal"].encode("utf-8")))
              for q in queries if q["id"] == p["query_id"]), None)
         _need(qid in nodes, "research pointer references absent query")
