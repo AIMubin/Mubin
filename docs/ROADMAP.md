@@ -30,3 +30,16 @@ Typed source/evidence/claim/rule/inference/proof/objection/historical-availabili
 ## P0 maintainer review exit conditions
 
 The PR cannot merge solely on passing its original 19 tests. Maintainer-originated adversarial additions must exercise qiyas-rule laundering, forced-empty bundles, open and falsely answered objections, source-verified digest changes, distinct claim modality, mismatched historical identities, CI execution and CLI failure exit codes. For high-impact changes Codex may provide a **second engineering pass after** maintainer review and fixes; if unavailable or quota-limited, record an explicit maintainer-only fallback audit rather than fabricate a second approval.
+
+
+## Parallel public preview launch lane — without research-stage blockers (2026-10-21)
+
+**A separately scoped, non-authoritative metadata preview** is now implemented under [docs/index.html](index.html) and checked by [dedicated cross-OS preview CI](../.github/workflows/public-preview.yml). [Launch runbook](PUBLIC_PREVIEW_LAUNCH.md). It presents only versioned capabilities, original digital-witness links and source-attributed aggregate research metadata (Stage07/08), without Quran/Tafsir/Hadith body text or juristic inference.
+
+- **Launch engineering gate:** reproducible metadata JSON from frozen Stage07/08 and Q0.3 review receipts, no new rights/scholarly assertions, passing public preview tests and JavaScript syntax checks. The build must fail closed when frozen source identities or public scope change.
+- **Hosting gate:** repo administrator enables GitHub Pages main /docs (or equivalent static hosting) and confirms the live URL, links and mobile display. Public hosting is NOT attested by CI.
+- **Feature-level holds only:** canonical Quran display, rights-sensitive modern editorial text, H3.9.2 frozen human gold, real-world legal inference and Fiqh remain excluded pending their separate requirements.
+- **Not blocking metadata launch:** unreviewed 158 Hadith decisions; wider Usul section ingestion; complete historical-witness comparison; new Stage09 P0 citation bindings; Fiqh Engine; organization-wide scholarly signoff.
+- **Version:** project remains 0.1.0-alpha. A research-only metadata preview is NOT the full P0–P7 system release and cannot be used to infer subsystem qualification.
+
+Stage09 [typed citation proposal contract](../engines/usul/typed_evidence_binding.py) is deliberately parallel. It can validate an EXACT source/P0 excerpt byte correspondence inside private research without turning P0 verification labels or a lexical match into scholarly authority or a public content permission.
