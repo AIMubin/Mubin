@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 
 from engines.usul.arabic_evidence_retrieval import SAFE_DIAGNOSTIC_MARKS
-from engines.usul.pilots.waraqat_stage06 import W2_RAW_SHA
+from engines.usul.pilots.waraqat_stage06 import W1_RAW_SHA, W1_EXPORT_SHA, W2_RAW_SHA
 
 VERSION = "waraqat-w2-heading-map/0.1.0"
 MAX_HTML_BYTES = 8*1024*1024
@@ -88,6 +88,8 @@ def map_headings(w2_raw_html, w1_inventory, *, trusted_w2_sha=W2_RAW_SHA):
     _need(type(w1_inventory) is dict
           and w1_inventory.get("status") == "FULL_W1_SOURCE_INVENTORY_PASS"
           and w1_inventory.get("all_original_bytes_partitioned_once") is True
+          and w1_inventory.get("source_raw_html_sha256") == W1_RAW_SHA
+          and w1_inventory.get("source_export_sha256") == W1_EXPORT_SHA
           and type(w1_inventory.get("inventory_sha256")) is str,
           "W1 full original source inventory required")
     payload = {k: v for k, v in w1_inventory.items() if k != "inventory_sha256"}
