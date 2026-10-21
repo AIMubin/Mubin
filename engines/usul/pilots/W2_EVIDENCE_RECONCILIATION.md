@@ -58,7 +58,7 @@ The verifier:
 From the up-to-date feature branch, while in the repository root:
 
     $root = "D:\MubinSources\waraqat"
-    python -m engines.usul.pilots.waraqat_w2_receipt_reconcile --raw-html "$root\witness2-original.html" --private-audit "$root\w2-three-representations.audit.json" --previous-receipt "corpus\reviews\u01-w2-three-representations-final-audit.json" --out "$root\u01-w2-three-representations-reconciliation-erratum.json"
+    python -m engines.usul.pilots.waraqat_w2_receipt_reconcile --raw-html "$root\witness2-original.html" --private-audit "$root\w2-three-representations.audit.json" --previous-receipt "corpus\reviews\u01-w2-three-representations-final-audit.json" --out "$root\u01-w2-three-representations-reconciliation-PASS.json"
     if ($LASTEXITCODE -ne 0) { throw "Evidence reconciliation failed" }
 
 Expected status: EVIDENCE_RECONCILIATION_PASS.
@@ -71,7 +71,12 @@ measured_legacy_lf_only_bytes=1696 and all three full SHA-256 digests.
 After verifying no source text or private locations were included, copy ONLY
 this JSON receipt to:
 
-    corpus/reviews/u01-w2-three-representations-reconciliation-erratum.json
+    corpus/reviews/u01-w2-three-representations-reconciliation-PASS.json
+
+Do not overwrite the earlier FAILED reconciliation receipt at
+corpus/reviews/u01-w2-three-representations-reconciliation-erratum.json.
+Keep the original, the failed attempt and the successful correction as
+separate immutable provenance records.
 
 Commit the new additive receipt to the feature branch. Do NOT revise the old
 report silently; retain its provenance for auditability.
