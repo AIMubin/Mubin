@@ -93,8 +93,13 @@ def inventory(raw_html, *, expected_html_sha=W1_RAW_SHA,
     _need(_render_region(region).encode("utf-8") == exported,
           "chapter boundary converter drifted from frozen source extractor")
     headings = list(CHAPTER_RE.finditer(region))
+    # Reject attributes/case variants or unclosed h5 instead of silently
+    # omitting an unrecognized section and claiming complete-book coverage.
+    raw_h5_opens = len(re.findall(r"<h5(?=[\\s>])", region, flags=re.I))
+    raw_h5_closes = len(re.findall(r"</h5\\s*>", region, flags=re.I))
     _need(2 <= len(headings) <= MAX_CHAPTERS and
-          len(headings) == stats["h5_headings_seen"],
+          len(headings) == stats["h5_headings_seen"] ==
+          raw_h5_opens == raw_h5_closes,
           "missing/extra/unsupported chapter heading markup")
     starts = _line_starts(exported)
     records = []
