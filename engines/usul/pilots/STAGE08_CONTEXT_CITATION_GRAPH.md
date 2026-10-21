@@ -1,6 +1,6 @@
 # U0.1 Stage 08 — Evidence Context & Citation Graph
 
-**Status:** `ENGINEERING_IMPLEMENTED_SYNTHETIC_CI_PASS` after cross-platform tests. **Real local Stage08 source replay is pending**: Stage08 has not executed the private historical HTML bytes in CI or this assistant environment. Stages 04–07 retain their own already-recorded technical status.
+**Status:** `STAGE08_DUAL_SOURCE_CONTEXT_GRAPH_PASS` **reported by the private Windows operator** and documented in [the Stage08 metadata-only closure receipt](../../../corpus/reviews/u01-stage08-waraqat-context-graph.json). This closes the locally attested technical source-to-context graph workflow; **public CI only reruns synthetic fixtures**, not the separately retained historical HTML captures. No scholarly, legal, edition or rights verification is implied.
 
 ## Why this graph exists
 
@@ -81,3 +81,31 @@ python -m unittest discover -s core/tests -v
 **No new scholastic, juridical or copyright acceptance is conveyed:** `scholarly_verified=false`, `redistribution_approved=false`, `semantic_qarinah_verified=false`, `juristic_inference_allowed=false`, and `public_fatwa_authorized=false`. Mubin remains `0.1.0-alpha`; `U0.1` remains `experimental_prototype_not_qualified`. Quran Q0.3 and Hadith H3.9.2 are untouched.
 
 **Future milestone:** Stage09 could formally bind source-attested text observations to versioned P0 `Evidence` metadata with explicit scope/authorship and *human scholarly attestation as a separate gate*. No lexical occurrence or hash should directly cause a juristic conclusion.
+
+
+## 2026-10-21 — real-source graph closure and independently verified CI
+
+The [Stage08 metadata-only review receipt](../../../corpus/reviews/u01-stage08-waraqat-context-graph.json), committed in [`753bebb`](https://github.com/AIMubin/Mubin/commit/753bebb1e7ce8d780c24ee3f815dc6090d62db6f), records successful **local** `STAGE08_DUAL_SOURCE_CONTEXT_GRAPH_PASS` following strict W1/W2 Stage07 replay with both HTML→section derivations rechecked.
+
+| Reported original-source graph measure | Count |
+| --- | ---: |
+| Nodes | **53** |
+| Edges | **87** |
+| Unique `TEXT_OCCURRENCE` | **22** |
+| `HASHED_CONTEXT` | **13** |
+| `SEARCH_QUERY` | **12** |
+| `QUERY_LOCATES_OCCURRENCE` links from exact literal matches | **12** |
+| `QUERY_LOCATES_OCCURRENCE` links from folded candidates | **24** |
+| Unassessed rule/objection pointers | **2** |
+
+All **13/13 context windows** and **22/22 source-positioned occurrences** were reportedly re-hashed against exact private UTF-8 sections; all **87/87 edge endpoints** resolved with no cross-witness crossing. The two research navigation pointers remained `UNASSESSED`, and the graph did not create legal support/proof edges.
+
+- Canonical logical-graph SHA-256: `72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2` (computed over canonical payload **excluding** `graph_sha256` and runner-added fields).
+- Private final-report SHA-256: `939380a4c191495269abc7db2d4a9c027e976daf9e57ed1f7225f0744e994231`; two local reports were byte-identical. **These two SHA-256s intentionally differ.**
+- [Usul code baseline `2388797`](https://github.com/AIMubin/Mubin/commit/238879784a8a463682a5d4955d87984b912426b0) passed [CI 39553023684](https://github.com/AIMubin/Mubin/actions/runs/39553023684) **173/173 tests on both Windows and Ubuntu**.
+- The Stage08 review-only commit `753bebb` passed [Corpus CI 39556898598](https://github.com/AIMubin/Mubin/actions/runs/39556898598), **62/62 tests on both OSes**. The `usul-checks` workflow was not triggered on the `corpus/reviews`-only change, as expected from path filters.
+- **Negative-test evidence is tiered:** the receipt records a private CLI missing-file check (exit 3) and W1 section byte flip (exit 1). Other HTML mutation and graph-integrity cases were covered by committed synthetic tests. Do not describe all variants as individually executed against both private HTML captures during Stage08.
+
+This locally reported PASS is a *byte-traceability and graph referential-integrity* milestone only. It does not qualify published witness editions, prove same meaning across source variants, detect semantic `qarā'in`, authenticate applied P0 rules, or permit a fatwa. `scholarly_verified=false`, `redistribution_approved=false`, `semantic_qarinah_verified=false`, `juristic_inference_allowed=false`, `rule_support_attested=false`, and `objection_presence_attested=false` remain in force.
+
+**Next independently scoped research milestone:** `U0.1 Stage09 — Typed Evidence Binding & Provenance Contracts`: a non-promotional, versioned bridge between source-anchored observations and P0 evidence identifiers, with separate scholarly/interpretive attestation and strict rejection of direct inferred rule support.
