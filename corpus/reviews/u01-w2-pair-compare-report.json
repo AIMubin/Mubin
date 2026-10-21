@@ -1,0 +1,393 @@
+{
+  "engine": "waraqat-w2-pair-compare/0.1.0",
+  "status": "W2_PAIR_COMPARE_COMPLETE",
+  "compared_sections": 20,
+  "skipped": [
+    {
+      "w1_section_id": "waraqat:w1:prologue",
+      "reason": "PRELUDE_HAS_NO_W2_COUNTERPART_BY_DESIGN"
+    }
+  ],
+  "results": [
+    {
+      "w1_section_id": "waraqat:w1:chapter-001",
+      "w2_h2_ordinal": 2,
+      "overall_classification": "WHITESPACE_DIFFERENCE",
+      "strict_change_count": 62,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": true,
+        "after_all_whitespace_removed_identical": true
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 55,
+        "WHITESPACE_DIFFERENCE": 7
+      },
+      "left_bytes": 331,
+      "right_bytes": 449
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-002",
+      "w2_h2_ordinal": 3,
+      "overall_classification": "WHITESPACE_DIFFERENCE",
+      "strict_change_count": 124,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": true,
+        "after_all_whitespace_removed_identical": true
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 107,
+        "WHITESPACE_DIFFERENCE": 17
+      },
+      "left_bytes": 709,
+      "right_bytes": 942
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-003",
+      "w2_h2_ordinal": 4,
+      "overall_classification": "WHITESPACE_DIFFERENCE",
+      "strict_change_count": 186,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": true,
+        "after_all_whitespace_removed_identical": true
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 169,
+        "WHITESPACE_DIFFERENCE": 17
+      },
+      "left_bytes": 1010,
+      "right_bytes": 1385
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-004",
+      "w2_h2_ordinal": 5,
+      "overall_classification": "WHITESPACE_DIFFERENCE",
+      "strict_change_count": 78,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": true,
+        "after_all_whitespace_removed_identical": true
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 72,
+        "WHITESPACE_DIFFERENCE": 6
+      },
+      "left_bytes": 429,
+      "right_bytes": 579
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-005",
+      "w2_h2_ordinal": 6,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 205,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 179,
+        "WHITESPACE_DIFFERENCE": 14,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 12
+      },
+      "left_bytes": 1098,
+      "right_bytes": 1478
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-006",
+      "w2_h2_ordinal": 7,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 237,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 217,
+        "WHITESPACE_DIFFERENCE": 16,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 4
+      },
+      "left_bytes": 1232,
+      "right_bytes": 1706
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-007",
+      "w2_h2_ordinal": 8,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 54,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 47,
+        "WHITESPACE_DIFFERENCE": 5,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 2
+      },
+      "left_bytes": 292,
+      "right_bytes": 403
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-008",
+      "w2_h2_ordinal": 9,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 310,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 275,
+        "WHITESPACE_DIFFERENCE": 24,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 11
+      },
+      "left_bytes": 1968,
+      "right_bytes": 2634
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-009",
+      "w2_h2_ordinal": 10,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 70,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 63,
+        "WHITESPACE_DIFFERENCE": 6,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 342,
+      "right_bytes": 471
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-010",
+      "w2_h2_ordinal": 11,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 28,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 24,
+        "WHITESPACE_DIFFERENCE": 3,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 194,
+      "right_bytes": 250
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-011",
+      "w2_h2_ordinal": 12,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 174,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 158,
+        "WHITESPACE_DIFFERENCE": 11,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 5
+      },
+      "left_bytes": 954,
+      "right_bytes": 1278
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-012",
+      "w2_h2_ordinal": 13,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 251,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 226,
+        "WHITESPACE_DIFFERENCE": 22,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 3
+      },
+      "left_bytes": 1616,
+      "right_bytes": 2091
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-013",
+      "w2_h2_ordinal": 14,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 176,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 162,
+        "WHITESPACE_DIFFERENCE": 13,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 1007,
+      "right_bytes": 1340
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-014",
+      "w2_h2_ordinal": 15,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 216,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 200,
+        "WHITESPACE_DIFFERENCE": 13,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 3
+      },
+      "left_bytes": 1205,
+      "right_bytes": 1618
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-015",
+      "w2_h2_ordinal": 16,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 195,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 180,
+        "WHITESPACE_DIFFERENCE": 14,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 1123,
+      "right_bytes": 1492
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-016",
+      "w2_h2_ordinal": 17,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 119,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 110,
+        "WHITESPACE_DIFFERENCE": 8,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 579,
+      "right_bytes": 821
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-017",
+      "w2_h2_ordinal": 18,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 58,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 53,
+        "WHITESPACE_DIFFERENCE": 4,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 350,
+      "right_bytes": 455
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-018",
+      "w2_h2_ordinal": 19,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 75,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 70,
+        "WHITESPACE_DIFFERENCE": 4,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 373,
+      "right_bytes": 508
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-019",
+      "w2_h2_ordinal": 20,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 100,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 88,
+        "WHITESPACE_DIFFERENCE": 11,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 1
+      },
+      "left_bytes": 574,
+      "right_bytes": 759
+    },
+    {
+      "w1_section_id": "waraqat:w1:chapter-020",
+      "w2_h2_ordinal": 21,
+      "overall_classification": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW",
+      "strict_change_count": 174,
+      "profiles": {
+        "raw_byte_identical": false,
+        "marks_and_brackets_ignored_identical": false,
+        "after_whitespace_collapsing_identical": false,
+        "after_all_whitespace_removed_identical": false
+      },
+      "classification_counts": {
+        "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 157,
+        "WHITESPACE_DIFFERENCE": 11,
+        "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 6
+      },
+      "left_bytes": 866,
+      "right_bytes": 1382
+    }
+  ],
+  "source_text_included": false,
+  "scholarly_verified": false,
+  "redistribution_approved": false,
+  "semantic_equivalence_verified": false
+}
