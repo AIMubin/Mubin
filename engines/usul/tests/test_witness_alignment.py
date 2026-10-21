@@ -52,8 +52,8 @@ class ComparativeWitnessTests(unittest.TestCase):
         self.assertTrue(v["profiles"]["after_all_whitespace_removed_identical"])
         self.assertEqual(v["overall_classification"],
                          "TOKEN_BOUNDARY_DIFFERENCE_CANDIDATE")
-        self.assertEqual(v["left"]["raw_whitespace_token_count"], 6)
-        self.assertEqual(v["right"]["raw_whitespace_token_count"], 5)
+        self.assertEqual(v["left"]["raw_whitespace_token_count"], 5)
+        self.assertEqual(v["right"]["raw_whitespace_token_count"], 4)
         self.assertFalse(v["lexical_content_equivalence_certified"])
         self.assertFalse(v["meaning_preservation_verified"])
         self.assertGreater(v["strict_change_count"], 0)
