@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-from html.parser import HTMLParser
+from html import unescape
 import json
 from pathlib import Path
 import re
@@ -52,28 +52,52 @@ def _convert(fragment):
     return fragment.replace("\r\n", "\n").replace("\r", "\n")
 
 
+def _content_region(page):
+    """Find the exact closing div of the frozen witness content wrapper."""
+    start = page.find(CONTENT_START)
+    if start < 0 or page.find(CONTENT_START, start+1) >= 0:
+        raise _ExtractionError("W2 content root missing or duplicated")
+    opening_end = page.find(">", start)
+    if opening_end < 0:
+        raise _ExtractionError("unterminated content root")
+    depth = 1
+    # Never stop on the *next* div: nested layout divs are legitimate.
+    tag = re.compile(r"</?div\b[^>]*>", flags=re.I)
+    for match in tag.finditer(page, opening_end+1):
+        depth += -1 if match.group().startswith("</") else 1
+        if depth == 0:
+            return page[opening_end+1:match.start()]
+    raise _ExtractionError("W2 content root has no balanced closing div")
+
+
 def extract_sections(raw: bytes):
+    if type(raw) is not bytes or not 0 < len(raw) <= MAX_BYTES:
+        raise _ExtractionError("W2 source absent or oversized")
     if raw.startswith(b"\xef\xbb\xbf") or b"\x00" in raw:
         raise _ExtractionError("BOM or binary W2 capture refused")
     page = raw.decode("utf-8", errors="strict")
-    start = page.find(CONTENT_START)
-    stop = page.find("<div", start + len(CONTENT_START))
-    if stop < 0:
-        raise _ExtractionError("W2 content terminator not found")
-    begin = page.find(">", start) + 1
-    region = page[begin:stop]
-    h2_spans = [(m.start(), m.end()) for m in
-                re.finditer(r"<h2[^>]*>(.*?)</h2>", region, re.S | re.I)]
-    if len(h2_spans) < 2:
-        raise _ExtractionError("insufficient W2 chapter headings")
+    region = _content_region(page)
+    if re.search(r"<(?:script|style|iframe|form)\b", region, flags=re.I):
+        raise _ExtractionError("active/unsupported content markup in W2 witness")
+    titles = list(re.finditer(r"<h2(?:\s[^>]*)?>(.*?)</h2\s*>",
+                             region, re.S | re.I))
+    opens = len(re.findall(r"<h2(?=[\s>])", region, flags=re.I))
+    closes = len(re.findall(r"</h2\s*>", region, flags=re.I))
+    if not 2 <= len(titles) <= 256 or opens != len(titles) or closes != len(titles):
+        raise _ExtractionError("ambiguous or incomplete W2 chapter heading markup")
     sections = []
-    for index, (hs, he) in enumerate(h2_spans):
-        title = re.sub(r"<[^>]+>", "", region[hs:he]).strip()
-        body_stop = h2_spans[index + 1][0] if index + 1 < len(h2_spans) else len(region)
-        body = _convert(region[he:body_stop]).strip()
+    for index, match in enumerate(titles):
+        title_raw = match.group(1)
+        if "<" in title_raw or ">" in title_raw:
+            raise _ExtractionError("nested W2 chapter heading markup")
+        title = unescape(title_raw).strip()
+        if not title or "\n" in title or "\r" in title:
+            raise _ExtractionError("empty or multiline W2 chapter heading")
+        body_stop = titles[index + 1].start() if index + 1 < len(titles) else len(region)
+        body = _convert(region[match.end():body_stop]).strip()
         sections.append({"h2_ordinal": index + 1, "title": title,
                          "title_folded": _fold(title),
-                         "text": body, "heading_char_start": hs})
+                         "text": body, "heading_char_start": match.start()})
     return sections
 
 
@@ -99,10 +123,9 @@ def pair_with_w1(sections, w1_inventory):
     for chapter in chapters:
         folded = chapter.get("heading_folded_sha256")
         candidates = by_fold.get(folded, [])
-        if not candidates:
-            candidates = by_fold.get(folded, [])
         free = [c for c in candidates if id(c) not in used]
-        if len(free) != 1:
+        if len(candidates) != 1 or len(free) != 1 or sum(
+                c.get("heading_folded_sha256") == folded for c in chapters) != 1:
             unresolved.append({"w1_section_id": chapter["id"],
                                "folded_sha256": folded,
                                "reason": ("AMBIGUOUS_OR_DUPLICATE_TITLE" if len(free) > 1
@@ -120,7 +143,8 @@ def pair_with_w1(sections, w1_inventory):
         if all(s is not p["w2_section"] for p in paired):
             folded_key = _sha(s["title_folded"].encode("utf-8"))
             kind = ("TITLE_HEADING"
-                    if s["title_folded"].startswith("كتاب الورقات") else "UNPAIRED")
+                    if s["h2_ordinal"] == 1
+                    and s["title_folded"] == "كتاب الورقات" else "UNPAIRED")
             extras.append({"h2_ordinal": s["h2_ordinal"], "title_folded": s["title_folded"],
                            "title_folded_sha256": folded_key, "kind": kind})
     return paired, unresolved, extras
@@ -141,27 +165,47 @@ def main():
     export = build_export(sections)
     paired, unresolved, extras = pair_with_w1(sections, w1_inventory)
     args.sections_dir.mkdir(parents=True, exist_ok=True)
-    files = []
+    files, summaries, byte_cursor = [], [], 0
     for s in sections:
         path = args.sections_dir / (f"w2-h2-{s['h2_ordinal']:03d}.txt")
-        path.write_text(s["title"] + "\n" + s["text"] + "\n", encoding="utf-8")
-        files.append({"h2_ordinal": s["h2_ordinal"], "path": str(path),
-                      "bytes": path.stat().st_size,
-                      "sha256": _sha(path.read_bytes())})
+        section_bytes = (s["title"] + "\n" + s["text"] + "\n").encode("utf-8")
+        path.write_bytes(section_bytes)
+        files.append({"h2_ordinal": s["h2_ordinal"], "path": path.name,
+                      "bytes": len(section_bytes),
+                      "sha256": _sha(section_bytes)})
+        summaries.append({
+            "h2_ordinal": s["h2_ordinal"],
+            "title_sha256": _sha(s["title"].encode("utf-8")),
+            "title_folded_sha256": _sha(s["title_folded"].encode("utf-8")),
+            "derived_byte_start": byte_cursor,
+            "derived_byte_end_exclusive": byte_cursor + len(section_bytes),
+            "chars": len(s["text"]),
+        })
+        byte_cursor += len(section_bytes)
+    if byte_cursor != len(export):
+        raise _ExtractionError("derived W2 export and saved section bytes differ")
+    good = (len(unresolved) == 0 and len(paired) == len(w1_inventory["sections"])-1
+            and len(extras) == 1 and extras[0]["kind"] == "TITLE_HEADING")
     manifest = {
-        "schema_version": "0.1.0", "engine": VERSION,
-        "status": "W2_FULL_EXTRACTION_PASS",
+        "schema_version": "0.1.1", "engine": VERSION,
+        "status": ("W2_FULL_EXTRACTION_PASS" if good
+                   else "W2_EXTRACTION_PARTIAL_REQUIRES_REVIEW"),
         "source_html_sha256": W2_RAW_SHA,
         "source_html_bytes": len(raw),
         "offset_basis": "w2_derived_text_export (NOT original HTML offsets)",
         "sections_total": len(sections),
-        "sections": [{"h2_ordinal": s["h2_ordinal"], "title_folded": s["title_folded"],
-                      "chars": len(s["text"])} for s in sections],
-        "paired_with_w1": len(paired), "unresolved": unresolved, "extras": extras,
+        "sections": summaries,
+        "paired_with_w1": len(paired), "unresolved": unresolved,
+        "extras": [{"h2_ordinal": x["h2_ordinal"],
+                    "title_folded_sha256": x["title_folded_sha256"],
+                    "kind": x["kind"]} for x in extras],
         "export_sha256": _sha(export), "export_bytes": len(export),
         "section_files": files, "source_text_included": False,
         "scholarly_verified": False, "redistribution_approved": False,
     }
+    manifest["manifest_sha256"] = _sha(json.dumps(
+        manifest, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":"), allow_nan=False).encode("utf-8"))
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                              encoding="utf-8")
@@ -169,7 +213,7 @@ def main():
                       "paired": len(paired), "extras": len(extras),
                       "export_sha256": manifest["export_sha256"]},
                      ensure_ascii=True))
-    return 0
+    return 0 if good else 1
 
 
 if __name__ == "__main__":

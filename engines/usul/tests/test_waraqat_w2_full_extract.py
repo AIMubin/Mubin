@@ -62,6 +62,30 @@ class W2FullExtractTests(unittest.TestCase):
         self.assertEqual(extras[0]["kind"], "TITLE_HEADING")
         self.assertEqual(extras[0]["h2_ordinal"], 1)
 
+    def test_nested_layout_div_cannot_truncate_book_content(self):
+        html = FIXTURE.replace("<h2>النهي</h2>",
+                               '<div class="nested"><p>نص محاط</p></div><h2>النهي</h2>')
+        sections = extract_sections(html.encode("utf-8"))
+        self.assertEqual(len(sections), 3)
+        self.assertIn("نص محاط", sections[1]["text"])
+        self.assertIn("والنهي استدعاء الترك", sections[2]["text"])
+
+    def test_duplicate_content_root_rejected(self):
+        html = FIXTURE.replace("</body>", '<div id="content">duplicate</div></body>')
+        with self.assertRaises(_ExtractionError):
+            extract_sections(html.encode("utf-8"))
+
+    def test_missing_h2_close_is_error_not_false_full_coverage(self):
+        html = FIXTURE.replace("<h2>النهي</h2>", "<h2>النهي")
+        with self.assertRaises(_ExtractionError):
+            extract_sections(html.encode("utf-8"))
+
+    def test_disallowed_markup_is_not_silently_indexed(self):
+        html = FIXTURE.replace("<h2>النهي</h2>",
+                               '<script>unrelated()</script><h2>النهي</h2>')
+        with self.assertRaises(_ExtractionError):
+            extract_sections(html.encode("utf-8"))
+
     def test_missing_content_scope_refused(self):
         with self.assertRaises(_ExtractionError):
             extract_sections(b"<html><body>no content div</body></html>")

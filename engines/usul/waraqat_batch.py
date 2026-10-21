@@ -201,6 +201,88 @@ def inventory(raw_html, *, expected_html_sha=W1_RAW_SHA,
     return exported, meta
 
 
+def validate_inventory(exported, inventory_report, *,
+                       trusted_export_sha=None, trusted_html_sha=None):
+    """Fail closed on altered, truncated, overlapping or self-inconsistent inventories.
+
+    The optional trusted digests are independent caller-supplied roots. The
+    production CLI already verifies frozen HTML/export via inventory(); a
+    comparator consuming private reports must pass both trusted roots.
+    """
+    _need(type(exported) is bytes and type(inventory_report) is dict,
+          "invalid W1 inventory inputs")
+    meta = inventory_report
+    _need(meta.get("status") == "FULL_W1_SOURCE_INVENTORY_PASS"
+          and meta.get("all_original_bytes_partitioned_once") is True
+          and meta.get("witness_id") == "pilot:waraqat-primary"
+          and meta.get("source_url") == W1_URL,
+          "invalid W1 source inventory contract")
+    digest = _sha(exported)
+    _need(meta.get("source_export_sha256") == digest
+          and (trusted_export_sha is None or digest == trusted_export_sha)
+          and (trusted_html_sha is None
+               or meta.get("source_raw_html_sha256") == trusted_html_sha),
+          "W1 trusted source digest mismatch")
+    starts = _line_starts(exported)
+    _need(meta.get("source_export_byte_count") == len(exported)
+          and meta.get("source_export_line_count") == len(starts)-1,
+          "W1 original export size/line count mismatch")
+    sections = meta.get("sections")
+    _need(type(sections) is list and 2 <= len(sections) <= MAX_CHAPTERS+1
+          and meta.get("partition_count_including_prelude") == len(sections)
+          and meta.get("chapter_heading_count") == len(sections)-1,
+          "W1 inventory chapter coverage incomplete")
+    cursor, ids = 0, set()
+    for index, section in enumerate(sections):
+        _need(type(section) is dict, "W1 section record malformed")
+        expected_id = ("waraqat:w1:prologue" if index == 0
+                       else f"waraqat:w1:chapter-{index:03d}")
+        kind = "PRELUDE" if index == 0 else "HEADING_SECTION"
+        _need(section.get("id") == expected_id
+              and section.get("kind") == kind
+              and section.get("id") not in ids,
+              "W1 section order/identifier invalid")
+        ids.add(section["id"])
+        first, stop = section.get("source_byte_start"), section.get("source_byte_end_exclusive")
+        _need(type(first) is int and type(stop) is int
+              and first == cursor and first < stop <= len(exported),
+              "W1 section partition gap/overlap/out-of-bounds")
+        part = exported[first:stop]
+        _need(section.get("section_sha256") == _sha(part),
+              "root source differs from listed section hash")
+        first_idx, last_idx = bisect_left(starts, first), bisect_left(starts, stop)
+        _need(first_idx < len(starts) and last_idx < len(starts)
+              and starts[first_idx] == first and starts[last_idx] == stop
+              and section.get("source_line_start") == first_idx+1
+              and section.get("source_line_end_exclusive") == last_idx+1
+              and section.get("line_count") == last_idx-first_idx
+              and section.get("byte_count") == len(part),
+              "W1 section line/byte coordinate mismatch")
+        _need(section.get("source_text_included") is False,
+              "W1 inventory source text inclusion not permitted")
+        if index == 0:
+            _need(section.get("heading_ordinal") is None
+                  and section.get("heading_sha256") is None,
+                  "W1 prologue heading contract invalid")
+        else:
+            _need(section.get("heading_ordinal") == index
+                  and all(type(section.get(key)) is str
+                          and re.fullmatch(r"[0-9a-f]{64}", section[key])
+                          for key in ("heading_sha256", "heading_folded_sha256")),
+                  "W1 chapter heading fingerprint invalid")
+            heading_line = exported[first:starts[first_idx+1]].decode("utf-8").strip()
+            _need(_sha(heading_line.encode("utf-8")) == section["heading_sha256"],
+                  "W1 heading fingerprint does not match source")
+        cursor = stop
+    _need(cursor == len(exported), "W1 inventory omits final source bytes")
+    self_sha = meta.get("inventory_sha256")
+    _need(type(self_sha) is str
+          and self_sha == _sha(_canonical({k:v for k,v in meta.items()
+                                          if k != "inventory_sha256"})),
+          "W1 inventory canonical digest invalid")
+    return True
+
+
 def batch_retrieve_and_graph(exported, inventory_report, queries):
     """Index each pinned W1 partition, then generate SHA-only context graphs.
 
@@ -212,6 +294,7 @@ def batch_retrieve_and_graph(exported, inventory_report, queries):
     _need(type(exported) is bytes
           and _sha(exported) == inventory_report["source_export_sha256"],
           "source export differs from frozen inventory")
+    validate_inventory(exported, inventory_report)
     result = []
     with TemporaryDirectory(prefix="mubin-w1-batch-") as temporary:
         root = Path(temporary)
