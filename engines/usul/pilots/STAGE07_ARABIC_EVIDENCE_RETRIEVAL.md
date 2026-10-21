@@ -1,6 +1,6 @@
 # U0.1 Stage 07 — Arabic Evidence Retrieval across pinned Waraqat witnesses
 
-**Current status:** `ENGINEERING_IMPLEMENTED_SYNTHETIC_CI_PASS` once CI is green; **real private two-witness Stage07 replay not yet recorded**. Stage 06's source-replay gate remains closed independently and is **reused** rather than reopened.
+**Current status:** `STAGE07_DUAL_WITNESS_ARABIC_RETRIEVAL_PASS` was **reported by the private Windows operator** and preserved in [the Stage07 metadata-only closing receipt](../../../corpus/reviews/u01-stage07-waraqat-arabic-retrieval.json). The independently observed GitHub CI verifies synthetic engineering behavior on Windows and Ubuntu, not a second replay of the private HTML captures. Stage 06's established source-replay gate is **reused**, not reopened.
 
 ## Reference sources
 
@@ -60,7 +60,7 @@ The published [Stage07 queries](data/waraqat-stage07-queries.json) are only shor
 
 On real PASS: `STAGE07_DUAL_WITNESS_ARABIC_RETRIEVAL_PASS` (exit 0), with both Stage06 HTML-to-section replay checks true, and separate query match arrays for W1 and W2. Missing private captures: `PENDING_PRIVATE_WITNESS_FILES` (exit 3). Any changed source/hash, malformed query, ambiguous section or verification error: `FAIL` (exit 1). **These exit statuses concern engineering operations only.**
 
-Run twice on the same frozen files. Check byte-for-byte identical JSON, verify every match's original bytes and hash using direct reads of the *private* section files, and check absence of source excerpts before publishing only a metadata-only closing receipt. **Do not fabricate the real-source match counts from Stage05's W1-only lexical results**; Stage07 profile effects and W2 may differ.
+For any future rerun, execute twice on the frozen files, compare byte-identical JSON, and revalidate every match against the private original sections. **The operator reported completing this exact replay** with two-run SHA-256 `5978af72c27a6835bf04a5e32c1eeff038c57008effd7459d914870b5e92bdc0`; the original HTML/UTF-8 bytes remain outside GitHub. Stage07 counts cannot be inferred from Stage05's W1-only literal search.
 
 ## CI, limitations and future work
 
@@ -72,3 +72,27 @@ python -m unittest discover -s core/tests -v
 [Generic regression suite](../tests/test_arabic_evidence_retrieval.py) and [real-runner contract tests](../tests/test_waraqat_stage07.py) use synthetic Arabic; they check UTF-8 byte offsets, reassembled indexes, stable report hashes, source-coordinate bases, hamza-safe diagnostics, harakat and editorial bracket matching, token-join candidates, negation integrity, malformed input, duplicate identifiers, and the non-circular frozen Stage06 gate.
 
 **Not implemented or claimed:** morphology/stemming, orthographic equivalence adjudication, alternative edition authenticity, cross-line retrieval, semantic `qarīnah` classification, scholarly approval, fiqh inference, citation text republication rights, or broader work coverage. `scholarly_verified=false`, `redistribution_approved=false`, `semantic_qarinah_verified=false`, and `juristic_inference_allowed=false` throughout. Mubin remains `0.1.0-alpha` and `U0.1` remains `experimental_prototype_not_qualified`. Q0.3 and H3.9.2 are untouched.
+
+
+## 2026-10-21 — closure on the locally pinned W1 and W2 captures
+
+The [Stage07 metadata-only closing receipt](../../../corpus/reviews/u01-stage07-waraqat-arabic-retrieval.json), committed in [`0d2cf97`](https://github.com/AIMubin/Mubin/commit/0d2cf97d7a63e471322e7c39a272a9669f809749), records the real-source runner status `STAGE07_DUAL_WITNESS_ARABIC_RETRIEVAL_PASS`, after W1 and W2 Stage06 strict HTML-to-section replay. It records SHA-256s of both raw captures and pinned chapters, W1 index of **22 lines/1,232 bytes** and W2 index of **16 lines/1,702 bytes**, original coordinate-basis distinctions, negative tests and repeatable JSON.
+
+Operator-reported literal counts for six queries:
+
+| Query | W1 literal | W2 literal | W2 fold-only candidates by selected profile |
+| --- | ---: | ---: | --- |
+| الأمر | 6 | 1 | 5 / 5 / 5 |
+| القرينة | 1 | 0 | 1 / 1 |
+| الوجوب | 1 | 0 | 1 / 1 |
+| الندب | 1 | 0 | 1 / 1 |
+| الإباحة | 1 | 0 | 1 / 1 |
+| و أما | 1 | 0 | 0 / 0 / 1 |
+
+There were **12 literal occurrences total (W1 11; W2 1)**. Fold candidate counts are **per profile** and overlap; adding the 5/5/5 numbers does not represent 15 distinct source occurrences. The single W2 `و أما` word-join candidate arose **only after the spaces fold**, as expected for a word-boundary diagnostic and never a lexical/semantic equivalence certification.
+
+The [`bbeefb353` source baseline](https://github.com/AIMubin/Mubin/commit/bbeefb35320fd67d124837f00caa9351991726a3) passed [Usul CI 39548101731](https://github.com/AIMubin/Mubin/actions/runs/39548101731) with **160/160 tests on both Ubuntu and Windows**. The closure-only [`0d2cf97` commit](https://github.com/AIMubin/Mubin/commit/0d2cf97d7a63e471322e7c39a272a9669f809749), touching only `corpus/reviews`, passed [Corpus CI 39550460703](https://github.com/AIMubin/Mubin/actions/runs/39550460703) **62/62 on both OSes**. GitHub's path-filtered Usul workflow did not execute on that review-only commit.
+
+**Acceptance boundary:** The Stage07 *source capture → frozen extraction → literal and folded retrieval* workflow is locally attested. Synthetic public CI independently tests its software. Source edition and rights, full book coverage, equivalence of the two witnesses, semantic qarīnah identification and legal deduction remain **unverified**: `scholarly_verified=false`, `redistribution_approved=false`, `semantic_qarinah_verified=false`, `juristic_inference_allowed=false`, `public_fatwa_authorized=false`. A hash pinned by an operator is not a cryptographic signature and not independent scholarly authentication.
+
+**Stage 08 handoff — Evidence Context & Citation Graph:** assemble source-addressed, context-limited evidence nodes and edges tied to verified original section spans, with the retrieved textual occurrence kept separate from normalized search candidates, P0 rule bindings, objections and semantic attestations. No absent-match→absent-qarīnah inference. Keep scope on Bab al-Amr until independently pinned chapter snapshots are available for expanded coverage.
