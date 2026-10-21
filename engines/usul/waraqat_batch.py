@@ -17,7 +17,7 @@ from pathlib import Path
 import re
 from tempfile import TemporaryDirectory
 
-from engines.usul.arabic_evidence_retrieval import retrieve
+from engines.usul.arabic_evidence_retrieval import SAFE_DIAGNOSTIC_MARKS, retrieve
 from engines.usul.evidence_context_graph import build_context_graph
 from engines.usul.pilots.waraqat_extract import (
     CONTENT_START, TOOL_VERSION as EXTRACTOR_VERSION, extract,
@@ -128,6 +128,10 @@ def inventory(raw_html, *, expected_html_sha=W1_RAW_SHA,
             "kind": "HEADING_SECTION",
             "heading_ordinal": index,
             "heading_sha256": _sha(text.encode("utf-8")),
+            # Diagnostic title matching only; never certifies shared wording.
+            "heading_folded_sha256": _sha(" ".join(
+                "".join(ch for ch in text if ord(ch) not in SAFE_DIAGNOSTIC_MARKS).split()
+            ).encode("utf-8")),
             "source_line_start": line_idx + 1,
             "source_byte_start": offset,
         })
@@ -137,6 +141,7 @@ def inventory(raw_html, *, expected_html_sha=W1_RAW_SHA,
         "kind": "PRELUDE",
         "heading_ordinal": None,
         "heading_sha256": None,
+        "heading_folded_sha256": None,
         "source_byte_start": 0,
         "source_line_start": 1,
     }, *records]
