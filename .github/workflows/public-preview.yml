@@ -11,6 +11,7 @@ on:
       - 'corpus/reviews/u01-stage08-waraqat-context-graph.json'
       - 'corpus/reviews/q03-engineering-qualification.json'
       - 'VERSION.yaml'
+      - '.gitattributes'
       - '.github/workflows/public-preview.yml'
   pull_request:
     paths:
@@ -23,6 +24,7 @@ on:
       - 'corpus/reviews/u01-stage08-waraqat-context-graph.json'
       - 'corpus/reviews/q03-engineering-qualification.json'
       - 'VERSION.yaml'
+      - '.gitattributes'
       - '.github/workflows/public-preview.yml'
 permissions:
   contents: read
