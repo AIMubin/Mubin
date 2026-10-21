@@ -173,6 +173,11 @@ class ContextGraphTests(unittest.TestCase):
             {"witness_id": "pilot:unknown"},
             {"kind": "SUPPORTS_RULE"},
             {"reference_id": ""},
+            {"id": "bad\nidentifier"},
+            {"id": "pilot:rule-navigation", "reference_id": ["not-a-string"]},
+            {"witness_id": []},
+            {"query_id": []},
+            {"kind": []},
         ):
             ptrs = copy.deepcopy(POINTERS)
             ptrs[0].update(change)
