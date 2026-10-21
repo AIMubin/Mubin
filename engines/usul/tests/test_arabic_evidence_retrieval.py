@@ -165,6 +165,8 @@ class ArabicRetrievalTests(unittest.TestCase):
         invalid = [
             [], [{"id": "pilot:a", "literal": "", "candidate_profiles": []}],
             [{"id": "pilot:a", "literal": "\n", "candidate_profiles": []}],
+            [{"id": "pilot:a", "literal": "س\u2028ر", "candidate_profiles": []}],
+            [{"id": "pilot:a", "literal": "س\u0085ر", "candidate_profiles": []}],
             [{"id": "pilot:a", "literal": "س"*130, "candidate_profiles": []}],
             [{"id": "pilot:a", "literal": "x", "candidate_profiles": ["aggressive"]}],
             [{"id": "pilot:a", "literal": "x", "candidate_profiles": [FOLD_MARKS,FOLD_MARKS]}],
