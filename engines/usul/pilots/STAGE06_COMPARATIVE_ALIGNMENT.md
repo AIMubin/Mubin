@@ -1,12 +1,12 @@
 # U0.1 Stage 06 — Comparative Witness Alignment
 
-**State:** Engineering implementation with synthetic CI tests; private real-witness comparison has NOT yet been independently replayed through this new module. This is not an edition verification, semantic equivalence proof, or fiqh ruling.
+**State:** `STAGE06_DUAL_SOURCE_EXTRACTION_REPLAY_PASS` reported by the Windows operator for BOTH locally pinned real digital witnesses and recorded in the [metadata-only Stage06 closure receipt](../../../corpus/reviews/u01-stage06-waraqat-dual-witness-alignment.json). Public CI independently establishes engineering correctness on synthetic fixtures, but did NOT replay the original private HTML bytes. This does not certify a critically edited edition, lexical/semantic equivalence, or a fiqh ruling.
 
 ## Primary-source provenance
 
 Witness 1: *الورقات في أصول الفقه*, Imam al-Haramayn al-Juwayni, [islamicbook.ws](https://www.islamicbook.ws/asol/alwrqat.html). Pinned Stage04 raw HTML SHA-256: 66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044. Exact W1 Bab al-Amr snapshot: 22 lines, bytes 3735:4967, SHA-256 20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab.
 
-Witness 2: [islam.ms](https://www.islam.ms/ar/كتاب-ورقات-أصول-فقه-إسلامي-إمام-حرمين-عبد-الملك-الجويني/). The separate operator report pins its original HTML SHA-256 to 3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa. The W2 HTML-to-section converter and **independently pinned extracted-section hash are not yet present in the public repository**.
+Witness 2: [islam.ms](https://www.islam.ms/ar/كتاب-ورقات-أصول-فقه-إسلامي-إمام-حرمين-عبد-الملك-الجويني/). The separate operator report pins its original HTML SHA-256 to 3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa. The [W2 HTML-to-section converter](waraqat_witness2_extract.py) is in the public repository; the operator reports a locally and separately pinned section digest `db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358` (1,702 bytes). The private section bytes and its pin ledger are not in the public repository.
 
 Source receipts: [Stage04 W1 source](../../../corpus/reviews/u01-stage04-waraqat-source-link.json), [Stage05 W1 search](../../../corpus/reviews/u01-stage05-waraqat-lexical-replay.json) and [W2 pilot comparison](../../../corpus/reviews/u01-stage05-witness2-comparison.json).
 
@@ -52,6 +52,20 @@ Then record the exact output SHA separately, inspect that the proper Bab al-Amr 
 
 The [Stage05 W2 comparison record](../../../corpus/reviews/u01-stage05-witness2-comparison.json) reports 127 vs 126 whitespace tokens, a difference like و أما versus وأما, vocalization and editorial brackets. The record also states identical_after_normalization=false while describing lexical_word_differences=0. The latter is a **conditional operator assessment**, not a reproduced identical normalized token sequence and not a scholarly finding.
 
-To close Stage06 on full dual-witness provenance, implement the W2 HTML-to-section extractor, independently freeze its raw and exported byte identity, add source-relative section byte coverage, and replay extraction+alignment over BOTH private captures. No third-party signature, critical edition or rights permission is inferred from SHA-256 alone.
+**Local dual-capture technical gate closed:** the operator reports reproducible W2 extraction, an independently recorded W2 section digest, and a successful strict runner with `--require-secondary-extraction` (exit 0). The machine reported **232 original-codepoint diff events**, mostly W2 vocalization. The additional locally reported combined-profile alignment explains residual token segmentation; it is **not** part of the separately versioned public comparator CI contract, so it must not be represented as independently certified zero lexical differences. [See closure record](../../../corpus/reviews/u01-stage06-waraqat-dual-witness-alignment.json). No third-party cryptographic signature, critical edition, scholarly equivalence or rights permission is inferred from a recorded SHA-256.
 
 Do not change Mubin system 0.1.0-alpha, Q0.3, or H3.9.2. Keep scholarly_verified=false, redistribution_approved=false, semantic_qarinah_verified=false, lexical_content_equivalence_certified=false, and full_witness_comparison_qualified=false until separately justified.
+
+## 2026-10-21 verified repository and CI status
+
+The [Stage06 closing receipt](../../../corpus/reviews/u01-stage06-waraqat-dual-witness-alignment.json), added by [`1efb5a6`](https://github.com/AIMubin/Mubin/commit/1efb5a6dbf15a5c88426555d2bb3bb556a1085b9), records:
+
+- W1 exact Bab al-Amr UTF-8 section: 1,232 bytes, SHA-256 `20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab`.
+- W2 extracted Bab al-Amr UTF-8 section: 1,702 bytes, SHA-256 `db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358`.
+- Both HTML→section replay checks reported `true`; strict source replay status `STAGE06_DUAL_SOURCE_EXTRACTION_REPLAY_PASS`; 232 raw alignment changes retained.
+- Independent local negative tests reported refusal for altered captures, sections and W2 pin. Private capture and per-event original bytes remain outside public CI.
+- `lexical_content_equivalence_certified=false`, `zero_lexical_difference_certified=false`, `full_witness_comparison_qualified=false`, `scholarly_verified=false`, `redistribution_approved=false` remain false, as designed.
+
+**Verified via GitHub:** source baseline [`18db3cb`](https://github.com/AIMubin/Mubin/commit/18db3cb63a331ee31604fa87a0a3b2b11990651b) passed [Usul CI 39533986573](https://github.com/AIMubin/Mubin/actions/runs/39533986573) (**145/145 tests on Windows and Ubuntu**). The closure-only commit `1efb5a6` changed `corpus/reviews` and passed [Corpus CI 39538619702](https://github.com/AIMubin/Mubin/actions/runs/39538619702) (**62/62 on both OSes**). The Usul workflow was not triggered by the review-only commit under the existing path filters.
+
+**Next scoped engineering campaign:** `U0.1 Stage 07 — Arabic Evidence Retrieval`. Define *versioned, reversible* Arabic lookup profiles with exact original-span offsets; return strict literal matches separately from orthographically folded candidates across **individually pinned witnesses**. Do not infer absent `qarā'in`, legal conclusions, or source equivalence from zero hits or normalized matches. The current engineering status closes Stage06 **only in the limited source-replay sense**.
