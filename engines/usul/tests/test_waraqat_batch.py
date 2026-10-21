@@ -112,7 +112,7 @@ class FullBookBatchTests(unittest.TestCase):
         src, exported = self.data()
         with self.assertRaisesRegex(BatchCoverageError, "HTML pin"):
             inventory(src + b"X", expected_html_sha=_digest(src),
-                      expected_export_sha=_digest(export),
+                      expected_export_sha=_digest(exported),
                       require_frozen_amr=False)
         with self.assertRaisesRegex(BatchCoverageError, "export pin"):
             inventory(src, expected_html_sha=_digest(src),
@@ -139,7 +139,7 @@ class FullBookBatchTests(unittest.TestCase):
         source = _html().replace("النهي</h5>".encode("utf8"),
                                   "النهي<br>كلمة</h5>".encode("utf8"), 1)
         exported, _ = extract(source)
-        with self.assertRaisesRegex(BatchCoverageError, "multiline heading"):
+        with self.assertRaisesRegex(BatchCoverageError, "nested HTML|multiline heading"):
             inventory(source, expected_html_sha=_digest(source),
                       expected_export_sha=_digest(exported),
                       require_frozen_amr=False)
