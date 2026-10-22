@@ -1,0 +1,35 @@
+{
+  "schema_version": "u0.2.0",
+  "concepts": [
+    {
+      "id": "concept:amr-term",
+      "concept_kind": "TERM",
+      "review_status": "UNASSESSED"
+    },
+    {
+      "id": "concept:qarinah-candidate",
+      "concept_kind": "EXCEPTION",
+      "review_status": "UNASSESSED"
+    },
+    {
+      "id": "concept:wujub-candidate",
+      "concept_kind": "OUTCOME",
+      "review_status": "UNASSESSED"
+    }
+  ],
+  "rule_candidates": [
+    {
+      "id": "candidate:amr-structural-hypothesis",
+      "pointer_id": "pilot:amr-rule-research-pointer",
+      "if_concepts": [
+        "concept:amr-term"
+      ],
+      "unless_concepts": [
+        "concept:qarinah-candidate"
+      ],
+      "then_concept": "concept:wujub-candidate",
+      "review_status": "UNASSESSED"
+    }
+  ],
+  "relations": []
+}

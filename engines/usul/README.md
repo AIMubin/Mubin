@@ -187,3 +187,20 @@ and synthetic regression tests appear under
 Success means only structurally linked research candidates. It does not
 verify source interpretation, school affiliation, disputed rules, `qiyas`,
 `tarjih` or any fatwa. Mubin remains `0.1.0-alpha`.
+
+## U0.2 pilot 03 — private-source replay bridge (W1/W2)
+
+A [strict local operator](pilots/waraqat_u02_real_bridge.py) now
+re-executes Stage06→Stage07→Stage08 from the **private frozen HTML
+witnesses**, verifies the historically pinned Stage08 SHA-256
+(`72ca6bd8…a6fdb2`), and constructs a candidate-only U0.2 catalog
+with source-scoped, byte-addressed **lexical** links. The three W1
+queries for the candidate concepts are bound to the frozen exact
+occurrence counts 6/1/1. No source text appears in its output.
+
+This is **not** runnable against private witnesses on public CI; synthetic
+end-to-end tests validate the integration contract. Follow the
+[U0.2 private-source operator runbook](pilots/U02_REAL_WARAQAT_BRIDGE.md)
+to run the actual frozen W1/W2 replay locally and archive a
+metadata-only receipt. No semantic equivalence, rule-support,
+scholarly authentication, rights clearance or fiqh inference is granted.
