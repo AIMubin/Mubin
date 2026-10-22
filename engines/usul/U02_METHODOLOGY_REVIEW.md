@@ -19,7 +19,9 @@ Available ambiguity kinds: `LEXICAL_SCOPE_UNRESOLVED`,
 
 Available alternative kinds: `PROFILE_DIVERGENCE` and
 `STRUCTURAL_ALTERNATIVE`. These labels mean proposed *comparison tasks*,
-not evidence that a disagreement actually exists among scholars.
+not evidence that a disagreement actually exists among scholars. The two candidate rules must share at least
+one declared concept before any comparison is recorded; this is a
+structural relevance check, never proof of doctrinal conflict.
 
 The input overlay is bound to a full `catalog_sha256`, and the catalog
 is **recomputed**, not trusted as a free-standing supplied blob. Recomputing

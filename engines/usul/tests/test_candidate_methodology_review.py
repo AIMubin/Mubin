@@ -214,6 +214,38 @@ class MethodologyCandidateReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogError, "DISAGREEMENT_DUPLICATED"):
             self.run_review()
 
+    def test_disagreement_requires_shared_comparison_concept(self):
+        self.catalog_manifest["concepts"].extend([
+            {"id": "concept:other-premise", "concept_kind": "TERM",
+             "review_status": "UNASSESSED"},
+            {"id": "concept:other-exception", "concept_kind": "EXCEPTION",
+             "review_status": "UNASSESSED"},
+        ])
+        rule = self.catalog_manifest["rule_candidates"][1]
+        rule["if_concepts"] = ["concept:other-premise"]
+        rule["unless_concepts"] = ["concept:other-exception"]
+        self.overlay["catalog_sha256"] = build_catalog(
+            self.graph, self.pin, self.catalog_manifest)["catalog_sha256"]
+        with self.assertRaisesRegex(CatalogError, "DISAGREEMENT_NO_COMMON_CONCEPT"):
+            self.run_review()
+
+    def test_malformed_ambiguity_kind_rejected_as_contract_error(self):
+        self.overlay["ambiguities"][0]["kind"] = ["LEXICAL_SCOPE_UNRESOLVED"]
+        with self.assertRaisesRegex(CatalogError, "AMBIGUITY_UNANCHORED_OR_PROMOTED"):
+            self.run_review()
+
+    def test_malformed_disagreement_kind_rejected_as_contract_error(self):
+        self.overlay["disagreements"][0]["kind"] = ["PROFILE_DIVERGENCE"]
+        with self.assertRaisesRegex(CatalogError, "DISAGREEMENT_INVALID"):
+            self.run_review()
+
+    def test_structural_alternative_does_not_imply_actual_disagreement(self):
+        self.overlay["disagreements"][0]["kind"] = "STRUCTURAL_ALTERNATIVE"
+        a = self.run_review()
+        self.assertEqual(a["disagreement_candidate_count"], 1)
+        self.assertFalse(a["real_juristic_disagreement_attested"])
+        self.assertFalse(a["semantic_equivalence_verified"])
+
     def test_duplicate_ambiguity_id_not_allowed(self):
         self.overlay["ambiguities"].append(copy.deepcopy(self.overlay["ambiguities"][0]))
         with self.assertRaisesRegex(CatalogError, "AMBIGUITY_IDS_INVALID"):

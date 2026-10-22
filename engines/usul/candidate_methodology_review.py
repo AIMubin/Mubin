@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from engines.usul.concept_rule_catalog import (
@@ -14,7 +15,7 @@ from engines.usul.concept_rule_catalog import (
 )
 
 VERSION = "usul-candidate-methodology-review/0.2.1"
-VERSION_PATTERN = __import__("re").compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
+VERSION_PATTERN = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
 AMBIGUITIES = {"LEXICAL_SCOPE_UNRESOLVED", "EXCEPTION_SCOPE_UNRESOLVED",
                "CONDITION_SCOPE_UNRESOLVED", "FORMALIZATION_UNRESOLVED"}
 DISAGREEMENTS = {"PROFILE_DIVERGENCE", "STRUCTURAL_ALTERNATIVE"}
@@ -102,7 +103,7 @@ def build_methodology_review(stage08_graph, trusted_stage08_sha256,
         exact(a, ("id", "subject_type", "subject_id", "kind",
                   "research_pointer_id", "review_status"),
               "AMBIGUITY_FIELDS_INVALID")
-        need(a["kind"] in AMBIGUITIES
+        need(type(a["kind"]) is str and a["kind"] in AMBIGUITIES
              and a["review_status"] == "UNRESOLVED"
              and valid_id(a["research_pointer_id"])
              and pointer_for_subject(a["subject_type"], a["subject_id"],
@@ -115,10 +116,18 @@ def build_methodology_review(stage08_graph, trusted_stage08_sha256,
                   "kind", "review_status"),
               "DISAGREEMENT_FIELDS_INVALID")
         left, right = d["left_rule_candidate_id"], d["right_rule_candidate_id"]
-        need(d["kind"] in DISAGREEMENTS and d["review_status"] == "UNASSESSED"
+        need(type(d["kind"]) is str and d["kind"] in DISAGREEMENTS
+             and d["review_status"] == "UNASSESSED"
              and valid_id(left) and valid_id(right)
              and left in rules and right in rules and left != right,
              "DISAGREEMENT_INVALID")
+        shared = set(rules[left]["if_concepts"] +
+                     rules[left]["unless_concepts"] +
+                     [rules[left]["then_concept"]]) & set(
+                         rules[right]["if_concepts"] +
+                         rules[right]["unless_concepts"] +
+                         [rules[right]["then_concept"]])
+        need(bool(shared), "DISAGREEMENT_NO_COMMON_CONCEPT")
         signature = (d["kind"],) + tuple(sorted((left, right)))
         need(signature not in seen_pairs, "DISAGREEMENT_DUPLICATED")
         seen_pairs.add(signature)
