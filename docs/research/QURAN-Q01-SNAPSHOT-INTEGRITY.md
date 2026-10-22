@@ -28,3 +28,15 @@ Reference topology: [Tanzil Quran Metadata](https://tanzil.net/docs/Quran_Metada
 4. Build source-identity and exact quote receipts under P1, run source-disjoint checks, maintain source updates without corrupting frozen benchmarks.
 
 The Q0.1 gate is engineering-only. No Hadith Schema-31 human reviews, U0.5 approval slots, or frozen H3.9.2 holdouts are modified or opened.
+
+## 2026-10-22 search orthography hardening (P2)
+
+The `arabic_marks_insensitive` search mode strips **only bounded optional
+vocalization / Quranic annotation marks** in a temporary query/index
+representation. It deliberately retains combining U+0653 (maddah),
+U+0654 (hamza above), U+0655 (hamza below) and U+0670 (superscript
+alef), rather than deleting every `Mn` mark. This prevents false
+matching between unhamzated strings and decomposed hamzated words.
+This is a conservative search matching contract, not a scholarly proof
+of full orthographic equivalence or an instruction to rewrite scripture.
+Snapshot bytes and `raw_sha256` remain unchanged.

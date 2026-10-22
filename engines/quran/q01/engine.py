@@ -130,8 +130,18 @@ def _parse(data:bytes,*,max_size:int)->Any:
 
 
 def _fold_arabic_marks(s:str)->str:
-    # Query/index-only transformation. This NEVER changes source text/bytes.
-    return ''.join(ch for ch in s if not (0x0600<=ord(ch)<=0x08FF and unicodedata.category(ch)=='Mn'))
+    # Query/index-only transformation; source text/bytes remain untouched.
+    # Only optional vocalization/Quranic annotation marks are suppressed.
+    # U+0653 MADDAH, U+0654/0655 HAMZA, and U+0670 SUPERSCRIPT ALEF
+    # distinguish script forms: never erase them as generic Mn marks.
+    def _optional_mark(ch:str)->bool:
+        point=ord(ch)
+        return (unicodedata.category(ch)=='Mn' and (
+            0x0610<=point<=0x061A or
+            0x064B<=point<=0x0652 or
+            0x06D6<=point<=0x06ED
+        ))
+    return ''.join(ch for ch in s if not _optional_mark(ch))
 
 @dataclass(frozen=True)
 class QuranIndex:

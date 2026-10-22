@@ -76,6 +76,29 @@ class Q01Tests(unittest.TestCase):
         for lim in (0,101,True,'1',1.5):
             with self.assertRaises(SnapshotError):self.index.find('سلام',limit=lim)
 
+    def test_combining_hamza_and_maddah_are_not_discarded(self):
+        # Accept decomposed script without pretending it is the unhamzated form.
+        for letter in ("\u0653", "\u0654", "\u0655", "\u0670"):
+            with self.subTest(letter=hex(ord(letter))):
+                c=copy.deepcopy(self.corpus)
+                c['verses'][0]['text']="ا"+letter+"مَانَةٌ"
+                raw=encode(c)
+                idx=load_snapshot(update_manifest(self.manifest,raw),raw)
+                self.assertEqual([],idx.find("امانة",match='arabic_marks_insensitive'))
+                hits=idx.find("ا"+letter+"مانة",match='arabic_marks_insensitive')
+                self.assertEqual(1,len(hits))
+                self.assertEqual(c['verses'][0]['text'],hits[0]['text'])
+
+    def test_query_folding_still_drops_optional_arabic_vowels_only(self):
+        c=copy.deepcopy(self.corpus)
+        c['verses'][0]['text']="ا\u0654مَانَةٌ"
+        raw=encode(c)
+        idx=load_snapshot(update_manifest(self.manifest,raw),raw)
+        self.assertEqual(1,len(idx.find("ا\u0654مانة",match='arabic_marks_insensitive')))
+        self.assertEqual([],idx.find("امانة",match='arabic_marks_insensitive'))
+        with self.assertRaises(SnapshotError):
+            idx.find("\u06d6",match='arabic_marks_insensitive')
+
     def test_tamper_text_or_whitespace_breaks_raw_pin(self):
         for b in (C.replace('تجريبي'.encode(), 'اختباري'.encode(),1), C+b' ',C.replace(b'\n',b'\r\n')):
             with self.subTest(b=b[-35:]):
