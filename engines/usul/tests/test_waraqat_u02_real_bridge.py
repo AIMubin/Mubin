@@ -69,6 +69,8 @@ class WaraqatU02BridgeTests(unittest.TestCase):
             "secondary_section_sha256": self.w2_sha,
         })
         self.graph = graph
+        self.expected_nodes = len(graph["nodes"])
+        self.expected_edges = len(graph["edges"])
         self.catalog = {
             "schema_version": "u0.2.0",
             "concepts": [
@@ -110,8 +112,8 @@ class WaraqatU02BridgeTests(unittest.TestCase):
                  "pilot:waraqat-primary": self.w1_sha,
                  "pilot:waraqat-comparator": self.w2_sha,
              }), \
-             patch.object(bridge, "EXPECTED_NODES", len(self.graph["nodes"])), \
-             patch.object(bridge, "EXPECTED_EDGES", len(self.graph["edges"])):
+             patch.object(bridge, "EXPECTED_NODES", self.expected_nodes), \
+             patch.object(bridge, "EXPECTED_EDGES", self.expected_edges):
             return bridge.bind_replayed_metadata(self.graph,
                                                   self.catalog, self.lexical)
 
@@ -208,8 +210,8 @@ class WaraqatU02BridgeTests(unittest.TestCase):
                  "pilot:waraqat-primary": self.w1_sha,
                  "pilot:waraqat-comparator": self.w2_sha,
              }), \
-             patch.object(bridge, "EXPECTED_NODES", len(self.graph["nodes"])), \
-             patch.object(bridge, "EXPECTED_EDGES", len(self.graph["edges"])):
+             patch.object(bridge, "EXPECTED_NODES", self.expected_nodes), \
+             patch.object(bridge, "EXPECTED_EDGES", self.expected_edges):
             report = bridge.replay_and_bind(paths, [], [], self.catalog, self.lexical)
         gateway.assert_called_once_with(*paths, [], [])
         self.assertEqual(report["status"], "U02_WARAQAT_PINNED_CATALOG_PASS")
