@@ -16,10 +16,33 @@ COLLECTIONS = (
 # P0 handles small research bundles, not corpus-scale untrusted graph ingestion.
 MAX_ENTITIES = 5000
 MAX_DEPENDENCY_DEPTH = 128
+MAX_JSON_BYTES = 5 * 1024 * 1024
 
 
 def validate_bundle(bundle: dict[str, Any]) -> list[str]:
     """Return structural problems; an empty list is NOT a religious verdict."""
+    # Fast, type-safe cardinality preflight before expensive JSON Schema traversal.
+    # Malformed non-list collections are left to JSON Schema for precise errors.
+    if isinstance(bundle, dict):
+        count = 0
+        for collection in COLLECTIONS:
+            entries = bundle.get(collection)
+            if isinstance(entries, list):
+                count += len(entries)
+                if count > MAX_ENTITIES:
+                    return [f"bundle exceeds P0 structural entity cap of {MAX_ENTITIES}"]
+
+    # Library callers must honor the same bounded UTF-8 JSON representation as
+    # the CLI. JSON escapes permit lone surrogates that cannot encode as UTF-8.
+    try:
+        raw = json.dumps(
+            bundle, ensure_ascii=False, allow_nan=False, separators=(",", ":")
+        ).encode("utf-8", "strict")
+    except (UnicodeError, TypeError, ValueError, RecursionError) as exc:
+        return [f"bundle: invalid UTF-8/JSON input ({type(exc).__name__})"]
+    if len(raw) > MAX_JSON_BYTES:
+        return [f"bundle exceeds P0 JSON byte limit of {MAX_JSON_BYTES}"]
+
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     errors = [
@@ -28,8 +51,6 @@ def validate_bundle(bundle: dict[str, Any]) -> list[str]:
     ]
     if errors:
         return sorted(set(errors))
-    if sum(len(bundle[collection]) for collection in COLLECTIONS) > MAX_ENTITIES:
-        return [f"bundle exceeds P0 structural entity cap of {MAX_ENTITIES}"]
 
     index: dict[str, dict[str, Any]] = {}
     membership: dict[str, str] = {}

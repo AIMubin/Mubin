@@ -24,7 +24,7 @@ def main(argv: list[str] | None = None) -> int:
             print("INPUT_ERROR: JSON bundle exceeds P0 CLI limit of 5 MiB", file=sys.stderr)
             return 2
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
         print(f"INPUT_ERROR: {exc}", file=sys.stderr)
         return 2
 

@@ -442,6 +442,57 @@ class TestP0InferenceFoundation(unittest.TestCase):
         ]
         self.assert_blocked(data, "depth")
 
+    def test_cli_rejects_deeply_nested_json_without_traceback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "deep.json"
+            path.write_text('{"x":' + "[" * 10000 + "0" + "]" * 10000 + "}", encoding="utf-8")
+            run = subprocess.run(
+                [sys.executable, "-m", "core.inference", str(path)],
+                cwd=ROOT, capture_output=True, text=True
+            )
+            self.assertEqual(2, run.returncode, run.stderr)
+            self.assertIn("INPUT_ERROR", run.stderr)
+            self.assertNotIn("Traceback", run.stderr)
+
+    def test_lone_surrogate_rejected_at_p0_library_and_cli_boundary(self):
+        data = fixture()
+        data["evidence"][0]["excerpt"] = chr(0xD800)
+        issues = validate_bundle(data)
+        self.assertTrue(issues, "P0 must reject invalid UTF-8 text")
+        self.assertTrue(any("UTF-8" in issue or "Unicode" in issue for issue in issues), issues)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "surrogate.json"
+            path.write_text(json.dumps(data, ensure_ascii=True), encoding="utf-8")
+            run = subprocess.run(
+                [sys.executable, "-m", "core.inference", str(path)],
+                cwd=ROOT, capture_output=True, text=True
+            )
+            self.assertEqual(1, run.returncode, run.stderr)
+            self.assertIn("INVALID", run.stderr)
+            self.assertNotIn("Traceback", run.stderr)
+
+    def test_oversized_invalid_entity_collection_fails_before_schema(self):
+        data = fixture()
+        data["sources"] += [{
+            "id": f"src.extra{n}", "kind": "usul", "work_title": "T",
+            "edition": "E", "locator": "L", "content_sha256": "0" * 64,
+            "unexpected": "schema error should not precede entity cap",
+        } for n in range(5001)]
+        issues = validate_bundle(data)
+        self.assertEqual(["bundle exceeds P0 structural entity cap of 5000"], issues)
+
+    def test_deep_programmatic_bundle_fails_closed(self):
+        data = fixture()
+        data["rogue"] = []
+        cursor = data["rogue"]
+        for _ in range(10000):
+            node = []
+            cursor.append(node)
+            cursor = node
+        issues = validate_bundle(data)
+        self.assertTrue(issues)
+        self.assertTrue(any("RecursionError" in issue or "depth" in issue for issue in issues), issues)
+
     def test_cli_handles_malformed_json_and_wrong_document_type(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "bundle.json"
