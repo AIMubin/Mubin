@@ -71,6 +71,21 @@ not textual authenticity, accuracy, source licensing or valid inference.
    authenticity flags false. Do not wait for every scholarly case to
    close unless that PR actually claims scientific qualification.
 
+## CI deduplication for active Usul PRs
+
+Usul CI is configured to run once for each **pull_request update**,
+once for a **main-branch push** (including merge commits), and optionally
+via **workflow_dispatch** for branches without an open PR. This avoids
+launching the same Windows+Ubuntu full suite twice for each active PR
+commit merely because GitHub emits both `push` and `pull_request` events.
+
+To run tests on a branch before opening its PR, use a local scoped test
+or explicitly dispatch the Usul workflow; do not assume a feature-branch
+push still triggers the full suite automatically. Required PR check names
+and the cross-OS matrix are unchanged. Public preview, Corpus and other
+pipelines are not modified by this single-PR optimization. Any further
+workflow deduplication should be measured and reviewed separately.
+
 ## Reduce repeat manual work
 
 - One pinned source receipt per immutable source snapshot. Consumers
