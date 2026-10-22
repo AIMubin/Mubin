@@ -166,3 +166,24 @@ is a structurally consistent *research index*, not an approved Usul engine.
 See [U0.2 pilot contract and limits](U02_CONCEPT_RULE_CATALOG.md),
 [synthetic candidate manifest](examples/u02-candidate-catalog-demo.json),
 and `test_concept_rule_catalog.py`. Mubin version remains `0.1.0-alpha`.
+
+## U0.2 development pilot 02 — methodology, ambiguity and alternatives
+
+The [methodology candidate review overlay](candidate_methodology_review.py)
+extends the U0.2.0 metadata catalog with separately versioned, **unassessed**
+methodology proposals. Every candidate rule must bind to one declared profile
+and exact profile version whose research pointer remains in Stage08.
+Unresolved ambiguities and candidate cross-profile/structural alternatives
+are tracked explicitly without asserting any genuine scholarly disagreement.
+
+This reuses [Stage08 pinned research navigation](evidence_context_graph.py)
+and [the U0.2.0 catalog](concept_rule_catalog.py), *not* a new juristic
+executor. Invalid/stale graph or catalog pins, unauthorized review statuses,
+cross-profile pointer mismatches and fabricated normative outcomes fail
+closed. Full [pilot 02 contract and limits](U02_METHODOLOGY_REVIEW.md)
+and synthetic regression tests appear under
+`tests/test_candidate_methodology_review.py`.
+
+Success means only structurally linked research candidates. It does not
+verify source interpretation, school affiliation, disputed rules, `qiyas`,
+`tarjih` or any fatwa. Mubin remains `0.1.0-alpha`.
