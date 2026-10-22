@@ -123,3 +123,65 @@ are unchanged; all `scholarly_verified`, `redistribution_approved`,
 `semantic_equivalence_verified` and `public_fatwa_authorized`
 authorizations remain `false`. No Fiqh engine or operative
 `qiyas`/`tarjih` was introduced.
+
+
+## U0.2.3 automated operator acceptance (preferred final run)
+
+Instead of manually carrying out the replay/determinism/recount/mutation
+checklist, use `waraqat_u02_private_acceptance.py`. It runs the real
+Stage06→07→08→U0.2.2 source verification **twice**, requires identical
+reports, checks the raw SHA-256 of **all six** original private files against
+frozen historical pins, independently counts the literal occurrences in
+the W1 chapter using UTF-8 byte search (not Stage07's locator code), and
+verifies the actual private-source replay refuses temporary first-byte
+mutations of **both** W1 and W2 HTML files. Temporary modified HTML files
+are automatically removed; the real private originals are never changed.
+
+PowerShell from the repository root (use the current PR #80 branch):
+
+```powershell
+git fetch origin
+git switch u02-concept-rule-catalog-pilot
+git pull --ff-only
+$sha = (git rev-parse HEAD).Trim()
+$root = "D:\MubinSources\waraqat"
+
+python -m engines.usul.pilots.waraqat_u02_private_acceptance `
+  --primary-html "$root\waraqat-original.html" `
+  --primary-export "$root\waraqat-private-utf8.txt" `
+  --primary-manifest "$root\waraqat-draft-manifest.json" `
+  --primary-section "$root\waraqat-bab-amr-private.txt" `
+  --secondary-html "$root\witness2-original.html" `
+  --secondary-section "$root\witness2-bab-amr-private.txt" `
+  --commit-sha $sha `
+  --out "$root\u02-waraqat-private-acceptance.json"
+
+if ($LASTEXITCODE -ne 0) {
+  throw "Private U0.2 acceptance failed closed"
+}
+```
+
+Successful output has
+`status=U02_REAL_WARAQAT_PRIVATE_REPLAY_ACCEPTED`, two identical
+runs, the frozen Stage08 graph hash, the independent `6/1/1` W1 exact
+literal counts, and two `*_mutated_html_rejected=true` results.
+All substantive scholarly, semantic, rights, rule-execution and fatwa
+flags remain explicitly false.
+
+`operator_supplied_git_commit` is the CLI's supplied value; compare
+it with `git rev-parse HEAD` and PR #80 before archiving the receipt.
+The output is a **metadata-only attestation of what the local software
+ran**, not a third-party verification of the private files. Keep the
+full private report off GitHub, inspect the acceptance JSON for public
+scope (no text, paths or confidential data), and commit *only* the
+reviewed metadata-only JSON to `corpus/reviews/` under a new
+`u02-...` filename. Retain the private report separately.
+
+Exit `3` means source files are missing; exit `1` means failed source
+identity, replay, independent word counts, nondeterminism, missing
+rejection of tampered private HTML or malformed metadata. Both are
+**BLOCKED** and must not produce a PASS receipt.
+
+This automated acceptance is the final **engineering** source gate for
+the current U0.2 research slice, not a request to create further
+stages or to qualify any scientific rule.
