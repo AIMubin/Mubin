@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage05-witness2-comparison",
+  "date_local": "2026-10-21",
+  "scope": "Independent second-digital-witness comparison for باب الأمر only; neither witness modified; no source text reproduced here",
+  "witness1_primary": {
+    "url": "https://www.islamicbook.ws/asol/alwrqat.html",
+    "raw_html_sha256": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+    "raw_html_bytes": 18923,
+    "utf8_export_sha256": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+    "stage04_status": "REAL_SOURCE_SNAPSHOT_COVERAGE_PASS + SNAPSHOT_COVERAGE_PASS"
+  },
+  "witness2_comparator": {
+    "url": "https://www.islam.ms/ar/كتاب-ورقات-أصول-فقه-إسلامي-إمام-حرمين-عبد-الملك-الجويني/",
+    "http_status": 200,
+    "raw_html_sha256": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+    "raw_html_bytes": 37259,
+    "private": true
+  },
+  "comparison_result": {
+    "section": "باب الأمر",
+    "word_counts": {
+      "witness1": 127,
+      "witness2": 126
+    },
+    "identical_after_normalization": false,
+    "normalization_note": "single tokenization artifact: و+أما as two tokens vs وأما as one — no lexical content difference",
+    "differences_classification": {
+      "orthographic_vocalization": "witness2 fully vocalized; witness1 minimally vocalized",
+      "typographic_brackets": "witness2 contains editorial square brackets [ممن هو دونه-style]; witness1 does not",
+      "word_splitting": "tokenization-only difference documented above",
+      "lexical_word_differences": 0,
+      "deletions": 0,
+      "additions": 0
+    },
+    "automatically_resolvable": "تشكيل/تنسيق/تجزئة — حُسمت آليًا بالمقارنة المطبعة",
+    "requires_human_or_manuscript_work": "أي حكم على الرسم الأصلي أو أصحية رواية — خارج قدرة المقارنة النصية"
+  },
+  "boundaries": {
+    "manuscript_investigation": false,
+    "printed_edition_verified": false,
+    "scholarly_verified": false,
+    "redistribution_approved": false
+  }
+}

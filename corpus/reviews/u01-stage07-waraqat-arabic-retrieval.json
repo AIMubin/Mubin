@@ -1,0 +1,181 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage07-waraqat-arabic-retrieval",
+  "date_local": "2026-10-21",
+  "git_commit_audited": "bbeefb353 (full: see git)",
+  "note_commit": "stage-07 tooling commit bbeefb353; closure record commit follows this file",
+  "retrieval_engine": "usul-arabic-evidence/0.1.0",
+  "runner": "waraqat-two-witness-stage07/0.1.0",
+  "campaign_decision": "STAGE07_DUAL_WITNESS_ARABIC_RETRIEVAL_PASS",
+  "frozen_source_pins": {
+    "W1": {
+      "html": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+      "utf8_export": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+      "bab_amr_section": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab"
+    },
+    "W2": {
+      "html": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+      "bab_amr_section": "db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358"
+    }
+  },
+  "stage06_strict_provenance_reverified": true,
+  "section_index": {
+    "W1": {
+      "lines": 22,
+      "bytes": 1232,
+      "line_index_sha256": "4ec449cd23c13c8095d076b4b0ba1907005e585567dc22c636d04f42f661f49b",
+      "line_index_complete": true,
+      "offset_basis": "utf8_export",
+      "byte_base": 3735,
+      "line_base": 86
+    },
+    "W2": {
+      "lines": 16,
+      "bytes": 1702,
+      "offset_basis": "extracted_section",
+      "byte_base": 0,
+      "line_base": 1
+    }
+  },
+  "queries": [
+    {
+      "query_id": "pilot:amr-term",
+      "literal_utf8_sha256": "b7e54a06f32e352c86802bdbe82d7c8a573ae7f4dbc7b33ccb8bbababb45482b",
+      "W1": {
+        "strict": 6,
+        "candidates": {
+          "ignore_arabic_marks_v1": 0,
+          "ignore_arabic_marks_and_brackets_v1": 0,
+          "ignore_arabic_marks_brackets_and_spaces_v1": 0
+        }
+      },
+      "W2": {
+        "strict": 1,
+        "candidates": {
+          "ignore_arabic_marks_v1": 5,
+          "ignore_arabic_marks_and_brackets_v1": 5,
+          "ignore_arabic_marks_brackets_and_spaces_v1": 5
+        }
+      }
+    },
+    {
+      "query_id": "pilot:qarinah-term",
+      "W1": {
+        "strict": 1,
+        "candidates_zero_beyond_exact": true
+      },
+      "W2": {
+        "strict": 0,
+        "candidates": {
+          "ignore_arabic_marks_v1": 1,
+          "ignore_arabic_marks_and_brackets_v1": 1
+        }
+      }
+    },
+    {
+      "query_id": "pilot:wujub-term",
+      "W1": {
+        "strict": 1,
+        "candidates_zero_beyond_exact": true
+      },
+      "W2": {
+        "strict": 0,
+        "candidates": {
+          "ignore_arabic_marks_v1": 1,
+          "ignore_arabic_marks_and_brackets_v1": 1
+        }
+      }
+    },
+    {
+      "query_id": "pilot:nadb-term",
+      "W1": {
+        "strict": 1,
+        "candidates_zero_beyond_exact": true
+      },
+      "W2": {
+        "strict": 0,
+        "candidates": {
+          "ignore_arabic_marks_v1": 1,
+          "ignore_arabic_marks_and_brackets_v1": 1
+        }
+      }
+    },
+    {
+      "query_id": "pilot:ibaha-term",
+      "W1": {
+        "strict": 1,
+        "candidates_zero_beyond_exact": true
+      },
+      "W2": {
+        "strict": 0,
+        "candidates": {
+          "ignore_arabic_marks_v1": 1,
+          "ignore_arabic_marks_and_brackets_v1": 1
+        }
+      }
+    },
+    {
+      "query_id": "pilot:word-boundary-diagnostic",
+      "literal": "و أما",
+      "W1": {
+        "strict": 1,
+        "candidates_all_zero": true
+      },
+      "W2": {
+        "strict": 0,
+        "candidates": {
+          "ignore_arabic_marks_v1": 0,
+          "ignore_arabic_marks_and_brackets_v1": 0,
+          "ignore_arabic_marks_brackets_and_spaces_v1": 1
+        }
+      },
+      "interpretation": "candidate appears only under the spaces-folding profile — mechanical detection of the documented tokenization difference (و+أما vs وأما); recorded as boundary-difference candidate, not semantic equivalence"
+    }
+  ],
+  "integrity_checks": {
+    "independent_byte_audit": "ALL PASS — every strict match re-verified: section slice == literal UTF-8 bytes; match/line SHA-256 correct; counts independently recounted; no duplicates; W1 absolute export coordinates verified (3735+section_offset, line = 85 + newlines-before)",
+    "w2_marks_fold_independent_recount": "6 occurrences of folded الأمر in W2 = 1 strict + 5 candidates (consistent with report)",
+    "offsets_reference_original_section_bytes": true,
+    "hamza_negation_bracket_content_audit": "no negation-token differences (لا 3=3، لم 1=1، ما 3=3، غير 1=1 between witnesses); editorial bracket content preserved in W2 extraction; no hamza-form substitutions found in differing tokens"
+  },
+  "negative_tests": {
+    "w1_html_byte_flip": "FAIL",
+    "w2_html_byte_flip": "FAIL",
+    "w1_section_change": "FAIL",
+    "w2_section_change": "FAIL",
+    "manifest_change": "FAIL",
+    "unknown_section_refusal": "exit 2",
+    "unsupported_profile": "FAIL",
+    "broken_queries_file": "FAIL",
+    "query_empty_after_normalization": "refused by profile validation (committed suite)",
+    "duplicate_query_id": "refused (committed suite)",
+    "missing_private_files": "exit 3 PENDING_PRIVATE_WITNESS_FILES",
+    "ghost_literal": "0 literal matches; NO_EXACT_LITERAL_MATCH_IN_PINNED_SECTION semantics retained at stage-05 layer",
+    "note": "negation/hamza/bracket-content/word-order changes remain visible as TEXTUAL_DIFFERENCE_REQUIRES_REVIEW at the stage-06 strict layer; normalization never converts them into confirmed matches"
+  },
+  "determinism": {
+    "two_run_identical": true,
+    "report_sha256": "5978af72c27a6835bf04a5e32c1eeff038c57008effd7459d914870b5e92bdc0"
+  },
+  "independent_offset_audit": "ALL PASS (after correcting the audit script's own coordinate-base bug; the report data was consistent throughout)",
+  "ci": {
+    "reference_run": {
+      "commit": "bbeefb353",
+      "run_id": 39548101731,
+      "conclusion": "success",
+      "tests": "160/160 per OS"
+    },
+    "closure_record_commit_note": "closure record commit touches corpus/reviews only; usul-checks does not trigger due to path filters; last code commit tested = bbeefb353"
+  },
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_qarinah_verified": false,
+    "juristic_inference_allowed": false,
+    "public_fatwa_authorized": false,
+    "meaning_preservation_verified": false,
+    "full_book_coverage_verified": false,
+    "note": "literal matches and orthographic candidates never imply semantic qarinah detection or juristic validity; witness-count agreement never implies semantic agreement"
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage06-waraqat-dual-witness-alignment",
+  "date_local": "2026-10-21",
+  "git_commit_audited": "18db3cb63a331ee31604fa87a0a3b2b11990651b",
+  "campaign_decision": "STAGE06_DUAL_SOURCE_EXTRACTION_REPLAY_PASS",
+  "alignment_engine": "usul-witness-alignment/0.1.0",
+  "witnesses": {
+    "W1_primary": {
+      "url": "https://www.islamicbook.ws/asol/alwrqat.html",
+      "raw_html_sha256": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+      "extractor": "engines/usul/pilots/waraqat_extract.py (waraqat-extract/1.0.0, stage-04)",
+      "utf8_export_sha256": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+      "section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+      "section_bytes": 1232,
+      "section_lines": 22,
+      "html_to_section_replay_verified": true
+    },
+    "W2_comparator": {
+      "url": "https://www.islam.ms/ar/كتاب-ورقات-أصول-فقه-إسلامي-إمام-حرمين-عبد-الملك-الجويني/",
+      "raw_html_sha256": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+      "extractor": "engines/usul/pilots/waraqat_witness2_extract.py (waraqat-islamms-h2-extract/0.1.0-candidate)",
+      "section_sha256": "db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358",
+      "section_bytes": 1702,
+      "html_to_section_replay_verified": true,
+      "replay_byte_identical_two_runs": true,
+      "pin_ledger": "D:\\MubinSources\\waraqat\\w2-section-pin.json (independent Node-crypto recompute before alignment run)"
+    }
+  },
+  "alignment": {
+    "status": "STAGE06_DUAL_SOURCE_EXTRACTION_REPLAY_PASS",
+    "exit_code": 0,
+    "require_secondary_extraction": true,
+    "strict_raw_codepoint_changes": 232,
+    "dominant_cause": "W2 is fully vocalized; W1 is minimally vocalized (marks dominate the raw diff)",
+    "four_level_profiles": {
+      "raw_byte_identical": false,
+      "marks_and_brackets_ignored_identical": false,
+      "after_whitespace_collapsing_identical": false,
+      "after_all_whitespace_removed_identical": false,
+      "note": "the four shipped profiles each remove only one class; combined-level resolution was performed by the supplementary audited analysis below without altering tool strictness"
+    },
+    "supplementary_machine_explanation": {
+      "method": "symmetric heading-line exclusion (marks-aware) + combined strip (marks + editorial brackets + whitespace) + word-level difflib",
+      "remaining_word_diffs": 1,
+      "explanation": "tokenization join: W1 'و'+'أما' (two tokens) vs W2 'وأما' (one token)",
+      "fully_explained": true,
+      "identical_after_documented_join": true,
+      "negation_token_parity": {
+        "لا": "3=3",
+        "لم": "1=1",
+        "ما": "3=3",
+        "غير": "1=1",
+        "لن": "0=0",
+        "ليس": "0=0"
+      },
+      "unexplained_differences_remaining": 0,
+      "classification_upheld": "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW at raw level; all differences machine-explained as representation-class (vocalization + editorial brackets + tokenization) at the supplementary combined level"
+    }
+  },
+  "negative_tests": {
+    "w1_html_byte_flip": "FAIL exit 1",
+    "w2_html_byte_flip": "FAIL exit 1",
+    "w1_section_content_change": "FAIL exit 1",
+    "w2_section_content_change": "FAIL exit 1",
+    "wrong_w2_pinned_sha": "FAIL exit 1",
+    "missing_private_files": "exit 3 PENDING_PRIVATE_WITNESS_FILES",
+    "duplicate_or_missing_headings_disallowed_elements_nondeterminism": "covered by committed suite test_witness_alignment.py / test_waraqat_stage06.py / test_waraqat_witness2_extract.py (part of the 145 green)"
+  },
+  "replay_determinism": {
+    "w2_two_run_byte_identical": true,
+    "stage06_deterministic": true
+  },
+  "ci": {
+    "baseline_reference": "https://github.com/AIMubin/Mubin/actions/runs/39533986573 (145/145 both OS)",
+    "local_at_this_record": "145 usul OK + 50 core OK"
+  },
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_qarinah_verified": false,
+    "lexical_content_equivalence_certified": false,
+    "valid_juristic_ruling": false,
+    "public_fatwa_authorized": false,
+    "printed_edition_verified": false,
+    "full_witness_comparison_qualified": false,
+    "zero_lexical_difference_certified": false
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}

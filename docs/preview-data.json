@@ -1,0 +1,134 @@
+{
+  "audience": "public_read_only_metadata",
+  "basis": {
+    "graph_sha256": "72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2",
+    "quran_review": "corpus/reviews/q03-engineering-qualification.json",
+    "stage07_review": "corpus/reviews/u01-stage07-waraqat-arabic-retrieval.json",
+    "stage08_review": "corpus/reviews/u01-stage08-waraqat-context-graph.json"
+  },
+  "engines": [
+    {
+      "milestone": "Q0.3",
+      "name": "Quran",
+      "note_ar": "العرض الحرفي للقرآن والتفسير محجوب حتى اعتماد النص والحقوق.",
+      "public_mode": "status_only"
+    },
+    {
+      "milestone": "H3.9.2",
+      "name": "Hadith",
+      "note_ar": "الأحكام البشرية المجمدة لم تُستبدل بقرارات آلية.",
+      "public_mode": "status_only"
+    },
+    {
+      "milestone": "U0.1",
+      "name": "Usul",
+      "note_ar": "بحث وصفي تجريبي؛ لا استنباط فقهي ولا اعتماد دلالي.",
+      "public_mode": "metadata_navigation_only"
+    },
+    {
+      "milestone": "F0.0",
+      "name": "Fiqh",
+      "note_ar": "لم يُطلق محرك فقه أو خدمة فتوى.",
+      "public_mode": "not_available"
+    }
+  ],
+  "preview_status": "STATIC_ARTIFACT_READY_NOT_HOSTING_CONFIRMED",
+  "product_name": "مُبين — Mubin",
+  "profile": "mubin-public-metadata-preview/0.1.0",
+  "public_fatwa_authorized": false,
+  "publication_gates": {
+    "canonical_quran_display": "WITHHELD",
+    "hadith_frozen_gold_mutation": "PROHIBITED",
+    "scholarly_conclusion_publication": "WITHHELD",
+    "source_verbatim_publication": "WITHHELD"
+  },
+  "research_example": {
+    "author_attribution": "إمام الحرمين الجويني",
+    "graph_edges": 87,
+    "graph_nodes": 53,
+    "query_counts": [
+      {
+        "label_ar": "الأمر",
+        "w1_exact": 6,
+        "w2_candidate_counts_by_profile": {
+          "ignore_arabic_marks_and_brackets_v1": 5,
+          "ignore_arabic_marks_brackets_and_spaces_v1": 5,
+          "ignore_arabic_marks_v1": 5
+        },
+        "w2_candidate_profiles": 3,
+        "w2_exact": 1
+      },
+      {
+        "label_ar": "القرينة",
+        "w1_exact": 1,
+        "w2_candidate_counts_by_profile": {
+          "ignore_arabic_marks_and_brackets_v1": 1,
+          "ignore_arabic_marks_v1": 1
+        },
+        "w2_candidate_profiles": 2,
+        "w2_exact": 0
+      },
+      {
+        "label_ar": "الوجوب",
+        "w1_exact": 1,
+        "w2_candidate_counts_by_profile": {
+          "ignore_arabic_marks_and_brackets_v1": 1,
+          "ignore_arabic_marks_v1": 1
+        },
+        "w2_candidate_profiles": 2,
+        "w2_exact": 0
+      },
+      {
+        "label_ar": "الندب",
+        "w1_exact": 1,
+        "w2_candidate_counts_by_profile": {
+          "ignore_arabic_marks_and_brackets_v1": 1,
+          "ignore_arabic_marks_v1": 1
+        },
+        "w2_candidate_profiles": 2,
+        "w2_exact": 0
+      },
+      {
+        "label_ar": "الإباحة",
+        "w1_exact": 1,
+        "w2_candidate_counts_by_profile": {
+          "ignore_arabic_marks_and_brackets_v1": 1,
+          "ignore_arabic_marks_v1": 1
+        },
+        "w2_candidate_profiles": 2,
+        "w2_exact": 0
+      },
+      {
+        "label_ar": "و أما",
+        "w1_exact": 1,
+        "w2_candidate_counts_by_profile": {
+          "ignore_arabic_marks_and_brackets_v1": 0,
+          "ignore_arabic_marks_brackets_and_spaces_v1": 1,
+          "ignore_arabic_marks_v1": 0
+        },
+        "w2_candidate_profiles": 3,
+        "w2_exact": 0
+      }
+    ],
+    "section": "باب الأمر",
+    "semantic_equivalence_certified": false,
+    "source_excerpts_included": false,
+    "witnesses": [
+      {
+        "id": "W1",
+        "section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+        "url": "https://www.islamicbook.ws/asol/alwrqat.html"
+      },
+      {
+        "id": "W2",
+        "section_sha256": "db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358",
+        "url": "https://www.islam.ms/ar/كتاب-ورقات-أصول-فقه-إسلامي-إمام-حرمين-عبد-الملك-الجويني/"
+      }
+    ],
+    "work_title": "الورقات في أصول الفقه"
+  },
+  "rights_granted": false,
+  "scholarly_verified": false,
+  "source_text_included": false,
+  "system_version": "0.1.0-alpha"
+}

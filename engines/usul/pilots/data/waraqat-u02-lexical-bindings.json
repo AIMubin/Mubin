@@ -1,0 +1,26 @@
+{
+  "schema_version": "u0.2.2",
+  "lexical_bindings": [
+    {
+      "concept_id": "concept:amr-term",
+      "witness_id": "pilot:waraqat-primary",
+      "query_id": "pilot:amr-term",
+      "classification": "EXACT_LITERAL_ONLY",
+      "expected_unique_occurrences": 6
+    },
+    {
+      "concept_id": "concept:qarinah-candidate",
+      "witness_id": "pilot:waraqat-primary",
+      "query_id": "pilot:qarinah-term",
+      "classification": "EXACT_LITERAL_ONLY",
+      "expected_unique_occurrences": 1
+    },
+    {
+      "concept_id": "concept:wujub-candidate",
+      "witness_id": "pilot:waraqat-primary",
+      "query_id": "pilot:wujub-term",
+      "classification": "EXACT_LITERAL_ONLY",
+      "expected_unique_occurrences": 1
+    }
+  ]
+}

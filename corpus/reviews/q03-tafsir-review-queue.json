@@ -1,0 +1,222 @@
+{
+  "audit_version": "Q0.3",
+  "status": "SOURCE_FIDELITY_PASSED_EDITORIAL_VERIFICATION_OPEN",
+  "verified_scholarly": false,
+  "observed": {
+    "verse_rows": 6236,
+    "tafsir_rows": 31180,
+    "markup_only_tabary": 7,
+    "possible_truncation_baghawy": 4
+  },
+  "issues": [
+    {
+      "source": "tabary",
+      "verse_id": "4:168",
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "4:169",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:16",
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "26:15",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:205",
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "26:206",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:25",
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "37:24",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:62",
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "37:63",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:103",
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "37:104",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
+    },
+    {
+      "source": "tabary",
+      "verse_id": "50:13",
+      "issue": "MARKUP_ONLY",
+      "related_tafsir_verse_candidate": "50:12",
+      "provisional_interpretation": "SHARED_MULTI_AYAH_HEADING_CANDIDATE",
+      "printed_edition_verified": false
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "4:43",
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "DIGITAL_CONTINUATION_ONLY",
+      "local_campaign_reported_unique_anchor_chars": 51,
+      "local_campaign_reported_following_witness_characters": 1906,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false,
+      "pdf_scanned_volume": 2,
+      "visually_read_printed_pages": [
+        228,
+        229
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "17:4",
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "DIGITAL_CONTINUATION_ONLY",
+      "local_campaign_reported_unique_anchor_chars": 320,
+      "local_campaign_reported_following_witness_characters": 4291,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false,
+      "pdf_scanned_volume": 5,
+      "visually_read_printed_pages": [
+        76,
+        77
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "18:10",
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "ALIGNMENT_AMBIGUOUS",
+      "local_campaign_reported_unique_anchor_chars": null,
+      "local_campaign_reported_following_witness_characters": null,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false,
+      "ocr_or_edition_difference_unresolved": true,
+      "pdf_scanned_volume": 5,
+      "visually_read_printed_pages": [
+        154,
+        155
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false,
+      "visually_read_ocr_correction": "أتى (OCR incorrectly read أنى)",
+      "number_orthography_needs_higher_dpi": true,
+      "reported_highres_visual_observations": {
+        "image_printed_number": "ثلاثمائة",
+        "image_printed_verb": "أتى",
+        "archive_ocr_number": "ثلهائة",
+        "archive_ocr_verb": "أنى",
+        "printed_page_number": 154,
+        "review_type": "AI_IMAGE_REVIEW_NOT_HUMAN_EDITION_APPROVAL"
+      },
+      "remaining_issues": [
+        "Formal suffix alignment NOT_ALIGNED",
+        "Independently authenticate the source edition and passage boundaries",
+        "Private ZIP has SHA256 manifest discrepancy for real-data-safety-test.json",
+        "No human/editorial rights signoff"
+      ],
+      "formal_alignment_status": "NOT_ALIGNED",
+      "scholarship_verified": false
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "33:9",
+      "issue": "POSSIBLE_TRUNCATION_32767",
+      "provisional_interpretation": "PROBABLE_SOURCE_SIDE_DIGITAL_TRUNCATION_SUPPORTED_BY_SOURCE_SPECIFIC_32767_CEILING_AND_INDEPENDENT_ONLINE_CONTINUATION",
+      "printed_edition_verified": false,
+      "editorial_replacement_approved": false,
+      "local_campaign_reported_status": "DIGITAL_CONTINUATION_ONLY",
+      "local_campaign_reported_unique_anchor_chars": 77,
+      "local_campaign_reported_following_witness_characters": 853,
+      "printed_page_visually_verified": false,
+      "printed_edition_identity_visually_verified": false,
+      "rights_verified": false,
+      "pdf_scanned_volume": 6,
+      "visually_read_printed_pages": [
+        330,
+        331
+      ],
+      "visual_observation": "AI_IMAGE_INSPECTION_CORROBORATES_CONTINUATION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+      "pdf_page_images_hash_verified_from_private_package": true,
+      "independent_human_print_review_completed": false
+    }
+  ],
+  "cautions": [
+    "Markup-only can reflect cross-verse continuation and does not prove missing tafsir in the work.",
+    "Exactly 32767 characters is a truncation warning, not a proven defect.",
+    "Publisher, editor, volume and page details require separate edition attestation.",
+    "Neither tafsir nor derived Quran text is scholarly authenticated."
+  ],
+  "linked_db_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "upstream_source_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+  "evidence": {
+    "primary_upstream_report": "q03-tafsir-upstream-machine-report.json",
+    "primary_report_sha256": "22e2a0f058d6d168e6a8352365a90780c1f3703da7aebf11d279c533400f602c",
+    "tabary_adjacent_shared_heading_report": "q03-tabary-adjacent-headings.json",
+    "baghawy_4_43_digital_comparator": "q03-baghawy-4-43-digital-continuation.json",
+    "baghawy_four_digital_continuations": "q03-baghawy-four-digital-continuations.json",
+    "baghawy_source_length_ceiling": "q03-baghawy-length-ceiling.json",
+    "baghawy_edition_review_runbook": "q03-baghawy-edition-verification-runbook.md",
+    "local_campaign_report": "q03-baghawy-local-campaign-summary.json",
+    "original_summary_sha256": "06014e047b3288e7a0a12c2ea30b21bace56415cfb997f90e62be6342833146f",
+    "assistant_visual_review": "q03-baghawy-assistant-visual-review.json",
+    "user_uploaded_private_zip_sha256": "1a7ec8d041767f3f4ab6b14d8c280905ac7faa5b5c221b65f9f8e29feb33067c",
+    "baghawy_18_10_highres": "q03-baghawy-18-10-highres-review.json",
+    "private_highres_zip_sha256": "a5ca89d0de68dbb87cfbdfab35a5fa1ff6f03a348a65e68ed4c8ffe2ea0d5f45",
+    "private_highres_zip_manifest_integrity": "FAILED_ONE_HASH_AND_SIZE_MISMATCH",
+    "baghawy_18_10_highres_v2_private": {
+      "filename": "Q03-18-10-HighRes-Review-v2.zip",
+      "sha256": "58570b34d82eb58b49fcf3edcbec196eea8e2e48642b478c9d03915553471ae4",
+      "verified_payloads": 19,
+      "integrity_gate": "PASS",
+      "v1_manifest_still_failed": true,
+      "source_pdf_hash_recomputed": false,
+      "scholarly_verified": false,
+      "rights_approved": false
+    }
+  },
+  "last_corpus_ci": {
+    "run_id": 39404137364,
+    "workflow": "Corpus integrity checks",
+    "os": [
+      "ubuntu-latest",
+      "windows-latest"
+    ],
+    "result": "success",
+    "tests_passed_per_os": 44,
+    "tests_total_per_os": 44,
+    "commit": "f1c4c14c3289def1e2a83f1a62e1859afc5b156b"
+  }
+}

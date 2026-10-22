@@ -1,0 +1,53 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage-w1-closure-w2-full-extract-compare",
+  "date_local": "2026-10-21",
+  "work_branch": "u01-stage-w1-closure-w2-full",
+  "base_commit": "bdb1b97",
+  "tracks": {
+    "track_a_w1_closure": {
+      "status": "VERIFIED_WITH_EXISTING_HARDENING",
+      "note": "bdb1b97 already contains the hardened batch_retrieve_and_graph inventory-safety verifier and the negative-test suite (maintainer implementation). Independent re-verification performed: partition continuity 0..16410 with zero gaps/overlaps, chapter-006 == frozen Bab al-Amr pin (3735..4967, 22 lines, 20879bad…81ab), two-run byte-identical batch reports, section digest re-derivation from pinned export.",
+      "double_run": "FULL_W1_BATCH_PASS x2 on pinned D:/MubinSources/waraqat files"
+    },
+    "track_b_w2_full_extraction": {
+      "status": "PASS",
+      "tool": "engines/usul/pilots/waraqat_w2_full_extract.py (waraqat-w2-full-extract/0.1.0)",
+      "sections_extracted": 21,
+      "paired_with_w1": 20,
+      "extra_heading_documented": "W2 h2 ordinal 1 = «كتاب الورقات» book-title heading (TITLE_HEADING, not a chapter); W1 has PRELUDE + 20 chapters; W2 has title-heading + 20 chapter h2s",
+      "derived_export": {
+        "sha256": "69af2565cf6ea78fa1a91ed34637c30e6d1644fe6e086ccd1901b2eb9fef3b0f",
+        "offset_basis": "w2_derived_text_export (NOT original HTML offsets)"
+      }
+    },
+    "track_c_pair_alignment": {
+      "status": "COMPLETE_METADATA_ONLY",
+      "tool": "engines/usul/pilots/waraqat_w2_pair_compare.py (waraqat-w2-pair-compare/0.1.0)",
+      "compared": 20,
+      "skipped": 1,
+      "skipped_reason": "W1 PRELUDE has no W2 counterpart by design"
+    }
+  },
+  "classification_summary": {
+    "whitespace_difference_only": [
+      "waraqat:w1:chapter-001",
+      "waraqat:w1:chapter-002",
+      "waraqat:w1:chapter-003",
+      "waraqat:w1:chapter-004"
+    ],
+    "textual_difference_requires_review": 16,
+    "note": "16 chapters carry word-level differences surviving marks+brackets+whitespace normalization — genuine witness variance requiring textual study; never normalized away"
+  },
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_equivalence_verified": false,
+    "semantic_rules_qualified": false,
+    "public_fatwa_authorized": false,
+    "printed_edition_verified": false,
+    "full_witness_comparison_pass": false,
+    "note": "identical-after-normalization never implies lexical/semantic equivalence; textual differences never imply which witness is correct"
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}

@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage08-waraqat-context-graph",
+  "date_local": "2026-10-21",
+  "git_commit_audited": "238879784a8a463682a5d4955d87984b912426b0",
+  "engine": "usul-evidence-context-graph/0.1.0",
+  "runner": "waraqat-stage08-graph/0.1.0",
+  "campaign_decision": "STAGE08_DUAL_SOURCE_CONTEXT_GRAPH_PASS",
+  "frozen_witness_pins": {
+    "W1": {
+      "html": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+      "utf8_export": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+      "bab_amr_section": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab"
+    },
+    "W2": {
+      "html": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+      "bab_amr_section": "db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358"
+    }
+  },
+  "stage07_strict_rerun": {
+    "status": "STAGE07_DUAL_WITNESS_ARABIC_RETRIEVAL_PASS",
+    "executed_this_session": true,
+    "both_html_to_section_replays_verified": true
+  },
+  "graph_counts": {
+    "nodes_total": 53,
+    "edges_total": 87,
+    "nodes_by_kind": {
+      "HASHED_CONTEXT": 13,
+      "TEXT_OCCURRENCE": 22,
+      "SEARCH_QUERY": 12,
+      "PINNED_SECTION": 2,
+      "SOURCE_WITNESS": 2,
+      "RULE_RESEARCH_POINTER": 1,
+      "OBJECTION_RESEARCH_POINTER": 1
+    },
+    "edges_by_kind": {
+      "CONTEXT_INCLUDES_OCCURRENCE": 22,
+      "QUERY_LOCATES_OCCURRENCE": 36,
+      "QUERY_SCOPED_TO_SECTION": 12,
+      "SECTION_HAS_CONTEXT": 13,
+      "WITNESS_HAS_PINNED_SECTION": 2,
+      "RESEARCH_NAVIGATION_ONLY": 2
+    },
+    "unique_text_occurrences": 22,
+    "locating_edges_literal_exact_only": 12,
+    "locating_edges_orthographic_candidate_only": 24
+  },
+  "graph_sha256": "72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2",
+  "graph_sha_verification": "three-way: fresh build_context_graph re-execution == internal _sha(_canonical(payload)) recompute == recorded report value; 53 nodes / 87 edges identical",
+  "private_report_sha256": "939380a4c191495269abc7db2d4a9c027e976daf9e57ed1f7225f0744e994231",
+  "private_report_determinism": {
+    "two_run_report_sha256": "939380a4c191495269abc7db2d4a9c027e976daf9e57ed1f7225f0744e994231",
+    "identical": true
+  },
+  "independent_audits": {
+    "context_hashes": "13/13 re-derived from pinned section bytes independently (hashlib, engine-independent)",
+    "occurrence_positions": "22/22 span+line SHAs verified; W1 absolute export bases applied (byte 3735 / line 86); W2 relative to extracted section per contract",
+    "node_id_uniqueness": true,
+    "edge_endpoints": "87/87 exist; zero dangling; zero disallowed kinds; zero forbidden relations (SUPPORTS_RULE/CLEARS_QARINAH/PROVES_OBJECTION/DERIVES_RULING absent)",
+    "cross_witness_contamination": "initial flags were auditor-script identity-format artifacts; corrected normalization shows ZERO genuine cross-witness edges",
+    "research_pointers": "review_status=UNASSESSED; rule_application_verified=false; objection_presence_verified=false; pointers target query nodes only"
+  },
+  "negative_tests_cli": {
+    "missing_private_files": "exit 3 PENDING_PRIVATE_WITNESS_FILES",
+    "w1_section_byte_flip": "FAIL exit 1",
+    "html_flips_and_other_mutations": "covered by committed suite test_waraqat_stage08.py/test_witness_alignment.py/test_evidence_context_graph.py (within 145→173 green)"
+  },
+  "privacy_audit": {
+    "book_lines_leaked": "NONE",
+    "bibliographic_metadata_only": true,
+    "method": "programmatic scan of full report JSON against both section files (40+ char lines)"
+  },
+  "tests": {
+    "engines_usul": "173 OK",
+    "core": "50 OK",
+    "reference_ci": "https://github.com/AIMubin/Mubin/actions/runs/39553023684 (173/173 both OS)"
+  },
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_qarinah_verified": false,
+    "juristic_inference_allowed": false,
+    "public_fatwa_authorized": false,
+    "rule_support_attested": false,
+    "objection_presence_attested": false,
+    "lexical_content_equivalence_certified": false,
+    "full_witness_comparison_qualified": false
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}

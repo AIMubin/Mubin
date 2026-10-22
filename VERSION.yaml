@@ -5,14 +5,14 @@ system:
 
 components:
   quran_engine:
-    milestone: Q0.0
-    maturity: planned
+    milestone: Q0.3
+    maturity: engineering_qualified_limited_scope
   hadith_engine:
     milestone: H3.9.2
     maturity: qualification
   usul_engine:
-    milestone: U0.0
-    maturity: planned
+    milestone: U0.1
+    maturity: experimental_prototype_not_qualified
   fiqh_engine:
     milestone: F0.0
     maturity: planned

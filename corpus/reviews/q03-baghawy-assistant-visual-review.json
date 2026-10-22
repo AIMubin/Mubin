@@ -1,0 +1,151 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "review_id": "baghawy-assistant-visual-inspection-2026-10-20",
+  "date": "2026-10-20",
+  "reviewer_kind": "AI_ASSISTED_DIRECT_IMAGE_INSPECTION_NOT_HUMAN_SCHOLARLY_SIGNOFF",
+  "reviewer": "ChatGPT GPT-6",
+  "scope": "Four Baghawi cutoff suspects and edition/title pages from private visual handoff",
+  "source_artifact": {
+    "filename": "Q03-Visual-Review-Handoff-20261020-1027.zip",
+    "sha256_verified": "1a7ec8d041767f3f4ab6b14d8c280905ac7faa5b5c221b65f9f8e29feb33067c",
+    "zip_integrity": "PASS",
+    "file_count": 22,
+    "embedded_manifest_matches_separately_uploaded_json": true,
+    "visual_manifest_sha256_verified": "d75c230a3931b650bad54be5e3ceb8cdc085f65a2803a6ded1fa9fd2471cf234",
+    "page_evidence_png_verified": 8,
+    "edition_identity_png_verified": 9,
+    "png_hash_mismatches": 0,
+    "full_pdf_bytes_in_package": false,
+    "pdf_sha256_claims_independently_recomputed": false,
+    "original_scans_committed_to_git": false
+  },
+  "source_pdf_hashes_reported_not_recomputed": [
+    {
+      "volume": 2,
+      "sha256": "20bfd9003ac4306dc5c9e8512b819ebd4c18bb32b601237ab65fddc5729fa1bb"
+    },
+    {
+      "volume": 5,
+      "sha256": "a9191af575d27ca9b959d06a537ca02ac18fa6ec84e0516906a5490e5ab7692f"
+    },
+    {
+      "volume": 6,
+      "sha256": "3dad5ea958b22f8c5a86000285a700c7900262053a5463224b13b6d8cbe0472d"
+    }
+  ],
+  "edition_images": {
+    "volume_2": {
+      "title_page_visual": "معالم التنزيل (تفسير البغوي), author al-Baghawi, volume 2, Dar Taybah, three named editors",
+      "copyright_page_visual": "جميع الحقوق محفوظة; الطبعة الأولى; ١٤٠٩ هـ — ١٩٨٩ م",
+      "edition_and_year_visually_observed": true
+    },
+    "volume_5": {
+      "title_page_visual": "Same work, editors and Dar Taybah imprint, volume 5",
+      "separate_edition_copyright_page_in_handoff": false
+    },
+    "volume_6": {
+      "title_page_visual": "Same work, editors and Dar Taybah imprint, volume 6",
+      "separate_edition_copyright_page_in_handoff": false
+    },
+    "all_volumes_proven_same_printing_by_independent_copyright_page": false
+  },
+  "verse_findings": [
+    {
+      "verse_id": "4:43",
+      "volume": 2,
+      "pdf_pages": [
+        228,
+        229
+      ],
+      "printed_pages_visually_read": [
+        228,
+        229
+      ],
+      "automatic_printed_page_suggestion_was": [
+        215,
+        216
+      ],
+      "auto_pagination_corrected": true,
+      "visible_commentary": "Surah An Nisa commentary; Abu Ali al-Lu'lu'i, Abu Dawud as-Sijistani, Abu Dharr chain visible on printed page 228 and continuation on page 229",
+      "digital_suffix_match_unique_chars_reported": 51,
+      "observed_evidence": "VISUAL_CONTINUATION_CORROBORATED",
+      "human_scholar_signoff": false
+    },
+    {
+      "verse_id": "18:10",
+      "volume": 5,
+      "pdf_pages": [
+        154,
+        155
+      ],
+      "printed_pages_visually_read": [
+        154,
+        155
+      ],
+      "visible_commentary": "The Ashab al-Kahf account visibly continues beyond the digital cutoff in page 154; the scanned phrase reads 'فلما أتى الملك الخبر'",
+      "ocr_error": "OCR 'أنى' contradicts the visually read 'أتى' in this scan",
+      "remaining_ambiguity": "At supplied 120dpi, the exact orthographic spelling of the preceding number (ثلثمائة vs ثلاثمائة) still needs higher-resolution review and cannot be editorially decided from OCR.",
+      "formal_suffix_alignment": "NOT_ALIGNED",
+      "observed_evidence": "VISUAL_CONTINUATION_CORROBORATED_ALIGNMENT_UNRESOLVED",
+      "human_scholar_signoff": false
+    },
+    {
+      "verse_id": "17:4",
+      "volume": 5,
+      "pdf_pages": [
+        76,
+        77
+      ],
+      "printed_pages_visually_read": [
+        76,
+        77
+      ],
+      "visible_commentary": "Surah Al Isra, the narrative after the Quranic phrase about mercy visibly continues in page 76 and over page 77",
+      "digital_suffix_match_unique_chars_reported": 320,
+      "observed_evidence": "VISUAL_CONTINUATION_CORROBORATED",
+      "human_scholar_signoff": false
+    },
+    {
+      "verse_id": "33:9",
+      "volume": 6,
+      "pdf_pages": [
+        330,
+        331
+      ],
+      "printed_pages_visually_read": [
+        330,
+        331
+      ],
+      "automatic_printed_page_suggestion_was": [
+        135,
+        136
+      ],
+      "auto_pagination_corrected": true,
+      "visible_commentary": "Abu Sufyan's speech contains 'الكراع والخف' on page 330; the next printed page begins the Quranic passage for 33:10 and following, requiring accurate verse-boundary attribution.",
+      "digital_suffix_match_unique_chars_reported": 77,
+      "observed_evidence": "VISUAL_CONTINUATION_CORROBORATED",
+      "human_scholar_signoff": false
+    }
+  ],
+  "qualification": {
+    "ai_visual_review_completed": true,
+    "human_independent_scholarly_review_completed": false,
+    "printed_edition_identity_entire_three_volume_set_verified": false,
+    "print_continuation_candidate_visually_corrob_for_all_four": true,
+    "exact_editorial_alignment_verified_for_all_four": false,
+    "source_original_modified": false,
+    "full_pdf_byte_hashes_independently_verified": false,
+    "rights_clearance_for_redistribution": false,
+    "editorial_overlay_approved": false,
+    "scholarly_verified": false,
+    "publication_approved": false
+  },
+  "next_actions": [
+    "Second independent human page review and attestation of volume/date/imprint and all four page intervals",
+    "Higher-resolution crop of verse 18:10 number spelling; compare image with source and KSU witness without treating OCR as authoritative",
+    "Establish exact printed passage and verse boundaries for each record, particularly 33:9 to 33:10 transition",
+    "Confirm volumes 5 and 6 refer to the same Dar Taybah 1409 printing rather than relying solely on matching covers",
+    "Require rights approval before any public edited-text overlay"
+  ]
+}

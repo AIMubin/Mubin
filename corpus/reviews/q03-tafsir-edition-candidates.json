@@ -1,0 +1,75 @@
+{
+  "schema_version": "0.1.0",
+  "purpose": "Independent printed-edition comparison candidates for Q0.3 tafsir quality gate",
+  "scope": "BIBLIOGRAPHIC_CANDIDATES_ONLY",
+  "evidence_date": "2026-10-19",
+  "upstream_edition_identity": "UNKNOWN",
+  "bibliography": [
+    {
+      "source_id": "baghawy",
+      "work_ar": "معالم التنزيل",
+      "candidate_id": "baghawy-taybah-1409-1989",
+      "publisher_ar": "دار طيبة",
+      "editors_ar": [
+        "محمد عبد الله النمر",
+        "عثمان جمعة ضميرية",
+        "سليمان مسلم الحرش"
+      ],
+      "year_hijri": 1409,
+      "year_ce": 1989,
+      "volumes": 8,
+      "online_catalogue": "https://waqfeya.net/books/%D9%85%D8%B9%D8%A7%D9%84%D9%85-%D8%A7%D9%84%D8%AA%D9%86%D8%B2%D9%8A%D9%84-%D8%AA%D9%81%D8%B3%D9%8A%D8%B1-%D8%A7%D9%84%D8%A8%D8%BA%D9%88%D9%8A-%D8%B7-%D8%AF%D8%A7%D8%B1-%D8%B7%D9%8A%D8%A8%D8%A9-62a02391d9854b00bceb37bd84e94365",
+      "source_edition_match_confirmed": false
+    },
+    {
+      "source_id": "baghawy",
+      "work_ar": "معالم التنزيل",
+      "candidate_id": "baghawy-ihya-1420",
+      "publisher_ar": "دار إحياء التراث العربي",
+      "editor_ar": "عبد الرزاق المهدي",
+      "year_hijri": 1420,
+      "volumes": 5,
+      "online_catalogue": "https://quranpedia.net/book/261",
+      "source_edition_match_confirmed": false
+    },
+    {
+      "source_id": "tabary",
+      "work_ar": "جامع البيان في تأويل آي القرآن",
+      "candidate_id": "tabary-risalah-1420-2000",
+      "publisher_ar": "مؤسسة الرسالة",
+      "editor_ar": "أحمد شاكر",
+      "year_hijri": 1420,
+      "year_ce": 2000,
+      "volumes": 24,
+      "online_catalogue": "https://quranpedia.net/book/4",
+      "source_edition_match_confirmed": false
+    }
+  ],
+  "inspection_protocol": {
+    "required": [
+      "record verse ID and adjacent verses",
+      "verify title, edition, editor, publisher, volume, printed page",
+      "compare source text boundary with printed page and neighboring commentary",
+      "classify intentional continuation vs absent vs possible truncation with evidence",
+      "document rights before storing scans or large extracts"
+    ],
+    "prohibited": [
+      "do not guess or write missing tafsir text using AI",
+      "do not publish modern edition text without rights review",
+      "do not silently overwrite upstream Tafsir Center records"
+    ],
+    "accepted_statuses": [
+      "CONTINUATION_CONFIRMED",
+      "SOURCE_TEXT_TRUNCATION_CONFIRMED",
+      "MISSING_UPSTREAM_RECORD_CONFIRMED",
+      "NO_INDEPENDENT_ENTRY_CONFIRMED",
+      "UNRESOLVED"
+    ],
+    "approval_required": "independent editorial verification"
+  },
+  "remarks": [
+    "Candidate editions are not proof of which edition Tafsir Center actually used.",
+    "Published variants and pagination differ; record edition before volume/page citations.",
+    "Printed-page verification has not yet been performed for any of the eleven flagged cases."
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "q03-engineering-qualification",
+  "date_local": "2026-10-20",
+  "decided_by": "lead (automated engineering closure session)",
+  "milestone": "Q0.3",
+  "gate_replay": {
+    "tool": "corpus.q03_engineering_gate",
+    "command": "python -m corpus.q03_engineering_gate --linked <vault linked db> --source <vault original db> --report corpus-data/linked/q03-engineering-replay.json",
+    "result": "DATA_REPLAY_PASS",
+    "checks_passed": 9,
+    "checks_failed": 0,
+    "checks": [
+      "baghawy_32767_quarantine_baseline",
+      "baghawy_read_path_quarantine",
+      "default_quran_and_healthy_tafsir_read_path",
+      "derived_slash_quarantine_baseline",
+      "linked_structure",
+      "pinned_linked_database",
+      "tabary_markup_not_presented_as_text",
+      "tabary_markup_only_baseline",
+      "upstream_verbatim_comparison"
+    ],
+    "report_artifact": "corpus-data/linked/q03-engineering-replay.json (local, not committed)"
+  },
+  "source_pins_verified": {
+    "linked_quran_tafsir_db": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+    "original_tafsircenter_db": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+    "match": true,
+    "databases_modified_during_gate": false
+  },
+  "test_evidence": {
+    "windows_local_python_312": "corpus 61 OK + core 50 OK + engines/usul 34 OK",
+    "ci_corpus": {
+      "commit": "bde3c76",
+      "run_id": 39437097414,
+      "conclusion": "success",
+      "os": [
+        "ubuntu-latest",
+        "windows-latest"
+      ]
+    },
+    "ci_usul": [
+      {
+        "commit": "bde3c76",
+        "run_id": 39437097385,
+        "conclusion": "failure",
+        "cause": "usul-checks workflow did not install jsonschema required by the P0 bridge import",
+        "fix": "72ad074 adds jsonschema==4.25.1 install step"
+      },
+      {
+        "commit": "72ad074",
+        "run_id": 39438483054,
+        "conclusion": "success",
+        "os": [
+          "ubuntu-latest",
+          "windows-latest"
+        ]
+      }
+    ],
+    "python_311_local_fresh_clone": "34/34 usul tests OK after dependency install"
+  },
+  "decision": {
+    "engineering_qualified": true,
+    "qualification_scope": [
+      "6236-verse linked structure integrity (no loss or duplication)",
+      "31180 tafsir rows across five sources, verbatim-identical to the pinned upstream original",
+      "read-path safety: 4 Baghawi cutoff records withheld, 7 Tabary markup-only records not presented as tafsir text, 364 derived slash-flagged verses never shown as canonical Quran text",
+      "healthy tafsir and default Quran retrieval unaffected",
+      "source databases unchanged byte-for-byte during all checks"
+    ],
+    "engineering_milestone_qualified_by_tool": false,
+    "note": "The gate tool itself reports engineering_data_gate_passed=true while deferring milestone qualification; this record grants the engineering qualification for exactly the replayed scope above, based on reproducible evidence (any third party can re-run the gate command against the pinned vault snapshots)."
+  },
+  "independent_gates_unchanged": {
+    "canonical_quran_verified": false,
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "editorial_replacement_approved": false
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}

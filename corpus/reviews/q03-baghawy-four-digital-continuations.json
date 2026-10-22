@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "status": "FOUR_DIGITAL_CONTINUATION_CANDIDATES_REVIEWED_PRINTED_EDITION_PENDING",
+  "original_linked_database_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "upstream_source_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+  "source_description": "Tafsir Center pinned Baghawi fields, read-only SQLite",
+  "comparative_online_source": "King Saud University Quran tafsir pages",
+  "bibliographic_candidate": {
+    "publisher": "دار طيبة",
+    "year_hijri": 1409,
+    "year_ce": 1989,
+    "editor_names": [
+      "محمد عبد الله النمر",
+      "عثمان جمعة ضميرية",
+      "سليمان مسلم الحرش"
+    ],
+    "scanned_volume_catalog_url": "https://waqfeya.net/books/%D9%85%D8%B9%D8%A7%D9%84%D9%85-%D8%A7%D9%84%D8%AA%D9%86%D8%B2%D9%8A%D9%84-%D8%AA%D9%81%D8%B3%D9%8A%D8%B1-%D8%A7%D9%84%D8%A8%D8%BA%D9%88%D9%8A-%D8%B7-%D8%AF%D8%A7%D8%B1-%D8%B7%D9%8A%D8%A8%D8%A9-62a02391d9854b00bceb37bd84e94365",
+    "printed_page_numbers_verified": false,
+    "edition_identical_to_upstream": false
+  },
+  "records": [
+    {
+      "source_characters": 32767,
+      "source_field_identical_to_upstream": true,
+      "digital_continuation_observed": true,
+      "digital_witness_not_a_verified_printed_page": true,
+      "tool_anchor_alignment_with_full_external_transcription_not_yet_run": true,
+      "verse_id": "4:43",
+      "publisher_volume_candidate": 2,
+      "source_field_sha256": "cf3d473ae3803eb434ac554ce8f90ceace0a6c5ca657c904d60560b19a009760",
+      "last_unicode_category": "Lo",
+      "cutoff_context": "Narrator chain ends at an incomplete narrator name",
+      "comparison_url": "https://quran.ksu.edu.sa/tafseer/baghawy/sura4-aya43.html",
+      "continuation_observed": "The online witness continues the chain through al-Lu'lu'i and Abu Dawud, followed by further commentary",
+      "last_96_diagnostic_hash": "116eec5173d65f5508dc0e19b50b48333528ca4fc668e40f134a41160cce40c3"
+    },
+    {
+      "source_characters": 32767,
+      "source_field_identical_to_upstream": true,
+      "digital_continuation_observed": true,
+      "digital_witness_not_a_verified_printed_page": true,
+      "tool_anchor_alignment_with_full_external_transcription_not_yet_run": true,
+      "verse_id": "17:4",
+      "publisher_volume_candidate": 5,
+      "source_field_sha256": "895f7db24c5fbb4de6ccb1213f121bfe21580b46d34eff91fa1058766ae5c0c3",
+      "last_unicode_category": "Lo",
+      "cutoff_context": "Stops immediately after the beginning of the clause following a quote of 'عسى ربكم أن يرحمكم'",
+      "comparison_url": "https://quran.ksu.edu.sa/tafseer/baghawy/sura17-aya4.html",
+      "continuation_observed": "The online witness continues the verse explanation and then additional paragraphs",
+      "last_96_diagnostic_hash": "39f1f4dde535c00fa1e17efb0ed6db830877286633124bd71b786d51a13c34e5"
+    },
+    {
+      "source_characters": 32767,
+      "source_field_identical_to_upstream": true,
+      "digital_continuation_observed": true,
+      "digital_witness_not_a_verified_printed_page": true,
+      "tool_anchor_alignment_with_full_external_transcription_not_yet_run": true,
+      "verse_id": "18:10",
+      "publisher_volume_candidate": 5,
+      "source_field_sha256": "0712222b0359439f7a9c607ff1c86f0b1633b1f7ac4a8267d17aeb1012b37e62",
+      "last_unicode_category": "Lo",
+      "cutoff_context": "Incomplete word after 'أكثر من ثلثمائة' in story of the youths",
+      "comparison_url": "https://quran.ksu.edu.sa/tafseer/baghawy/sura18-aya10.html",
+      "continuation_observed": "The online witness continues the description of the years and the story",
+      "last_96_diagnostic_hash": "f37bc2301e0ca777b5e39fa6c03e39d07755d9b6de85f5a93cbc6513b515dd5b"
+    },
+    {
+      "source_characters": 32767,
+      "source_field_identical_to_upstream": true,
+      "digital_continuation_observed": true,
+      "digital_witness_not_a_verified_printed_page": true,
+      "tool_anchor_alignment_with_full_external_transcription_not_yet_run": true,
+      "verse_id": "33:9",
+      "publisher_volume_candidate": 6,
+      "source_field_sha256": "6d8ad2ab729de18c6e9a34794fbfddd20f89c410cf673b7bd9b6634b006a56af",
+      "last_unicode_category": "Mn",
+      "cutoff_context": "Stops inside a word/phrase while Abu Sufyan addresses Quraysh",
+      "comparison_url": "https://quran.ksu.edu.sa/tafseer/baghawy/sura33-aya9.html",
+      "continuation_observed": "The online witness continues his speech and ensuing events",
+      "last_96_diagnostic_hash": "b928389fdb0d0d5d90a32a18905dbbd20bd77480dd137772c7e04e3ea9cbcde0"
+    }
+  ],
+  "conclusions": [
+    "All four distinct original fields end at exactly 32767 Unicode characters and at linguistically abrupt boundaries.",
+    "Each KSU independent online representation contains further text beyond the observed cutoff, supporting probable digital truncation.",
+    "No exact printed page or aligned 32767-character prefix has been authenticated; the full size and precise text of any missing continuation remain unmeasured.",
+    "These findings do not clear reproduction rights, and original source data must not be edited or silently patched."
+  ],
+  "next_gate": "Obtain an authorized verbatim transcription plus image/page citation of the matching printed edition. Use corpus.audit_baghawy_cutoff for unique suffix match and continuation; perform independent edition-level review."
+}

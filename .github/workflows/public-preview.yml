@@ -1,0 +1,49 @@
+name: Public metadata preview readiness
+on:
+  push:
+    paths:
+      - 'release/**'
+      - 'docs/index.html'
+      - 'docs/preview.css'
+      - 'docs/preview.js'
+      - 'docs/preview-data.json'
+      - 'corpus/reviews/u01-stage07-waraqat-arabic-retrieval.json'
+      - 'corpus/reviews/u01-stage08-waraqat-context-graph.json'
+      - 'corpus/reviews/q03-engineering-qualification.json'
+      - 'VERSION.yaml'
+      - '.gitattributes'
+      - '.github/workflows/public-preview.yml'
+  pull_request:
+    paths:
+      - 'release/**'
+      - 'docs/index.html'
+      - 'docs/preview.css'
+      - 'docs/preview.js'
+      - 'docs/preview-data.json'
+      - 'corpus/reviews/u01-stage07-waraqat-arabic-retrieval.json'
+      - 'corpus/reviews/u01-stage08-waraqat-context-graph.json'
+      - 'corpus/reviews/q03-engineering-qualification.json'
+      - 'VERSION.yaml'
+      - '.gitattributes'
+      - '.github/workflows/public-preview.yml'
+permissions:
+  contents: read
+jobs:
+  metadata-preview:
+    name: Public preview readiness (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Rebuild check against committed metadata reviews
+        run: python -m release.public_preview --check
+      - name: Browser script syntax smoke check
+        run: node --check docs/preview.js
+      - name: Negative gate regression tests
+        run: python -m unittest discover -s release/tests -v

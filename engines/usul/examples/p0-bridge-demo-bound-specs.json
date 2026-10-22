@@ -1,0 +1,33 @@
+{
+  "demo:rule1": {
+    "if_all": [
+      {
+        "atom": "demo:premise",
+        "truth": "true"
+      }
+    ],
+    "unless_any": [],
+    "then": {
+      "atom": "demo:output",
+      "truth": "true"
+    },
+    "binding": {
+      "version": "0.1.0",
+      "rule_sha256": "ef2907f95437d4b47c5f4fb1ac96798d99702f45ec28de948d4bcf3077415529",
+      "preconditions": [
+        {
+          "label": "demo:precondition",
+          "claim_id": "demo:c-premise",
+          "atom": "demo:premise",
+          "truth": "true"
+        }
+      ],
+      "exceptions": [],
+      "conclusion": {
+        "claim_id": "demo:c-conclusion",
+        "atom": "demo:output",
+        "truth": "true"
+      }
+    }
+  }
+}

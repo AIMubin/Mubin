@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-w2-three-representations-reconciliation-erratum",
+  "engine": "waraqat-w2-receipt-reconcile/0.1.0",
+  "date_local": "2026-10-21",
+  "status": "EVIDENCE_RECONCILIATION_FAILED",
+  "reason_code": "WINDOWS_NEWLINE_ACCOUNTING_INVALID",
+  "root_cause": {
+    "summary": "حقل legacy_lf_only_bytes=1700 في الإيصال التاريخي هو نقلٌ غير مُتحقق من جدول افتراضات الحساب (1706−6=1700 بافتراض 6 أسطر جديدة) — بينما القياس الفعلي لإعادة تشغيل legacy_full_bab_amr أعطى 1,696 بايت و10 أسطر جديدة",
+    "measured_from_replay": {
+      "legacy_lf_serialized_bytes": 1696,
+      "legacy_lf_linefeed_count": 10,
+      "legacy_windows_bytes": 1706,
+      "legacy_lf_sha256": "6e88c20addae4744be5d3754fe17e46965d96793f98f869c6d1027f7c343981f",
+      "note": "legacy LF-only مطابق بايت-ببايت لنسخة hardened_full (نفس SHA)"
+    },
+    "historical_receipt_field": {
+      "legacy_lf_only_bytes": 1700,
+      "source": "نقل من افتراض §4 دون قياس"
+    },
+    "tool_behavior": "صحيح — fail-closed رفض الاعتماد عند تعارض الإيصال مع القياس"
+  },
+  "corrected_accounting_measured": {
+    "legacy_windows_minus_legacy_lf": 10,
+    "legacy_lf_minus_hardened": 0,
+    "legacy_windows_minus_hardened": 10,
+    "stage06_minus_hardened": 6,
+    "note": "task §4 claimed legacy_lf−hardened=4 و legacy_windows−legacy_lf=6 — القياس يكذّب الافتراضين: CRs الفعلية 10 (10 أسطر جديدة)، وlegacy_lf مطابق لhardened بالبايت"
+  },
+  "everything_else_verified": {
+    "source_w2_pin_match": true,
+    "private_audit_replay_byte_match": true,
+    "stage06_and_hardened_full_digests_match_frozen_pins": true,
+    "pairwise_lines_tokens_codepoints_identical": true,
+    "historical_digest_prefixes_match_full_digests": true,
+    "privacy_scan": "metadata-only, no source text"
+  },
+  "resolution_required": "صاحب المستودع يصحح حقل legacy_lf_only_bytes في الإيصال التاريخي إلى القيمة المقاسة (1696) عبر عملية اعتماد خاصة به، ثم يعاد تشغيل waraqat_w2_receipt_reconcile ليعيد EVIDENCE_RECONCILIATION_PASS",
+  "pr79_merge_readiness": "BLOCKED على حقل واحد موثق — كل البوابات الهندسية الأخرى خضراء",
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_rules_qualified": false,
+    "semantic_equivalence_verified": false,
+    "public_fatwa_authorized": false
+  }
+}

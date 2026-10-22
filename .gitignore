@@ -1,0 +1,5 @@
+# Downloaded or imported original source objects (must not enter Git by accident)
+corpus-data/
+__pycache__/
+.pytest_cache/
+*.pyc

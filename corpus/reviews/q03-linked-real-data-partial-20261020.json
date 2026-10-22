@@ -1,0 +1,59 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "measurement_kind": "DIRECT_LINKED_SQLITE_READ_ONLY",
+  "inspection_date": "2026-10-20",
+  "database_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "linked_sqlite_bytes": 104947712,
+  "verse_count": 6236,
+  "tafsir_count": 31180,
+  "tafsir_sources": {
+    "baghawy": 6236,
+    "katheer": 6236,
+    "moyassar": 6236,
+    "saadi": 6236,
+    "tabary": 6236
+  },
+  "slash_affected_derived_verses": 364,
+  "slash_character_occurrences": 371,
+  "baghawy_exact_32767": [
+    {
+      "verse_id": "4:43",
+      "characters": 32767,
+      "utf8_field_sha256": "cf3d473ae3803eb434ac554ce8f90ceace0a6c5ca657c904d60560b19a009760"
+    },
+    {
+      "verse_id": "17:4",
+      "characters": 32767,
+      "utf8_field_sha256": "895f7db24c5fbb4de6ccb1213f121bfe21580b46d34eff91fa1058766ae5c0c3"
+    },
+    {
+      "verse_id": "18:10",
+      "characters": 32767,
+      "utf8_field_sha256": "0712222b0359439f7a9c607ff1c86f0b1633b1f7ac4a8267d17aeb1012b37e62"
+    },
+    {
+      "verse_id": "33:9",
+      "characters": 32767,
+      "utf8_field_sha256": "6d8ad2ab729de18c6e9a34794fbfddd20f89c410cf673b7bd9b6634b006a56af"
+    }
+  ],
+  "tabary_markup_only": [
+    "4:168",
+    "26:16",
+    "26:205",
+    "37:25",
+    "37:62",
+    "37:103",
+    "50:13"
+  ],
+  "sqlite_integrity": "ok",
+  "foreign_key_errors": 0,
+  "upstream_source_db_available": false,
+  "upstream_text_fidelity_replayed": false,
+  "canonical_quran_verified": false,
+  "scholarly_verified": false,
+  "redistribution_approved": false,
+  "engineering_gate_complete": false,
+  "note": "Direct inspection of user-uploaded linked SQLite in this assistant runtime; upstream Tafsir Center pinned quran.db bytes were not present, so no current complete upstream comparison. Does not attest printed edition or canonical Quran display."
+}

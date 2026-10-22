@@ -1,0 +1,58 @@
+{
+  "acceptance_receipt_sha256": "00f0d1c71f55dc226cd6b840decfcdada152a40746a5cdc39b1e4f019c6bf7df",
+  "bridge_engine": "waraqat-u02-pinned-lexical-catalog/0.2.2",
+  "bridge_report_sha256": "c7004429ab41d37812fa1f494f97fb93be6fc2aa4ea2ccf3a0c5f3b8ec38f2b0",
+  "candidate_concept_count": 3,
+  "candidate_rule_count": 1,
+  "catalog_sha256": "ab77f297b0b6e4518bd7c8f0b00e13cf38df4c6372d642d76d494a7df1b75ca5",
+  "engine": "waraqat-u02-private-acceptance/0.2.3",
+  "full_private_inputs_matched_frozen_sha256": true,
+  "identical_two_source_replays": true,
+  "independent_original_byte_literal_counts": [
+    {
+      "concept_id": "concept:amr-term",
+      "independent_exact_count": 6,
+      "matches_reported_graph": true,
+      "query_id": "pilot:amr-term"
+    },
+    {
+      "concept_id": "concept:qarinah-candidate",
+      "independent_exact_count": 1,
+      "matches_reported_graph": true,
+      "query_id": "pilot:qarinah-term"
+    },
+    {
+      "concept_id": "concept:wujub-candidate",
+      "independent_exact_count": 1,
+      "matches_reported_graph": true,
+      "query_id": "pilot:wujub-term"
+    }
+  ],
+  "juristic_inference_allowed": false,
+  "lexical_content_equivalence_certified": false,
+  "operator_supplied_git_commit": "a11f7cd7489dd2bda4fa2b8de11e9c9b0fec2ee9",
+  "original_private_witness_pins": {
+    "w1_bab_amr_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+    "w1_html_sha256": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+    "w1_manifest_sha256": "5bf586787dbb9f84d03fc21c62ee32619b66b474c66a6c890aeb813219f853cf",
+    "w1_utf8_export_sha256": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+    "w2_bab_amr_sha256": "db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358",
+    "w2_html_sha256": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa"
+  },
+  "private_paths_included": false,
+  "public_fatwa_authorized": false,
+  "redistribution_approved": false,
+  "rule_execution_performed": false,
+  "schema_version": "0.2.3",
+  "scholarly_verified": false,
+  "semantic_equivalence_verified": false,
+  "source_edition_authenticated": false,
+  "source_support_attested": false,
+  "source_text_included": false,
+  "stage08_graph_sha256": "72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2",
+  "stage08_reproduced_edge_count": 87,
+  "stage08_reproduced_node_count": 53,
+  "status": "U02_REAL_WARAQAT_PRIVATE_REPLAY_ACCEPTED",
+  "w1_mutated_html_rejected": true,
+  "w2_mutated_html_rejected": true
+}

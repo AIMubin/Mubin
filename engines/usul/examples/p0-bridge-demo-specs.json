@@ -1,0 +1,20 @@
+{
+  "demo:rule1": {
+    "if_all": [
+      {
+        "atom": "demo:premise",
+        "truth": "true"
+      }
+    ],
+    "unless_any": [
+      {
+        "atom": "demo:exception",
+        "truth": "true"
+      }
+    ],
+    "then": {
+      "atom": "demo:output",
+      "truth": "true"
+    }
+  }
+}
