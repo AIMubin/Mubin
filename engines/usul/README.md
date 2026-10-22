@@ -148,3 +148,59 @@ The [whole-book W1 inventory/batch engine](waraqat_batch.py) and [one-command W1
 One oversized or malformed chapter fails with a separate section code rather than blocking other structurally valid W1 chapters; root-source tampering fails closed. The [optional W2 title matcher](waraqat_w2_heading_map.py) matches h2 heading fingerprints as **unassessed and potentially incomplete title candidates**, independently of W1 coverage; no W2 section identity, scholarly agreement or matching editorial editions is implied.
 
 See the [private source operator runbook](pilots/FULL_WARAQAT_BATCH_COVERAGE.md). The [synthetic all-chapter regression suite](tests/test_waraqat_batch.py) includes a 20-heading fake witness plus negative and per-section isolation tests; the [W2 heading diagnostics tests](tests/test_waraqat_w2_heading_map.py) exercise ambiguous titles, order and pinned source roots. No public CI has rerun all chapters of the real private historical W1/W2 HTML captures yet. Therefore the actual number of W1 chapters and full-book coverage outcome must come from the local operator, **not synthetic fixture counts**. These chapter-engineering outcomes do NOT qualify semantic rules, publication rights, P0 evidentiary status or juristic judgments. The separate public metadata preview remains deployable without waiting for whole-book research.
+
+## U0.2 development pilot 01 — concept/rule candidates (research-only)
+
+The [candidate concept/rule catalog](concept_rule_catalog.py) introduces a small
+versioned `u0.2.0` **internal** metadata contract for symbolic concept nodes,
+unassessed candidate rule structures, and typed proposed relationships. It
+binds each rule candidate to a pinned Stage08 `RULE_RESEARCH_POINTER` via
+research-navigation metadata, checks reference integrity, and produces a
+deterministic digest without including source text.
+
+It deliberately does **not** create a P0 Rule, authenticate an edition,
+interpret linguistic meaning, execute a juristic condition, infer a ruling,
+or update scholarly/rights/semantic authorization flags. A passing catalog
+is a structurally consistent *research index*, not an approved Usul engine.
+
+See [U0.2 pilot contract and limits](U02_CONCEPT_RULE_CATALOG.md),
+[synthetic candidate manifest](examples/u02-candidate-catalog-demo.json),
+and `test_concept_rule_catalog.py`. Mubin version remains `0.1.0-alpha`.
+
+## U0.2 development pilot 02 — methodology, ambiguity and alternatives
+
+The [methodology candidate review overlay](candidate_methodology_review.py)
+extends the U0.2.0 metadata catalog with separately versioned, **unassessed**
+methodology proposals. Every candidate rule must bind to one declared profile
+and exact profile version whose research pointer remains in Stage08.
+Unresolved ambiguities and candidate cross-profile/structural alternatives
+are tracked explicitly without asserting any genuine scholarly disagreement.
+
+This reuses [Stage08 pinned research navigation](evidence_context_graph.py)
+and [the U0.2.0 catalog](concept_rule_catalog.py), *not* a new juristic
+executor. Invalid/stale graph or catalog pins, unauthorized review statuses,
+cross-profile pointer mismatches and fabricated normative outcomes fail
+closed. Full [pilot 02 contract and limits](U02_METHODOLOGY_REVIEW.md)
+and synthetic regression tests appear under
+`tests/test_candidate_methodology_review.py`.
+
+Success means only structurally linked research candidates. It does not
+verify source interpretation, school affiliation, disputed rules, `qiyas`,
+`tarjih` or any fatwa. Mubin remains `0.1.0-alpha`.
+
+## U0.2 pilot 03 — private-source replay bridge (W1/W2)
+
+A [strict local operator](pilots/waraqat_u02_real_bridge.py) now
+re-executes Stage06→Stage07→Stage08 from the **private frozen HTML
+witnesses**, verifies the historically pinned Stage08 SHA-256
+(`72ca6bd8…a6fdb2`), and constructs a candidate-only U0.2 catalog
+with source-scoped, byte-addressed **lexical** links. The three W1
+queries for the candidate concepts are bound to the frozen exact
+occurrence counts 6/1/1. No source text appears in its output.
+
+This is **not** runnable against private witnesses on public CI; synthetic
+end-to-end tests validate the integration contract. Follow the
+[U0.2 private-source operator runbook](pilots/U02_REAL_WARAQAT_BRIDGE.md)
+to run the actual frozen W1/W2 replay locally and archive a
+metadata-only receipt. No semantic equivalence, rule-support,
+scholarly authentication, rights clearance or fiqh inference is granted.
