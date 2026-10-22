@@ -205,6 +205,67 @@ class MethodologyCandidateReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogError, "DISAGREEMENT_NO_STRUCTURAL_ALTERNATIVE"):
             self.run_review()
 
+    def _structural_comparison_with_two_items(self, clause):
+        """Construct two unassessed candidate rules identical as unordered clauses.
+
+        Rule IDs and research pointers intentionally differ: only the order
+        of premise or exception identifiers changes, never their meaning.
+        """
+        self.overlay["disagreements"][0]["kind"] = "STRUCTURAL_ALTERNATIVE"
+        self.catalog_manifest["concepts"].extend([
+            {"id": "concept:premise-extra", "concept_kind": "TERM",
+             "review_status": "UNASSESSED"},
+            {"id": "concept:exception-extra", "concept_kind": "EXCEPTION",
+             "review_status": "UNASSESSED"},
+        ])
+        first, second = self.catalog_manifest["rule_candidates"]
+        second["then_concept"] = first["then_concept"]
+        identifier = ("concept:premise-extra" if clause == "if_concepts"
+                      else "concept:exception-extra")
+        first[clause].append(identifier)
+        second[clause] = list(reversed(first[clause]))
+        self.overlay["catalog_sha256"] = build_catalog(
+            self.graph, self.pin, self.catalog_manifest)["catalog_sha256"]
+        return first, second
+
+    def test_structural_alternative_ignores_reordered_premises(self):
+        self._structural_comparison_with_two_items("if_concepts")
+        with self.assertRaisesRegex(CatalogError, "DISAGREEMENT_NO_STRUCTURAL_ALTERNATIVE"):
+            self.run_review()
+
+    def test_structural_alternative_ignores_reordered_exceptions(self):
+        self._structural_comparison_with_two_items("unless_concepts")
+        with self.assertRaisesRegex(CatalogError, "DISAGREEMENT_NO_STRUCTURAL_ALTERNATIVE"):
+            self.run_review()
+
+    def test_structural_alternative_ignores_reordering_both_clause_lists(self):
+        first, second = self._structural_comparison_with_two_items("if_concepts")
+        first["unless_concepts"].append("concept:exception-extra")
+        second["unless_concepts"] = list(reversed(first["unless_concepts"]))
+        self.overlay["catalog_sha256"] = build_catalog(
+            self.graph, self.pin, self.catalog_manifest)["catalog_sha256"]
+        with self.assertRaisesRegex(CatalogError, "DISAGREEMENT_NO_STRUCTURAL_ALTERNATIVE"):
+            self.run_review()
+
+    def test_structural_alternative_accepts_real_premise_membership_change(self):
+        first, second = self._structural_comparison_with_two_items("if_concepts")
+        second["if_concepts"] = ["concept:premise"]
+        self.overlay["catalog_sha256"] = build_catalog(
+            self.graph, self.pin, self.catalog_manifest)["catalog_sha256"]
+        report = self.run_review()
+        self.assertEqual(report["disagreement_candidate_count"], 1)
+        self.assertFalse(report["real_juristic_disagreement_attested"])
+        self.assertFalse(report["semantic_equivalence_verified"])
+
+    def test_structural_alternative_accepts_real_exception_membership_change(self):
+        first, second = self._structural_comparison_with_two_items("unless_concepts")
+        second["unless_concepts"] = ["concept:exception"]
+        self.overlay["catalog_sha256"] = build_catalog(
+            self.graph, self.pin, self.catalog_manifest)["catalog_sha256"]
+        report = self.run_review()
+        self.assertEqual(report["disagreement_candidate_count"], 1)
+        self.assertFalse(report["real_juristic_disagreement_attested"])
+
     def test_mirrored_disagreement_not_allowed(self):
         self.overlay["disagreements"].append({
             "id": "difference:reverse", "left_rule_candidate_id": "candidate:second",

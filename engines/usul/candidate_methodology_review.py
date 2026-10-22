@@ -138,7 +138,8 @@ def build_methodology_review(stage08_graph, trusted_stage08_sha256,
                  "DISAGREEMENT_PROFILE_NOT_DISTINCT")
         else:
             def structural(r):
-                return (tuple(r["if_concepts"]), tuple(r["unless_concepts"]),
+                return (tuple(sorted(r["if_concepts"])),
+                        tuple(sorted(r["unless_concepts"])),
                         r["then_concept"])
             need(structural(rules[left]) != structural(rules[right]),
                  "DISAGREEMENT_NO_STRUCTURAL_ALTERNATIVE")

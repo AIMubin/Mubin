@@ -23,6 +23,14 @@ not evidence that a disagreement actually exists among scholars. The two candida
 one declared concept before any comparison is recorded; this is a
 structural relevance check, never proof of doctrinal conflict.
 
+For `STRUCTURAL_ALTERNATIVE`, `if_concepts` and `unless_concepts` are
+**unordered sets** of concept references. Reordering identical premises
+or identical exceptions does not create a distinct structural proposal.
+Genuine membership differences, differences between premise and exception
+roles, and differences in `then_concept` remain distinguishable. This
+check remains strictly structural: it does not certify a real scholarly
+disagreement or an executable rule.
+
 The input overlay is bound to a full `catalog_sha256`, and the catalog
 is **recomputed**, not trusted as a free-standing supplied blob. Recomputing
 also checks Stage08's independently pinned graph hash, research navigation
