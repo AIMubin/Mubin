@@ -103,3 +103,23 @@ CLI exit `0`: `U02_DEFINITION_METADATA_CANDIDATES_PASS` (schema and provenance o
 - Define a separate scholarly-acceptance workflow for textual variants in the 16 W1/W2 chapters, with human review. Do not change P0, U0.1 executor, Quran Q0.3 or Hadith H3.9.2.
 
 **Always false:** `scholarly_verified`, `redistribution_approved`, `source_support_attested`, `semantic_equivalence_verified`, `juristic_inference_allowed`, `rule_execution_performed`, `public_fatwa_authorized`.
+
+## Local operator path for authentic candidate preparation (not executed in CI)
+
+The [private intake runbook](pilots/U02_PRIVATE_DEFINITION_INTAKE.md)
+defines how the local researcher keeps original W1/W2 and proposed
+definition texts off-repo while using the
+[operator](pilots/waraqat_definition_private_intake.py) to generate
+a valid `HMAC_SHA256_PRIVATE` candidate manifest rooted in the pinned
+U0.2.3 receipt. [Example structural intake](pilots/data/u02-private-definition-intake.EXAMPLE.json)
+includes only invented relative filenames. Public CI runs synthetic
+temporary test files with no privately sourced Arabic quotations.
+
+The operator refuses a Git-repository private root, escaped/symlinked
+files, inline text fields, unsupported concepts, repeated input files,
+missing/short HMAC keys, stale receipt pins and cross-concept
+interpretation links. Output is restricted to a private root.
+**Do not publish** the local intake JSON, key, excerpt files, or any
+locally produced manifest until a separate metadata disclosure audit.
+A cryptographic commitment is proof of byte identity relative to a
+private key, **not** proof of scientific attribution.

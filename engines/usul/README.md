@@ -228,3 +228,20 @@ See [implementation scope and scientific non-goals](U02_CONCEPT_DEFINITIONS_IMPL
 No fiqh inference, semantic qualification, permission to redistribute source
 text, authenticated author attribution, or claim of scholarly disagreement
 is enabled. Overall system stays `0.1.0-alpha`.
+
+## Private W1 definition intake (Draft PR #81)
+
+The [local-only candidate intake operator](pilots/waraqat_definition_private_intake.py)
+and [operator instructions](pilots/U02_PRIVATE_DEFINITION_INTAKE.md)
+prepare an **unassessed metadata-only** manifest from private text files
+stored **outside Git**. The operator validates the frozen U0.2.3 receipt,
+requires exact W1 concept/query IDs, computes private HMAC commitments,
+and refuses source-text fields, path traversal, unsupported concept IDs,
+cross-concept interpretations and unapproved scholarly statuses.
+
+See the [safe structural intake example](pilots/data/u02-private-definition-intake.EXAMPLE.json).
+The example filenames do **not** imply that real quotations or source
+attributions have been verified. GitHub CI uses synthetic temporary files
+only; the private real-source intake has **not** been run here. The tool
+does not verify whether a candidate is actually authored by the person
+claimed, and must never promote it into a scholarly rule.
