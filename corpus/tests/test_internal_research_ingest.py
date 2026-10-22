@@ -6,6 +6,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -76,6 +79,42 @@ class InternalResearchIngestTests(unittest.TestCase):
             source_meta=_meta(), attestation=_attestation(),
             use_record=_use_record(),
             independently_pinned_sha256=self.pin)
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction regression")
+    def test_python311_windows_objects_junction_refused(self):
+        git_root = self.base / "junction-target-repository"
+        (git_root / ".git").mkdir(parents=True)
+        self.corpus_root.mkdir()
+        link = self.corpus_root / "objects"
+        cmd = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(git_root)],
+            capture_output=True, text=True)
+        self.assertEqual(cmd.returncode, 0, cmd.stderr)
+        attributes = link.lstat().st_file_attributes
+        self.assertTrue(attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "PRIVATE_STORAGE_SYMLINK_REFUSED"):
+            self.admit()
+        self.assertFalse((git_root / self.pin[:2] / self.pin).exists())
+        self.assertFalse(self.register.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction regression")
+    def test_python311_windows_manifest_junction_refused(self):
+        git_root = self.base / "junction-target-repository"
+        (git_root / ".git").mkdir(parents=True)
+        self.corpus_root.mkdir()
+        link = self.corpus_root / "manifests"
+        cmd = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(git_root)],
+            capture_output=True, text=True)
+        self.assertEqual(cmd.returncode, 0, cmd.stderr)
+        self.assertTrue(link.lstat().st_file_attributes &
+                        stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "PRIVATE_STORAGE_SYMLINK_REFUSED"):
+            self.admit()
+        self.assertFalse((self.corpus_root / "objects").exists())
+        self.assertFalse(self.register.exists())
 
     def test_objects_symlink_into_git_is_refused_before_private_copy(self):
         git_root = self.base / "repo-for-test"

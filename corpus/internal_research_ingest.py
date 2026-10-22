@@ -155,6 +155,16 @@ def verify_usage_register(register_path: Path) -> dict:
 
 
 
+def _is_windows_reparse_point(path: Path) -> bool:
+    """Compatible with Python 3.11, where Path.is_junction does not exist."""
+    if os.name != "nt" or not path.exists():
+        return False
+    # Junctions carry FILE_ATTRIBUTE_REPARSE_POINT (0x400). Reject other
+    # reparse points too: the vault needs ordinary local directories.
+    attrs = getattr(path.lstat(), "st_file_attributes", 0)
+    return bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+
+
 def _guard_private_path(path: Path, *, container: bool = False):
     """Fail closed on existing symlink/junction components before any writes.
 
@@ -164,8 +174,7 @@ def _guard_private_path(path: Path, *, container: bool = False):
     try:
         candidate = Path(os.path.abspath(os.fspath(path)))
         for part in (candidate, *candidate.parents):
-            if part.is_symlink() or (os.name == "nt" and
-                    getattr(part, "is_junction", lambda: False)()):
+            if part.is_symlink() or _is_windows_reparse_point(part):
                 raise InternalSourceRefusal("PRIVATE_STORAGE_SYMLINK_REFUSED")
             if (part / ".git").exists() or (part / ".git").is_symlink():
                 raise InternalSourceRefusal("PRIVATE_STORAGE_INSIDE_GIT_REFUSED")
