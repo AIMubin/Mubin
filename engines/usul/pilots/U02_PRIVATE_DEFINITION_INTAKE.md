@@ -80,6 +80,21 @@ Files created locally:
   `scholarly_verified=false`, `source_support_attested=false`,
   `public_fatwa_authorized=false`.
 
+The emitted `report_sha256` covers **the entire final operator report**
+except the digest field itself. The original validator-only result is
+preserved separately as `definition_validation_report_sha256`. The two
+values have different scopes: never treat one as the other's digest.
+The canonical JSON serialization uses sorted keys, compact separators,
+UTF-8 and `ensure_ascii=False`, matching
+`engines.usul.concept_rule_catalog.canonical`.
+
+Path-resolution failures, including symlink loops on Python 3.11, fail
+closed with only `PRIVATE_DEFINITION_INTAKE_REJECTED` on stdout;
+full private paths and Python traceback messages are never printed.
+The private operator is an offline, **single-trusted-user** workflow:
+do not let untrusted processes concurrently replace/swap source or
+output files in the private directory during intake.
+
 Both files should remain private until independently inspected to ensure
 they contain **no private text, paths, keys, personal identifiers or
 rights-restricted information**. Do not automatically commit either file.

@@ -38,7 +38,12 @@ def _private_path(root: Path, relative: str) -> Path:
          ".." not in Path(relative).parts and
          "\\" not in relative and ":" not in relative,
          "PRIVATE_RELATIVE_PATH_INVALID")
-    path = (root / relative).resolve()
+    try:
+        path = (root / relative).resolve()
+    except (OSError, RuntimeError):
+        # Python 3.11 can raise RuntimeError on a symlink loop, with
+        # a sensitive path embedded in the exception message.
+        raise CatalogError("PRIVATE_PATH_RESOLUTION_REJECTED") from None
     need(path.is_relative_to(root) and path != root,
          "PRIVATE_PATH_OUTSIDE_ROOT")
     return path
@@ -88,7 +93,10 @@ def prepare_private_manifest(receipt, intake, root: Path, key: bytes):
     need(type(receipt) is dict and
          receipt.get("original_private_witness_pins", {}).get("w1_bab_amr_sha256"),
          "PRIVATE_INTAKE_RECEIPT_INVALID")
-    root = root.resolve()
+    try:
+        root = root.resolve()
+    except (OSError, RuntimeError):
+        raise CatalogError("PRIVATE_ROOT_RESOLUTION_REJECTED") from None
     need(root.is_dir() and not root.is_relative_to(REPO_ROOT)
          and not REPO_ROOT.is_relative_to(root),
          "PRIVATE_ROOT_MUST_BE_OUTSIDE_REPOSITORY")
@@ -183,7 +191,10 @@ def main():
     p.add_argument("--key-env", default="MUBIN_PRIVATE_HMAC_KEY_HEX")
     args = p.parse_args()
     try:
-        root = args.private_root.resolve()
+        try:
+            root = args.private_root.resolve()
+        except (OSError, RuntimeError):
+            raise CatalogError("PRIVATE_ROOT_RESOLUTION_REJECTED") from None
         need(root.is_dir() and not root.is_relative_to(REPO_ROOT)
              and not REPO_ROOT.is_relative_to(root),
              "PRIVATE_ROOT_MUST_BE_OUTSIDE_REPOSITORY")
@@ -206,11 +217,16 @@ def main():
         manifest, report = prepare_private_manifest(receipt, intake, root, key)
         out_report = {
             **report,
+            "definition_validation_report_sha256": report["report_sha256"],
             "operator_intake_status": "PRIVATE_CANDIDATES_PREPARED_UNASSESSED",
             "private_source_files_uploaded": False,
             "private_text_attested_as_source_quotation": False,
             "private_key_exported": False,
         }
+        # The emitted *full* operator report must be hash-covered. Preserve
+        # the original validator report digest as a separately scoped field.
+        out_report.pop("report_sha256")
+        out_report["report_sha256"] = sha(canonical(out_report))
         for path, obj in zip(paths[1:], (manifest, out_report)):
             path.write_text(json.dumps(obj, ensure_ascii=False, sort_keys=True,
                                        indent=2)+"\n", encoding="utf-8")

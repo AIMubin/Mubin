@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 from engines.usul.concept_definitions import build_definitions
-from engines.usul.concept_rule_catalog import CatalogError
+from engines.usul.concept_rule_catalog import CatalogError, canonical, sha
 from engines.usul.pilots.waraqat_definition_private_intake import (
     BASIS_PIN, REPO_ROOT, _private_path, prepare_private_manifest,
 )
@@ -148,6 +148,71 @@ class PrivateWaraqatDefinitionIntakeTests(unittest.TestCase):
                 self.skipTest("Symlink creation unavailable")
             with self.assertRaisesRegex(CatalogError, "PRIVATE_PATH_OUTSIDE_ROOT"):
                 _private_path(self.root, "escape.txt")
+
+    def test_symlink_loop_rejected_without_private_path_leak(self):
+        loop = self.root / "sensitive-symlink-loop.txt"
+        try:
+            loop.symlink_to(loop)
+        except (OSError, RuntimeError):
+            self.skipTest("Local OS does not support symlink loop fixture")
+        with self.assertRaisesRegex(CatalogError, "PRIVATE_PATH_RESOLUTION_REJECTED") as error:
+            _private_path(self.root, loop.name)
+        self.assertNotIn(str(self.root), str(error.exception))
+        self.assertNotIn(loop.name, str(error.exception))
+
+    def test_cli_symlink_loop_fails_privacy_safely(self):
+        loop = self.root / "restricted-source-file-loop.txt"
+        try:
+            loop.symlink_to(loop)
+        except (OSError, RuntimeError):
+            self.skipTest("Local OS does not support symlink loop fixture")
+        self.intake["definition_files"][0]["private_text_file"] = loop.name
+        (self.root / "intake.json").write_text(
+            json.dumps(self.intake), encoding="utf-8")
+        env = dict(os.environ)
+        env["MUBIN_PRIVATE_HMAC_KEY_HEX"] = self.key.hex()
+        r = subprocess.run([
+            sys.executable, "-m",
+            "engines.usul.pilots.waraqat_definition_private_intake",
+            "--private-root", str(self.root),
+            "--private-intake", "intake.json",
+            "--output-manifest", "definitions-metadata.json",
+            "--output-report", "definitions-report.json",
+        ], cwd=REPO_ROOT, env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["status"],
+                         "PRIVATE_DEFINITION_INTAKE_REJECTED")
+        self.assertNotIn("Traceback", r.stderr)
+        self.assertNotIn(str(self.root), r.stdout + r.stderr)
+        self.assertNotIn(loop.name, r.stdout + r.stderr)
+        self.assertFalse((self.root / "definitions-metadata.json").exists())
+        self.assertFalse((self.root / "definitions-report.json").exists())
+
+    def test_cli_emitted_report_digest_covers_intake_specific_fields(self):
+        (self.root / "intake.json").write_text(
+            json.dumps(self.intake), encoding="utf-8")
+        env = dict(os.environ)
+        env["MUBIN_PRIVATE_HMAC_KEY_HEX"] = self.key.hex()
+        r = subprocess.run([
+            sys.executable, "-m",
+            "engines.usul.pilots.waraqat_definition_private_intake",
+            "--private-root", str(self.root),
+            "--private-intake", "intake.json",
+            "--output-manifest", "defs.json",
+            "--output-report", "report.json",
+        ], cwd=REPO_ROOT, env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        final = json.loads((self.root / "report.json").read_text(encoding="utf-8"))
+        full_payload = {key: value for key, value in final.items()
+                        if key != "report_sha256"}
+        self.assertEqual(final["report_sha256"], sha(canonical(full_payload)))
+        self.assertEqual(final["definition_validation_report_sha256"],
+                         self.run_build()[1]["report_sha256"])
+        self.assertTrue(final["operator_intake_status"].endswith("UNASSESSED"))
+        modified = dict(final)
+        modified["private_text_attested_as_source_quotation"] = True
+        modified.pop("report_sha256")
+        self.assertNotEqual(final["report_sha256"], sha(canonical(modified)))
 
     def test_wrong_receipt_cannot_forge_candidate_provenance(self):
         self.receipt["stage08_graph_sha256"] = "0"*64
