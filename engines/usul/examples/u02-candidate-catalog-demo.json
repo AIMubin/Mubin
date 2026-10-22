@@ -1,0 +1,42 @@
+{
+  "schema_version": "u0.2.0",
+  "concepts": [
+    {
+      "id": "concept:command",
+      "concept_kind": "TERM",
+      "review_status": "UNASSESSED"
+    },
+    {
+      "id": "concept:context",
+      "concept_kind": "EXCEPTION",
+      "review_status": "UNASSESSED"
+    },
+    {
+      "id": "concept:outcome",
+      "concept_kind": "OUTCOME",
+      "review_status": "UNASSESSED"
+    }
+  ],
+  "rule_candidates": [
+    {
+      "id": "candidate:command",
+      "pointer_id": "pointer:real",
+      "if_concepts": [
+        "concept:command"
+      ],
+      "unless_concepts": [
+        "concept:context"
+      ],
+      "then_concept": "concept:outcome",
+      "review_status": "UNASSESSED"
+    }
+  ],
+  "relations": [
+    {
+      "from_concept_id": "concept:command",
+      "to_concept_id": "concept:outcome",
+      "kind": "PROPOSED_RELATED_TO",
+      "review_status": "UNASSESSED"
+    }
+  ]
+}

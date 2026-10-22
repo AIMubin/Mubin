@@ -1,0 +1,52 @@
+[
+  {
+    "id": "pilot:amr-term",
+    "literal": "الأمر",
+    "candidate_profiles": [
+      "ignore_arabic_marks_v1",
+      "ignore_arabic_marks_and_brackets_v1",
+      "ignore_arabic_marks_brackets_and_spaces_v1"
+    ]
+  },
+  {
+    "id": "pilot:qarinah-term",
+    "literal": "القرينة",
+    "candidate_profiles": [
+      "ignore_arabic_marks_v1",
+      "ignore_arabic_marks_and_brackets_v1"
+    ]
+  },
+  {
+    "id": "pilot:wujub-term",
+    "literal": "الوجوب",
+    "candidate_profiles": [
+      "ignore_arabic_marks_v1",
+      "ignore_arabic_marks_and_brackets_v1"
+    ]
+  },
+  {
+    "id": "pilot:nadb-term",
+    "literal": "الندب",
+    "candidate_profiles": [
+      "ignore_arabic_marks_v1",
+      "ignore_arabic_marks_and_brackets_v1"
+    ]
+  },
+  {
+    "id": "pilot:ibaha-term",
+    "literal": "الإباحة",
+    "candidate_profiles": [
+      "ignore_arabic_marks_v1",
+      "ignore_arabic_marks_and_brackets_v1"
+    ]
+  },
+  {
+    "id": "pilot:word-boundary-diagnostic",
+    "literal": "و أما",
+    "candidate_profiles": [
+      "ignore_arabic_marks_v1",
+      "ignore_arabic_marks_and_brackets_v1",
+      "ignore_arabic_marks_brackets_and_spaces_v1"
+    ]
+  }
+]

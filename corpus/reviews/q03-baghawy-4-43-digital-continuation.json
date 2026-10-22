@@ -1,0 +1,23 @@
+{
+  "schema_version": "0.1.0",
+  "source": "baghawy",
+  "verse_id": "4:43",
+  "linked_sqlite_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "upstream_field_characters": 32767,
+  "upstream_field_sha256": "cf3d473ae3803eb434ac554ce8f90ceace0a6c5ca657c904d60560b19a009760",
+  "linked_field_matches_upstream": true,
+  "boundary_observation": "The locally inspected upstream-derived field ends mid-word after a narrator-introduction sequence (أنا أب).",
+  "comparator": {
+    "kind": "INDEPENDENT_ONLINE_REPRESENTATION_NOT_PRINT_EDITION",
+    "url": "https://quran.ksu.edu.sa/tafseer/baghawy/sura4-aya43.html",
+    "source_name": "King Saud University Quran tafsir pages",
+    "edition_id_confirmed": false,
+    "bibliographic_page_verified": false,
+    "observation": "The corresponding narrator-introduction passage continues with Abu Ali al-Lulu'i and Abu Dawud, followed by further commentary paragraphs."
+  },
+  "classification": "DIGITAL_CONTINUATION_CORROBORATES_PROBABLE_UPSTREAM_TRUNCATION",
+  "evidence_limit": "The online text uses different punctuation/diacritic conventions and is not proven to derive from the same editor/publisher edition. No full prefix alignment or printed-page verification performed; do not infer an exact byte completion or paste text into the source.",
+  "scholarly_verified": false,
+  "editorial_replacement_approved": false,
+  "next_action": "Check corresponding pages of a precisely identified Baghawi printed edition and align a full independently licensed text before determining any replacement."
+}

@@ -1,0 +1,5 @@
+# Byte-hash pinned synthetic source-index fixtures: checkout must preserve LF on Windows.
+engines/usul/pilots/data/*.json text eol=lf
+
+# Public static preview is hashed/byte-compared across Windows and Ubuntu.
+docs/preview-data.json text eol=lf

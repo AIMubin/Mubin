@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1.0",
+  "milestone": "Q0.3",
+  "purpose": "Locators for independent printed-page verification of four Baghawi cutoff candidates",
+  "print_edition_candidate": {
+    "work": "معالم التنزيل (تفسير البغوي)",
+    "publisher": "دار طيبة",
+    "year_hijri": 1409,
+    "year_ce": 1989,
+    "editors": [
+      "محمد عبد الله النمر",
+      "عثمان جمعة ضميرية",
+      "سليمان مسلم الحرش"
+    ],
+    "volumes": 8,
+    "catalogue": "https://waqfeya.net/books/%D9%85%D8%B9%D8%A7%D9%84%D9%85-%D8%A7%D9%84%D8%AA%D9%86%D8%B2%D9%8A%D9%84-%D8%AA%D9%81%D8%B3%D9%8A%D8%B1-%D8%A7%D9%84%D8%A8%D8%BA%D9%88%D9%8A-%D8%B7-%D8%AF%D8%A7%D8%B1-%D8%B7%D9%8A%D8%A8%D8%A9-62a02391d9854b00bceb37bd84e94365",
+    "archive_pdf_links": {
+      "2": "https://archive.org/download/FP3457/malimt2.pdf",
+      "5": "https://archive.org/download/FP3457/malimt5.pdf",
+      "6": "https://archive.org/download/FP3457/malimt6.pdf"
+    },
+    "files_downloaded_and_examined_in_this_run": false,
+    "page_images_visually_verified": false,
+    "actual_pdf_sha256": null
+  },
+  "external_textual_locator_not_print_attestation": [
+    {
+      "verse_id": "4:43",
+      "volume": 2,
+      "site": "Islamweb digitized Baghawi",
+      "site_volume": 2,
+      "site_page_start": 220,
+      "url": "https://www.islamweb.net/ar/library/content/51/310/",
+      "printed_page_equivalence_confirmed": false
+    },
+    {
+      "verse_id": "17:4",
+      "volume": 5,
+      "site": "Islamweb digitized Baghawi",
+      "site_volume": 5,
+      "site_page_start": 67,
+      "url": "https://www.islamweb.net/ar/library/content/51/942/",
+      "printed_page_equivalence_confirmed": false
+    },
+    {
+      "verse_id": "18:10",
+      "volume": 5,
+      "site": "Islamweb digitized Baghawi",
+      "site_volume": 5,
+      "site_page_start": null,
+      "notes": "Look near source's Kahf introduction (site page 141) and subsequent verses (site page 155); verse 10 page unverified.",
+      "url": "https://www.islamweb.net/ar/library/content/51/993/",
+      "printed_page_equivalence_confirmed": false
+    },
+    {
+      "verse_id": "33:9",
+      "volume": 6,
+      "site": "Islamweb digitized Baghawi",
+      "site_volume": 6,
+      "site_page_start": null,
+      "notes": "Look between Ahzab intro (site page 312) and 33:12 (site page 332); verse 9 page unverified.",
+      "url": "https://www.islamweb.net/ar/library/content/51/1447/",
+      "printed_page_equivalence_confirmed": false
+    }
+  ],
+  "remaining_required": [
+    "Download authorized scanned PDFs locally",
+    "verify PDF SHA-256 and selected page image hashes",
+    "read printed pagination visually and identify edition from title/imprint",
+    "compare suspected cutoffs against contiguous scanned passage",
+    "verify independent transcription alignment",
+    "retain scans/text outside git and decide redistribution rights"
+  ],
+  "limitations": [
+    "Web browsing located edition catalogues and archive PDF URLs, but automated PDF download in this session was unsuccessful.",
+    "Digitized website pagination does not establish the corresponding printed page of the specific 1409 edition.",
+    "No printed page or edition-level text completeness is certified by this locator report."
+  ]
+}

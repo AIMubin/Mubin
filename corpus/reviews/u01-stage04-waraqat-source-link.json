@@ -1,0 +1,60 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage04-waraqat-source-link",
+  "date_local": "2026-10-20",
+  "campaign_status": "REAL_SOURCE_SNAPSHOT_COVERAGE_PASS",
+  "chain": {
+    "raw_html_capture": {
+      "url": "https://www.islamicbook.ws/asol/alwrqat.html",
+      "http_status": 200,
+      "captured_at": "2026-10-20T17:29:40Z (server Date header; Asia/Riyadh session)",
+      "bytes": 18923,
+      "sha256": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+      "private": true
+    },
+    "deterministic_extraction": {
+      "tool": "engines/usul/pilots/waraqat_extract.py",
+      "version": "waraqat-extract/1.0.0",
+      "replay_verified_byte_identical": true,
+      "extracted_utf8": {
+        "bytes": 16410,
+        "sha256": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+        "lines_total": 343,
+        "private": true
+      }
+    },
+    "manifest": {
+      "path": "D:\\MubinSources\\waraqat\\waraqat-draft-manifest.json",
+      "sha256_independently_pinned": "5bf586787dbb9f84d03fc21c62ee32619b66b474c66a6c890aeb813219f853cf",
+      "pin_ledger": "D:\\MubinSources\\waraqat\\manifest-pin.json",
+      "draft_status": "DRAFT_NOT_ATTESTED (by design)"
+    },
+    "coverage": {
+      "status": "SNAPSHOT_COVERAGE_PASS",
+      "report": "D:\\MubinSources\\waraqat\\waraqat-coverage-report.json",
+      "section_id": "pilot:waraqat-bab-amr",
+      "section_bounds": "الأمر (line 86) → النهي (line 108), exclusive end",
+      "section_lines": 22,
+      "section_bytes": 1232,
+      "section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab"
+    }
+  },
+  "engine_link": {
+    "rule_id": "pilot:rule-amr-default",
+    "source_id": "pilot:waraqat-text-export",
+    "citation_locator": "باب الأمر، صيغة الأمر وقيودها (داخل القسم المغطى)",
+    "lexical_check": {
+      "classification": "LEXICAL_MATCH_ONLY",
+      "semantic_qarinah_verified": false,
+      "result": "pilot SOURCE_EXCERPT found verbatim inside the covered section of the pinned snapshot (private probe: lexical-link-result.json)"
+    }
+  },
+  "boundaries": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_equivalence_verified": false,
+    "printed_edition_verified": false,
+    "full_qarinah_coverage_claimed": false,
+    "note": "Indexing success never implies absence of diverting indicators; Stage-04 does not understand all usul qarinah classes"
+  }
+}

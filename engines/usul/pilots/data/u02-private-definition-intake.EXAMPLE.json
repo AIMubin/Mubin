@@ -1,0 +1,35 @@
+{
+  "schema_version": "u02-private-intake/0.1.0",
+  "commitment_key_id": "key:operator-local-waraqat",
+  "definition_files": [
+    {
+      "id": "definition:amr-local-candidate-01",
+      "concept_id": "concept:amr-term",
+      "version": "0.1.0",
+      "private_text_file": "amr-candidate-private.txt"
+    },
+    {
+      "id": "definition:qarinah-local-candidate-01",
+      "concept_id": "concept:qarinah-candidate",
+      "version": "0.1.0",
+      "private_text_file": "qarinah-candidate-private.txt"
+    },
+    {
+      "id": "definition:wujub-local-candidate-01",
+      "concept_id": "concept:wujub-candidate",
+      "version": "0.1.0",
+      "private_text_file": "wujub-candidate-private.txt"
+    }
+  ],
+  "interpretation_files": [
+    {
+      "id": "interpretation:amr-local-01",
+      "concept_id": "concept:amr-term",
+      "version": "0.1.0",
+      "definition_candidate_ids": [
+        "definition:amr-local-candidate-01"
+      ],
+      "private_text_file": "amr-commentary-private.txt"
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+name: Import Quran and Tafsir Center corpus
+# Full ~214 MB data refresh is explicit, never on ordinary code or docs push.
+on:
+  workflow_dispatch:
+concurrency:
+  group: quran-corpus-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install verified downloader
+        run: python -m pip install 'huggingface_hub>=0.25,<2'
+      - name: Download, pin and import source database
+        run: python -m corpus.import_tafsircenter --download
+      - name: Verify imported tafsir rows match pinned upstream source
+        run: python -m corpus.audit_tafsir_upstream --download
+      - name: Audit linked Quran and five tafsirs
+        run: python -m corpus.audit_linked
+      - name: Audit tafsir editorial quality (warning report)
+        run: python -m corpus.audit_tafsir_quality
+      - name: Inspect noncanonical slash artifacts in derived Quran
+        run: python -m corpus.audit_quran_derived
+      - name: Verify Quran retrieval fails closed without a trusted witness
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from corpus.query import get_ayah
+          result = get_ayah(Path("corpus-data/linked/quran_tafsir.db"), 2, 21)
+          assert result["text"] is None, "Derived verse text leaked without a witness"
+          assert result["text_classification"] == "REFERENCE_REQUIRED_NO_QURAN_TEXT"
+          PY
+      - name: Smoke-test read-only verse retrieval
+        run: python -m corpus.query 1 1 --database corpus-data/linked/quran_tafsir.db > /dev/null
+      - name: Download independent Tanzil reference
+        id: tanzil
+        continue-on-error: true
+        run: python -m corpus.fetch_tanzil
+      - name: Record missing witness explicitly
+        if: steps.tanzil.outcome != 'success'
+        run: |
+          echo 'Tanzil retrieval failed: independent Quran comparison NOT COMPLETED.' >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("corpus-data/linked/quran-comparison-summary.json")
+          p.parent.mkdir(parents=True, exist_ok=True)
+          p.write_text(json.dumps({"comparison_status":"NOT_RUN_REFERENCE_UNAVAILABLE",
+            "canonical_quran_verified":False,"scholarly_verified":False}, indent=2) + chr(10))
+          PY
+      - name: Smoke-test pinned Tanzil text retrieval
+        if: steps.tanzil.outcome == 'success'
+        run: python -m corpus.query 1 1 --reference corpus-data/reference/tanzil-uthmani.txt > /dev/null
+      - name: Compare Quran verses against independent reference
+        if: steps.tanzil.outcome == 'success'
+        shell: bash
+        run: |
+          set +e
+          python -m corpus.compare_quran --reference corpus-data/reference/tanzil-uthmani.txt
+          result=$?
+          set -e
+          if [ "$result" -ne 0 ] && [ "$result" -ne 2 ]; then exit "$result"; fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("corpus-data/linked/quran-comparison.json")
+          d = json.loads(p.read_text(encoding="utf-8"))
+          d.pop("differences", None)
+          Path("corpus-data/linked/quran-comparison-summary.json").write_text(
+              json.dumps(d, ensure_ascii=False, indent=2) + chr(10), encoding="utf-8")
+          PY
+      - name: Classify Quran differences conservatively
+        if: steps.tanzil.outcome == 'success'
+        run: |
+          python -m corpus.triage_quran --reference corpus-data/reference/tanzil-uthmani.txt
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path("corpus-data/linked/quran-triage.json").read_text(encoding="utf-8"))
+          lines = ["## Quran witness diagnostic (not scholarly validation)", "", f"Compared {report['verses_compared']} verses"]
+          lines.extend(f"- {name}: {value}" for name, value in report["class_counts"].items())
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              out.write("\n".join(lines) + "\n")
+          PY
+      - name: Analyze pinned Quran witness with basmala boundaries
+        if: steps.tanzil.outcome == 'success'
+        run: python -m corpus.quran_witness_analysis --reference corpus-data/reference/tanzil-uthmani.txt
+      - name: Verify surah-opening basmala is separate from verse text
+        if: steps.tanzil.outcome == 'success'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from corpus.query import get_ayah
+          result = get_ayah(Path("corpus-data/linked/quran_tafsir.db"), 2, 1,
+                            Path("corpus-data/reference/tanzil-uthmani.txt"))
+          assert result["opening_basmala"], "Opening basmala not separated"
+          assert not result["text"].startswith(result["opening_basmala"])
+          assert not result["scholarly_verification"]
+          PY
+      - name: Retain verbatim Tanzil witness and attribution
+        if: steps.tanzil.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tanzil-reference-witness
+          path: |
+            corpus-data/reference/tanzil-uthmani.txt
+            corpus-data/reference/tanzil-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Run corpus unit tests
+        run: python -m unittest discover -s corpus/tests -v
+      - name: Check report JSON readability
+        if: success()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for p in Path("corpus-data/linked").glob("*.json"):
+              json.loads(p.read_text(encoding="utf-8"))
+          for p in Path("corpus-data/reference").glob("*manifest.json"):
+              json.loads(p.read_text(encoding="utf-8"))
+          PY
+      - name: Retain temporary access-controlled corpus database
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-tafsir-staging-sqlite
+          path: corpus-data/linked/quran_tafsir.db
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Print and upload provenance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-tafsir-import-report
+          path: |
+            corpus-data/linked/import-manifest.json
+            corpus-data/linked/audit-report.json
+            corpus-data/linked/tafsir-quality.json
+            corpus-data/linked/tafsir-upstream-comparison.json
+            corpus-data/linked/derived-quran-quality.json
+            corpus-data/linked/quran-comparison-summary.json
+            corpus-data/linked/quran-triage.json
+            corpus-data/linked/quran-witness-analysis.json
+            corpus-data/reference/tanzil-manifest.json
+          if-no-files-found: warn
+          retention-days: 30
+      # Staging artifacts expire; they are NOT persistent storage or publication approval.

@@ -1,0 +1,94 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage-w1w2-hardened-replay-closure",
+  "date_local": "2026-10-21",
+  "git_commit_audited": "12d5262d801802088432f5ee9fde8ebc0ae9aac6",
+  "work_branch": "u01-stage-w1-closure-w2-full",
+  "tools": {
+    "w1_batch": "waraqat-w1-full-book-batch/0.1.0 (hardened inventory validation)",
+    "w2_extractor": "waraqat-islamms-h2-extract hardened (balancing content div, rejects unsupported headings)",
+    "pair_compare": "waraqat-w2-pair-compare hardened (requires pinned W2 raw HTML for replay)"
+  },
+  "campaign_decision": "STAGE06/07/08 HARDENED REPLAY PASS ON REAL PRIVATE FILES",
+  "source_pins": {
+    "W1": {
+      "html": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+      "utf8_export": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+      "bab_amr": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab"
+    },
+    "W2": {
+      "html": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+      "bab_amr_hardened": "6e88c20addae4744be5d3754fe17e46965d96793f98f869c6d1027f7c343981f"
+    }
+  },
+  "bab_al_amr_representation_difference": {
+    "status": "RESOLVED",
+    "stage06_extractor_bytes": 1702,
+    "hardened_full_extract_bytes": 1696,
+    "delta_bytes": 6,
+    "root_cause": "FORMATTING_ONLY — the older Stage-06 extractor preserved six blank lines (empty-paragraph separators) that the hardened extractor drops; unified diff over both outputs shows ZERO differing content lines",
+    "content_lines_identical": true,
+    "classification_impact": "none on content; hardened extractor normalizes away empty-paragraph separators only"
+  },
+  "runs": {
+    "run_01": {
+      "w1": "FULL_W1_BATCH_PASS 21/21",
+      "w2": "W2_FULL_EXTRACTION_PASS 21 sections, 20 paired, 0 unresolved, 1 TITLE_HEADING extra (h2#1 كتاب الورقات)",
+      "pair_compare": "W2_PAIR_COMPARE_COMPLETE 20 compared, 1 skipped (W1 PRELUDE by design)"
+    },
+    "run_02": "identical to run-01 across all four JSON outputs + 21 W2 section files (SHA-256 compared)"
+  },
+  "classification_recompute_chapter_006": {
+    "ARABIC_MARKS_OR_EDITORIAL_BRACKET_DIFFERENCE": 217,
+    "WHITESPACE_DIFFERENCE": 12,
+    "TEXTUAL_DIFFERENCE_REQUIRES_REVIEW": 4,
+    "note": "the four review-class events are the documented witness variance (editorial brackets content, vocalization, tokenization); they belong to independent textual study"
+  },
+  "determinism": {
+    "w1_inventory_identical": true,
+    "w1_batch_identical": true,
+    "w2_manifest_identical": true,
+    "w2_pairs_identical": true,
+    "w2_section_files_identical": "21/21"
+  },
+  "ci": {
+    "commit_12d5262": [
+      {
+        "name": "Corpus integrity checks",
+        "run_id": 39621504212,
+        "conclusion": "success"
+      },
+      {
+        "name": "Usul U0.1 deterministic prototype checks",
+        "run_id": 39621504148,
+        "conclusion": "success"
+      },
+      {
+        "name": "Usul U0.1 deterministic prototype checks",
+        "run_id": 39621248986,
+        "conclusion": "success"
+      }
+    ],
+    "local": "221/221 usul OK + 50/50 core OK on Windows (Python 3.12)"
+  },
+  "tests": {
+    "engines_usul": "221 OK",
+    "core": "50 OK"
+  },
+  "pr_79": {
+    "state": "open/draft",
+    "head": "12d5262",
+    "base": "main",
+    "mergeable": true,
+    "recommendation": "READY_FOR_REVIEW after maintainer reads this receipt; no auto-merge performed"
+  },
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_rules_qualified": false,
+    "semantic_equivalence_verified": false,
+    "public_fatwa_authorized": false,
+    "note": "16 textual-difference chapters across the full book belong to independent textual study; literal/orthographic matches never imply semantic equivalence"
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}

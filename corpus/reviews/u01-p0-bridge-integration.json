@@ -1,0 +1,29 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-p0-bridge-integration",
+  "date_local": "2026-10-20",
+  "bridge": "engines/usul/p0_bridge.py (p0-usul-u0.1/0.1.0)",
+  "tests": "engines/usul/tests/test_p0_bridge.py (18 cases: 11-case negative table + invariants + integration)",
+  "demo": "engines/usul/examples/p0-bridge-demo-{bundle,specs,facts}.json — offline deterministic replay via: python -m engines.usul.p0_bridge <bundle> <specs> <facts>",
+  "now_executable": [
+    "deduction rules with formalization_status=machine_checkable AND an explicit bounded propositional spec (if_all/unless_any/then)",
+    "fact assertions backed by evidence that exists in the P0 bundle and is verified",
+    "objection propagation: open/sustained objections on a target inference block its executable rules (BLOCKED_BY_OBJECTION)",
+    "deterministic one-step evaluation with full trace: missing premises, unresolved exceptions/objections, rule and premise evidence chains",
+    "conflict detection: two rules reaching opposite conclusions on the same atom yield CONTESTED",
+    "methodology isolation: rules spanning multiple methodologies refuse the derivation until a reconciliation contract exists"
+  ],
+  "still_structural_only": [
+    "Rule.expression free text: never parsed or executed (verified by hostile-expression test producing identical output)",
+    "constraint and exception rule types: carried as P0 representation, no executor semantics",
+    "rules with formalization_status=draft or without a propositional spec: REPRESENTATION_ONLY_NO_EXECUTABLE_SPEC",
+    "qiyas and tarjih: REJECTED_UNSUPPORTED_RULE_KIND - no formal semantics defined, no approximate analogy permitted",
+    "multi-step rule chaining: U0.1 stays one-step; conclusion-as-premise cycles are refused (DERIVATION_CYCLE)",
+    "cross-methodology reconciliation: refused (METHODOLOGY_MIXING_REFUSED) until an audited contract is defined",
+    "source authentication of evidence IDs: the bridge checks existence and verified status inside the bundle; external world verification stays outside its scope"
+  ],
+  "invariants_held": [
+    "scholarly_verified=false and valid_juristic_ruling=false and public_fatwa_authorized=false on every output",
+    "test proving a correct engineering simulation is never classified as an approved fiqh ruling"
+  ]
+}

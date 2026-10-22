@@ -1,0 +1,69 @@
+{
+  "audit_type": "SOURCE_SPECIFIC_CHARACTER_LIMIT_FINGERPRINT",
+  "milestone": "Q0.3",
+  "data_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "reference_upstream_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+  "metric": "SQLite LENGTH(text); counts Unicode codepoints, not UTF-8 bytes",
+  "total_tafsir_rows": 31180,
+  "per_source": {
+    "baghawy": {
+      "rows": 6236,
+      "maximum_codepoints": 32767,
+      "boundary_counts": {
+        "32767": 4,
+        "65535": 0
+      },
+      "above_32767": 0,
+      "above_65535": 0
+    },
+    "katheer": {
+      "rows": 6236,
+      "maximum_codepoints": 131238,
+      "boundary_counts": {
+        "32767": 0,
+        "65535": 0
+      },
+      "above_32767": 13,
+      "above_65535": 2
+    },
+    "moyassar": {
+      "rows": 6236,
+      "maximum_codepoints": 1451,
+      "boundary_counts": {
+        "32767": 0,
+        "65535": 0
+      },
+      "above_32767": 0,
+      "above_65535": 0
+    },
+    "saadi": {
+      "rows": 6236,
+      "maximum_codepoints": 18983,
+      "boundary_counts": {
+        "32767": 0,
+        "65535": 0
+      },
+      "above_32767": 0,
+      "above_65535": 0
+    },
+    "tabary": {
+      "rows": 6236,
+      "maximum_codepoints": 169857,
+      "boundary_counts": {
+        "32767": 0,
+        "65535": 0
+      },
+      "above_32767": 57,
+      "above_65535": 10
+    }
+  },
+  "inference": "Baghawy uniquely has a 32767-character ceiling within these five sources: 4 fields at exactly 32767 and none longer. Katheer and Tabary have values longer than this. Upstream-to-import field identity has been independently documented in Q0.3.",
+  "inference_strength": "STRONG_INDICATOR_OF_SOURCE_SPECIFIC_DIGITAL_TEXT_LIMIT",
+  "not_established": [
+    "exact software layer causing truncation",
+    "missing text length in each record",
+    "correspondence of Tafsir Center upstream to a precisely identified printed edition",
+    "right to redistribute an editorial completion"
+  ],
+  "next_gate": "Independently identify printed edition, record printed pages, obtain authorized text and run witness alignment with source field."
+}

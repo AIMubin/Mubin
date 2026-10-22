@@ -1,0 +1,61 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-w2-three-representations-final-audit",
+  "date_local": "2026-10-21",
+  "git_commit_audited": "b7ec54db90253fc99ed3e15a89167f7c4cf396d3",
+  "audit_tool": "engines/usul/pilots/waraqat_w2_representation_audit.py (waraqat-w2-representation-audit/0.1.0)",
+  "campaign_status": "ALL_THREE_REPRESENTATIONS_FORMAT_ONLY_VERIFIED",
+  "pinned_html_sha256": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+  "representations": {
+    "stage06_htmlparser": {
+      "bytes": 1702,
+      "sha256": "db181b1d9466389d2b5aeaf50362dd57e716cc1e36d041948777e3fe0c9c9358",
+      "note": "matches the Stage-06 frozen bab-al-amr pin exactly"
+    },
+    "legacy_full_windows": {
+      "bytes": 1706,
+      "sha256": "e0f621b46da27175",
+      "note": "pre-hardening 6dfd5e0 full-book extractor replayed; the +10 bytes over its LF form are Windows text-mode CR translations",
+      "legacy_lf_only_bytes": 1700
+    },
+    "hardened_full": {
+      "bytes": 1696,
+      "sha256": "6e88c20addae4744",
+      "note": "drops empty-paragraph separators"
+    }
+  },
+  "lf_to_crf_translations_on_windows": 10,
+  "pairwise_comparisons": {
+    "stage06_vs_legacy_full": {
+      "nonempty_lines_identical": true,
+      "whitespace_delimited_tokens_identical": true,
+      "nonwhitespace_codepoints_identical": true
+    },
+    "stage06_vs_hardened_full": {
+      "nonempty_lines_identical": true,
+      "whitespace_delimited_tokens_identical": true,
+      "nonwhitespace_codepoints_identical": true
+    },
+    "legacy_full_vs_hardened_full": {
+      "nonempty_lines_identical": true,
+      "whitespace_delimited_tokens_identical": true,
+      "nonwhitespace_codepoints_identical": true
+    }
+  },
+  "interpretation": {
+    "resolved": true,
+    "hypothesis_confirmed": "1706→1696 = Windows CRLF translation; 1702→1696 = Stage-06 extra blank lines at paragraph boundaries",
+    "textual_difference_between_representations": "NONE — zero letters/words/diacritics differ",
+    "classification": "REPRESENTATION_DIFFERENCE_FORMAT_ONLY"
+  },
+  "private_audit_report_sha256": "840b9eeb41726e10f5417188272d74b1e90c70d0a93718a3379661c4f87dbd0c",
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_rules_qualified": false,
+    "semantic_equivalence_verified": false,
+    "public_fatwa_authorized": false,
+    "note": "forensic representation audit only; not edition authentication and not scholarly verification"
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}

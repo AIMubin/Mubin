@@ -1,0 +1,70 @@
+{
+  "schema_version": "0.1.0",
+  "project": "Mubin",
+  "milestone": "Q0.3",
+  "gate": "LOCAL_BACKUP_AND_RESTORE",
+  "status": "PASSED_AS_REPORTED_BY_LOCAL_OPERATOR",
+  "date_utc": "2026-10-19",
+  "github_evidence": {
+    "run_id": 39267807115,
+    "workflow": "import-quran-tafsir.yml",
+    "repository": "AIMubin/Mubin",
+    "job_id": 118111876743,
+    "job_status": "completed",
+    "job_conclusion": "success",
+    "connector_verified_at_recording": true,
+    "artifact_names": [
+      "quran-tafsir-import-report",
+      "tanzil-reference-witness",
+      "quran-tafsir-staging-sqlite"
+    ]
+  },
+  "local_evidence": {
+    "evidence_type": "user-supplied local assistant execution report; host inaccessible to remote verifier",
+    "backup_status": "FULL_ORIGINAL_PRESERVED",
+    "snapshot_file_count": 10,
+    "source_original_present": true,
+    "pinned_tanzil_witness_present": true,
+    "mirrored_on_two_reported_separate_physical_disks": true,
+    "snapshot_bytes_per_copy": 342382480,
+    "source_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+    "linked_database_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+    "tanzil_witness_sha256": "b9027e22eb7e69d326f1eb7467fed8b7bc1eccbe1a894887ed2b3feb4ef5fc90",
+    "verified_operations": [
+      {
+        "operation": "verify_secondary_vault",
+        "exit_code": 0
+      },
+      {
+        "operation": "restore_from_secondary_vault",
+        "exit_code": 0
+      },
+      {
+        "operation": "audit_restored_linked_sqlite",
+        "exit_code": 0,
+        "structural_audit_passed": true,
+        "verse_count": 6236,
+        "tafsir_rows_per_source": 6236
+      },
+      {
+        "operation": "query_restored_verse_2_21_with_pinned_tanzil",
+        "exit_code": 0,
+        "classification": "VERBATIM_TANZIL_WITNESS_NOT_SCHOLARLY_APPROVED"
+      }
+    ]
+  },
+  "out_of_scope": [
+    "Independent direct access to operator filesystem",
+    "Scholarly or canonical verification of Quran and tafsir editions",
+    "Rights clearance for public redistribution",
+    "Offsite or offline disaster recovery; both disks reside in one device",
+    "Cryptographic authenticity of editable unsigned snapshot metadata",
+    "Availability of upstream download for indefinite future"
+  ],
+  "operational_notes": [
+    "Do not overwrite immutable snapshot IDs; use a new successful run ID.",
+    "Retain the independent snapshot.json lock in GitHub metadata or sign it before treating its digest list as tamper-evident.",
+    "Use a separate offline/offsite encrypted copy for resilience when feasible.",
+    "Future online publication hosting choice deferred."
+  ]
+}

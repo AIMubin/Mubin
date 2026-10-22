@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1.0",
+  "id": "quran-tafsir-q03-import-baseline",
+  "status": "STRUCTURALLY_VERIFIED_NOT_SCHOLARLY_VERIFIED",
+  "upstream": {
+    "provider": "Tafsir Center dataset",
+    "repository": "tafsircenter/tafsir-mcp-data",
+    "filename": "quran.db",
+    "sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+    "rights": "Content-specific redistribution requires review"
+  },
+  "linked_sqlite": {
+    "path": "corpus-data/linked/quran_tafsir.db",
+    "observed_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+    "verse_keys": 6236,
+    "tafsir_entries": 31180,
+    "source": "previously examined user-provided SQLite artifact"
+  },
+  "quran_witness": {
+    "source": "Tanzil official Uthmani txt-2",
+    "reported_sha256": "b9027e22eb7e69d326f1eb7467fed8b7bc1eccbe1a894887ed2b3feb4ef5fc90",
+    "independently_attested": false,
+    "canonical_quran_verified": false
+  },
+  "remaining": {
+    "quran_derived_slash_verse_count": 364,
+    "tafsir_markup_only_candidates": 7,
+    "tafsir_possible_truncations": 4,
+    "independent_scholarly_review": false
+  },
+  "storage": {
+    "strategy": "github-code-metadata-plus-local-verified-snapshots",
+    "gha_artifacts_are_durable": false,
+    "public_provider_selection": "deferred_until_release"
+  }
+}

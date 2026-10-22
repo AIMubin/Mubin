@@ -1,0 +1,112 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage05-waraqat-lexical-replay",
+  "date_local": "2026-10-21",
+  "git_commit_audited": "c7e1d20ac4bba874023b8e6a8db005b6d2792aac",
+  "retrieval_engine": "usul-lexical-index/0.1.0",
+  "campaign_decision": "STAGE05_REAL_SOURCE_LEXICAL_REPLAY_PASS",
+  "execution": {
+    "local_run_status": "STAGE05_REAL_SOURCE_LEXICAL_REPLAY_PASS",
+    "exit_code": 0,
+    "ran_on_real_private_files": true,
+    "deterministic_two_run_identical": true
+  },
+  "source_pins_reverified_from_files": {
+    "raw_html_sha256": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+    "raw_html_bytes": 18923,
+    "utf8_text_sha256": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+    "utf8_text_bytes": 16410,
+    "manifest_sha256": "5bf586787dbb9f84d03fc21c62ee32619b66b474c66a6c890aeb813219f853cf",
+    "section_bab_amr_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+    "all_match": true
+  },
+  "section_index": {
+    "section_id": "pilot:waraqat-bab-amr",
+    "indexed_line_count": 22,
+    "indexed_byte_count": 1232,
+    "line_index_sha256": "ed4379957d90878e47eec4076e436b7e671e523dcb2948da034bcf1923215951",
+    "first_byte": 3735,
+    "last_byte_exclusive": 4967,
+    "reassembles_to_pinned_section": true
+  },
+  "queries": [
+    {
+      "query_id": "pilot:amr-keyword",
+      "query_utf8_sha256": "b7e54a06f32e352c86802bdbe82d7c8a573ae7f4dbc7b33ccb8bbababb45482b",
+      "profile": "literal_exact_v1",
+      "match_count": 6,
+      "result_status": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION",
+      "classification": "LEXICAL_MATCH_ONLY"
+    },
+    {
+      "query_id": "pilot:qarinah-keyword",
+      "query_utf8_sha256": "d8878738d41a7d265ea919b82a4ff9fcb425c419317d7d94c5ade2c29a2238ba",
+      "profile": "literal_exact_v1",
+      "match_count": 1,
+      "result_status": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION",
+      "classification": "LEXICAL_MATCH_ONLY"
+    },
+    {
+      "query_id": "pilot:wujub-keyword",
+      "query_utf8_sha256": "07937d35c52a505463196787185b5e86b885742832fc53459523e5095e15e1ee",
+      "profile": "literal_exact_v1",
+      "match_count": 1,
+      "result_status": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION",
+      "classification": "LEXICAL_MATCH_ONLY"
+    },
+    {
+      "query_id": "pilot:nadb-keyword",
+      "query_utf8_sha256": "d01b492d0139bcadb5f1f06d9cb93e5e27d2e07447c9293f165777948ff7620f",
+      "profile": "literal_exact_v1",
+      "match_count": 1,
+      "result_status": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION",
+      "classification": "LEXICAL_MATCH_ONLY"
+    },
+    {
+      "query_id": "pilot:ibaha-keyword",
+      "query_utf8_sha256": "6f1f9680c7592d62e80531f4c74106d01defc9c528d5821fa362ca5dad9a3a0e",
+      "profile": "literal_exact_v1",
+      "match_count": 1,
+      "result_status": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION",
+      "classification": "LEXICAL_MATCH_ONLY"
+    }
+  ],
+  "total_verified_matches": 10,
+  "integrity_checks": {
+    "independent_byte_audit": "ALL PASS (raw[byte_start:byte_end] == query utf-8 bytes for all 10 matches; line numbers, line shas, match shas, no duplicates)",
+    "independent_recount_matches_report": true,
+    "all_matches_within_pinned_section": true,
+    "determinism_two_runs": true,
+    "negative_raw_html_byte_flip": "FAIL (exit 1)",
+    "negative_utf8_byte_flip": "FAIL (exit 1)",
+    "negative_manifest_byte_flip": "FAIL (exit 1)",
+    "negative_section_digest_flip": "FAIL (exit 1)",
+    "negative_unknown_section": "refused (exit 2)",
+    "negative_unsupported_profile": "FAIL (exit 1)",
+    "negative_broken_queries_file": "FAIL (exit 1)",
+    "negative_missing_private_files": "PENDING_PRIVATE_STAGE04_FILES (exit 3)",
+    "negative_ghost_literal": "0 matches; NO_EXACT_LITERAL_MATCH_IN_PINNED_SECTION; LEXICAL_MATCH_ONLY"
+  },
+  "attribution": {
+    "work_title": "الورقات في أصول الفقه",
+    "author": "عبد الملك بن عبد الله الجويني",
+    "digital_witness": "https://www.islamicbook.ws/asol/alwrqat.html",
+    "section": "باب الأمر",
+    "rule_id": "pilot:rule-amr-default"
+  },
+  "independent_levels_note": {
+    "phrase_present_in_witness": true,
+    "attribution_to_specific_printed_edition": false,
+    "usul_interpretation_validity": false,
+    "application_to_real_cases": false,
+    "redistribution_right": false
+  },
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_qarinah_verified": false,
+    "valid_juristic_ruling": false,
+    "public_fatwa_authorized": false,
+    "note": "LEXICAL_MATCH_ONLY results never imply semantic qarinah detection; absence of a literal match never proves absence of a juristic indicator"
+  }
+}

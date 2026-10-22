@@ -1,0 +1,134 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "q03-tafsir-upstream-fidelity",
+  "assessment": "UPSTREAM_TEXT_FIDELITY_CONFIRMED_BY_UPLOADED_MACHINE_REPORT",
+  "evidence_provenance": "Full locally generated audit JSON supplied in conversation, examined, SHA-256 checked against the expected source/linked DB hashes, archived unchanged in the repo. Audit execution occurred on the user's Windows workstation.",
+  "local_report_location": "C:\\AI\\Mubin\\tafsir-upstream-comparison.json",
+  "audit_exit_code_reported": 0,
+  "comparison_reported": "ALL_SOURCE_ROWS_IDENTICAL_TO_IMPORTED_ROWS",
+  "upstream_database_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+  "linked_database_sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+  "tafsir_sources": {
+    "tabary": {
+      "rows_identical": 6236
+    },
+    "katheer": {
+      "rows_identical": 6236
+    },
+    "baghawy": {
+      "rows_identical": 6236
+    },
+    "saadi": {
+      "rows_identical": 6236
+    },
+    "moyassar": {
+      "rows_identical": 6236
+    }
+  },
+  "flagged_records": [
+    {
+      "source": "baghawy",
+      "verse_id": "4:43",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED",
+      "source_text_sha256": "cf3d473ae3803eb434ac554ce8f90ceace0a6c5ca657c904d60560b19a009760"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "17:4",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED",
+      "source_text_sha256": "895f7db24c5fbb4de6ccb1213f121bfe21580b46d34eff91fa1058766ae5c0c3"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "18:10",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED",
+      "source_text_sha256": "0712222b0359439f7a9c607ff1c86f0b1633b1f7ac4a8267d17aeb1012b37e62"
+    },
+    {
+      "source": "baghawy",
+      "verse_id": "33:9",
+      "source_characters_reported": 32767,
+      "import_identical": true,
+      "editorial_status": "POSSIBLE_TRUNCATION_UNVERIFIED",
+      "source_text_sha256": "6d8ad2ab729de18c6e9a34794fbfddd20f89c410cf673b7bd9b6634b006a56af"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "4:168",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "LINKABLE_VIA_NEIGHBOR_HEADING_CANDIDATE_NOT_EDITION_VERIFIED",
+      "source_text_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:16",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "LINKABLE_VIA_NEIGHBOR_HEADING_CANDIDATE_NOT_EDITION_VERIFIED",
+      "source_text_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "26:205",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "LINKABLE_VIA_NEIGHBOR_HEADING_CANDIDATE_NOT_EDITION_VERIFIED",
+      "source_text_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:25",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "LINKABLE_VIA_NEIGHBOR_HEADING_CANDIDATE_NOT_EDITION_VERIFIED",
+      "source_text_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:62",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "LINKABLE_VIA_NEIGHBOR_HEADING_CANDIDATE_NOT_EDITION_VERIFIED",
+      "source_text_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "37:103",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "LINKABLE_VIA_NEIGHBOR_HEADING_CANDIDATE_NOT_EDITION_VERIFIED",
+      "source_text_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf"
+    },
+    {
+      "source": "tabary",
+      "verse_id": "50:13",
+      "source_characters_reported": 4,
+      "import_identical": true,
+      "editorial_status": "LINKABLE_VIA_NEIGHBOR_HEADING_CANDIDATE_NOT_EDITION_VERIFIED",
+      "source_text_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf"
+    }
+  ],
+  "assertion_scope": "The importer preserves all 31,180 tafsir text field values from the pinned Tafsir Center source under the audited version; equality is text-field equality, not proof of printed-edition authenticity or validation of every upstream editorial decision.",
+  "source_edition_verified": false,
+  "scholarly_verified": false,
+  "next_gate": "Compare each flagged record with a precisely identified edition, reference page and passage boundaries; retain source and edition texts unchanged.",
+  "primary_machine_report": "q03-tafsir-upstream-machine-report.json",
+  "primary_machine_report_sha256": "22e2a0f058d6d168e6a8352365a90780c1f3703da7aebf11d279c533400f602c",
+  "primary_report_byte_length": 3460,
+  "windows_test_recheck": {
+    "reported_result": "Ran 1 test in 0.171s — OK",
+    "exit_code": 0,
+    "environment": "Windows",
+    "connection_closure_fix_commit": "629d22b3acc0983debcec5995f531281d66bd8ed",
+    "independently_executed_in_this_chat": false
+  },
+  "tabary_markup_sha256": "65aef1adba8672a5fe7932d9f9f0dc35c2435893f65112acac628d2dc17a0bcf",
+  "tabary_markup_literal": "<br>"
+}

@@ -1,0 +1,60 @@
+{
+  "schema_version": "0.1.0",
+  "sources": [
+    {
+      "id": "tanzil-uthmani",
+      "kind": "quran_text",
+      "title": "Tanzil Quran Text (Uthmani)",
+      "homepage": "https://tanzil.net/download/",
+      "license": "CC BY 3.0 plus verbatim-only and attribution requirements",
+      "delivery": "manual_download",
+      "default_visibility": "public_eligible_after_review",
+      "integrity": "verse_count_and_hash",
+      "notes": "Keep source text unmodified; store search-normalized copy only as noncanonical derivative index."
+    },
+    {
+      "id": "kfgqpc-digital-mushaf",
+      "kind": "mushaf",
+      "title": "King Fahd Quran Printing Complex digital editions",
+      "homepage": "https://qurancomplex.gov.sa/",
+      "license": "edition_specific_review",
+      "delivery": "official_download_or_embed",
+      "default_visibility": "review_pending",
+      "integrity": "page_count_and_file_hash",
+      "notes": "Keep page images and reading variants separately; verify edition provenance."
+    },
+    {
+      "id": "openiti",
+      "kind": "classical_texts",
+      "title": "OpenITI releases",
+      "homepage": "https://github.com/OpenITI/RELEASE",
+      "license": "CC BY-NC-SA 4.0 corpus release; verify per-item provenance",
+      "delivery": "release_archive",
+      "default_visibility": "noncommercial_review",
+      "integrity": "release_version_and_hash",
+      "notes": "Preserve URIs, versions, metadata, and original text; check text fidelity."
+    },
+    {
+      "id": "quran-foundation-tafsir",
+      "kind": "tafsir_api",
+      "title": "Quran Foundation Content API tafsir resources",
+      "homepage": "https://api-docs.quran.com/docs/content_apis_versioned/4.0.0/tafsirs/",
+      "license": "API and content permissions require verification",
+      "delivery": "authenticated_api",
+      "default_visibility": "remote_reference_only",
+      "integrity": "resource_id_version",
+      "notes": "Do not assume API access grants redistribution or bulk mirroring."
+    },
+    {
+      "id": "shamela",
+      "kind": "classical_texts",
+      "title": "Al-Maktaba al-Shamela editions",
+      "homepage": "https://shamela.ws/",
+      "license": "edition_and_publisher_specific",
+      "delivery": "approved_editions_only",
+      "default_visibility": "review_pending",
+      "integrity": "edition_metadata_and_hash",
+      "notes": "Do not mirror whole collections from third-party services that prohibit it."
+    }
+  ]
+}
