@@ -154,33 +154,57 @@ def verify_usage_register(register_path: Path) -> dict:
             "entries": len(entries), "broken_at": broken, "chain_valid": not broken}
 
 
-def ingest_internal_research(source_path: Path, corpus_root: Path,
-                             register_path: Path, *, source_meta: dict,
-                             attestation: dict, use_record: dict,
-                             independently_pinned_sha256: str) -> dict:
-    """Gate, then content-address, then register one internal-research source."""
+
+def _guard_private_path(path: Path, *, container: bool = False):
+    """Fail closed on existing symlink/junction components before any writes.
+
+    The workflow assumes one trusted writer; do not allow a separate process
+    to mutate directory entries while an admission is running.
+    """
+    try:
+        candidate = Path(os.path.abspath(os.fspath(path)))
+        for part in (candidate, *candidate.parents):
+            if part.is_symlink():
+                raise InternalSourceRefusal("PRIVATE_STORAGE_SYMLINK_REFUSED")
+            if (part / ".git").exists() or (part / ".git").is_symlink():
+                raise InternalSourceRefusal("PRIVATE_STORAGE_INSIDE_GIT_REFUSED")
+            if part != candidate and part.exists() and not part.is_dir():
+                raise InternalSourceRefusal("PRIVATE_STORAGE_PATH_INVALID")
+        if candidate.resolve() != candidate:
+            raise InternalSourceRefusal("PRIVATE_STORAGE_SYMLINK_REFUSED")
+        if container and candidate.exists() and not candidate.is_dir():
+            raise InternalSourceRefusal("PRIVATE_STORAGE_PATH_INVALID")
+        return candidate
+    except InternalSourceRefusal:
+        raise
+    except (OSError, RuntimeError, ValueError, TypeError):
+        raise InternalSourceRefusal("PRIVATE_STORAGE_PATH_INVALID") from None
+
+
+def _ingest_internal_research(source_path: Path, corpus_root: Path,
+                              register_path: Path, *, source_meta: dict,
+                              attestation: dict, use_record: dict,
+                              independently_pinned_sha256: str) -> dict:
     _need(type(source_meta) is dict, "INVALID_SOURCE_META_SCHEMA")
-    source_path = Path(source_path)
-    _reject_symlink(source_path)
-    if not source_path.exists():
-        raise InternalSourceRefusal("SOURCE_PATH_MISSING")
-    if not _is_regular_file(source_path):
-        raise InternalSourceRefusal("SOURCE_NOT_REGULAR_FILE")
-    _refuse_private_root_inside_git(source_path.parent)
-    corpus_root = Path(corpus_root)
-    _refuse_private_root_inside_git(corpus_root)
-    _refuse_private_root_inside_git(Path(register_path).parent)
-    _reject_symlink(corpus_root)
-    _reject_symlink(Path(register_path))
     _need(set(source_meta) == {
         "source_id", "source_kind", "work_id", "edition_id",
         "redistribution_status", "source_url", "acquisition_evidence"
     }, "INVALID_SOURCE_META_SCHEMA")
     _need(all(type(value) is str for value in source_meta.values()),
           "INVALID_SOURCE_META_SCHEMA")
+    source_path = Path(source_path)
+    _reject_symlink(source_path)
+    if not source_path.exists():
+        raise InternalSourceRefusal("SOURCE_PATH_MISSING")
+    if not _is_regular_file(source_path):
+        raise InternalSourceRefusal("SOURCE_NOT_REGULAR_FILE")
+    _guard_private_path(source_path)
+    corpus_root = _guard_private_path(Path(corpus_root), container=True)
+    register_path = _guard_private_path(Path(register_path))
+    _guard_private_path(register_path.parent, container=True)
+
     data = source_path.read_bytes()
     digest = _sha(data)
-
     source = {
         "source_id": source_meta["source_id"],
         "source_kind": source_meta["source_kind"],
@@ -195,33 +219,83 @@ def ingest_internal_research(source_path: Path, corpus_root: Path,
         independently_pinned_sha256=independently_pinned_sha256)
     if not gate["internal_development_eligible"]:
         raise InternalSourceRefusal(gate["status"])
+    _need(source_meta["source_id"] and all(
+        char.isascii() and (char.isalnum() or char in "-_")
+        for char in source_meta["source_id"]), "SOURCE_ID_INVALID")
+    manifest_path = corpus_root / "manifests" / (
+        source["source_id"] + "-" + digest[:16] + ".json")
+    obj_path = corpus_root / "objects" / digest[:2] / digest
+    # These checks happen BEFORE calling the legacy importer.
+    for target in (corpus_root / "objects", corpus_root / "manifests",
+                   obj_path.parent, obj_path, manifest_path,
+                   register_path, register_path.parent):
+        _guard_private_path(target, container=(
+            target == corpus_root / "objects" or
+            target == corpus_root / "manifests" or
+            target == obj_path.parent or
+            target == register_path.parent))
+    if register_path.exists() and not verify_usage_register(register_path)["chain_valid"]:
+        raise InternalSourceRefusal("USAGE_REGISTER_CHAIN_INVALID")
 
-    record = ingest(source_path, corpus_root, source_id=source["source_id"],
-                    edition=source["edition_id"], rights=source["redistribution_status"],
-                    source_url=source_meta["source_url"],
-                    visibility="internal_only")
-    _need(record.get("sha256") == digest,
-          "SOURCE_CHANGED_DURING_IMPORT")
-    written_object = corpus_root / record["object_path"]
-    _need(written_object.is_file() and not written_object.is_symlink() and
-          _sha(written_object.read_bytes()) == digest,
-          "SOURCE_OBJECT_DIGEST_MISMATCH")
-    admitted_manifest = dict(record)
-    admitted_manifest.update({
-        "admission_status": gate["status"],
-        "admission_legal_basis": attestation["basis"],
-        "use_date": use_record["use_date"],
-        "purpose_code": use_record["purpose_code"],
-        "verification_scope": source["verification_scope"],
-        "independently_pinned_sha256": independently_pinned_sha256,
-        "usage_register": str(register_path.name),
-    })
-    manifest_path = (corpus_root / "manifests" /
-                     (source["source_id"] + "-" + digest[:16] + ".json"))
-    tmp = manifest_path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(admitted_manifest, ensure_ascii=False, indent=2) + "\n",
-                   encoding="utf-8")
-    os.replace(tmp, manifest_path)
+    old_admission = manifest_path.exists()
+    if old_admission:
+        if not is_admitted(manifest_path, register_path):
+            raise InternalSourceRefusal("EXISTING_MANIFEST_UNADMITTED")
+        admitted_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        _need(
+            admitted_manifest.get("edition") == source["edition_id"] and
+            admitted_manifest.get("rights_statement") == source["redistribution_status"] and
+            admitted_manifest.get("source_url") == source_meta["source_url"] and
+            admitted_manifest.get("source_id") == source["source_id"] and
+            admitted_manifest.get("sha256") == digest,
+            "EXISTING_MANIFEST_METADATA_CONFLICT")
+        manifest_digest = _sha(manifest_path.read_bytes())
+    else:
+        corpus_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix=".internal-stage-",
+                                         dir=corpus_root) as temporary:
+            stage_root = Path(temporary)
+            # The legacy importer may write a manifest; it only writes inside
+            # this private staging root, never at the final manifest path.
+            record = ingest(
+                source_path, stage_root, source_id=source["source_id"],
+                edition=source["edition_id"],
+                rights=source["redistribution_status"],
+                source_url=source_meta["source_url"], visibility="internal_only")
+            _need(record.get("sha256") == digest,
+                  "SOURCE_CHANGED_DURING_IMPORT")
+            staged_obj = stage_root / record["object_path"]
+            _need(staged_obj.is_file() and _sha(staged_obj.read_bytes()) == digest,
+                  "SOURCE_OBJECT_DIGEST_MISMATCH")
+            admitted_manifest = dict(record)
+            admitted_manifest.update({
+                "admission_status": gate["status"],
+                "admission_legal_basis": attestation["basis"],
+                "use_date": use_record["use_date"],
+                "purpose_code": use_record["purpose_code"],
+                "verification_scope": source["verification_scope"],
+                "independently_pinned_sha256": independently_pinned_sha256,
+                "usage_register": str(register_path.name),
+            })
+            obj_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            # Fail closed if an untrusted replacement appeared since preflight.
+            _guard_private_path(obj_path)
+            _guard_private_path(manifest_path)
+            _guard_private_path(register_path)
+            if obj_path.exists():
+                _need(obj_path.is_file() and
+                      _sha(obj_path.read_bytes()) == digest,
+                      "SOURCE_OBJECT_DIGEST_MISMATCH")
+            else:
+                os.replace(staged_obj, obj_path)
+            payload_bytes = (json.dumps(admitted_manifest, ensure_ascii=False,
+                                        indent=2) + "\n").encode("utf-8")
+            staged_manifest = stage_root / "admission.json"
+            staged_manifest.write_bytes(payload_bytes)
+            manifest_digest = _sha(payload_bytes)
+            _need(not manifest_path.exists(), "EXISTING_MANIFEST_UNADMITTED")
+            os.replace(staged_manifest, manifest_path)
 
     register_entry = {
         "source_id": source["source_id"], "work_id": source["work_id"],
@@ -233,13 +307,39 @@ def ingest_internal_research(source_path: Path, corpus_root: Path,
         "verification_scope": source["verification_scope"],
         "redistribution_status": source["redistribution_status"],
         "admission_status": gate["status"],
-        "manifest_sha256": _sha(manifest_path.read_bytes()),
+        "manifest_sha256": manifest_digest,
         "object_sha256": digest,
     }
-    entry_sha = append_usage_register(register_path, register_entry)
+    try:
+        entry_sha = append_usage_register(register_path, register_entry)
+    except BaseException:
+        # The register may have been durably appended before a subsequent
+        # error; preserve a committed admission. Otherwise remove ONLY the
+        # new manifest. An existing admission must never be overwritten.
+        if not old_admission and not is_admitted(manifest_path, register_path):
+            manifest_path.unlink(missing_ok=True)
+        raise
     return {"status": gate["status"], "manifest": admitted_manifest,
             "register_entry_sha256": entry_sha,
-            "object_sha256": digest, "manifest_sha256": _sha(manifest_path.read_bytes())}
+            "object_sha256": digest, "manifest_sha256": manifest_digest}
+
+
+def ingest_internal_research(source_path: Path, corpus_root: Path,
+                             register_path: Path, *, source_meta: dict,
+                             attestation: dict, use_record: dict,
+                             independently_pinned_sha256: str) -> dict:
+    """Non-disclosing public boundary: only stable refusal codes escape."""
+    try:
+        return _ingest_internal_research(
+            source_path, corpus_root, register_path,
+            source_meta=source_meta, attestation=attestation,
+            use_record=use_record,
+            independently_pinned_sha256=independently_pinned_sha256)
+    except InternalSourceRefusal:
+        raise
+    except (OSError, RuntimeError, UnicodeError, ValueError, TypeError,
+            KeyError, RecursionError, OverflowError):
+        raise InternalSourceRefusal("INTERNAL_INGEST_COMMIT_FAILED") from None
 
 
 def is_admitted(manifest_path: Path, register_path: Path) -> bool:

@@ -135,3 +135,37 @@ writers require an explicit inter-process lock and integrity review.
 No version of this private importer is an authorization to run
 unreviewed automatic training or public text exposure.
 
+## Transactional private intake hardening (PR #83)
+
+The private bridge now performs **resolved-path and ancestor symlink checks**
+for the original source, content-addressed object, manifest and usage-register
+before the legacy importer is invoked. It rejects destinations inside any
+Git working tree, including a linked objects/manifest subdirectory.
+
+The legacy importer runs inside a **private temporary staging root**.
+New final manifests are made visible only after source-byte digest and
+object checks; they are not **admitted** until a corresponding valid
+usage-register entry exists. An uncommitted new manifest is removed on a
+failed register append. An unadmitted content-addressed object may remain
+after failure; garbage-collect only if no other record references it.
+
+For repeat imports with the same source ID and bytes, the bridge reuses the
+already-admitted manifest **byte-for-byte** and appends a new usage event
+without rewriting the manifest. If append fails, previous admission survives.
+Existing unadmitted manifests are rejected for operator investigation.
+
+Filesystem and legacy-importer exceptions at the public bridge boundary map
+to a stable non-disclosing refusal; raw exception messages may include private
+paths and must not reach callers or logs.
+
+**Limit:** pre-write path checks alone do not prevent another process from
+replacing directory entries concurrently (TOCTOU). One trusted writer and a
+restricted vault are required; platform-specific no-follow handle-relative
+writes and exclusive locking are a separate gate before untrusted concurrent
+writers. SHA-linked journal chains also need an independent head anchor for
+tamper evidence against an attacker who can rewrite historical entries.
+
+The private W1/W2 pilot is operator-reported and separate from the historical
+W2 EVIDENCE_RECONCILIATION_FAILED receipt. No source authenticity, rights,
+scholarly or religious-use authority is granted.
+

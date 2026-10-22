@@ -77,6 +77,114 @@ class InternalResearchIngestTests(unittest.TestCase):
             use_record=_use_record(),
             independently_pinned_sha256=self.pin)
 
+    def test_objects_symlink_into_git_is_refused_before_private_copy(self):
+        git_root = self.base / "repo-for-test"
+        (git_root / ".git").mkdir(parents=True)
+        self.corpus_root.mkdir()
+        try:
+            (self.corpus_root / "objects").symlink_to(git_root, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink privileges unavailable")
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "PRIVATE_STORAGE_SYMLINK_REFUSED"):
+            self.admit()
+        self.assertFalse((git_root / self.pin[:2] / self.pin).exists())
+        self.assertFalse(self.register.exists())
+
+    def test_manifest_symlink_into_git_is_refused_before_private_copy(self):
+        git_root = self.base / "repo-for-test"
+        (git_root / ".git").mkdir(parents=True)
+        self.corpus_root.mkdir()
+        try:
+            (self.corpus_root / "manifests").symlink_to(git_root, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink privileges unavailable")
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "PRIVATE_STORAGE_SYMLINK_REFUSED"):
+            self.admit()
+        self.assertFalse((self.corpus_root / "objects").exists())
+        self.assertFalse(self.register.exists())
+
+    def test_intermediate_objects_subdirectory_symlink_is_refused(self):
+        git_root = self.base / "repo-for-test"
+        (git_root / ".git").mkdir(parents=True)
+        (self.corpus_root / "objects").mkdir(parents=True)
+        try:
+            (self.corpus_root / "objects" / self.pin[:2]).symlink_to(
+                git_root, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink privileges unavailable")
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "PRIVATE_STORAGE_SYMLINK_REFUSED"):
+            self.admit()
+        self.assertFalse((git_root / self.pin).exists())
+
+    def test_repeated_import_register_failure_preserves_previous_admission(self):
+        from unittest.mock import patch
+        first = self.admit()
+        manifest = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + self.pin[:16] + ".json")
+        original_manifest = manifest.read_bytes()
+        original_register = self.register.read_bytes()
+        with patch("corpus.internal_research_ingest.append_usage_register",
+                   side_effect=OSError("confidential-register-location")):
+            with self.assertRaisesRegex(InternalSourceRefusal,
+                                        "INTERNAL_INGEST_COMMIT_FAILED") as err:
+                self.admit()
+        self.assertNotIn("confidential-register-location", str(err.exception))
+        self.assertEqual(manifest.read_bytes(), original_manifest)
+        self.assertEqual(self.register.read_bytes(), original_register)
+        self.assertTrue(is_admitted(manifest, self.register))
+        self.assertEqual(verify_usage_register(self.register)["entries"], 1)
+
+    def test_legacy_import_write_failure_does_not_leak_private_path(self):
+        from unittest.mock import patch
+        with patch("corpus.internal_research_ingest.ingest",
+                   side_effect=NotADirectoryError(
+                       "secret-private-vault-directory")):
+            with self.assertRaisesRegex(InternalSourceRefusal,
+                                        "INTERNAL_INGEST_COMMIT_FAILED") as err:
+                self.admit()
+        self.assertNotIn("secret-private-vault-directory", str(err.exception))
+        self.assertFalse(self.register.exists())
+
+    def test_regular_file_used_as_root_fails_without_path_leak(self):
+        private_root = self.base / "sensitive-root-file"
+        private_root.write_bytes(b"synthetic")
+        with self.assertRaisesRegex(InternalSourceRefusal,
+                                    "PRIVATE_STORAGE_PATH_INVALID") as err:
+            ingest_internal_research(
+                self.source, private_root, self.register,
+                source_meta=_meta(), attestation=_attestation(),
+                use_record=_use_record(), independently_pinned_sha256=self.pin)
+        self.assertNotIn(str(private_root), str(err.exception))
+        self.assertFalse(self.register.exists())
+
+    def test_failing_new_register_append_reverts_new_manifest(self):
+        from unittest.mock import patch
+        with patch("corpus.internal_research_ingest.append_usage_register",
+                   side_effect=PermissionError("secret-protected-register")):
+            with self.assertRaisesRegex(InternalSourceRefusal,
+                                        "INTERNAL_INGEST_COMMIT_FAILED"):
+                self.admit()
+        manifest = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + self.pin[:16] + ".json")
+        self.assertFalse(manifest.exists())
+        self.assertFalse(self.register.exists())
+
+    def test_submitted_source_path_symlink_loop_rejected(self):
+        loop = self.base / "src" / "loop"
+        try:
+            loop.symlink_to(loop)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink privileges unavailable")
+        with self.assertRaises(InternalSourceRefusal):
+            ingest_internal_research(
+                loop, self.corpus_root, self.register,
+                source_meta=_meta(), attestation=_attestation(),
+                use_record=_use_record(), independently_pinned_sha256=self.pin)
+        self.assertFalse(self.register.exists())
+
     def test_positive_admission_is_complete_and_chained(self):
         out = self.admit()
         self.assertEqual(out["status"], "INTERNAL_DEVELOPMENT_RESEARCH_ELIGIBLE")
@@ -293,11 +401,14 @@ class InternalResearchIngestTests(unittest.TestCase):
                 self.admit()
         self.assertFalse(self.register.exists())
 
-    def test_duplicate_source_same_content_two_manifests(self):
+    def test_repeat_admission_preserves_manifest_and_appends_usage(self):
         first = self.admit()
         second = self.admit()
         self.assertEqual(first["object_sha256"], second["object_sha256"])
-        self.assertNotEqual(first["manifest_sha256"], second["manifest_sha256"])
+        self.assertEqual(first["manifest_sha256"], second["manifest_sha256"])
+        self.assertNotEqual(first["register_entry_sha256"], second["register_entry_sha256"])
+        self.assertEqual(verify_usage_register(self.register)["entries"], 2)
+
 
 
 if __name__ == "__main__":
