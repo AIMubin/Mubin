@@ -1,6 +1,6 @@
 # Usul definition metadata contract — research-only implementation
 
-**Internal component:** `usul-concept-definitions/0.1.0` in PR #81.
+**Internal component:** `usul-concept-definitions/0.1.1` in PR #81.
 **System version:** `0.1.0-alpha`. This is **not** a new qualified Usul U0.2 engine and does not replace the parallel historical PR #67 naming.
 
 ## Three **separate**, independently versioned representations
@@ -34,6 +34,51 @@ Entries are sorted by their immutable ID before hashing, using existing `engines
 
 **Limit:** this first schema forbids reattributing or replacing the one pinned W1 source entry. Genuine historical correction, W2 coverage, version migrations and authenticated scholarly statements need new, explicitly reviewed schema versions—not silent in-place changes.
 
+## Privacy-hardening: keyed commitments (0.1.1)
+
+**Security issue closed before using real short definition texts:** a raw
+SHA-256 of a short Arabic phrase can be recovered by trying a dictionary of
+plausible phrases. A public hash is not encryption. The `0.1.1` draft schema
+therefore requires each definition and interpretation candidate to declare
+`commitment_scheme`, `commitment_key_id`, and its own
+`definition_commitment_sha256` / `interpretation_commitment_sha256` field.
+
+- `SYNTHETIC_SHA256_TEST_VECTOR`: **synthetic test vectors only**, with
+  `commitment_key_id: null`. **Never** use this for real text from a
+  restricted source.
+- `HMAC_SHA256_PRIVATE`: for private real candidate texts, with an opaque
+  public **key identifier** (not secret key bytes). The 64-character value
+  is an HMAC-SHA256 commitment generated with a secret key stored **off-repo**.
+  The schema validates commitment shape, not whether any text is authentic.
+
+The helper `private_text_commitment.py` calculates HMAC from a local file,
+with a 32-byte-or-longer key provided as **hex in an environment variable**.
+It emits only the digest and scheme; it does not display paths, input content
+or key material. Do not commit, paste, log, send, or upload the key, and do
+not publish private excerpts or local source files. Protect the key with
+appropriate local controls and backup; lost keys prevent independent
+recomputation. Public CI runs **only synthetic test vectors**.
+
+A local test command with a **synthetic** example file:
+
+```powershell
+# Use locally generated, securely stored 32+ byte secret key; never commit it.
+# Set environment variable MUBIN_PRIVATE_HMAC_KEY_HEX securely in the local session.
+python -m engines.usul.private_text_commitment --text-file "C:\PRIVATE\synthetic-test-only.txt"
+```
+
+Treat the example path as illustrative, not an existing file. The real source
+text and key remain private. Neither HMAC verification nor a matching key ID
+certifies scholarly attribution, edition authenticity, intellectual property
+rights, exact quotation scope, or semantic correctness. Compare candidate
+commitments only for exact local byte identity, not to infer doctrinal disputes.
+
+The schema bump is a **breaking draft contract change** from 0.1.0; any
+off-branch local manifest must be reviewed and migrated, never silently
+accepted as a valid 0.1.1 contract. No public real-text digest is converted
+to HMAC without re-reading the original private source and computing a fresh
+keyed commitment locally.
+
 ## Synthetic demonstration
 
 ```bash
@@ -45,7 +90,7 @@ python -m engines.usul.concept_definitions \
 python -m unittest discover -s engines/usul/tests -v
 ```
 
-The fixture contains **three accepted W1 lexical observations** and two **synthetic dummy definition digests** for the `concept:amr-term` concept. Digests `synthetic-A`, `synthetic-B` and `synthetic-interpretation` are produced from invented testing strings, **not** actual wordings from al-Waraqat and **not** statements attributable to its author. They must never be labelled as the book's competing definitions.
+The fixture contains **three accepted W1 lexical observations** and two **synthetic test-vector definition commitments** for the `concept:amr-term` concept. Digests `synthetic-A`, `synthetic-B` and `synthetic-interpretation` are produced from invented testing strings, **not** actual wordings from al-Waraqat and **not** statements attributable to its author. They must never be labelled as the book's competing definitions.
 
 CLI exit `0`: `U02_DEFINITION_METADATA_CANDIDATES_PASS` (schema and provenance only). Exit `2`: `U02_DEFINITION_METADATA_REJECTED` with a stable reason code. Neither exit code authenticates scholarship.
 

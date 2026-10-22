@@ -43,3 +43,19 @@ metadata contracts and the pinned U0.2.3 receipt agree.
 - Deterministic manifest with per-entry digests (same canonical rules as
   the Stage-08 graph digest)
 - Metadata-only public outputs; private witness text stays local
+
+## Private text commitments (draft schema 0.1.1)
+
+Direct public SHA-256 fingerprints of short genuine source definitions are
+**not acceptable**: adversaries can guess short texts and compare hashes.
+The model now distinguishes `SYNTHETIC_SHA256_TEST_VECTOR` (invented CI
+data, never private source text) from `HMAC_SHA256_PRIVATE` commitments
+computed off-repository using a secret key. Each commitment includes only
+an opaque `commitment_key_id` (no secret), a digest, and an `UNASSESSED`
+status. Text, HMAC key and local paths must remain private. The public
+validator cannot independently attest the truth of a private commitment.
+
+See [privacy implementation and operator cautions](U02_CONCEPT_DEFINITIONS_IMPLEMENTATION.md)
+and [local HMAC helper](private_text_commitment.py). This draft schema change
+is intentionally non-backward-compatible and must not silently upgrade
+prior 0.1.0 manifests.

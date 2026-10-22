@@ -14,8 +14,8 @@ from engines.usul.concept_rule_catalog import (
     CatalogError, canonical, exact, need, sha, valid_id,
 )
 
-VERSION = "usul-concept-definitions/0.1.0"
-SCHEMA = "u02-concept-definitions/0.1.0"
+VERSION = "usul-concept-definitions/0.1.1"
+SCHEMA = "u02-concept-definitions/0.1.1"
 RECEIPT_STATUS = "U02_REAL_WARAQAT_PRIVATE_REPLAY_ACCEPTED"
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 SEMVER = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
@@ -39,6 +39,15 @@ def _digest(value):
 
 def _version(value):
     return type(value) is str and SEMVER.fullmatch(value) is not None
+
+
+def _commitment_valid(record, value_field):
+    """A raw SHA-256 of confidential short texts is NOT a safe public pin."""
+    scheme = record.get("commitment_scheme")
+    key_id = record.get("commitment_key_id")
+    return (_digest(record.get(value_field)) and
+            ((scheme == "SYNTHETIC_SHA256_TEST_VECTOR" and key_id is None) or
+             (scheme == "HMAC_SHA256_PRIVATE" and valid_id(key_id))))
 
 
 def _require_id(value, code):
@@ -182,7 +191,9 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
     definitions_by_concept = {}
     for definition in definitions.values():
         exact(definition, ("id", "concept_id", "source_observation_id",
-                           "version", "definition_sha256", "claimed_author_id",
+                           "version", "definition_commitment_sha256",
+                           "commitment_scheme", "commitment_key_id",
+                           "claimed_author_id",
                            "review_status", "source_text_included"),
               "DEFINITION_CANDIDATE_FIELDS_INVALID")
         oid = definition["source_observation_id"]
@@ -190,13 +201,15 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
              and oid in observations
              and observations[oid]["concept_id"] == definition["concept_id"]
              and _version(definition["version"])
-             and _digest(definition["definition_sha256"])
+             and _commitment_valid(definition, "definition_commitment_sha256")
              and definition["claimed_author_id"] ==
              sources[observations[oid]["source_id"]]["claimed_author_id"]
              and definition["review_status"] == "UNASSESSED"
              and definition["source_text_included"] is False,
              "DEFINITION_ATTRIBUTION_OR_STATUS_INVALID")
-        pair = (definition["concept_id"], definition["definition_sha256"])
+        pair = (definition["concept_id"],
+                definition["commitment_scheme"], definition["commitment_key_id"],
+                definition["definition_commitment_sha256"])
         need(pair not in seen_definition_pairs, "DEFINITION_DUPLICATE_DIGEST")
         seen_definition_pairs.add(pair)
         definitions_by_concept.setdefault(definition["concept_id"], set()).add(
@@ -204,7 +217,8 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
 
     for interp in m["interpretation_candidates"]:
         exact(interp, ("id", "concept_id", "definition_candidate_ids",
-                       "version", "interpretation_sha256", "review_status",
+                       "version", "interpretation_commitment_sha256",
+                       "commitment_scheme", "commitment_key_id", "review_status",
                        "source_text_included"),
               "INTERPRETATION_FIELDS_INVALID")
         references = interp["definition_candidate_ids"]
@@ -216,7 +230,7 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
              and set(references) <= definitions_by_concept.get(
                  interp["concept_id"], set())
              and _version(interp["version"])
-             and _digest(interp["interpretation_sha256"])
+             and _commitment_valid(interp, "interpretation_commitment_sha256")
              and interp["review_status"] == "UNASSESSED"
              and interp["source_text_included"] is False,
              "INTERPRETATION_UNANCHORED_OR_PROMOTED")

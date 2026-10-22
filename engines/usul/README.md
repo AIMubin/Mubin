@@ -210,7 +210,7 @@ scholarly authentication, rights clearance or fiqh inference is granted.
 A new [strict metadata-only definition model](concept_definitions.py) separates
 a pinned W1 **lexical observation** from an unassessed *candidate scholarly
 definition* and from an independently versioned *proposed interpretation*.
-Each record is a digest and identifier, never source text, a trusted attribution
+Each record is a keyed HMAC commitment and identifier for real private phrases (or a clearly synthetic test-vector hash), never source text, a trusted attribution
 or an executable rule. The initial source-registry contract allows only
 `NOT_CLEARED` or `RESTRICTED` rights, and treats all work/author/edition
 identifiers as unassessed claims.

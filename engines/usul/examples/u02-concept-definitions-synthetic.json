@@ -1,5 +1,5 @@
 {
-  "schema_version": "u02-concept-definitions/0.1.0",
+  "schema_version": "u02-concept-definitions/0.1.1",
   "basis_receipt_sha256": "00f0d1c71f55dc226cd6b840decfcdada152a40746a5cdc39b1e4f019c6bf7df",
   "previous_manifest_sha256": null,
   "sources": [
@@ -52,20 +52,24 @@
       "concept_id": "concept:amr-term",
       "source_observation_id": "observation:amr-term",
       "version": "0.1.0",
-      "definition_sha256": "b4698dbd327f6ffb328d6d6cf82c471e0b7051cb739d518d90cc70c640d8fa79",
       "claimed_author_id": "author:unassessed",
       "review_status": "UNASSESSED",
-      "source_text_included": false
+      "source_text_included": false,
+      "definition_commitment_sha256": "b4698dbd327f6ffb328d6d6cf82c471e0b7051cb739d518d90cc70c640d8fa79",
+      "commitment_scheme": "SYNTHETIC_SHA256_TEST_VECTOR",
+      "commitment_key_id": null
     },
     {
       "id": "definition:amr-b",
       "concept_id": "concept:amr-term",
       "source_observation_id": "observation:amr-term",
       "version": "0.1.0",
-      "definition_sha256": "1daf0ef83212cb8f0754254b559b51a228ba3b7206545c8bd6c967cb53266d34",
       "claimed_author_id": "author:unassessed",
       "review_status": "UNASSESSED",
-      "source_text_included": false
+      "source_text_included": false,
+      "definition_commitment_sha256": "1daf0ef83212cb8f0754254b559b51a228ba3b7206545c8bd6c967cb53266d34",
+      "commitment_scheme": "SYNTHETIC_SHA256_TEST_VECTOR",
+      "commitment_key_id": null
     }
   ],
   "interpretation_candidates": [
@@ -76,9 +80,11 @@
         "definition:amr-a"
       ],
       "version": "0.1.0",
-      "interpretation_sha256": "f8b98c86c402d56e955cf8a08eaef8965a8e4529a0e4de66c2ed4d2aa29d5b2e",
       "review_status": "UNASSESSED",
-      "source_text_included": false
+      "source_text_included": false,
+      "interpretation_commitment_sha256": "f8b98c86c402d56e955cf8a08eaef8965a8e4529a0e4de66c2ed4d2aa29d5b2e",
+      "commitment_scheme": "SYNTHETIC_SHA256_TEST_VECTOR",
+      "commitment_key_id": null
     }
   ],
   "definition_comparisons": [

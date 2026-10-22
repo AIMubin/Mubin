@@ -49,20 +49,26 @@ class DefinitionMetadataTests(unittest.TestCase):
             "definition_candidates": [
                 {"id": "definition:amr-a", "concept_id": "concept:amr-term",
                  "source_observation_id": "observation:amr-term",
-                 "version": "0.1.0", "definition_sha256": sha(b"synthetic-A"),
+                 "version": "0.1.0", "definition_commitment_sha256": sha(b"synthetic-A"),
                  "claimed_author_id": "author:unassessed",
+                 "commitment_scheme": "SYNTHETIC_SHA256_TEST_VECTOR",
+                 "commitment_key_id": None,
                  "review_status": "UNASSESSED", "source_text_included": False},
                 {"id": "definition:amr-b", "concept_id": "concept:amr-term",
                  "source_observation_id": "observation:amr-term",
-                 "version": "0.1.0", "definition_sha256": sha(b"synthetic-B"),
+                 "version": "0.1.0", "definition_commitment_sha256": sha(b"synthetic-B"),
                  "claimed_author_id": "author:unassessed",
+                 "commitment_scheme": "SYNTHETIC_SHA256_TEST_VECTOR",
+                 "commitment_key_id": None,
                  "review_status": "UNASSESSED", "source_text_included": False},
             ],
             "interpretation_candidates": [
                 {"id": "interpretation:amr-a", "concept_id": "concept:amr-term",
                  "definition_candidate_ids": ["definition:amr-a"],
                  "version": "0.1.0",
-                 "interpretation_sha256": sha(b"synthetic-interpretation"),
+                 "interpretation_commitment_sha256": sha(b"synthetic-interpretation"),
+                 "commitment_scheme": "SYNTHETIC_SHA256_TEST_VECTOR",
+                 "commitment_key_id": None,
                  "review_status": "UNASSESSED", "source_text_included": False}
             ],
             "definition_comparisons": [
@@ -104,6 +110,49 @@ class DefinitionMetadataTests(unittest.TestCase):
         self.assertEqual(report["status"], "U02_DEFINITION_METADATA_CANDIDATES_PASS")
         self.assertEqual(report["definition_candidate_count"], 2)
         self.assertFalse(report["scholarly_attribution_verified"])
+
+    def test_unmarked_raw_sha256_commitment_rejected(self):
+        self.manifest["definition_candidates"][0]["commitment_scheme"] = "SHA256_RAW"
+        with self.assertRaisesRegex(CatalogError, "DEFINITION_ATTRIBUTION_OR_STATUS_INVALID"):
+            self.run_build()
+
+    def test_private_hmac_commitment_accepts_opaque_key_id(self):
+        d = self.manifest["definition_candidates"][0]
+        d["commitment_scheme"] = "HMAC_SHA256_PRIVATE"
+        d["commitment_key_id"] = "hmac:local-key-one"
+        result = self.run_build()
+        self.assertEqual(result["status"], "U02_DEFINITION_METADATA_CANDIDATES_PASS")
+        self.assertFalse(result["source_text_included"])
+
+    def test_private_hmac_key_id_is_required(self):
+        self.manifest["definition_candidates"][0]["commitment_scheme"] = "HMAC_SHA256_PRIVATE"
+        with self.assertRaisesRegex(CatalogError, "DEFINITION_ATTRIBUTION_OR_STATUS_INVALID"):
+            self.run_build()
+
+    def test_hmac_secret_must_not_be_embedded_in_public_record(self):
+        d = self.manifest["definition_candidates"][0]
+        d["commitment_scheme"] = "HMAC_SHA256_PRIVATE"
+        d["commitment_key_id"] = "hmac:opaque"
+        d["hmac_secret"] = "never-publish-a-secret"
+        with self.assertRaisesRegex(CatalogError, "DEFINITION_CANDIDATE_FIELDS_INVALID"):
+            self.run_build()
+
+    def test_interpretation_hmac_key_id_required_and_valid(self):
+        i = self.manifest["interpretation_candidates"][0]
+        i["commitment_scheme"] = "HMAC_SHA256_PRIVATE"
+        i["commitment_key_id"] = "hmac:private-interpretation-key"
+        report = self.run_build()
+        self.assertEqual(report["interpretation_candidate_count"], 1)
+
+    def test_interpretation_raw_hash_promotion_rejected(self):
+        self.manifest["interpretation_candidates"][0]["commitment_scheme"] = "SHA256_RAW"
+        with self.assertRaisesRegex(CatalogError, "INTERPRETATION_UNANCHORED_OR_PROMOTED"):
+            self.run_build()
+
+    def test_synthetic_test_vector_cannot_claim_private_key(self):
+        self.manifest["definition_candidates"][0]["commitment_key_id"] = "hmac:unused"
+        with self.assertRaisesRegex(CatalogError, "DEFINITION_ATTRIBUTION_OR_STATUS_INVALID"):
+            self.run_build()
 
     def test_collection_reordering_does_not_change_digest(self):
         a = self.run_build()
@@ -236,8 +285,8 @@ class DefinitionMetadataTests(unittest.TestCase):
             self.run_build()
 
     def test_definition_duplicate_digest_not_independent_alternative(self):
-        self.manifest["definition_candidates"][1]["definition_sha256"] = (
-            self.manifest["definition_candidates"][0]["definition_sha256"])
+        self.manifest["definition_candidates"][1]["definition_commitment_sha256"] = (
+            self.manifest["definition_candidates"][0]["definition_commitment_sha256"])
         with self.assertRaisesRegex(CatalogError, "DEFINITION_DUPLICATE_DIGEST"):
             self.run_build()
 
@@ -285,7 +334,7 @@ class DefinitionMetadataTests(unittest.TestCase):
             **self.manifest["definition_candidates"][0],
             "id": "definition:amr-new",
             "version": "0.2.0",
-            "definition_sha256": sha(b"synthetic-new"),
+            "definition_commitment_sha256": sha(b"synthetic-new"),
         })
         report = build_definitions(self.receipt, TRUSTED_RECEIPT_SHA,
                                    self.manifest, prior, pin)
@@ -296,7 +345,7 @@ class DefinitionMetadataTests(unittest.TestCase):
         prior = copy.deepcopy(self.manifest)
         pin = sha(canonical(normalize_manifest(prior)))
         self.manifest["previous_manifest_sha256"] = pin
-        self.manifest["definition_candidates"][0]["definition_sha256"] = "f"*64
+        self.manifest["definition_candidates"][0]["definition_commitment_sha256"] = "f"*64
         with self.assertRaisesRegex(CatalogError, "APPEND_ONLY_RECORD_MUTATION_OR_DELETION"):
             build_definitions(self.receipt, TRUSTED_RECEIPT_SHA,
                               self.manifest, prior, pin)
