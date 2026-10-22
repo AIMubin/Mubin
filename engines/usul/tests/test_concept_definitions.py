@@ -181,6 +181,34 @@ class DefinitionMetadataTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogError, "SOURCE_OBSERVATION_UNANCHORED_OR_PROMOTED"):
             self.run_build()
 
+    def test_source_observation_ref_as_list_fails_with_catalog_error(self):
+        self.manifest["source_observations"][0]["source_id"] = ["source:waraqat-w1"]
+        with self.assertRaisesRegex(CatalogError, "SOURCE_OBSERVATION_UNANCHORED_OR_PROMOTED"):
+            self.run_build()
+
+    def test_query_id_as_list_fails_with_catalog_error(self):
+        self.manifest["source_observations"][0]["query_id"] = ["pilot:amr-term"]
+        with self.assertRaisesRegex(CatalogError, "SOURCE_OBSERVATION_UNANCHORED_OR_PROMOTED"):
+            self.run_build()
+
+    def test_definition_observation_ref_as_list_fails_with_catalog_error(self):
+        self.manifest["definition_candidates"][0]["source_observation_id"] = [
+            "observation:amr-term"]
+        with self.assertRaisesRegex(CatalogError, "DEFINITION_ATTRIBUTION_OR_STATUS_INVALID"):
+            self.run_build()
+
+    def test_interpretation_concept_as_list_fails_with_catalog_error(self):
+        self.manifest["interpretation_candidates"][0]["concept_id"] = [
+            "concept:amr-term"]
+        with self.assertRaisesRegex(CatalogError, "INTERPRETATION_UNANCHORED_OR_PROMOTED"):
+            self.run_build()
+
+    def test_comparison_concept_as_list_fails_with_catalog_error(self):
+        self.manifest["definition_comparisons"][0]["concept_id"] = [
+            "concept:amr-term"]
+        with self.assertRaisesRegex(CatalogError, "DEFINITION_COMPARISON_UNATTESTED"):
+            self.run_build()
+
     def test_duplicate_source_observation_id_refused(self):
         self.manifest["source_observations"][1]["id"] = (
             self.manifest["source_observations"][0]["id"])

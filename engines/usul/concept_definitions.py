@@ -168,7 +168,8 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
               "SOURCE_OBSERVATION_FIELDS_INVALID")
         c = obs["concept_id"]
         need(valid_id(c) and c in lookup and c not in seen_concepts
-             and obs["source_id"] in sources
+             and valid_id(obs["source_id"]) and obs["source_id"] in sources
+             and valid_id(obs["query_id"])
              and obs["query_id"] == lookup[c]["query_id"]
              and _version(obs["version"])
              and obs["observation_status"] == "LEXICAL_ONLY"
@@ -185,7 +186,8 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
                            "review_status", "source_text_included"),
               "DEFINITION_CANDIDATE_FIELDS_INVALID")
         oid = definition["source_observation_id"]
-        need(valid_id(definition["concept_id"]) and oid in observations
+        need(valid_id(definition["concept_id"]) and valid_id(oid)
+             and oid in observations
              and observations[oid]["concept_id"] == definition["concept_id"]
              and _version(definition["version"])
              and _digest(definition["definition_sha256"])
@@ -206,7 +208,8 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
                        "source_text_included"),
               "INTERPRETATION_FIELDS_INVALID")
         references = interp["definition_candidate_ids"]
-        need(interp["concept_id"] in lookup
+        need(valid_id(interp["concept_id"])
+             and interp["concept_id"] in lookup
              and type(references) is list and 1 <= len(references) <= 8
              and all(type(r) is str and r in definitions for r in references)
              and len(references) == len(set(references))
@@ -224,7 +227,8 @@ def build_definitions(receipt, trusted_receipt_sha256, manifest,
                            "kind", "review_status"),
               "DEFINITION_COMPARISON_FIELDS_INVALID")
         refs = comparison["definition_candidate_ids"]
-        need(comparison["concept_id"] in lookup and type(refs) is list
+        need(valid_id(comparison["concept_id"])
+             and comparison["concept_id"] in lookup and type(refs) is list
              and len(refs) == 2 and all(type(r) is str for r in refs)
              and len(set(refs)) == 2 and
              set(refs) <= definitions_by_concept.get(
