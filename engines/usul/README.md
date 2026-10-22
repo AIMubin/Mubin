@@ -204,3 +204,27 @@ end-to-end tests validate the integration contract. Follow the
 to run the actual frozen W1/W2 replay locally and archive a
 metadata-only receipt. No semantic equivalence, rule-support,
 scholarly authentication, rights clearance or fiqh inference is granted.
+
+## Structured definition candidates (Draft PR #81, research-only)
+
+A new [strict metadata-only definition model](concept_definitions.py) separates
+a pinned W1 **lexical observation** from an unassessed *candidate scholarly
+definition* and from an independently versioned *proposed interpretation*.
+Each record is a digest and identifier, never source text, a trusted attribution
+or an executable rule. The initial source-registry contract allows only
+`NOT_CLEARED` or `RESTRICTED` rights, and treats all work/author/edition
+identifiers as unassessed claims.
+
+The validator verifies the historical U0.2.3 receipt under an **externally
+pinned digest**, strictly associates all three candidate concept IDs to
+their W1 query IDs, rejects unauthorized schema fields/status promotions and
+supports hash-linked append-only changes with an explicitly supplied
+predecessor manifest. A [synthetic example](examples/u02-concept-definitions-synthetic.json)
+and [adversarial tests](tests/test_concept_definitions.py) exercise only
+structural/provenance behavior; the example's hashes are synthetic placeholders,
+not actual scholarly definitions from al-Waraqat.
+
+See [implementation scope and scientific non-goals](U02_CONCEPT_DEFINITIONS_IMPLEMENTATION.md).
+No fiqh inference, semantic qualification, permission to redistribute source
+text, authenticated author attribution, or claim of scholarly disagreement
+is enabled. Overall system stays `0.1.0-alpha`.
