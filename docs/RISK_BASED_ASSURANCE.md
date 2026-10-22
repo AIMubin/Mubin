@@ -72,3 +72,17 @@ These are *feature/action-specific* holds. They do **not** halt work on Quran Q0
 ## Source-use clarification
 
 Use and cite identified sources proactively in development, evaluation and bounded research; do not wait for a blanket human corpus approval. Require actual provenance data per conclusion and explicit publication checks for the copied text. **Attribution alone is neither an external authenticity finding nor permission for redistribution.** See [source-use and attribution policy](SOURCE_ATTRIBUTION_POLICY.md) and the U0.1 structural semantic binding.
+
+## Separate internal source-use eligibility (2026-10-22)
+
+The research-only code status INTERNAL_DEVELOPMENT_RESEARCH_ELIGIBLE
+means a **strict metadata check** of operator-declared conditions and
+an externally supplied source pin passed. It does NOT independently
+verify lawful acquisition, applicability of Art. 26, the use-register's
+persistence, access terms, scholarly authenticity or permissions to
+distribute text. The operator must establish those facts separately.
+
+Where applicable, real texts can power PRIVATE development without
+prior public redistribution permission. The public-release gate remains
+independent and conservative. See
+[development-first source policy](INTERNAL_SOURCE_DEVELOPMENT_POLICY.md).

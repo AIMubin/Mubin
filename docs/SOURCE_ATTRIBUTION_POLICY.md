@@ -48,3 +48,21 @@ Only `deduction` + `machine_checkable` + bounded explicit logical specs can exec
 - **Quran canonical display:** independently verified, pinned exact witness/riwayah and numbering plus appropriate redistribution conditions; no use of malformed derived verse reconstruction.
 
 Use [risk-proportionate review](RISK_BASED_ASSURANCE.md) for each action, not a globally blocking review committee.
+
+## Development-first source admission (2026-10-22)
+
+A source with independently pinned original bytes and lawfully obtained
+access may enter a controlled, purpose-limited private AI development
+vault **without waiting for public redistribution clearance** where a
+genuinely applicable legal basis permits this use. This is a **source-level
+development decision**, not a general licence to obtain any digital copy
+or publish its contents. Check acquisition and access/database terms;
+record work type, source, purpose and use date as required by the Saudi
+2026 Implementing Regulations Article 30.
+
+See [internal source development policy](INTERNAL_SOURCE_DEVELOPMENT_POLICY.md)
+for the Art. 26(2)/(4), Art. 37 and regulation Art. 29–30 distinctions, and
+the fail-closed engineering-only operator declaration contract.
+**Public publishing** of any edition/annotations/text still requires
+specific rights and fidelity gates. Valid metadata and copied-text
+hashes do not authenticate scholarly attribution or content correctness.

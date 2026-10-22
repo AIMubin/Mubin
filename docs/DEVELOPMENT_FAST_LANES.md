@@ -118,3 +118,20 @@ Never turn `engineering_ready=true` into
 `redistribution_approved=true`, `juristic_inference_allowed=true`
 or `public_fatwa_authorized=true`. These states have separate
 evidence and ownership.
+
+## Private real-source acceleration (2026-10-22)
+
+Do **not** restrict non-public Quran/Hadith/Tafsir/Usul AI development
+to synthetic data or redistributable licences only. Use independently
+pinned, lawfully published/acquired real sources in a restricted local
+vault when the particular intended use meets an applicable legal basis.
+Record source type/locator, purpose and date, keep public dissemination
+disabled and honor independent protected rights. Unknown conditions
+hold the **specific source**, not the whole engine. Refer to
+[Development-first source policy](INTERNAL_SOURCE_DEVELOPMENT_POLICY.md).
+
+Distinguish source byte integrity from scholarly authenticity. Neither
+internal source admission nor automated labeling changes the frozen
+H3.9.2 adjudication/benchmark requirements or authorizes a public
+fiqh ruling. **PR #81 is merged**; references above to PR #81 as an
+active draft are retained as historical context only.
