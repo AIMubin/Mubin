@@ -1,0 +1,17 @@
+{
+  "contract": "mubin-review-harness-v0.1",
+  "candidate": {
+    "repository": "AIMubin/Mubin",
+    "base_sha": "567e55858a9911a23430ef81f1e41b7a5f26480e",
+    "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "changed_paths": [
+      "core/review_harness/validator.py"
+    ],
+    "impact_tags": [
+      "code_change",
+      "security_boundary"
+    ]
+  },
+  "deterministic_checks": [],
+  "review_attempts": []
+}
