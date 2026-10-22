@@ -70,3 +70,12 @@ The first two commands validate the public metadata artifact. The third serves i
 ## Stage09 research, separate from the preview
 
 The [typed evidence proposal contract](engines/usul/typed_evidence_binding.py) and [runbook](engines/usul/pilots/STAGE09_TYPED_EVIDENCE_BINDING.md) connect an exact SHA-pinned Stage08 text occurrence to an existing P0 Source/Evidence record **as an unassessed byte-correspondence proposal**. They never promote P0 verification, invoke a rule, certify interpretation or produce a fatwa. This remains experimental and is not a blocker for the metadata preview.
+
+## Development fast lanes
+
+The [engineering throughput policy](docs/DEVELOPMENT_FAST_LANES.md) separates
+synthetic/CI qualification, private source & rights gates, and scholarly
+adjudication. Safe research-only code can proceed with automated
+`UNASSESSED`/`UNVERIFIED` labels while protected text and normative
+claims retain strict independent approval. Avoid rerunning frozen source
+pilots or duplicating core inference engines for unrelated changes.

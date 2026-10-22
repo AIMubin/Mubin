@@ -1,6 +1,8 @@
 name: Usul U0.1 deterministic prototype checks
 on:
+  workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - 'engines/usul/**'
       - '.gitattributes'

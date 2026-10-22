@@ -204,3 +204,44 @@ end-to-end tests validate the integration contract. Follow the
 to run the actual frozen W1/W2 replay locally and archive a
 metadata-only receipt. No semantic equivalence, rule-support,
 scholarly authentication, rights clearance or fiqh inference is granted.
+
+## Structured definition candidates (Draft PR #81, research-only)
+
+A new [strict metadata-only definition model](concept_definitions.py) separates
+a pinned W1 **lexical observation** from an unassessed *candidate scholarly
+definition* and from an independently versioned *proposed interpretation*.
+Each record is a keyed HMAC commitment and identifier for real private phrases (or a clearly synthetic test-vector hash), never source text, a trusted attribution
+or an executable rule. The initial source-registry contract allows only
+`NOT_CLEARED` or `RESTRICTED` rights, and treats all work/author/edition
+identifiers as unassessed claims.
+
+The validator verifies the historical U0.2.3 receipt under an **externally
+pinned digest**, strictly associates all three candidate concept IDs to
+their W1 query IDs, rejects unauthorized schema fields/status promotions and
+supports hash-linked append-only changes with an explicitly supplied
+predecessor manifest. A [synthetic example](examples/u02-concept-definitions-synthetic.json)
+and [adversarial tests](tests/test_concept_definitions.py) exercise only
+structural/provenance behavior; the example's hashes are synthetic placeholders,
+not actual scholarly definitions from al-Waraqat.
+
+See [implementation scope and scientific non-goals](U02_CONCEPT_DEFINITIONS_IMPLEMENTATION.md).
+No fiqh inference, semantic qualification, permission to redistribute source
+text, authenticated author attribution, or claim of scholarly disagreement
+is enabled. Overall system stays `0.1.0-alpha`.
+
+## Private W1 definition intake (Draft PR #81)
+
+The [local-only candidate intake operator](pilots/waraqat_definition_private_intake.py)
+and [operator instructions](pilots/U02_PRIVATE_DEFINITION_INTAKE.md)
+prepare an **unassessed metadata-only** manifest from private text files
+stored **outside Git**. The operator validates the frozen U0.2.3 receipt,
+requires exact W1 concept/query IDs, computes private HMAC commitments,
+and refuses source-text fields, path traversal, unsupported concept IDs,
+cross-concept interpretations and unapproved scholarly statuses.
+
+See the [safe structural intake example](pilots/data/u02-private-definition-intake.EXAMPLE.json).
+The example filenames do **not** imply that real quotations or source
+attributions have been verified. GitHub CI uses synthetic temporary files
+only; the private real-source intake has **not** been run here. The tool
+does not verify whether a candidate is actually authored by the person
+claimed, and must never promote it into a scholarly rule.
