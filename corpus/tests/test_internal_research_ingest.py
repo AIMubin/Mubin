@@ -180,6 +180,119 @@ class InternalResearchIngestTests(unittest.TestCase):
         report = verify_usage_register(self.register)
         self.assertFalse(report["chain_valid"])
 
+    def test_tampered_usage_register_prevents_admission_and_new_append(self):
+        original = self.admit()
+        manifest_path = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + original["object_sha256"][:16] + ".json")
+        rows = self.register.read_text(encoding="utf-8").splitlines()
+        entry = json.loads(rows[0])
+        entry["payload"]["source_sha256"] = "f" * 64
+        self.register.write_text(json.dumps(entry) + "\n", encoding="utf-8")
+        self.assertFalse(verify_usage_register(self.register)["chain_valid"])
+        self.assertFalse(is_admitted(manifest_path, self.register))
+        from corpus.internal_research_ingest import append_usage_register
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "USAGE_REGISTER_CHAIN_INVALID"):
+            append_usage_register(self.register, {"example": "candidate"})
+        self.assertEqual(len(self.register.read_text(encoding="utf-8").splitlines()), 1)
+
+    def test_structurally_forged_sequence_fails_even_with_rehashed_entry(self):
+        from corpus.internal_research_ingest import _canonical
+        self.admit()
+        entry = json.loads(self.register.read_text(encoding="utf-8"))
+        entry["seq"] = 99
+        entry["entry_sha256"] = hashlib.sha256(_canonical({
+            k: v for k, v in entry.items() if k != "entry_sha256"
+        })).hexdigest()
+        self.register.write_text(json.dumps(entry) + "\n", encoding="utf-8")
+        self.assertFalse(verify_usage_register(self.register)["chain_valid"])
+
+    def test_missing_metadata_key_is_stable_refusal_not_keyerror(self):
+        meta = _meta()
+        del meta["source_url"]
+        with self.assertRaisesRegex(InternalSourceRefusal, "INVALID_SOURCE_META_SCHEMA"):
+            ingest_internal_research(
+                self.source, self.corpus_root, self.register,
+                source_meta=meta, attestation=_attestation(),
+                use_record=_use_record(), independently_pinned_sha256=self.pin)
+        self.assertFalse(self.corpus_root.exists())
+
+    def test_raw_source_prose_field_is_rejected(self):
+        meta = _meta()
+        meta["raw_source_excerpt"] = "private-synthetic"
+        with self.assertRaisesRegex(InternalSourceRefusal, "INVALID_SOURCE_META_SCHEMA"):
+            ingest_internal_research(
+                self.source, self.corpus_root, self.register,
+                source_meta=meta, attestation=_attestation(),
+                use_record=_use_record(), independently_pinned_sha256=self.pin)
+
+    def test_private_usage_register_cannot_be_inside_git_repository(self):
+        git = self.base / "repo"
+        (git / ".git").mkdir(parents=True)
+        register = git / "sensitive-register.jsonl"
+        with self.assertRaisesRegex(InternalSourceRefusal, "PRIVATE_STORAGE_INSIDE_GIT_REFUSED"):
+            ingest_internal_research(
+                self.source, self.corpus_root, register,
+                source_meta=_meta(), attestation=_attestation(),
+                use_record=_use_record(), independently_pinned_sha256=self.pin)
+        self.assertFalse(register.exists())
+
+    def test_private_corpus_root_cannot_be_git_repository_root(self):
+        git = self.base / "repo"
+        (git / ".git").mkdir(parents=True)
+        with self.assertRaisesRegex(InternalSourceRefusal, "PRIVATE_STORAGE_INSIDE_GIT_REFUSED"):
+            ingest_internal_research(
+                self.source, git, self.register,
+                source_meta=_meta(), attestation=_attestation(),
+                use_record=_use_record(), independently_pinned_sha256=self.pin)
+        self.assertFalse(self.register.exists())
+
+    def test_mutating_content_addressed_object_revokes_admission(self):
+        out = self.admit()
+        manifest_path = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + out["object_sha256"][:16] + ".json")
+        self.assertTrue(is_admitted(manifest_path, self.register))
+        object_path = (self.corpus_root / "objects" / out["object_sha256"][:2] /
+                       out["object_sha256"])
+        object_path.write_bytes(b"tampered-local-data")
+        self.assertFalse(is_admitted(manifest_path, self.register))
+
+    def test_malformed_register_is_not_admitted(self):
+        out = self.admit()
+        manifest_path = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + out["object_sha256"][:16] + ".json")
+        self.register.write_text("{not-json\n", encoding="utf-8")
+        self.assertFalse(verify_usage_register(self.register)["chain_valid"])
+        self.assertFalse(is_admitted(manifest_path, self.register))
+
+    def test_private_original_cannot_be_in_git_tree(self):
+        repo = self.base / "repo"
+        (repo / ".git").mkdir(parents=True)
+        original = repo / "source.txt"
+        original.write_bytes(self.source.read_bytes())
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "PRIVATE_STORAGE_INSIDE_GIT_REFUSED"):
+            ingest_internal_research(
+                original, self.corpus_root, self.register,
+                source_meta=_meta(), attestation=_attestation(),
+                use_record=_use_record(), independently_pinned_sha256=self.pin)
+        self.assertFalse(self.register.exists())
+
+    def test_importer_cannot_change_bytes_after_hash_preflight(self):
+        from unittest.mock import patch
+        from corpus.import_local import ingest as real_ingest
+
+        def mutate_source_and_ingest(*args, **kwargs):
+            self.source.write_bytes(b"malicious source swapped after hash check")
+            return real_ingest(*args, **kwargs)
+
+        with patch("corpus.internal_research_ingest.ingest",
+                   side_effect=mutate_source_and_ingest):
+            with self.assertRaisesRegex(
+                    InternalSourceRefusal, "SOURCE_CHANGED_DURING_IMPORT"):
+                self.admit()
+        self.assertFalse(self.register.exists())
+
     def test_duplicate_source_same_content_two_manifests(self):
         first = self.admit()
         second = self.admit()

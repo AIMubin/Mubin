@@ -101,3 +101,37 @@ must independently verify source bytes, retain usage logs and call this
 admission API before a private intake. The new module is not a downloader
 or a universal source-import integration. This policy does not change
 system version or authorize public source-text exposure.
+
+## Local importer bridge, integrity limitations, and release isolation
+
+The local operator added the research-only wrapper at
+`corpus/internal_research_ingest.py`; it records one metadata-only
+admission manifest and a private usage-register entry. A manifest
+marked `internal_only` is **not** an export entitlement.
+
+The follow-up hardening enforces fail-closed **usage-chain verification
+before append and again before admission**, validates sequence and digest
+fields, checks the content-addressed object still matches the pinned
+digest, and rejects both the corpus vault and the register file when
+placed under the Git working tree. Use records stay outside Git.
+
+**Scope limitation:** This is a SHA-256 linked register, **not** a
+tamper-proof audit log against an adversary able to edit and recompute
+all earlier entries. Preserve its final head hash independently in a
+trusted, restricted ledger, or add an authenticated signature/append-only
+storage backend before making adversarial non-repudiation claims.
+
+A local pilot W1/W2 admission receipt is evidence of two local source
+files meeting this *operator-declared* ingestion contract, not proof
+of edition authenticity, scholarly equivalence, sublicensing rights,
+or public distribution entitlement. The unresolved W2
+`EVIDENCE_RECONCILIATION_FAILED` erratum is a separate historical
+integrity matter: **do not rewrite frozen evidence or silently replace
+the legacy field** based solely on a reported byte count.
+
+**Concurrency limit:** The initial register uses a read-and-atomic-
+replace pattern intended for one trusted operator at a time. Concurrent
+writers require an explicit inter-process lock and integrity review.
+No version of this private importer is an authorization to run
+unreviewed automatic training or public text exposure.
+

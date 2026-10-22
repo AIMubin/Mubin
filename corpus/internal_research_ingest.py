@@ -67,7 +67,7 @@ def _reject_symlink(path: Path):
 
 def _refuse_private_root_inside_git(corpus_root: Path):
     root = corpus_root.resolve()
-    for parent in root.parents:
+    for parent in (root, *root.parents):
         if (parent / ".git").exists():
             raise InternalSourceRefusal("PRIVATE_STORAGE_INSIDE_GIT_REFUSED")
 
@@ -79,7 +79,10 @@ def append_usage_register(register_path: Path, entry: dict) -> str:
     recorded_at_utc, payload})). Tampering with any earlier entry breaks the
     chain and refuses the append.
     """
+    _refuse_private_root_inside_git(register_path.parent)
     _reject_symlink(register_path)
+    if not verify_usage_register(register_path)["chain_valid"]:
+        raise InternalSourceRefusal("USAGE_REGISTER_CHAIN_INVALID")
     entries = []
     if register_path.exists():
         _reject_symlink(register_path)
@@ -119,17 +122,34 @@ def verify_usage_register(register_path: Path) -> dict:
     _reject_symlink(register_path)
     if not register_path.exists():
         return {"status": "REGISTER_EMPTY", "entries": 0, "chain_valid": True}
-    entries = []
-    for line in register_path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            entries.append(json.loads(line))
-    previous, broken = "0" * 64, []
-    for i, body in enumerate(entries, 1):
-        recorded = body.pop("entry_sha256", None)
-        computed = _sha(_canonical(body))
-        if computed != recorded or body["prev_entry_sha256"] != previous:
-            broken.append(i)
-        previous = recorded
+    try:
+        entries = []
+        for line in register_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                entries.append(json.loads(line))
+        previous, broken = "0" * 64, []
+        expected_keys = {"seq", "prev_entry_sha256", "recorded_at_utc",
+                         "payload", "entry_sha256"}
+        for i, entry in enumerate(entries, 1):
+            if (type(entry) is not dict or set(entry) != expected_keys or
+                    type(entry["seq"]) is not int or entry["seq"] != i or
+                    type(entry["payload"]) is not dict or
+                    type(entry["prev_entry_sha256"]) is not str or
+                    type(entry["entry_sha256"]) is not str or
+                    type(entry["recorded_at_utc"]) is not str):
+                broken.append(i)
+                break
+            recorded = entry["entry_sha256"]
+            computed = _sha(_canonical({k: v for k, v in entry.items()
+                                         if k != "entry_sha256"}))
+            if computed != recorded or entry["prev_entry_sha256"] != previous:
+                broken.append(i)
+                break
+            previous = recorded
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError,
+            RecursionError, OverflowError):
+        return {"status": "REGISTER_CHAIN_BROKEN", "entries": 0,
+                "broken_at": [], "chain_valid": False}
     return {"status": "REGISTER_CHAIN_VALID" if not broken else "REGISTER_CHAIN_BROKEN",
             "entries": len(entries), "broken_at": broken, "chain_valid": not broken}
 
@@ -146,9 +166,18 @@ def ingest_internal_research(source_path: Path, corpus_root: Path,
         raise InternalSourceRefusal("SOURCE_PATH_MISSING")
     if not _is_regular_file(source_path):
         raise InternalSourceRefusal("SOURCE_NOT_REGULAR_FILE")
+    _refuse_private_root_inside_git(source_path.parent)
     corpus_root = Path(corpus_root)
     _refuse_private_root_inside_git(corpus_root)
+    _refuse_private_root_inside_git(Path(register_path).parent)
     _reject_symlink(corpus_root)
+    _reject_symlink(Path(register_path))
+    _need(set(source_meta) == {
+        "source_id", "source_kind", "work_id", "edition_id",
+        "redistribution_status", "source_url", "acquisition_evidence"
+    }, "INVALID_SOURCE_META_SCHEMA")
+    _need(all(type(value) is str for value in source_meta.values()),
+          "INVALID_SOURCE_META_SCHEMA")
     data = source_path.read_bytes()
     digest = _sha(data)
 
@@ -171,6 +200,12 @@ def ingest_internal_research(source_path: Path, corpus_root: Path,
                     edition=source["edition_id"], rights=source["redistribution_status"],
                     source_url=source_meta["source_url"],
                     visibility="internal_only")
+    _need(record.get("sha256") == digest,
+          "SOURCE_CHANGED_DURING_IMPORT")
+    written_object = corpus_root / record["object_path"]
+    _need(written_object.is_file() and not written_object.is_symlink() and
+          _sha(written_object.read_bytes()) == digest,
+          "SOURCE_OBJECT_DIGEST_MISMATCH")
     admitted_manifest = dict(record)
     admitted_manifest.update({
         "admission_status": gate["status"],
@@ -212,16 +247,35 @@ def is_admitted(manifest_path: Path, register_path: Path) -> bool:
     usage register contains an entry referencing that exact manifest digest."""
     if not manifest_path.exists() or not register_path.exists():
         return False
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not verify_usage_register(register_path)["chain_valid"]:
+        return False
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError, TypeError):
+        return False
     if manifest.get("admission_status") != ADMISSION_ELIGIBLE:
         return False
     manifest_digest = _sha(manifest_path.read_bytes())
+    if (manifest.get("sha256") != manifest.get("independently_pinned_sha256") or
+            not isinstance(manifest.get("object_path"), str)):
+        return False
+    try:
+        root = manifest_path.parent.parent.resolve()
+        candidate = root / manifest["object_path"]
+        object_path = candidate.resolve()
+        if (not object_path.is_relative_to(root) or not object_path.is_file() or
+                candidate.is_symlink() or
+                _sha(object_path.read_bytes()) != manifest["sha256"]):
+            return False
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return False
     for line in register_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         body = json.loads(line)
         payload = body.get("payload", {})
         if payload.get("admission_status") == ADMISSION_ELIGIBLE and \
+                payload.get("source_sha256") == manifest["sha256"] and \
                 payload.get("manifest_sha256") == manifest_digest:
             return True
     return False
