@@ -164,14 +164,21 @@ def _guard_private_path(path: Path, *, container: bool = False):
     try:
         candidate = Path(os.path.abspath(os.fspath(path)))
         for part in (candidate, *candidate.parents):
-            if part.is_symlink():
+            if part.is_symlink() or (os.name == "nt" and
+                    getattr(part, "is_junction", lambda: False)()):
                 raise InternalSourceRefusal("PRIVATE_STORAGE_SYMLINK_REFUSED")
             if (part / ".git").exists() or (part / ".git").is_symlink():
                 raise InternalSourceRefusal("PRIVATE_STORAGE_INSIDE_GIT_REFUSED")
             if part != candidate and part.exists() and not part.is_dir():
                 raise InternalSourceRefusal("PRIVATE_STORAGE_PATH_INVALID")
-        if candidate.resolve() != candidate:
+        # Windows resolve() also normalizes unrelated system path aliases,
+        # case and short names. That alone is not evidence of a link.
+        resolved = candidate.resolve()
+        if os.name != "nt" and resolved != candidate:
             raise InternalSourceRefusal("PRIVATE_STORAGE_SYMLINK_REFUSED")
+        for parent in (resolved, *resolved.parents):
+            if (parent / ".git").exists() or (parent / ".git").is_symlink():
+                raise InternalSourceRefusal("PRIVATE_STORAGE_INSIDE_GIT_REFUSED")
         if container and candidate.exists() and not candidate.is_dir():
             raise InternalSourceRefusal("PRIVATE_STORAGE_PATH_INVALID")
         return candidate
