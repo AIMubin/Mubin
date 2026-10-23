@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Q0.1 — untrusted byte-pinned local Quran snapshot (not canonically authenticated)",
+  "$defs": {
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract","source_id","source_kind","provider_url","reading","script","coverage","rights_status","authority_status","declared_verse_count","raw_sha256"],
+      "properties": {
+        "contract": {"const": "mubin-quran-q01-source-manifest-v1"},
+        "source_id": {"type":"string","minLength":2,"maxLength":80,"pattern":"^[a-z][a-z0-9:_-]+$"},
+        "source_kind": {"enum": ["synthetic_fixture","external_unverified"]},
+        "provider_url": {"type":["string","null"],"maxLength":256},
+        "reading": {"const":"hafs_an_asim_kufan"},
+        "script": {"enum":["uthmani","imlaei"]},
+        "coverage": {"enum":["partial","complete_hafs_kufan"]},
+        "rights_status": {"const":"not_reviewed_for_this_use"},
+        "authority_status": {"const":"not_authenticated"},
+        "declared_verse_count": {"type":"integer","minimum":1,"maximum":6236},
+        "raw_sha256": {"type":"string","pattern":"^[0-9a-f]{64}$"}
+      },
+      "allOf": [
+        {"if":{"properties":{"source_kind":{"const":"synthetic_fixture"}}},"then":{"properties":{"provider_url":{"const":null}}}},
+        {"if":{"properties":{"source_kind":{"const":"external_unverified"}}},"then":{"properties":{"provider_url":{"type":"string","pattern":"^https://"}}}}
+      ]
+    },
+    "corpus": {
+      "type":"object",
+      "additionalProperties":false,
+      "required":["contract","verses"],
+      "properties": {
+        "contract": {"const":"mubin-quran-q01-verse-corpus-v1"},
+        "verses": {"type":"array","minItems":1,"maxItems":6236,"items":{
+          "type":"object","additionalProperties":false,
+          "required":["surah","ayah","text"],
+          "properties": {
+            "surah":{"type":"integer","minimum":1,"maximum":114},
+            "ayah":{"type":"integer","minimum":1,"maximum":286},
+            "text":{"type":"string","minLength":1,"maxLength":4000}
+          }
+        }}
+      }
+    }
+  }
+}

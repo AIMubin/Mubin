@@ -261,3 +261,4 @@ private inputs, CLI arguments, source-ID namespace differences, synthetic CI,
 and the unresolved W2 and independent-anchoring limitations. No protected
 source bytes are supplied to GitHub and historical source receipts are not
 modified or promoted.
+

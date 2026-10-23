@@ -93,3 +93,19 @@ The earlier notes above document stages of the evidence campaign, not today's to
 Every returned tafsir row now includes `source_citation` with the dataset key, a work label, the exact sura:ayah locator, SHA-256 of its imported text field, and explicit `NOT_YET_VERIFIED` edition and `UNKNOWN_UNLESS_SEPARATELY_ESTABLISHED` rights labels. The citation remains visible even when the source's text is quarantined (e.g., the four Baghawi suspected cutoff records), without changing the suppression behavior or mutating the original database. The label identifies the imported Tafsir Center source key, **not** an independently verified printed edition.
 
 These citations aid reproducible use and research; they do not automatically authorize reproducing protected editorial content. See [source-use policy](../../docs/SOURCE_ATTRIBUTION_POLICY.md). The Q0.3 internal engineering qualification scope remains unchanged.
+
+## Independent Q0.1 snapshot-lookup adapter (research-only)
+
+The [offline Q0.1 snapshot adapter](q01/engine.py) adds bounded, caller-
+supplied SHA-256-pinned JSON verse-reference lookup and query-only Arabic
+marks-insensitive search. It is **distinct from and does not supersede**
+Q0.3's current source-connected Quran/tafsir workflow. The committed
+[`q01` fixture](fixtures/q01-verses-synthetic.json) comprises **invented
+Arabic phrases**, not Quran verses; do not display it as scripture.
+
+Run its independent synthetic suite with
+`python -m unittest discover -s core/tests -p test_quran_q01.py -v`.
+Source snapshot SHA matching does not authenticate Quran wording, a modern
+edition, reading, copyright or a public display permission. Live Quran
+source display remains subject to the existing Q0.3 pinned-witness and
+rights protections. See [the Q0.1 research contract](../../docs/research/QURAN-Q01-SNAPSHOT-INTEGRITY.md).
