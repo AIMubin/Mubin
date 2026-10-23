@@ -59,7 +59,12 @@ The query JSON is a bounded array of `{"id": "...", "literal": "...",
 metadata-only exact lexical replay, **1** for a refusal, **3** when a required
 private input is missing. The CLI prints no private paths or source text; it
 writes a fresh metadata report or refusal receipt only to a path outside Git.
-Always check the current process exit code, not a cached earlier report.
+**Report destinations must also lie outside the source vault and cannot be
+the intake manifest, usage register, Stage04 manifest, query file, admitted
+object, or any existing hard link to these inputs.** Results are written
+using an atomic same-directory replacement; no input evidence is deliberately
+modified, even when a replay is refused. Always check the current process
+exit code, not a cached earlier report.
 
 ## Existing al-Waraqat W1/W2 evidence is not silently upgraded
 
