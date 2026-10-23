@@ -1,0 +1,14 @@
+{
+  "contract": "mubin-quran-q01b-verbatim-source-v1",
+  "source_kind": "unverified_github_mirror",
+  "source_id": "mirror:acfatah-tanzil-uthmani-v1.1",
+  "source_url": "https://raw.githubusercontent.com/acfatah/tanzil/052b515f3a24dfacbe4cafc3b89f0681a447f462/data/quran-uthmani.txt",
+  "source_commit": "052b515f3a24dfacbe4cafc3b89f0681a447f462",
+  "source_git_blob_sha1": "f2f03c415ea50f8493d2058ec67a90257333abe3",
+  "raw_sha256": "f64fe7657dbe2e185e9995e14f7a67ee6cf1a30773f39184883d7a763d70fb19",
+  "raw_byte_count": 1396677,
+  "coverage": "complete_hafs_kufan",
+  "reading": "hafs_an_asim_kufan",
+  "rights_status": "requires_use_review",
+  "authority_status": "not_authenticated"
+}

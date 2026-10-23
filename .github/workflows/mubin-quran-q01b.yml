@@ -1,0 +1,54 @@
+name: Mubin Quran Q0.1b pinned raw mirror candidate
+
+on:
+  pull_request:
+    paths:
+      - "engines/quran/q01b/**"
+      - "core/tests/test_quran_q01b.py"
+      - "docs/research/QURAN-Q01B-**"
+      - "docs/reviews/QURAN-Q01B-**"
+      - ".github/workflows/mubin-quran-q01b.yml"
+  push:
+    branches: [main]
+    paths:
+      - "engines/quran/q01b/**"
+      - "core/tests/test_quran_q01b.py"
+      - "docs/research/QURAN-Q01B-**"
+      - "docs/reviews/QURAN-Q01B-**"
+      - ".github/workflows/mubin-quran-q01b.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tanzil-mirror-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: core/requirements-test.txt
+      - run: python -m pip install -r core/requirements-test.txt
+      - run: python -m compileall -q engines/quran/q01b core/tests
+      - run: python -m unittest discover -s core/tests -v
+      - name: Read pinned GitHub mirror candidate (temporary; never committed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --max-time 45 --max-filesize 4194304 \
+            'https://raw.githubusercontent.com/acfatah/tanzil/052b515f3a24dfacbe4cafc3b89f0681a447f462/data/quran-uthmani.txt' \
+            --output "${RUNNER_TEMP}/q01b-source.txt"
+          sha256sum "${RUNNER_TEMP}/q01b-source.txt"
+          python -m engines.quran.q01b \
+            --manifest engines/quran/q01b/sources/tanzil-mirror-v1.1.json \
+            --source "${RUNNER_TEMP}/q01b-source.txt" --json verify
+          python -m engines.quran.q01b \
+            --manifest engines/quran/q01b/sources/tanzil-mirror-v1.1.json \
+            --source "${RUNNER_TEMP}/q01b-source.txt" --json get 2:1
+          python -m engines.quran.q01b \
+            --manifest engines/quran/q01b/sources/tanzil-mirror-v1.1.json \
+            --source "${RUNNER_TEMP}/q01b-source.txt" --json get 114:6
