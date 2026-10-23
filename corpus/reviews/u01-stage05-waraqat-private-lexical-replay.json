@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage05-waraqat-private-lexical-replay",
+  "date_local": "2026-10-23",
+  "git_commit_audited": "0de1dd2b7ed8a6bddc97d82998da4af519417233",
+  "bridge": "usul-private-admission-lexical/0.1.0",
+  "lexical_engine": "usul-lexical-index/0.1.0",
+  "campaign_status": "PRIVATE_ADMITTED_LEXICAL_REPLAY_PASS",
+  "source_pins_verified": {
+    "W1_html": "66ec33c1825acdf82b3720f89d89aac15aa6e993356c0d90b41e53fe9a2fa044",
+    "W1_utf8_export": "9ce9de30f1af3ef32b2bf55b0473c9459e0cf530e3b557535744b284c760f4df",
+    "W1_manifest": "5bf586787dbb9f84d03fc21c62ee32619b66b474c66a6c890aeb813219f853cf",
+    "W1_bab_amr": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+    "W2_html": "3c4de1baa99bad782b5fba066523ca9f12798525907edede93bd1046ef36f0fa",
+    "W2_bab_amr_hardened": "6e88c20addae4744be5d3754fe17e46965d96793f98f869c6d1027f7c343981f"
+  },
+  "admission_verified": {
+    "source_id": "usul-waraqat-w1-export",
+    "visibility": "internal_only",
+    "admission_status": "INTERNAL_DEVELOPMENT_RESEARCH_ELIGIBLE",
+    "is_admitted": true
+  },
+  "stage04_coverage": {
+    "status": "SNAPSHOT_COVERAGE_PASS",
+    "trusted_manifest_sha256": "5bf586787dbb9f84d03fc21c62ee32619b66b474c66a6c890aeb813219f853cf"
+  },
+  "stage05_lexical": {
+    "status": "LEXICAL_INDEX_PASS",
+    "indexed_line_count": 22,
+    "section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab"
+  },
+  "per_query": [
+    {
+      "query_id": "pilot:amr-term",
+      "matches": 6,
+      "classification": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION"
+    },
+    {
+      "query_id": "pilot:qarinah-term",
+      "matches": 1,
+      "classification": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION"
+    },
+    {
+      "query_id": "pilot:wujub-term",
+      "matches": 1,
+      "classification": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION"
+    },
+    {
+      "query_id": "pilot:nadb-term",
+      "matches": 1,
+      "classification": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION"
+    },
+    {
+      "query_id": "pilot:ibaha-term",
+      "matches": 1,
+      "classification": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION"
+    },
+    {
+      "query_id": "pilot:word-boundary-diagnostic",
+      "matches": 1,
+      "classification": "EXACT_LITERAL_MATCHES_IN_PINNED_SECTION"
+    }
+  ],
+  "tests": {
+    "engines_usul": "399 OK (3 skipped)",
+    "core": "84 OK"
+  },
+  "limits": {
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "semantic_rules_qualified": false,
+    "semantic_equivalence_verified": false,
+    "public_fatwa_authorized": false,
+    "juristic_inference_allowed": false,
+    "printed_edition_verified": false,
+    "full_book_coverage_verified": false
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}
