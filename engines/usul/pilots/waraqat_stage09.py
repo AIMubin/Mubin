@@ -54,7 +54,13 @@ def _safe_report_path(report_path, protected_inputs):
     """
     dest = _private(report_path)
     _private(dest.parent)
-    inputs = [_private(item) for item in protected_inputs]
+    # Input validity is checked separately by main(). Even if an input has
+    # become a symlink, a broken file, or a path inside Git, the destination
+    # must still receive a fresh REFUSED receipt when independently safe.
+    # Resolve candidate identities here ONLY to prevent report aliasing; do
+    # not treat a resolved input path as authorized for reading.
+    inputs = [Path(os.path.abspath(os.fspath(item)))
+              for item in protected_inputs]
     try:
         for original in inputs:
             if (dest == original or dest.resolve() == original.resolve() or
