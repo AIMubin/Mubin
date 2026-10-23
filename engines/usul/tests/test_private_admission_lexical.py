@@ -234,6 +234,57 @@ class PrivateAdmissionLexicalTests(unittest.TestCase):
         self.assertEqual(refusal["reason_code"], "SOURCE_NOT_ADMITTED")
         self.assertNotIn("source_sha256", refusal)
 
+    def test_report_never_overwrites_a_protected_input_or_source_object(self):
+        self.admit()
+        object_path = self.vault / "objects" / self.digest[:2] / self.digest
+        originals = (self.intake, self.register, self.snapshot_manifest,
+                     self.query_file, object_path)
+        before = {path: path.read_bytes() for path in originals}
+        for protected_path in originals:
+            with self.subTest(name=protected_path.name):
+                args = self.cli_args()
+                args[-1] = str(protected_path)
+                self.assertEqual(main(args), 1)
+                for path in originals:
+                    self.assertEqual(path.read_bytes(), before[path])
+
+    def test_report_rejects_hardlink_aliases_of_input_and_object(self):
+        self.admit()
+        object_path = self.vault / "objects" / self.digest[:2] / self.digest
+        originals = (self.intake, self.register, self.snapshot_manifest,
+                     self.query_file, object_path)
+        before = {path: path.read_bytes() for path in originals}
+        alias = self.root / "hardlinked-report.json"
+        for protected_path in originals:
+            alias.unlink(missing_ok=True)
+            try:
+                alias.hardlink_to(protected_path)
+            except OSError:
+                self.skipTest("Host filesystem does not support hard links")
+            with self.subTest(name=protected_path.name):
+                args = self.cli_args()
+                args[-1] = str(alias)
+                self.assertEqual(main(args), 1)
+                for path in originals:
+                    self.assertEqual(path.read_bytes(), before[path])
+        alias.unlink(missing_ok=True)
+
+    def test_failed_scan_cannot_write_refusal_over_register_alias(self):
+        self.admit()
+        before = self.register.read_bytes()
+        self.snapshot_pin = "0" * 64
+        args = self.cli_args()
+        args[-1] = str(self.register)
+        self.assertEqual(main(args), 1)
+        self.assertEqual(self.register.read_bytes(), before)
+
+    def test_private_metadata_receipts_are_replaced_without_temp_files(self):
+        self.admit()
+        self.assertEqual(main(self.cli_args()), 0)
+        self.assertTrue(self.report.exists())
+        self.assertEqual(main(self.cli_args()), 0)
+        self.assertEqual(list(self.root.glob(".usul-report-*.tmp")), [])
+
     def test_cli_private_report_cannot_be_written_inside_git(self):
         self.admit()
         git = self.root / "repo"

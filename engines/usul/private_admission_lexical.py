@@ -10,7 +10,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import tempfile
 
 from corpus.internal_research_ingest import (
     ADMISSION_ELIGIBLE, _guard_private_path, is_admitted,
@@ -164,6 +166,71 @@ def scan_admitted_section(admission_manifest_path, usage_register_path,
         raise PrivateUsulRefusal("PRIVATE_USUL_BRIDGE_FAILED") from None
 
 
+def _report_destination(report_path, protected_paths):
+    """Refuse vault writes and aliases to any private input, even hard links.
+
+    Only one trusted local writer is supported: concurrent path swaps remain
+    explicitly out of scope. Recheck again before the atomic replacement.
+    """
+    destination = _private(report_path)
+    _private(destination.parent)
+    originals = [_private(item) for item in protected_paths]
+    admission_path = originals[0]
+    # A report does not belong anywhere in the source vault, even if its
+    # filename is not a currently known manifest or content-addressed object.
+    vault_root = admission_path.parent.parent
+    _require(not destination.is_relative_to(vault_root),
+             "PRIVATE_REPORT_DESTINATION_REFUSED")
+
+    # The admitted object is not a CLI argument; derive and protect its inode.
+    try:
+        if admission_path.is_file():
+            candidate = json.loads(_bound_read(admission_path, 65536).decode("utf-8"))
+            digest = candidate.get("sha256") if type(candidate) is dict else None
+            if type(digest) is str and SHA256.fullmatch(digest) is not None:
+                object_path = vault_root / "objects" / digest[:2] / digest
+                originals.append(_private(object_path))
+    except (OSError, UnicodeError, ValueError, TypeError, RuntimeError):
+        # Malformed admission will be refused by the scan. Continue guarding
+        # every known input and the whole vault before writing a refusal.
+        pass
+
+    for original in originals:
+        if destination == original:
+            raise PrivateUsulRefusal("PRIVATE_REPORT_DESTINATION_REFUSED")
+        try:
+            if (destination.exists() and original.exists() and
+                    os.path.samefile(destination, original)):
+                raise PrivateUsulRefusal("PRIVATE_REPORT_DESTINATION_REFUSED")
+        except PrivateUsulRefusal:
+            raise
+        except (OSError, ValueError, TypeError):
+            raise PrivateUsulRefusal("PRIVATE_REPORT_DESTINATION_REFUSED") from None
+    return destination
+
+
+def _write_private_report(destination, result, protected_paths):
+    """Atomic replace prevents truncating a prior receipt before commit."""
+    destination = _report_destination(destination, protected_paths)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", newline="\n", delete=False,
+                prefix=".usul-report-", suffix=".tmp",
+                dir=str(destination.parent)) as handle:
+            temporary = Path(handle.name)
+            handle.write(json.dumps(result, ensure_ascii=False,
+                                    sort_keys=True, indent=2) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        _report_destination(destination, protected_paths)
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     for arg in ("admission-manifest", "usage-register", "snapshot-manifest",
@@ -176,9 +243,9 @@ def main(argv=None):
               args.snapshot_manifest, args.queries)
     report_path = None
     try:
-        # Never create or overwrite a report under Git, including linked parents.
-        report_path = _private(args.report)
-        _private(report_path.parent)
+        # Check all inputs, the derived admitted object, and hard-link aliases
+        # BEFORE indexing or writing either success or refusal metadata.
+        report_path = _report_destination(args.report, inputs)
         if not all(x.is_file() for x in inputs):
             result, code = {"status": "PENDING_PRIVATE_INPUTS"}, 3
         else:
@@ -195,16 +262,13 @@ def main(argv=None):
         result, code = {"status": "REFUSED",
                         "reason_code": "PRIVATE_USUL_BRIDGE_FAILED"}, 1
 
-    # Persist a fresh refusal or PENDING result, overwriting any stale success.
-    # The process exit code remains the authoritative execution result.
+    # Persist current refusal/PENDING status if destination is safe; never
+    # overwrite source evidence through report-path or hard-link aliasing.
     if report_path is not None:
         try:
-            _private(report_path)
-            _private(report_path.parent)
-            report_path.parent.mkdir(parents=True, exist_ok=True)
-            report_path.write_text(
-                json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2)
-                + "\n", encoding="utf-8")
+            _write_private_report(report_path, result, inputs)
+        except PrivateUsulRefusal as exc:
+            result, code = {"status": "REFUSED", "reason_code": exc.code}, 1
         except (OSError, ValueError, TypeError, RuntimeError, UnicodeError):
             result, code = {"status": "REFUSED",
                             "reason_code": "PRIVATE_REPORT_WRITE_FAILED"}, 1
