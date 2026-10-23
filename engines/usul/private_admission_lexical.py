@@ -166,6 +166,21 @@ def scan_admitted_section(admission_manifest_path, usage_register_path,
         raise PrivateUsulRefusal("PRIVATE_USUL_BRIDGE_FAILED") from None
 
 
+def _within_private_vault(destination: Path, vault_root: Path) -> bool:
+    """Canonical + lexical containment, including Windows 8.3 path aliases.
+
+    _private() already rejects symlinks/reparse points, but on Windows its
+    absolute output may retain different 8.3/long spellings of the same
+    existing ancestor. Path.resolve() canonicalizes those aliases even when
+    the report leaf does not exist.
+    """
+    try:
+        return (destination.is_relative_to(vault_root) or
+                destination.resolve().is_relative_to(vault_root.resolve()))
+    except (OSError, RuntimeError, ValueError, TypeError):
+        raise PrivateUsulRefusal("PRIVATE_REPORT_DESTINATION_REFUSED") from None
+
+
 def _report_destination(report_path, protected_paths):
     """Refuse vault writes and aliases to any private input, even hard links.
 
@@ -179,7 +194,7 @@ def _report_destination(report_path, protected_paths):
     # A report does not belong anywhere in the source vault, even if its
     # filename is not a currently known manifest or content-addressed object.
     vault_root = admission_path.parent.parent
-    _require(not destination.is_relative_to(vault_root),
+    _require(not _within_private_vault(destination, vault_root),
              "PRIVATE_REPORT_DESTINATION_REFUSED")
 
     # The admitted object is not a CLI argument; derive and protect its inode.
