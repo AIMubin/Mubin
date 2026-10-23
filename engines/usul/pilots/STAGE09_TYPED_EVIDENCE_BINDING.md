@@ -29,7 +29,30 @@ python -m engines.usul.pilots.waraqat_stage09 --stage08-graph "D:\MubinSources\w
 
 Exit 0: STAGE09_TYPED_REFERENCE_PROPOSALS_PASS (byte-level research reference proposal, not a juridical decision).
 Exit 3: PENDING_STAGE09_SOURCE_BINDING_INPUTS (private graph/P0 inputs not supplied).
-Exit 1: FAIL (bad source/graph pin, mismatching quote, unrecognized or candidate-only occurrence, malformed P0/proposal data).
+Exit 1: FAIL/REFUSED (bad source/graph pin, mismatching quote, unrecognized or candidate-only occurrence, malformed P0/proposal data, or unsafe output destination).
+
+### Protected inputs and metadata-only report
+
+The Stage09 runner now rejects input and report paths inside any Git worktree, as
+well as symlink/reparse redirections. The report destination must **not** equal
+or hardlink to the Stage08 graph, P0 bundle or proposal input. It may overwrite
+only a previous Stage09 report carrying its recognized `report_kind` and
+`runner` markers; an unrelated existing file is protected.
+
+Reports are written through a same-directory temporary file with fsync and
+atomic replacement. On a safe destination, the current refusal or missing-input
+status replaces the previous Stage09 status, preventing stale PASS reports.
+The command prints only status/reason metadata, not filenames or private text.
+These checks assume **one trusted local writer**; they do not defend against
+an adversary replacing directory entries concurrently.
+
+**Important prerequisite for W1:** A successful Stage05 lexical replay alone
+does not construct a valid P0 bundle or a Stage08 exact-occurrence proposal.
+Select real Stage08 `TEXT_OCCURRENCE` identifiers and already-existing P0
+Source/Evidence records; verify matching section and excerpt digests and the
+independently pinned Stage08 canonical graph hash. Keep all source and P0
+inputs outside Git. Mark every proposal `UNASSESSED`; no rule execution or
+scholarly/fiqh/publishing authorization follows from Stage09.
 
 [Synthetic byte-binding tests](../tests/test_typed_evidence_binding.py) use the project’s synthetic P0 demo bundle and original-byte fixture; [runner tests](../tests/test_waraqat_stage09.py) enforce the frozen Stage08 public receipt digest.
 
