@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import tempfile
 
 from engines.usul.concept_definitions import (
     SCHEMA, build_definitions, canonical, sha, normalize_manifest,
@@ -177,7 +178,50 @@ def prepare_private_manifest(receipt, intake, root: Path, key: bytes):
     return normalize_manifest(manifest), report
 
 
-def main():
+
+def _publish_private_pair(destinations, objects):
+    """Create both outputs from fully written same-directory private files.
+
+    An existing destination is NEVER overwritten (os.link is no-replace).
+    Ordinary second-output failures remove only files this function created.
+    Publishing two paths is not crash-atomic: after abrupt termination a
+    lone output is incomplete and must NOT be accepted as a completed intake.
+    Only one trusted operator/writer is supported.
+    """
+    need(len(destinations) == len(objects) == 2 and
+         destinations[0] != destinations[1] and
+         destinations[0].parent == destinations[1].parent,
+         "PRIVATE_OUTPUT_PAIR_INVALID")
+    staged = []
+    created = []
+    try:
+        for obj, dest in zip(objects, destinations):
+            raw = (json.dumps(obj, ensure_ascii=False, sort_keys=True,
+                              indent=2) + "\n").encode("utf-8")
+            with tempfile.NamedTemporaryFile(
+                    mode="wb", dir=dest.parent,
+                    prefix=".private-definition-", suffix=".tmp",
+                    delete=False) as handle:
+                staged.append(Path(handle.name))
+                handle.write(raw)
+                handle.flush()
+                os.fsync(handle.fileno())
+        for temporary, destination in zip(staged, destinations):
+            # Same-directory hardlink publishes fully flushed bytes atomically
+            # and fails if another file appeared since output preflight.
+            os.link(temporary, destination)
+            created.append(destination)
+    except BaseException:
+        for owned in reversed(created):
+            owned.unlink(missing_ok=True)
+        raise
+    finally:
+        for temporary in staged:
+            temporary.unlink(missing_ok=True)
+
+
+
+def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--private-root", type=Path, required=True)
     p.add_argument("--private-intake", required=True,
@@ -189,7 +233,7 @@ def main():
     p.add_argument("--basis-receipt", type=Path, default=(
         REPO_ROOT / "corpus/reviews/u02-waraqat-private-source-acceptance-PASS.json"))
     p.add_argument("--key-env", default="MUBIN_PRIVATE_HMAC_KEY_HEX")
-    args = p.parse_args()
+    args = p.parse_args(argv)
     try:
         try:
             root = args.private_root.resolve()
@@ -227,9 +271,7 @@ def main():
         # the original validator report digest as a separately scoped field.
         out_report.pop("report_sha256")
         out_report["report_sha256"] = sha(canonical(out_report))
-        for path, obj in zip(paths[1:], (manifest, out_report)):
-            path.write_text(json.dumps(obj, ensure_ascii=False, sort_keys=True,
-                                       indent=2)+"\n", encoding="utf-8")
+        _publish_private_pair(paths[1:], (manifest, out_report))
         code = 0
         display = "PRIVATE_CANDIDATES_PREPARED_UNASSESSED"
     except (CatalogError, OSError, ValueError, TypeError,
