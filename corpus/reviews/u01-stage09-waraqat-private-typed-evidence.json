@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "u01-stage09-waraqat-private-typed-evidence",
+  "date_local": "2026-10-23",
+  "git_commit_audited": "d0f1182b10ce35618f658355703dd4952730e9fc",
+  "campaign_status": "STAGE09_TYPED_REFERENCE_PROPOSALS_PASS",
+  "runner": "waraqat-stage09-typed-reference/0.1.0",
+  "typed_evidence_binding": "usul-typed-evidence-binding/0.1.0",
+  "frozen_graph_sha256": "72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2",
+  "proposal_count": 12,
+  "classification": "EXACT_BYTE_CITATION_PROPOSAL / UNASSESSED",
+  "all_byte_verified": true,
+  "p0_bundle_mutated": false,
+  "p0_rule_execution_performed": false,
+  "juristic_inference_allowed": false,
+  "scholarly_verified": false,
+  "redistribution_approved": false,
+  "public_fatwa_authorized": false,
+  "source_text_included": false,
+  "tests": {
+    "engines_usul": "407 OK (5 skipped)",
+    "core": "84 OK"
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}
