@@ -15,7 +15,7 @@ from engines.usul.private_admission_lexical import (
 )
 from engines.usul.source_snapshot_prepare import propose
 
-TEXT = "تمهيد اصطناعي\nالأمر\nسطر تجريبي للأمر\nالنهي\n"
+TEXT = "تمهيد اصطناعي\nالأمر\nسطر تجريبي والأمر\nالنهي\n"
 SOURCE_URL = "https://example.invalid/synthetic-private-witness"
 META = {
     "source_id": "pilot:synthetic-snapshot",
