@@ -8,12 +8,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from engines.usul.concept_definitions import build_definitions
 from engines.usul.concept_rule_catalog import CatalogError, canonical, sha
 from engines.usul.pilots.waraqat_definition_private_intake import (
-    BASIS_PIN, REPO_ROOT, _private_path, prepare_private_manifest,
+    BASIS_PIN, REPO_ROOT, _private_path, prepare_private_manifest, main,
 )
 
 RECEIPT_PATH = REPO_ROOT / "corpus/reviews/u02-waraqat-private-source-acceptance-PASS.json"
@@ -285,6 +286,79 @@ class PrivateWaraqatDefinitionIntakeTests(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
         self.assertNotIn("w1-amr.txt", r.stdout+r.stderr)
         self.assertFalse((self.root / "definitions-metadata.json").exists())
+
+
+    def test_two_output_second_publish_failure_leaves_no_partial_receipt(self):
+        # Synthetic local private text only. Real Stage09/P0 evidence unused.
+        self.intake_path = self.root / "intake.json"
+        self.intake_path.write_text(json.dumps(self.intake), encoding="utf-8")
+        args = ["--private-root", str(self.root), "--private-intake", "intake.json",
+                "--output-manifest", "defs.json",
+                "--output-report", "receipt.json"]
+        before = {name: (self.root / name).read_bytes() for name in self.files}
+        real_link = os.link
+        calls = []
+
+        def fail_second(src, dst, *a, **kw):
+            calls.append(str(dst))
+            if len(calls) == 2:
+                raise OSError("synthetic second-publication failure")
+            return real_link(src, dst, *a, **kw)
+
+        with patch.dict(os.environ, {"MUBIN_PRIVATE_HMAC_KEY_HEX": self.key.hex()}):
+            with patch("engines.usul.pilots.waraqat_definition_private_intake.os.link",
+                       side_effect=fail_second):
+                self.assertEqual(main(args), 2)
+        self.assertEqual(len(calls), 2)
+        self.assertFalse((self.root / "defs.json").exists())
+        self.assertFalse((self.root / "receipt.json").exists())
+        self.assertEqual(list(self.root.glob(".private-definition-*.tmp")), [])
+        for name, data in before.items():
+            self.assertEqual((self.root / name).read_bytes(), data)
+
+    def test_race_collision_does_not_overwrite_unrelated_report(self):
+        (self.root / "intake.json").write_text(json.dumps(self.intake),
+                                                encoding="utf-8")
+        args = ["--private-root", str(self.root), "--private-intake", "intake.json",
+                "--output-manifest", "defs.json",
+                "--output-report", "receipt.json"]
+        report = self.root / "receipt.json"
+        real_link = os.link
+        count = 0
+
+        def appear_before_second(src, dst, *a, **kw):
+            nonlocal count
+            count += 1
+            if count == 2:
+                report.write_bytes(b"PREEXISTING_UNRELATED_PRIVATE_FILE")
+            return real_link(src, dst, *a, **kw)
+
+        with patch.dict(os.environ, {"MUBIN_PRIVATE_HMAC_KEY_HEX": self.key.hex()}):
+            with patch("engines.usul.pilots.waraqat_definition_private_intake.os.link",
+                       side_effect=appear_before_second):
+                self.assertEqual(main(args), 2)
+        self.assertEqual(report.read_bytes(), b"PREEXISTING_UNRELATED_PRIVATE_FILE")
+        self.assertFalse((self.root / "defs.json").exists())
+        self.assertEqual(list(self.root.glob(".private-definition-*.tmp")), [])
+
+    def test_success_pair_is_complete_and_cannot_be_replaced(self):
+        (self.root / "intake.json").write_text(json.dumps(self.intake),
+                                                encoding="utf-8")
+        args = ["--private-root", str(self.root), "--private-intake", "intake.json",
+                "--output-manifest", "defs.json",
+                "--output-report", "receipt.json"]
+        with patch.dict(os.environ, {"MUBIN_PRIVATE_HMAC_KEY_HEX": self.key.hex()}):
+            self.assertEqual(main(args), 0)
+            original = [(self.root / file).read_bytes()
+                        for file in ("defs.json", "receipt.json")]
+            self.assertEqual(main(args), 2)
+        self.assertEqual(original, [(self.root / file).read_bytes()
+                                   for file in ("defs.json", "receipt.json")])
+        self.assertEqual(list(self.root.glob(".private-definition-*.tmp")), [])
+        receipt = json.loads(original[1].decode("utf-8"))
+        payload = {key: val for key, val in receipt.items() if key != "report_sha256"}
+        self.assertEqual(receipt["report_sha256"], sha(canonical(payload)))
+        self.assertFalse(receipt["scholarly_verified"])
 
 
 if __name__ == "__main__":
