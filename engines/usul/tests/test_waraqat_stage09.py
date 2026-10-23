@@ -144,6 +144,52 @@ class Stage09PrivateReportSafetyTests(unittest.TestCase):
         self.assertEqual(list(self.root.glob(".stage09-report-*.tmp")), [])
         self.assertTrue(all(path.exists() for path in self.inputs))
 
+    def test_stale_pass_replaced_when_graph_moved_into_git(self):
+        mock_result = {
+            "status": "STAGE09_TYPED_REFERENCE_PROPOSALS_PASS",
+            "proposal_count": 1, "source_text_included": False,
+        }
+        with patch("engines.usul.pilots.waraqat_stage09.bind_exact_observations",
+                   return_value=mock_result):
+            self.assertEqual(main(self.args()), 0)
+        self.assertEqual(json.loads(self.report.read_text(encoding="utf-8"))["status"],
+                         "STAGE09_TYPED_REFERENCE_PROPOSALS_PASS")
+        git = self.root / "repo"
+        (git / ".git").mkdir(parents=True)
+        moved = git / "private-graph.json"
+        self.graph.replace(moved)
+        argv = self.args()
+        argv[1] = str(moved)
+        original = moved.read_bytes()
+        self.assertEqual(main(argv), 1)
+        receipt = json.loads(self.report.read_text(encoding="utf-8"))
+        self.assertEqual(receipt["status"], "REFUSED")
+        self.assertEqual(receipt["reason_code"], "PRIVATE_STAGE09_PATH_REFUSED")
+        self.assertEqual(moved.read_bytes(), original)
+        self.assertNotIn("SECRET_SENTINEL", self.report.read_text(encoding="utf-8"))
+
+    def test_stale_pass_replaced_when_input_becomes_symlink(self):
+        mock_result = {
+            "status": "STAGE09_TYPED_REFERENCE_PROPOSALS_PASS",
+            "proposal_count": 1, "source_text_included": False,
+        }
+        with patch("engines.usul.pilots.waraqat_stage09.bind_exact_observations",
+                   return_value=mock_result):
+            self.assertEqual(main(self.args()), 0)
+        old_bytes = self.graph.read_bytes()
+        moved = self.root / "new-private-graph.json"
+        moved.write_bytes(old_bytes)
+        self.graph.unlink()
+        try:
+            self.graph.symlink_to(moved)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink privilege unavailable")
+        self.assertEqual(main(self.args()), 1)
+        receipt = json.loads(self.report.read_text(encoding="utf-8"))
+        self.assertEqual(receipt["status"], "REFUSED")
+        self.assertEqual(receipt["reason_code"], "PRIVATE_STAGE09_PATH_REFUSED")
+        self.assertEqual(moved.read_bytes(), old_bytes)
+
     def test_report_symlink_to_input_is_refused(self):
         target = self.root / "report-linked.json"
         try:
