@@ -477,6 +477,43 @@ class InternalResearchIngestTests(unittest.TestCase):
         self.assertEqual(self.register.read_bytes(), bad)
         self.assertEqual(manifest_path.read_bytes(), manifest_bytes)
 
+    def test_jsonl_unicode_separators_within_metadata_remain_admitted(self):
+        # ensure_ascii=False legitimately retains Unicode line separators
+        # inside JSON strings; only the ASCII LF is a JSONL delimiter.
+        metadata = _meta(acquisition_evidence="archive\u2028folio\u2029page\u0085receipt")
+        first = ingest_internal_research(
+            self.source, self.corpus_root, self.register,
+            source_meta=metadata, attestation=_attestation(),
+            use_record=_use_record(), independently_pinned_sha256=self.pin)
+        manifest = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + self.pin[:16] + ".json")
+        self.assertTrue(verify_usage_register(self.register)["chain_valid"])
+        self.assertTrue(is_admitted(manifest, self.register))
+        again = ingest_internal_research(
+            self.source, self.corpus_root, self.register,
+            source_meta=metadata, attestation=_attestation(),
+            use_record=_use_record(), independently_pinned_sha256=self.pin)
+        self.assertEqual(first["manifest_sha256"], again["manifest_sha256"])
+        self.assertEqual(verify_usage_register(self.register)["entries"], 2)
+        self.assertTrue(is_admitted(manifest, self.register))
+
+    def test_nonobject_manifest_is_refused_as_false(self):
+        self.admit()
+        manifest = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + self.pin[:16] + ".json")
+        manifest.write_text("[]\n", encoding="utf-8")
+        self.assertFalse(is_admitted(manifest, self.register))
+
+    def test_unreadable_manifest_is_refused_as_false(self):
+        from unittest.mock import patch
+
+        self.admit()
+        manifest = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + self.pin[:16] + ".json")
+        with patch.object(Path, "read_bytes",
+                          side_effect=PermissionError("private-manifest-path")):
+            self.assertFalse(is_admitted(manifest, self.register))
+
     def test_repeat_admission_preserves_manifest_and_appends_usage(self):
         first = self.admit()
         second = self.admit()
