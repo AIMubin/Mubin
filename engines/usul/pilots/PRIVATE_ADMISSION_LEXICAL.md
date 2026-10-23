@@ -63,7 +63,11 @@ writes a fresh metadata report or refusal receipt only to a path outside Git.
 the intake manifest, usage register, Stage04 manifest, query file, admitted
 object, or any existing hard link to these inputs.** Results are written
 using an atomic same-directory replacement; no input evidence is deliberately
-modified, even when a replay is refused. Always check the current process
+modified, even when a replay is refused. Vault containment checks both lexical
+and resolved/canonical paths to reject Windows 8.3 short-name aliases of the
+private vault. The real 8.3 regression executes only where the runner's
+filesystem has short names enabled; a cross-platform canonicalization test
+runs regardless. Always check the current process
 exit code, not a cached earlier report.
 
 ## Existing al-Waraqat W1/W2 evidence is not silently upgraded

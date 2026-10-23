@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +12,7 @@ from corpus.internal_research_ingest import (
     ingest_internal_research, verify_usage_register,
 )
 from engines.usul.private_admission_lexical import (
-    PrivateUsulRefusal, main, scan_admitted_section,
+    PrivateUsulRefusal, _within_private_vault, main, scan_admitted_section,
 )
 from engines.usul.source_snapshot_prepare import propose
 
@@ -68,7 +69,7 @@ class PrivateAdmissionLexicalTests(unittest.TestCase):
         self.source = self.root / "original-synthetic.txt"
         self.source.write_bytes(TEXT.encode("utf-8"))
         self.digest = sha(self.source.read_bytes())
-        self.vault = self.root / "vault"
+        self.vault = self.root / "private-source-vault-with-long-name"
         self.register = self.root / "register.jsonl"
         self.snapshot_manifest = self.root / "snapshot.json"
         proposed = propose(self.source, META, "pilot:section-amr", "الأمر", "النهي")
@@ -284,6 +285,47 @@ class PrivateAdmissionLexicalTests(unittest.TestCase):
         self.assertTrue(self.report.exists())
         self.assertEqual(main(self.cli_args()), 0)
         self.assertEqual(list(self.root.glob(".usul-report-*.tmp")), [])
+
+    def test_canonical_vault_boundary_detects_simulated_short_alias(self):
+        # Platform-independent guard regression: lexical paths differ but
+        # their resolved identities refer to the same private vault.
+        from unittest.mock import patch
+
+        long_vault = self.root / "private-source-vault-with-long-name"
+        alias_report = self.root / "PRIVAT~1" / "manifests" / "other.json"
+        actual_report = long_vault / "manifests" / "other.json"
+        self.assertFalse(alias_report.is_relative_to(long_vault))
+        original_resolve = Path.resolve
+
+        def canonicalized(path, strict=False):
+            if path == alias_report:
+                return actual_report
+            if path == long_vault:
+                return long_vault
+            return original_resolve(path, strict=strict)
+
+        with patch.object(Path, "resolve", autospec=True,
+                          side_effect=canonicalized):
+            self.assertTrue(_within_private_vault(alias_report, long_vault))
+
+    @unittest.skipUnless(os.name == "nt", "Native Windows 8.3 regression")
+    def test_windows_83_alias_cannot_write_another_vault_manifest(self):
+        # Uses real GetShortPathNameW, if volume policy actually enables it;
+        # never claim this branch was exercised when shortnames are disabled.
+        from ctypes import create_unicode_buffer, windll
+
+        self.admit()
+        buffer = create_unicode_buffer(32768)
+        length = windll.kernel32.GetShortPathNameW(
+            str(self.vault), buffer, len(buffer))
+        if (length <= 0 or length >= len(buffer) or
+                str(self.vault).casefold() == buffer.value.casefold()):
+            self.skipTest("8.3 short names disabled or unavailable")
+        target = Path(buffer.value) / "manifests" / "different-source.json"
+        args = self.cli_args()
+        args[-1] = str(target)
+        self.assertEqual(main(args), 1)
+        self.assertFalse((self.vault / "manifests" / "different-source.json").exists())
 
     def test_cli_private_report_cannot_be_written_inside_git(self):
         self.admit()
