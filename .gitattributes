@@ -1,5 +1,4 @@
-# Byte-hash pinned synthetic source-index fixtures: checkout must preserve LF on Windows.
-engines/usul/pilots/data/*.json text eol=lf
-
-# Public static preview is hashed/byte-compared across Windows and Ubuntu.
-docs/preview-data.json text eol=lf
+# Digest-pinned fixtures must keep exact bytes on every platform.
+# CRLF conversion corrupts SHA-256-pinned fixtures on Windows checkouts.
+engines/quran/fixtures/*.json -text
+*.fixture -text
