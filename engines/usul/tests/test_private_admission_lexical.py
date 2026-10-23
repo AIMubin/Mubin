@@ -228,10 +228,11 @@ class PrivateAdmissionLexicalTests(unittest.TestCase):
         self.assertNotIn(str(self.root), output)
         self.register.write_bytes(b"{invalid json}\n")
         self.assertEqual(main(self.cli_args()), 1)
-        # A previously written success report must not falsely survive a
-        # subsequent refusal as a newly accepted run.
-        self.assertFalse(json.loads(self.report.read_text(encoding="utf-8"))
-                         .get("scholarly_verified", False))
+        # A previously written success report is replaced by this refusal.
+        refusal = json.loads(self.report.read_text(encoding="utf-8"))
+        self.assertEqual(refusal["status"], "REFUSED")
+        self.assertEqual(refusal["reason_code"], "SOURCE_NOT_ADMITTED")
+        self.assertNotIn("source_sha256", refusal)
 
     def test_cli_private_report_cannot_be_written_inside_git(self):
         self.admit()
