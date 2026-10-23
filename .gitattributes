@@ -1,4 +1,10 @@
-# Digest-pinned fixtures must keep exact bytes on every platform.
-# CRLF conversion corrupts SHA-256-pinned fixtures on Windows checkouts.
-engines/quran/fixtures/*.json -text
-*.fixture -text
+# Mubin integrity policy: every content file is digest-pinned or references
+# digest-pinned bytes. Line-ending conversion corrupts SHA-256 evidence on
+# Windows checkouts, so automatic EOL handling is disabled repo-wide.
+* -text
+
+# Explicit binary safety (redundant with -text, self-documenting)
+*.png binary
+*.pdf binary
+*.db binary
+*.sqlite binary
