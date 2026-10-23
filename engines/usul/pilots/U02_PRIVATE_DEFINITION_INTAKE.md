@@ -7,14 +7,14 @@ candidate is genuinely from al-Waraqat, correctly ascribed to an author,
 semantically faithful, or legally reusable.
 
 Implementation: [`waraqat_definition_private_intake.py`](waraqat_definition_private_intake.py)
-(and [15 synthetic adversarial tests](../tests/test_waraqat_definition_private_intake.py)).
+(with synthetic adversarial tests in [the private-intake test module](../tests/test_waraqat_definition_private_intake.py)).
 All real candidate texts must remain off GitHub in an operator-controlled,
 **off-repository** directory. The HMAC secret is never stored in public
 files. There is no AI-generated authoritative definition here.
 
 ## Prerequisites
 
-1. Clone/check out the PR #81 `u02-concept-definitions` branch.
+1. Use the current repository `main` with the merged PR #81 private-intake operator.
 2. Use the historically frozen public receipt
    `corpus/reviews/u02-waraqat-private-source-acceptance-PASS.json`
    (canonical SHA-256 `00f0d1c71f55dc226cd6b840decfcdada152a40746a5cdc39b1e4f019c6bf7df`).
@@ -65,7 +65,16 @@ or leaving the key in a persistent PowerShell profile.
 
 Output paths must be **new**, immediate children of the private root
 (not inside the repository). Existing output paths and attempts to
-overwrite input are rejected. A failed run returns exit 2 and only a
+overwrite input are rejected. Both outputs are first fully staged in
+private, same-directory temporary files and fsynced, then published using
+no-clobber file creation. A normal second-publication error removes
+only outputs newly created by this run, preserving any existing unrelated
+file. The temporary files are removed on both success and ordinary failure.
+**This is not a crash-atomic two-file transaction:** if a process is
+forcibly terminated between the two publications, a lone manifest is
+incomplete evidence and must be inspected privately rather than treated
+as accepted or silently overwritten. Use one trusted writer on a
+filesystem supporting same-directory hard links. A failed run returns exit 2 and only a
 privacy-safe failure status on stdout. Exit 0 returns:
 
 `PRIVATE_CANDIDATES_PREPARED_UNASSESSED`
@@ -123,8 +132,9 @@ source, or a scientific judgment about the definition. In particular,
 connecting a definition file to `concept:amr-term` and the W1 query
 `pilot:amr-term` proves only that the **metadata references** match an
 existing literal observation. Authentic quotation, attribution, edition,
-meaning, provenance rights, and the sixteen W1/W2 variant chapters still
-require external review. The algorithm does not turn mere word matches
+meaning, provenance rights, and historical W1/W2 textual comparisons remain
+separate from scholarly review, regardless of any completed byte-level
+representation reconciliation. The algorithm does not turn mere word matches
 into a rule of `amr`, `qiyas` or `tarjih`.
 
 ## Final local acceptance ledger
