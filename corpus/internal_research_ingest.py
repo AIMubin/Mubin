@@ -108,6 +108,10 @@ def append_usage_register(register_path: Path, entry: dict) -> str:
                                          prefix=".register-", suffix=".tmp")
     try:
         handle.file.write(prior_bytes)
+        # A valid JSONL chain may omit its final newline. Preserve the
+        # previous entry bytes while adding the required record separator.
+        if prior_bytes and not prior_bytes.endswith(b"\n"):
+            handle.file.write(b"\n")
         handle.file.write(line.encode("utf-8"))
         handle.file.flush()
         os.fsync(handle.file.fileno())

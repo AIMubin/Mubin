@@ -440,6 +440,43 @@ class InternalResearchIngestTests(unittest.TestCase):
                 self.admit()
         self.assertFalse(self.register.exists())
 
+    def test_repeat_append_inserts_missing_jsonl_record_separator(self):
+        first = self.admit()
+        manifest_path = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + self.pin[:16] + ".json")
+        manifest_bytes = manifest_path.read_bytes()
+        original = self.register.read_bytes()
+        self.assertTrue(original.endswith(b"\n"))
+        self.register.write_bytes(original[:-1])
+        self.assertTrue(verify_usage_register(self.register)["chain_valid"])
+        self.assertTrue(is_admitted(manifest_path, self.register))
+
+        again = self.admit()
+        self.assertEqual(first["manifest_sha256"], again["manifest_sha256"])
+        self.assertEqual(manifest_path.read_bytes(), manifest_bytes)
+        new_bytes = self.register.read_bytes()
+        self.assertTrue(new_bytes.startswith(original))
+        self.assertEqual(new_bytes.count(b"\n"), 2)
+        self.assertTrue(verify_usage_register(self.register)["chain_valid"])
+        self.assertEqual(verify_usage_register(self.register)["entries"], 2)
+        self.assertTrue(is_admitted(manifest_path, self.register))
+
+    def test_malformed_separatorless_register_refused_without_mutation(self):
+        first = self.admit()
+        manifest_path = self.corpus_root / "manifests" / (
+            "usul-waraqat-w1-" + self.pin[:16] + ".json")
+        manifest_bytes = manifest_path.read_bytes()
+        # Valid first entry, then a second object concatenated directly.
+        bad = self.register.read_bytes().rstrip(b"\n")
+        bad = bad + bad
+        self.register.write_bytes(bad)
+        self.assertFalse(verify_usage_register(self.register)["chain_valid"])
+        with self.assertRaisesRegex(
+                InternalSourceRefusal, "USAGE_REGISTER_CHAIN_INVALID"):
+            self.admit()
+        self.assertEqual(self.register.read_bytes(), bad)
+        self.assertEqual(manifest_path.read_bytes(), manifest_bytes)
+
     def test_repeat_admission_preserves_manifest_and_appends_usage(self):
         first = self.admit()
         second = self.admit()
