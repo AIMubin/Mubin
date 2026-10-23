@@ -1,0 +1,69 @@
+{
+  "schema_version": "0.1.0",
+  "review_id": "quran-q01b-primary-engineering-review",
+  "date_local": "2026-10-23",
+  "reviewed_head": "f34da8400c4d75af14d4a751b52ce76d20189a9d",
+  "pr": 74,
+  "reviewer": "engineering-agent (self-review per v2.0 policy; Codex additional)",
+  "review_scope": "8 files, 593 insertions, purely additive",
+  "verdict": "ENGINEERING_REVIEW_PASS",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "attention-confirmed",
+      "title": "Fingerprint pass is not mirror authenticity",
+      "detail": "SHA-256 + length + Git blob SHA-1 verification proves FILE IDENTITY with the pinned mirror commit only. It does not authenticate the mirror as an official Tanzil release, nor scripture authenticity. Manifest and all outputs keep source_authenticated=false, authority_status=not_authenticated."
+    },
+    {
+      "id": "F2",
+      "severity": "attention-confirmed",
+      "title": "Windows symlink test not locally qualified",
+      "detail": "test_symlink_alias_refused requires symlink privileges unavailable to the local Windows operator (WinError 1314). Locally: 16/17 pass + 1 privilege error. On Ubuntu CI the symlink test executes and the Q0.1b workflow is green on this exact head. Refusal logic itself was code-reviewed (symlink rejection before any read)."
+    },
+    {
+      "id": "F3",
+      "severity": "pass",
+      "title": "No network in module; ephemeral fetch confined to CI workflow"
+    },
+    {
+      "id": "F4",
+      "severity": "pass",
+      "title": "No disk writes; pure bytes-in/index-out"
+    },
+    {
+      "id": "F5",
+      "severity": "pass",
+      "title": "Dual independent digests: SHA-256+length AND Git blob SHA-1 for unverified mirrors"
+    },
+    {
+      "id": "F6",
+      "severity": "pass",
+      "title": "114/6236 topology + Tanzil license notice validated; no text rewriting"
+    },
+    {
+      "id": "F7",
+      "severity": "note-p3",
+      "title": "INPUT_ERROR branch prints untruncated str(exc); RawSourceError messages are fixed strings so leak risk is minimal — consider truncation for symmetry"
+    },
+    {
+      "id": "F8",
+      "severity": "pass",
+      "title": "CLI exit codes 0/1/2 documented; find matches are mark-folding in MATCHING ONLY, never in returned text"
+    }
+  ],
+  "tests": {
+    "targeted_local": "17 tests: 16 pass + 1 Windows symlink-privilege (platform-expected)",
+    "core_full": "125 tests: 123 pass + 2 platform symlink (q01 + q01b)",
+    "usul_full": "410 OK",
+    "ci_on_reviewed_head": "8/8 SUCCESS including Q0.1b pinned mirror candidate (Ubuntu)"
+  },
+  "gates": {
+    "engineering_qualified": true,
+    "source_fidelity_verified": false,
+    "scholarly_verified": false,
+    "redistribution_approved": false,
+    "juristic_inference_allowed": false,
+    "public_fatwa_authorized": false
+  },
+  "system_version_unchanged": "0.1.0-alpha"
+}
