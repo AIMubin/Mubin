@@ -245,3 +245,19 @@ attributions have been verified. GitHub CI uses synthetic temporary files
 only; the private real-source intake has **not** been run here. The tool
 does not verify whether a candidate is actually authored by the person
 claimed, and must never promote it into a scholarly rule.
+
+
+## PR #83 private source admission → Stage05 read-only integration
+
+The [private admission lexical adapter](private_admission_lexical.py) joins a
+currently admitted `usul` source in the restricted corpus store to the existing
+Stage04 pinned-coverage and Stage05 exact-literal search. Its output contains
+only byte offsets, hashes and controlled IDs; original text, query literals,
+private paths, and source URLs are not returned. There is **no new rule
+execution**, publication permission or religious authority.
+
+See the [operator runbook](pilots/PRIVATE_ADMISSION_LEXICAL.md) for exact
+private inputs, CLI arguments, source-ID namespace differences, synthetic CI,
+and the unresolved W2 and independent-anchoring limitations. No protected
+source bytes are supplied to GitHub and historical source receipts are not
+modified or promoted.
