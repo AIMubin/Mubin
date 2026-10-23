@@ -174,8 +174,9 @@ def main(argv=None):
     args = p.parse_args(argv)
     inputs = (args.admission_manifest, args.usage_register,
               args.snapshot_manifest, args.queries)
+    report_path = None
     try:
-        # Never create a report under Git, including via linked parents.
+        # Never create or overwrite a report under Git, including linked parents.
         report_path = _private(args.report)
         _private(report_path.parent)
         if not all(x.is_file() for x in inputs):
@@ -188,15 +189,25 @@ def main(argv=None):
                 args.snapshot_manifest, args.trusted_snapshot_manifest_sha256,
                 args.section_id, query_list)
             code = 0
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(
-            json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2)
-            + "\n", encoding="utf-8")
     except PrivateUsulRefusal as exc:
         result, code = {"status": "REFUSED", "reason_code": exc.code}, 1
     except (OSError, ValueError, TypeError, RuntimeError, UnicodeError):
         result, code = {"status": "REFUSED",
                         "reason_code": "PRIVATE_USUL_BRIDGE_FAILED"}, 1
+
+    # Persist a fresh refusal or PENDING result, overwriting any stale success.
+    # The process exit code remains the authoritative execution result.
+    if report_path is not None:
+        try:
+            _private(report_path)
+            _private(report_path.parent)
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(
+                json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2)
+                + "\n", encoding="utf-8")
+        except (OSError, ValueError, TypeError, RuntimeError, UnicodeError):
+            result, code = {"status": "REFUSED",
+                            "reason_code": "PRIVATE_REPORT_WRITE_FAILED"}, 1
     print(json.dumps({"status": result["status"],
                       "reason_code": result.get("reason_code"),
                       "source_text_included": False}, ensure_ascii=True))
