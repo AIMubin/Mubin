@@ -86,7 +86,7 @@ def append_usage_register(register_path: Path, entry: dict) -> str:
     entries = []
     if register_path.exists():
         _reject_symlink(register_path)
-        for line in register_path.read_text(encoding="utf-8").splitlines():
+        for line in register_path.read_text(encoding="utf-8").split("\n"):
             if line.strip():
                 entries.append(json.loads(line))
     previous = entries[-1]["entry_sha256"] if entries else "0" * 64
@@ -128,7 +128,7 @@ def verify_usage_register(register_path: Path) -> dict:
         return {"status": "REGISTER_EMPTY", "entries": 0, "chain_valid": True}
     try:
         entries = []
-        for line in register_path.read_text(encoding="utf-8").splitlines():
+        for line in register_path.read_text(encoding="utf-8").split("\n"):
             if line.strip():
                 entries.append(json.loads(line))
         previous, broken = "0" * 64, []
@@ -363,23 +363,23 @@ def ingest_internal_research(source_path: Path, corpus_root: Path,
 
 
 def is_admitted(manifest_path: Path, register_path: Path) -> bool:
-    """A source is admitted only when the manifest says ELIGIBLE AND the
-    usage register contains an entry referencing that exact manifest digest."""
-    if not manifest_path.exists() or not register_path.exists():
-        return False
-    if not verify_usage_register(register_path)["chain_valid"]:
-        return False
+    """Total fail-closed predicate: corrupt/inaccessible intake is never admitted."""
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, ValueError, TypeError):
-        return False
-    if manifest.get("admission_status") != ADMISSION_ELIGIBLE:
-        return False
-    manifest_digest = _sha(manifest_path.read_bytes())
-    if (manifest.get("sha256") != manifest.get("independently_pinned_sha256") or
-            not isinstance(manifest.get("object_path"), str)):
-        return False
-    try:
+        if (not manifest_path.is_file() or not register_path.is_file() or
+                manifest_path.is_symlink() or register_path.is_symlink()):
+            return False
+        if not verify_usage_register(register_path)["chain_valid"]:
+            return False
+        manifest_bytes = manifest_path.read_bytes()
+        manifest = json.loads(manifest_bytes.decode("utf-8"))
+        if type(manifest) is not dict:
+            return False
+        if manifest.get("admission_status") != ADMISSION_ELIGIBLE:
+            return False
+        manifest_digest = _sha(manifest_bytes)
+        if (manifest.get("sha256") != manifest.get("independently_pinned_sha256") or
+                not isinstance(manifest.get("object_path"), str)):
+            return False
         root = manifest_path.parent.parent.resolve()
         candidate = root / manifest["object_path"]
         object_path = candidate.resolve()
@@ -387,15 +387,18 @@ def is_admitted(manifest_path: Path, register_path: Path) -> bool:
                 candidate.is_symlink() or
                 _sha(object_path.read_bytes()) != manifest["sha256"]):
             return False
-    except (OSError, RuntimeError, TypeError, ValueError):
+        # splitlines() also splits U+0085/U+2028/U+2029 inside valid JSON
+        # strings. Only ASCII LF terminates a JSONL record.
+        for line in register_path.read_text(encoding="utf-8").split("\n"):
+            if not line.strip():
+                continue
+            body = json.loads(line)
+            payload = body.get("payload", {})
+            if payload.get("admission_status") == ADMISSION_ELIGIBLE and \
+                    payload.get("source_sha256") == manifest["sha256"] and \
+                    payload.get("manifest_sha256") == manifest_digest:
+                return True
         return False
-    for line in register_path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        body = json.loads(line)
-        payload = body.get("payload", {})
-        if payload.get("admission_status") == ADMISSION_ELIGIBLE and \
-                payload.get("source_sha256") == manifest["sha256"] and \
-                payload.get("manifest_sha256") == manifest_digest:
-            return True
-    return False
+    except (OSError, RuntimeError, UnicodeError, ValueError, TypeError,
+            AttributeError, RecursionError, OverflowError):
+        return False
