@@ -116,9 +116,9 @@ class Q01dCandidateTests(unittest.TestCase):
         self.assertEqual('operator_supplied_unverified',x['candidate_provenance'])
 
     def test_no_online_fetch_or_write_to_corpus_in_adapter(self):
-        doc=(ROOT/'engines/quran/q01d/compare.py').read_text()
+        doc=(ROOT/'engines/quran/q01d/compare.py').read_text(encoding='utf-8')
         for token in ('requests.get(', 'urllib.request.urlopen(', 'subprocess.run(', 'os.system('):
             self.assertNotIn(token,doc)
-        self.assertIn('Tanzil', (ROOT/'docs/research/QURAN-Q01D-COMPARISON.md').read_text())
+        self.assertIn('Tanzil', (ROOT/'docs/research/QURAN-Q01D-COMPARISON.md').read_text(encoding='utf-8'))
 
 if __name__=='__main__':unittest.main()
