@@ -79,3 +79,13 @@ adjudication. Safe research-only code can proceed with automated
 `UNASSESSED`/`UNVERIFIED` labels while protected text and normative
 claims retain strict independent approval. Avoid rerunning frozen source
 pilots or duplicating core inference engines for unrelated changes.
+
+## Internal verified-source development
+
+[Development-first verified-source admission](docs/INTERNAL_SOURCE_DEVELOPMENT_POLICY.md)
+allows appropriately sourced and independently byte-pinned originals to
+support **private** research and AI development under an evaluated legal
+basis even when separate permission to **redistribute** an edition
+publicly is still pending. The gate uses operator-maintained use records
+and never grants scholarly attribution, public text rights, juristic
+inference or fatwa status. Existing public release safeguards remain.
