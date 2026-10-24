@@ -1,0 +1,71 @@
+name: Mubin Quran Q0.1e-a advisory domain probe
+
+on:
+  pull_request:
+    paths:
+      - "qa/quran_official_probe.py"
+      - "core/tests/test_quran_official_probe.py"
+      - "docs/research/QURAN-Q01E-DOMAIN-PROBE.md"
+      - "docs/reviews/QURAN-Q01E-DOMAIN-PROBE-AUDIT.md"
+      - ".github/workflows/mubin-quran-q01e-probe.yml"
+  push:
+    branches: [main]
+    paths:
+      - "qa/quran_official_probe.py"
+      - "core/tests/test_quran_official_probe.py"
+      - ".github/workflows/mubin-quran-q01e-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - run: python -m compileall -q qa/quran_official_probe.py core/tests/test_quran_official_probe.py
+      - run: python -m unittest core.tests.test_quran_official_probe -v
+
+  transport-advisory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Fetch only pinned third-party mirror to ephemeral runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --max-time 45 --max-filesize 4194304 \
+            'https://raw.githubusercontent.com/acfatah/tanzil/052b515f3a24dfacbe4cafc3b89f0681a447f462/data/quran-uthmani.txt' \
+            --output "${RUNNER_TEMP}/q01e-unverified-pinned-mirror.txt"
+      - name: Verify mirror digest/structure without persisting Quran text
+        shell: bash
+        run: |
+          python - "${RUNNER_TEMP}/q01e-unverified-pinned-mirror.txt" <<'PY'
+          import sys
+          from pathlib import Path
+          from engines.quran.q01b.tanzil import load_raw
+          manifest=Path('engines/quran/q01b/sources/tanzil-mirror-v1.1.json').read_bytes()
+          index=load_raw(manifest,Path(sys.argv[1]).read_bytes())
+          assert len(index.verses)==6236 and index.report()['source_authenticated'] is False
+          print('PINNED_MIRROR_PASS 6236 (not publisher authentication)')
+          PY
+      - name: Attempt fixed-preset Tanzil HTTPS comparison (ADVISORY ONLY)
+        continue-on-error: true
+        shell: bash
+        run: |
+          python -m qa.quran_official_probe \
+            --manifest engines/quran/q01b/sources/tanzil-mirror-v1.1.json \
+            --mirror "${RUNNER_TEMP}/q01e-unverified-pinned-mirror.txt"
