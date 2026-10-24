@@ -119,13 +119,20 @@ def assess_pr(snapshot: dict[str, Any], number: int) -> dict[str, Any]:
         problems.append("REVIEW_LISTING_INCOMPLETE")
     else:
         author = _at(pr, "user", "login")
-        approved = any(
-            type(review) is dict and review.get("state") == "APPROVED" and
-            review.get("commit_id") == head and
-            type(_at(review, "user", "login")) is str and
-            _at(review, "user", "login") != author
-            for review in reviews
-        )
+        # Reviews arrive chronologically: reduce to each independent
+        # reviewer's LATEST decision on this exact head, so an earlier
+        # approval cannot outlive that reviewer's later change request.
+        latest_state: dict[str, str] = {}
+        for review in reviews:
+            if type(review) is not dict or review.get("commit_id") != head:
+                continue
+            login = _at(review, "user", "login")
+            state = review.get("state")
+            if (type(login) is not str or login == author or
+                    state not in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")):
+                continue
+            latest_state[login] = state
+        approved = any(state == "APPROVED" for state in latest_state.values())
         if not approved:
             advisories.append("NO_INDEPENDENT_GITHUB_APPROVAL_ON_HEAD")
     advisories.append("REVIEW_THREADS_AND_RULESETS_NOT_EVALUATED")
@@ -221,8 +228,11 @@ def fetch_live(number: int, token: str | None = None) -> dict[str, Any]:
         raise ReadinessError("MAIN_CHANGED_DURING_READ")
     if (_at(latest_pr, "head", "sha") != head or
             _at(latest_pr, "base", "sha") != _at(pr, "base", "sha") or
+            _at(latest_pr, "base", "ref") != _at(pr, "base", "ref") or
             latest_pr.get("state") != pr.get("state") or
             latest_pr.get("draft") != pr.get("draft")):
+        # A retarget to a different branch may keep the same base SHA;
+        # the branch identity itself must stay main for isolation.
         raise ReadinessError("PR_CHANGED_DURING_READ")
     return {"main": main, "pr": pr, "comparison": cmp,
             "check_listing": checks, "reviews": reviews}

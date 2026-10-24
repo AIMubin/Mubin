@@ -191,6 +191,50 @@ class QuranReadinessV2Tests(unittest.TestCase):
                                         "PR_CHANGED_DURING_READ"):
                 fetch_live(NUMBER)
 
+    def test_late_changes_requested_suppresses_earlier_approval(self):
+        d = fixture()
+        d["reviews"] = [
+            {"state": "APPROVED", "commit_id": HEAD,
+             "user": {"login": "reviewer"}},
+            {"state": "CHANGES_REQUESTED", "commit_id": HEAD,
+             "user": {"login": "reviewer"}},
+        ]
+        self.assertIn("NO_INDEPENDENT_GITHUB_APPROVAL_ON_HEAD",
+                      assess_pr(d, NUMBER)["review_advisories"])
+
+    def test_dismissed_approval_is_not_counted(self):
+        d = fixture()
+        d["reviews"] = [
+            {"state": "APPROVED", "commit_id": HEAD,
+             "user": {"login": "reviewer"}},
+            {"state": "DISMISSED", "commit_id": HEAD,
+             "user": {"login": "reviewer"}},
+        ]
+        self.assertIn("NO_INDEPENDENT_GITHUB_APPROVAL_ON_HEAD",
+                      assess_pr(d, NUMBER)["review_advisories"])
+
+    def test_latest_approval_after_changes_still_counts(self):
+        d = fixture()
+        d["reviews"] = [
+            {"state": "CHANGES_REQUESTED", "commit_id": HEAD,
+             "user": {"login": "reviewer"}},
+            {"state": "APPROVED", "commit_id": HEAD,
+             "user": {"login": "reviewer"}},
+        ]
+        self.assertNotIn("NO_INDEPENDENT_GITHUB_APPROVAL_ON_HEAD",
+                         assess_pr(d, NUMBER)["review_advisories"])
+
+    def test_live_fetch_fails_on_base_ref_retarget_same_sha(self):
+        d = fixture()
+        retargeted = copy.deepcopy(d["pr"])
+        retargeted["base"]["ref"] = "old-stacked-pr"
+        sequence = [d["main"], d["pr"], d["comparison"],
+                    d["check_listing"], d["reviews"], d["main"], retargeted]
+        with patch("qa.quran_merge_readiness._get_api", side_effect=sequence):
+            with self.assertRaisesRegex(ReadinessError,
+                                        "PR_CHANGED_DURING_READ"):
+                fetch_live(NUMBER)
+
     def test_live_fetch_fails_on_concurrent_pr_draft_change(self):
         d = fixture()
         new_pr = copy.deepcopy(d["pr"])
