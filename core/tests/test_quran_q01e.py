@@ -44,6 +44,15 @@ class OfficialLocalReaderTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             index.manifest["rights_status"] = "approved"
 
+    def test_observation_metadata_points_to_existing_transport_report(self):
+        from pathlib import Path
+        with patch.object(official, "PINNED_OFFICIAL_DOMAIN_SHA256", self.hash):
+            idx=official.load_official_candidate(self.data)
+        rel=idx.manifest["source_observation"]
+        self.assertEqual("docs/research/QURAN-Q01E-DOMAIN-PROBE.md",rel)
+        root=Path(__file__).resolve().parents[2]
+        self.assertTrue((root/rel).is_file())
+
     def test_byte_drift_rejected_even_if_verses_are_plausible(self):
         altered = self.data.replace("مِثَالٌ".encode(), "حَقِيقِيٌّ".encode(), 1)
         with patch.object(official, "PINNED_OFFICIAL_DOMAIN_SHA256", self.hash):
