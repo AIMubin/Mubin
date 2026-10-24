@@ -109,6 +109,44 @@ class TafsirSourceCatalogTests(unittest.TestCase):
         with self.assertRaises(CatalogError):
             catalog_for_ref("1:8","unverified_github_mirror")
 
+    def test_duplicate_json_key_is_rejected_without_rights_promotion(self):
+        from unittest.mock import patch
+        base=DATA_PATH.read_bytes()
+        altered=base.replace(b'"sources": [',b'"sources": [], "sources": [',1)
+        with patch("engines.quran.tafsir.catalog.Path.read_bytes",return_value=altered):
+            with self.assertRaises(CatalogError):
+                load_catalog()
+
+    def test_korean_or_untrusted_html_labels_rejected(self):
+        for label in ("<iframe>تفسير</iframe>", "x", "English only",
+                      "تفسير\\nمزيف", "  تفسير", "تفسير{evil}"):
+            bad=copy.deepcopy(load_catalog())
+            bad["sources"][0]["title_ar"]=label
+            with self.subTest(label=repr(label)), self.assertRaises(CatalogError):
+                validate_catalog(bad)
+
+    def test_frontend_external_link_trust_boundary(self):
+        script=(DATA_PATH.parents[2]/"engines/quran/q01c/reader.js").read_text(encoding="utf-8")
+        self.assertIn("/api/tafsir-catalog?ref=",script)
+        self.assertIn("sourceType!==\"unverified_github_mirror\"",script)
+        self.assertIn('a.rel="noopener noreferrer"',script)
+        self.assertIn('a.referrerPolicy="no-referrer"',script)
+        self.assertIn("panel.isConnected",script)
+        self.assertIn("d.rights_verified!==false",script)
+        self.assertIn("d.text_import_allowed!==false",script)
+        self.assertNotIn(".innerHTML",script)
+        self.assertNotIn("fetch(KSU_BASE",script)
+        self.assertNotIn("document.write(",script)
+
+    def test_metadata_only_response_never_contains_tafsir_text(self):
+        output=catalog_for_ref("114:6","unverified_github_mirror")
+        self.assertEqual(6,len(output["sources"]))
+        self.assertEqual("114:6",output["reference"])
+        self.assertFalse(output["ai_tafsir_generated"])
+        self.assertFalse(output["p1_admitted"])
+        self.assertFalse(output["rights_verified"])
+        self.assertNotIn("text",json.dumps(output,ensure_ascii=False).split('"sources":')[0])
+
     def test_fixture_browser_cannot_access_tafsir_endpoint(self):
         server=build_http_server(fixture_index(),SAMPLE,port=0)
         thread=threading.Thread(target=server.serve_forever, daemon=True)
