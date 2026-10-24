@@ -119,7 +119,7 @@ class TafsirSourceCatalogTests(unittest.TestCase):
 
     def test_korean_or_untrusted_html_labels_rejected(self):
         for label in ("<iframe>تفسير</iframe>", "x", "English only",
-                      "تفسير\\nمزيف", "  تفسير", "تفسير{evil}"):
+                      "تفسير\\nمزيف", "  تفسير", "تفسير{evil}", "تفسير\\u202eمقلوب"):
             bad=copy.deepcopy(load_catalog())
             bad["sources"][0]["title_ar"]=label
             with self.subTest(label=repr(label)), self.assertRaises(CatalogError):
