@@ -108,7 +108,7 @@ def load_operator_key(key_file: Path, *, create: bool = True) -> bytes:
     if path.is_symlink():
         raise EvidenceError("OPERATOR_KEY_SYMLINK_REFUSED")
     if path.exists():
-        key = path.read_bytes().strip()
+        key = path.read_bytes()
         if len(key) < 32:
             raise EvidenceError("OPERATOR_KEY_TOO_SHORT")
         return key
