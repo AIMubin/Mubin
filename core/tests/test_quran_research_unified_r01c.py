@@ -214,6 +214,49 @@ class UnifiedRetrievalTests(unittest.TestCase):
                 self.lookup()
         self.assertEqual(ctx.exception.code, "EVIDENCE_VERIFICATION_FAILED")
 
+    def test_evidence_head_changes_during_aggregation_refused(self):
+        from engines.quran.research.unified import UnifiedRetrievalError
+        with patch.object(self.adapters, "evidence_head",
+                          side_effect=[HEAD, "c"*64]) as head:
+            with self.assertRaisesRegex(
+                    UnifiedRetrievalError, "EVIDENCE_HEAD_CHANGED_DURING_LOOKUP"):
+                self.lookup()
+            self.assertEqual(2,head.call_count)
+
+    def test_unified_response_explicit_nonpromotion_flags(self):
+        result=self.lookup()
+        for obj in [result,*result["sources"]]:
+            self.assertFalse(obj["source_authenticated"])
+            self.assertFalse(obj["edition_verified"])
+            self.assertFalse(obj["rights_verified"])
+            self.assertFalse(obj["publication_allowed"])
+            self.assertFalse(obj["redistribution_approved"])
+            self.assertFalse(obj["p1_admitted"])
+            self.assertFalse(obj["juristic_inference_allowed"])
+            self.assertFalse(obj["public_fatwa_authorized"])
+            self.assertEqual("legal_review_pending",obj["rights_status"])
+
+    def test_cli_refusal_stable_json_with_no_text_or_traceback(self):
+        import contextlib
+        import io
+        from engines.quran.research.unified import main
+        out=io.StringIO()
+        with patch("engines.quran.research.unified.unified_lookup",
+                   side_effect=ResearchAdapterError("EVIDENCE_VERIFICATION_FAILED")):
+            with contextlib.redirect_stdout(out):
+                exit_code=main([
+                    "lookup","--ref","2:1","--vault",str(self.vault),
+                    "--corpus-db",str(self.corpus),"--sidecar-db",str(self.sidecar),
+                    "--registry",str(self.registry),"--anchor-dir",str(self.anchor),
+                    "--evidence-key",str(self.evidence_key)])
+        self.assertEqual(1,exit_code)
+        result=json.loads(out.getvalue())
+        self.assertEqual("REFUSED",result["status"])
+        self.assertEqual("EVIDENCE_VERIFICATION_FAILED",result["reason_code"])
+        self.assertFalse(result["text_included"])
+        self.assertNotIn(str(self.vault),out.getvalue())
+        self.assertNotIn(FIXTURE_TAFSIR,out.getvalue())
+
     def test_deterministic_report_bytes(self):
         a = json.dumps(self.lookup(), ensure_ascii=False, sort_keys=True)
         b = json.dumps(self.lookup(), ensure_ascii=False, sort_keys=True)
