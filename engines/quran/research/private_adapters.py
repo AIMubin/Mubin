@@ -27,6 +27,10 @@ TEXT_COLUMNS = {**{table: "tafsir" for table in TABLES_AR},
 HEX = re.compile(r"[0-9a-f]{64}\Z")
 REF = re.compile(r"(?:[1-9]|[1-9][0-9]|1[01][0-9]|11[0-4]):[1-9][0-9]{0,2}\Z")
 MAX_TEXT = 128 * 1024
+# An independently approved issuer fingerprint must be pinned in a SEPARATE
+# governance change before any private text can be served by this library.
+# Neither a caller-provided key nor an unsigned config can grant authority.
+TRUSTED_PERMIT_SIGNER_SHA256: str | None = None
 
 
 class ResearchAdapterError(ValueError):
@@ -93,6 +97,11 @@ def _private_permit(permit_path: Path | None, key_path: Path | None,
     """
     if permit_path is None or key_path is None:
         _deny("LOCAL_TEXT_PERMIT_REQUIRED")
+    if TRUSTED_PERMIT_SIGNER_SHA256 is None:
+        _deny("LOCAL_TEXT_ISSUER_NOT_CONFIGURED")
+    if (type(TRUSTED_PERMIT_SIGNER_SHA256) is not str
+            or not HEX.fullmatch(TRUSTED_PERMIT_SIGNER_SHA256)):
+        _deny("LOCAL_TEXT_ISSUER_NOT_CONFIGURED")
     try:
         p = evidence._guard_secret_location(permit_path, vault)
         k = evidence._guard_secret_location(key_path, vault)
@@ -103,6 +112,8 @@ def _private_permit(permit_path: Path | None, key_path: Path | None,
         key = k.read_bytes()
         if len(key) < 32:
             _deny("LOCAL_TEXT_PERMIT_INVALID")
+        if hashlib.sha256(key).hexdigest() != TRUSTED_PERMIT_SIGNER_SHA256:
+            _deny("LOCAL_TEXT_ISSUER_MISMATCH")
         raw = json.loads(p.read_bytes().decode("utf-8", "strict"))
         if type(raw) is not dict or set(raw) != {
             "contract", "evidence_head_sha256", "source_ids", "purpose",
