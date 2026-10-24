@@ -1,0 +1,40 @@
+name: Mubin private retrieval unified contract synthetic verification
+
+on:
+  pull_request:
+    paths:
+      - "engines/quran/research/unified.py"
+      - "engines/quran/research/__main__.py"
+      - "core/tests/test_quran_research_unified_r01c.py"
+      - ".github/workflows/mubin-quran-research-unified.yml"
+  push:
+    branches: [main]
+    paths:
+      - "engines/quran/research/unified.py"
+      - "engines/quran/research/__main__.py"
+      - "core/tests/test_quran_research_unified_r01c.py"
+      - ".github/workflows/mubin-quran-research-unified.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-unified-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Offline synthetic-only contract and barrier tests
+        run: python -m unittest core.tests.test_quran_research_unified_r01c -v
+      - name: Compile local retrieval CLI
+        run: python -m compileall -q engines/quran/research
+
+# No vault access, permits, keys, text, or artifacts in CI.

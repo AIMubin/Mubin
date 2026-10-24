@@ -198,6 +198,10 @@ class PrivateResearchAdapters:
         except (evidence.EvidenceError, OSError, sqlite3.Error, ValueError) as exc:
             raise ResearchAdapterError("EVIDENCE_VERIFICATION_FAILED") from exc
 
+    def evidence_head(self) -> str:
+        """The exact R0.1a evidence head this adapter instance is bound to."""
+        return self._evidence()["head_entry_sha256"]
+
     def corpus_sources(self) -> list[dict]:
         self._evidence()
         manifest = load_manifest()
