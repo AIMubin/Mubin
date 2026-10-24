@@ -216,8 +216,14 @@ def fetch_live(number: int, token: str | None = None) -> dict[str, Any]:
     checks = _get_api(f"/commits/{head}/check-runs?per_page=100", token)
     reviews = _get_api(f"/pulls/{number}/reviews?per_page=100", token)
     latest_main = _get_api("/branches/main", token)
+    latest_pr = _get_api(f"/pulls/{number}", token)
     if _at(latest_main, "commit", "sha") != main_sha:
         raise ReadinessError("MAIN_CHANGED_DURING_READ")
+    if (_at(latest_pr, "head", "sha") != head or
+            _at(latest_pr, "base", "sha") != _at(pr, "base", "sha") or
+            latest_pr.get("state") != pr.get("state") or
+            latest_pr.get("draft") != pr.get("draft")):
+        raise ReadinessError("PR_CHANGED_DURING_READ")
     return {"main": main, "pr": pr, "comparison": cmp,
             "check_listing": checks, "reviews": reviews}
 
