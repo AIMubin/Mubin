@@ -13,3 +13,5 @@ Derived from **merged** R0.1a HEAD `f87e43bb01baa34ac023759fd82304a6232bca8a`. T
 - Cross-OS synthetic tests and R0.1a/ingest/sidecar regression all green on exact head; Codex independent review clean at the same head; retain false scholarly/rights/inference/fatwa flags
 
 **Status:** awaiting exact-head CI and review. No permission or scholarship is conferred by this checklist.
+
+**Issuer spoofing check:** text retrieval is disabled by default even when a caller supplies matching locally minted permit and HMAC key; the separately reviewed signer fingerprint constant remains unset on main. Test-only patch simulates a trusted signer to verify expiry, scope, and cryptographic checks. Do not activate without a distinct governance review.
