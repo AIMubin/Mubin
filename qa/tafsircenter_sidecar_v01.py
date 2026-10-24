@@ -32,7 +32,7 @@ def _restricted_file(path: Path) -> Path:
         raise SidecarError("source_file_must_be_private_outside_public_checkout")
     if not p.is_file() or not 1 <= p.stat().st_size <= MAX_SIZE:
         raise SidecarError("missing_oversized_or_unsafe_source_file")
-    return p
+    return resolved
 
 
 def _counts(conn, table, key1, key2):
@@ -58,7 +58,7 @@ def verify_sidecar(path: Path, *, deep: bool = True) -> dict:
     with p.open("rb") as stream:
         if stream.read(16) != b"SQLite format 3\x00":
             raise SidecarError("not_sqlite_database")
-    con = sqlite3.connect(f"file:{p}?mode=ro&immutable=1",uri=True)
+    con = sqlite3.connect(p.as_uri()+"?mode=ro&immutable=1",uri=True)
     try:
         con.execute("PRAGMA query_only=ON")
         if con.execute("PRAGMA quick_check").fetchone()[0] != "ok":
