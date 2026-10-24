@@ -61,6 +61,11 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
         self.signing_key_path = self.root / "independent-approver.key"
         self.signing_key = b"test-only-secret-not-an-actual-operator-key-xyz"
         self.signing_key_path.write_bytes(self.signing_key)
+        from engines.quran.research import private_adapters
+        trusted = patch.object(private_adapters, "TRUSTED_PERMIT_SIGNER_SHA256",
+                               sha256(self.signing_key).hexdigest())
+        trusted.start()
+        self.addCleanup(trusted.stop)
         self.manifest = load_manifest()
         db = sqlite3.connect(self.corpus)
         try:
@@ -172,6 +177,24 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
         result=adapter.lookup("2:1","tafsir_tabary",adapter="sidecar",include_text=True)
         self.assertEqual(FIXTURE_TAFSIR,result["text"])
         self.assertNotIn("footnotes",result)
+
+    def test_arbitrary_self_signed_permit_cannot_enable_unconfigured_issuer(self):
+        from engines.quran.research import private_adapters
+        _permit(self.permit,self.signing_key)
+        with patch.object(private_adapters,"TRUSTED_PERMIT_SIGNER_SHA256",None):
+            with self.assertRaisesRegex(
+                    ResearchAdapterError,"LOCAL_TEXT_ISSUER_NOT_CONFIGURED"):
+                self.adapters(permit_path=self.permit,permit_key=self.signing_key_path).lookup(
+                    "2:1","qe_ar_muyassar",include_text=True)
+
+    def test_different_signer_key_refused_even_if_its_mac_valid(self):
+        unauthorized=b"unauthorized-but-sufficiently-long-local-key-test"
+        self.signing_key_path.write_bytes(unauthorized)
+        _permit(self.permit,unauthorized)
+        with self.assertRaisesRegex(
+                ResearchAdapterError,"LOCAL_TEXT_ISSUER_MISMATCH"):
+            self.adapters(permit_path=self.permit,permit_key=self.signing_key_path).lookup(
+                "2:1","qe_ar_muyassar",include_text=True)
 
     def test_corrupted_signature_denied(self):
         _permit(self.permit,self.signing_key)
