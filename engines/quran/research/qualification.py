@@ -224,34 +224,33 @@ def validate_decision(decision: dict) -> dict:
 
 def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
                     decision: dict, operator: str) -> dict:
+    """Record exactly one human-provided decision; never grant public authority."""
     ledger_path = _guard_outside(ledger_path, None)
     anchor_dir = _guard_outside(anchor_dir, None)
-    key = load_operator_key(_guard_outside(key_file, None))
+    key_file = _guard_outside(key_file, None)
     clean = validate_decision(decision)
-    lock = _VaultLock(ledger_path.parent / LOCK_NAME, operator)
-    with lock:
-        entries = _load(ledger_path)
-        _verify_chain(entries)
+    _need(type(operator) is str and operator.strip().casefold() != clean["reviewer"].strip().casefold(),
+          "SELF_REVIEW_REFUSED")
+    with _VaultLock(ledger_path.parent / LOCK_NAME, operator):
+        entries, previous = _attested_entries(ledger_path, anchor_dir, key_file,
+                                               allow_initial=True)
+        try:
+            key = load_operator_key(key_file, create=not entries)
+        except EvidenceError as exc:
+            raise QualificationError("LEDGER_KEY_UNAVAILABLE") from exc
         _need(not any(e["payload"]["decision_id"] == clean["decision_id"]
                       for e in entries), "DECISION_ID_ALREADY_RECORDED")
-        previous = entries[-1]["entry_sha256"] if entries else "0" * 64
         body = {
             "seq": len(entries) + 1, "prev_entry_sha256": previous,
             "recorded_at_utc": datetime.now(timezone.utc).isoformat(),
             "operator": operator, "payload": clean,
         }
         entry_sha = _sha(_canonical(body))
-        line = json.dumps({**body, "entry_sha256": entry_sha},
-                          ensure_ascii=False, sort_keys=True,
-                          separators=(",", ":")) + "\n"
-        prior = ledger_path.read_bytes() if ledger_path.exists() else b""
+        record = {**body, "entry_sha256": entry_sha}
+        raw = b"".join(_canonical(entry) + bytes([10]) for entry in [*entries, record])
+        # Single process-local lock; both files must remain on operator-owned
+        # storage. A crash between two replacements MUST fail closed thereafter.
         temp = ledger_path.parent / (".qual-" + str(os.getpid()) + ".tmp")
-        with open(temp, "wb") as handle:
-            handle.write(prior)
-            handle.write(line.encode("utf-8"))
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temp, ledger_path)
         anchor_path = _anchor_path(anchor_dir, ledger_path)
         anchor_path.parent.mkdir(parents=True, exist_ok=True)
         anchor_body = {"registry": ledger_path.name,
@@ -259,51 +258,85 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
                        "sequence": body["seq"]}
         mac = hmac.new(key, _canonical(anchor_body), hashlib.sha256).hexdigest()
         anchor_tmp = anchor_path.parent / (".qanchor-" + str(os.getpid()) + ".tmp")
-        anchor_tmp.write_bytes(_canonical({**anchor_body, "head_hmac": mac}) + b"\n")
-        os.replace(anchor_tmp, anchor_path)
+        try:
+            for dst, data in ((temp, raw),
+                              (anchor_tmp, _canonical({**anchor_body, "head_hmac": mac}) + bytes([10]))):
+                fd = os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                             getattr(os, "O_BINARY", 0), 0o600)
+                with os.fdopen(fd, "wb") as handle:
+                    handle.write(data)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            os.replace(temp, ledger_path)
+            os.replace(anchor_tmp, anchor_path)
+        finally:
+            temp.unlink(missing_ok=True)
+            anchor_tmp.unlink(missing_ok=True)
     return {"status": "QUALIFICATION_DECISION_RECORDED",
             "decision_id": clean["decision_id"], "entry_sha256": entry_sha,
-            "axis": clean["axis"], "decision": clean["decision"]}
+            "axis": clean["axis"], "decision": clean["decision"],
+            "publication_granted": False, "juristic_inference_allowed": False,
+            "public_fatwa_authorized": False}
 
 
-def decisions_for(ledger_path: Path, source_id: str, axis: str | None = None) -> list[dict]:
-    entries = _load(_guard_outside(ledger_path, None))
-    _verify_chain(entries)
+def decisions_for(ledger_path: Path, source_id: str, axis: str | None = None,
+                  *, anchor_dir: Path, key_file: Path,
+                  reference: str | None = None) -> list[dict]:
+    _need(type(source_id) is str and source_id in SOURCE_IDS, "SOURCE_NOT_ALLOWLISTED")
+    _need(axis is None or axis in AXES, "AXIS_INVALID")
+    if reference is not None:
+        _valid_reference(reference)
+    entries, _ = _attested_entries(ledger_path, anchor_dir, key_file)
     out = []
     for body in entries:
         payload = body["payload"]
-        if payload["source_id"] == source_id and axis in (None, payload["axis"]):
-            out.append({"decision_id": payload["decision_id"],
-                        "axis": payload["axis"], "decision": payload["decision"],
-                        "scope": payload["scope"], "reviewer": payload["reviewer"],
-                        "reviewed_at_utc": payload["reviewed_at_utc"],
-                        "entry_sha256": body["entry_sha256"]})
+        if payload["source_id"] != source_id or axis not in (None, payload["axis"]):
+            continue
+        scope = payload["scope"]
+        if reference is not None and "record_coordinates" in scope and reference not in scope["record_coordinates"]:
+            continue
+        out.append({"decision_id": payload["decision_id"],
+                    "axis": payload["axis"], "decision": payload["decision"],
+                    "scope": scope, "reviewer": payload["reviewer"],
+                    "reviewed_at_utc": payload["reviewed_at_utc"],
+                    "evidence_head_sha256": payload["evidence_head_sha256"],
+                    "entry_sha256": body["entry_sha256"],
+                    "publication_granted": False})
     return out
 
 
-def current_state(ledger_path: Path, source_id: str, axis: str) -> str:
-    """Latest per-axis state; pending defaults when no decision exists."""
+def _valid_reference(reference: str) -> None:
+    if type(reference) is not str:
+        raise QualificationError("SCOPE_COORDINATES_INVALID")
+    try:
+        sv, av = reference.split(":")
+        sura, aya = int(sv), int(av)
+    except (ValueError, TypeError):
+        raise QualificationError("SCOPE_COORDINATES_INVALID") from None
+    _need(reference == f"{sura}:{aya}" and 1 <= sura <= len(_VERSE_COUNTS)
+          and 1 <= aya <= _VERSE_COUNTS[sura-1], "SCOPE_COORDINATES_INVALID")
+
+
+def current_state(ledger_path: Path, source_id: str, axis: str, *,
+                  anchor_dir: Path, key_file: Path,
+                  reference: str | None = None) -> str:
+    """Full-source decisions remain global; quarantines affect only matching coordinates."""
     _need(axis in AXES, "AXIS_INVALID")
-    latest = None
-    for body in _load(_guard_outside(ledger_path, None)):
-        payload = body["payload"]
-        if payload["source_id"] == source_id and payload["axis"] == axis:
-            latest = payload
-    if latest is None:
-        return DEFAULT_SCHOLARLY if axis == "scholarly" else DEFAULT_RIGHTS
-    return latest["decision"]
+    items = decisions_for(ledger_path, source_id, axis, anchor_dir=anchor_dir,
+                          key_file=key_file, reference=reference)
+    latest_full = DEFAULT_SCHOLARLY if axis == "scholarly" else DEFAULT_RIGHTS
+    quarantined = False
+    for item in items:
+        if item["scope"] == {"full_source": True}:
+            latest_full = item["decision"]
+        elif (reference is not None and axis == "scholarly"
+              and item["decision"] == "RECORD_QUARANTINED"):
+            quarantined = True
+    return "RECORD_QUARANTINED" if quarantined else latest_full
 
 
 def verify_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path) -> dict:
-    ledger_path = _guard_outside(ledger_path, None)
-    anchor_dir = _guard_outside(anchor_dir, None)
-    key = load_operator_key(_guard_outside(key_file, None))
-    entries = _load(ledger_path)
-    _verify_chain(entries)
-    head = entries[-1]["entry_sha256"] if entries else "0" * 64
-    anchor = read_head_anchor(anchor_dir, ledger_path, key)
-    if anchor.get("head_entry_sha256") != head:
-        raise QualificationError("HEAD_ANCHOR_HEAD_MISMATCH")
+    entries, head = _attested_entries(ledger_path, anchor_dir, key_file)
     return {"contract": CONTRACT, "status": "QUALIFICATION_LEDGER_VERIFIED",
             "entries": len(entries), "head_entry_sha256": head,
             "axes": sorted(AXES), "publication_granted": False,
