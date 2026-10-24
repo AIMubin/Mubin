@@ -102,6 +102,11 @@ class TafsirSourceCatalogTests(unittest.TestCase):
         self.assertFalse(d["text_import_allowed"])
         self.assertFalse(d["scholarly_verification"])
         self.assertFalse(d["p1_admitted"])
+        official=catalog_for_ref("2:1","tanzil_domain_unattested_export")
+        self.assertEqual("external_navigation_only",official["use_scope"])
+        self.assertFalse(official["rights_verified"])
+        self.assertFalse(official["source_authenticated"])
+        self.assertFalse(official["p1_admitted"])
         with self.assertRaises(CatalogError):
             catalog_for_ref("2:1","synthetic_fixture")
         with self.assertRaises(CatalogError):
