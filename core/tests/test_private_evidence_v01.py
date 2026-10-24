@@ -206,7 +206,7 @@ class EvidenceRegistryTests(unittest.TestCase):
         body["payload"]["corpus_records"] = 42
         body["entry_sha256"] = _sha(_canonical({
             k:v for k,v in body.items() if k!="entry_sha256"}))
-        forged = _canonical(body) + b"\\n"
+        forged = _canonical(body) + bytes([10])
         self.registry.write_bytes(forged)
         with self.assertRaisesRegex(ev.EvidenceError, "HEAD_ANCHOR_HEAD_MISMATCH"):
             self.append()
@@ -246,6 +246,7 @@ class EvidenceRegistryTests(unittest.TestCase):
         self.assertFalse(secret.exists())
 
     def test_initial_check_requires_existing_anchored_registry(self):
+        ev.load_operator_key(self.key_file)
         with self.assertRaisesRegex(
                 ev.EvidenceError, "REGISTRY_EMPTY|REGISTRY_MISSING"):
             self.verify()
