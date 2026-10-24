@@ -51,6 +51,10 @@ def unified_lookup(adapters: PrivateResearchAdapters, reference: str, *,
     if adapter_filter not in (None, "corpus", "sidecar"):
         raise UnifiedRetrievalError("ADAPTER_FILTER_INVALID")
 
+    # A single report may combine queries against different source families.
+    # Bind the entire response to the same HMAC-attested evidence head before
+    # and after aggregation; refuse if the vault/anchor changed mid-query.
+    first_head = adapters.evidence_head()
     corpus_meta = [] if adapter_filter == "sidecar" else adapters.corpus_sources()
     sidecar_meta = [] if adapter_filter == "corpus" else adapters.sidecar_sources()
 
@@ -67,6 +71,12 @@ def unified_lookup(adapters: PrivateResearchAdapters, reference: str, *,
             "rights_status": "legal_review_pending",
             "scholarly_verified": False,
             "p1_admitted": False,
+            "source_authenticated": False,
+            "rights_verified": False,
+            "publication_allowed": False,
+            "redistribution_approved": False,
+            "juristic_inference_allowed": False,
+            "public_fatwa_authorized": False,
         }
         try:
             outcome = adapters.lookup(reference, meta["source_id"], adapter="corpus",
@@ -77,7 +87,7 @@ def unified_lookup(adapters: PrivateResearchAdapters, reference: str, *,
                 entry["footnotes"] = outcome["footnotes"]
                 entry["text_included"] = outcome["text_included"]
                 entry["restricted_local_use_only"] = True
-        except ResearchAdapterError as exc:
+        except (ResearchAdapterError, UnifiedRetrievalError) as exc:
             if exc.code == "REFERENCE_NOT_PRESENT":
                 entry["coordinate_present"] = False
             else:
@@ -95,6 +105,12 @@ def unified_lookup(adapters: PrivateResearchAdapters, reference: str, *,
             "rights_status": "legal_review_pending",
             "scholarly_verified": False,
             "p1_admitted": False,
+            "source_authenticated": False,
+            "rights_verified": False,
+            "publication_allowed": False,
+            "redistribution_approved": False,
+            "juristic_inference_allowed": False,
+            "public_fatwa_authorized": False,
         }
         try:
             outcome = adapters.lookup(reference, meta["source_id"], adapter="sidecar",
@@ -111,18 +127,27 @@ def unified_lookup(adapters: PrivateResearchAdapters, reference: str, *,
                 raise
         sources.append(entry)
 
+    last_head = adapters.evidence_head()
+    if last_head != first_head:
+        raise UnifiedRetrievalError("EVIDENCE_HEAD_CHANGED_DURING_LOOKUP")
     result = {
         "contract": CONTRACT,
         "engine": VERSION,
         "reference": reference,
         "research_mode": research_mode,
-        "evidence_head_sha256": adapters.evidence_head(),
+        "evidence_head_sha256": first_head,
         "sources": sources,
         "text_included": any(s["text_included"] for s in sources),
         "juristic_inference_allowed": False,
         "public_fatwa_authorized": False,
         "scholarly_verified": False,
         "source_authenticated": False,
+        "edition_verified": False,
+        "rights_status": "legal_review_pending",
+        "rights_verified": False,
+        "publication_allowed": False,
+        "redistribution_approved": False,
+        "p1_admitted": False,
     }
     return result
 
