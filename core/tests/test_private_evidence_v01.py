@@ -129,6 +129,15 @@ class EvidenceRegistryTests(unittest.TestCase):
         return ev.verify_evidence(self.registry, self.anchor_dir, self.key_file,
                                   self.vault, self.sidecar)
 
+    def test_binary_key_with_whitespace_end_bytes_remains_verbatim(self):
+        import secrets
+        binary_key=bytes([10])+b"K"*46+bytes([9])
+        with patch.object(secrets, "token_bytes", return_value=binary_key):
+            self.append()
+        self.assertEqual(binary_key, self.key_file.read_bytes())
+        self.append()
+        self.assertEqual("EVIDENCE_REGISTRY_VERIFIED", self.verify()["status"])
+
     def test_append_then_verify_is_clean_and_metadata_only(self):
         out = self.append()
         self.assertEqual(out["status"], "REGISTRY_ENTRY_APPENDED")
