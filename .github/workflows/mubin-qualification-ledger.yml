@@ -1,0 +1,39 @@
+name: Mubin qualification ledger synthetic verification
+
+on:
+  pull_request:
+    paths:
+      - "engines/quran/research/qualification.py"
+      - "core/tests/test_quran_qualification_ledger.py"
+      - ".github/workflows/mubin-qualification-ledger.yml"
+  push:
+    branches: [main]
+    paths:
+      - "engines/quran/research/qualification.py"
+      - "core/tests/test_quran_qualification_ledger.py"
+      - ".github/workflows/mubin-qualification-ledger.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-qualification-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Offline synthetic-only axis-isolation and tamper tests
+        run: python -m unittest core.tests.test_quran_qualification_ledger -v
+      - name: Compile qualification ledger
+        run: python -m compileall -q engines/quran/research/qualification.py
+
+# No source text, real reviews, keys, or vault access in CI.
+# Real qualification decisions require named independent reviewers.
