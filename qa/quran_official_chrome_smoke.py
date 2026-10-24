@@ -28,10 +28,10 @@ from qa.quran_browser_smoke import request, script, wait, check
 
 def synthetic_full_candidate():
     """An artificial full-size document; NEVER represent this as an authentic Quran."""
-    rows=[f"{s}|{a}|مِثَالٌ اصْطِنَاعِيٌّ لِلِاخْتِبَارِ\\n"
+    rows=[f"{s}|{a}|مِثَالٌ اصْطِنَاعِيٌّ لِلِاخْتِبَارِ\n"
           for s,n in enumerate(_VERSE_COUNTS,1) for a in range(1,n+1)]
-    rows.extend(["\\n","# PLEASE DO NOT REMOVE OR CHANGE THIS COPYRIGHT BLOCK\\n",
-                 "# TEST-ONLY invented Arabic sentences; no edition assertions\\n"])
+    rows.extend(["\n","# PLEASE DO NOT REMOVE OR CHANGE THIS COPYRIGHT BLOCK\n",
+                 "# TEST-ONLY invented Arabic sentences; no edition assertions\n"])
     return "".join(rows).encode("utf-8")
 
 
