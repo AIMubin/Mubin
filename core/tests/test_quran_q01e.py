@@ -87,6 +87,103 @@ class OfficialLocalReaderTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 build_http_server(evil,self.data,port=0)
 
+    def test_full_pinned_candidate_http_retrieval_and_tafsir_metadata(self):
+        """Synthetic FULL fixture exercises runtime with no external Quran texts."""
+        import http.client
+        import threading
+        from engines.quran.q01c.reader import build_http_server
+        with patch.object(official, "PINNED_OFFICIAL_DOMAIN_SHA256", self.hash):
+            index=self.load_test_source()
+            server=build_http_server(index,self.data,port=0)
+            thread=threading.Thread(target=server.serve_forever,daemon=True)
+            thread.start()
+            try:
+                def query(path, headers=None):
+                    conn=http.client.HTTPConnection("127.0.0.1",server.server_port,timeout=5)
+                    try:
+                        conn.request("GET",path,headers=headers or {})
+                        resp=conn.getresponse()
+                        return resp.status,dict(resp.getheaders()),resp.read()
+                    finally:
+                        conn.close()
+                self.assertEqual("127.0.0.1",server.server_address[0])
+                status,headers,body=query("/api/status")
+                self.assertEqual(200,status)
+                data=json.loads(body)
+                self.assertEqual("observed_tanzil_domain_unattested",data["display_provenance"])
+                self.assertFalse(data["official_tanzil_bytes_independently_verified"])
+                self.assertFalse(data["source_authenticated"])
+                self.assertFalse(data["rights_verified"])
+                self.assertEqual(6236,data["verse_count"])
+                status,headers,body=query("/api/get?ref=2%3A1")
+                self.assertEqual(200,status)
+                self.assertEqual("مِثَالٌ اصْطِنَاعِيٌّ لِلِاخْتِبَارِ",
+                                 json.loads(body)["result"]["text"])
+                self.assertEqual("no-store",headers["Cache-Control"])
+                self.assertEqual("no-referrer",headers["Referrer-Policy"])
+                status,_,body=query("/api/tafsir-catalog?ref=2%3A1")
+                self.assertEqual(200,status)
+                catalog=json.loads(body)
+                self.assertEqual(6,len(catalog["sources"]))
+                for field in ("rights_verified","source_authenticated",
+                              "redistribution_approved","juristic_inference_allowed",
+                              "scholarly_verified","public_fatwa_authorized",
+                              "text_import_allowed","p1_admitted"):
+                    self.assertFalse(catalog[field],field)
+                self.assertEqual(
+                    "https://quran.ksu.edu.sa/index.php#aya=2_1&m=hafs",
+                    catalog["links"]["choose_tafsir"])
+                status,_,body=query("/api/notice")
+                self.assertEqual(200,status)
+                self.assertIn("PLEASE DO NOT REMOVE",
+                              json.loads(body)["notice"])
+                status,_,body=query("/api/status",headers={"Host":"evil.example"})
+                self.assertEqual(403,status)
+                status,_,body=query("/api/tafsir-catalog?ref=1%3A99")
+                self.assertEqual(400,status)
+                status,_,body=query("/api/tafsir-catalog?ref=2%3A1%0a")
+                self.assertEqual(400,status)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=3)
+
+    def test_forged_direct_source_manifest_cannot_self_attest(self):
+        from engines.quran.q01b.tanzil import SourceIndex, RawSourceError
+        from engines.quran.q01c.reader import build_http_server
+        from types import MappingProxyType
+        with patch.object(official, "PINNED_OFFICIAL_DOMAIN_SHA256", self.hash):
+            good=self.load_test_source()
+            impostor=SourceIndex(
+                MappingProxyType({**good.manifest,"rights_status":"approved"}),
+                good.verses, good.raw_sha256)
+            with self.assertRaises(RawSourceError):
+                build_http_server(impostor,self.data,port=0)
+            impostor2=SourceIndex(
+                good.manifest,
+                ((1,1,"نص غير مستمد من البايتات المثبتة"),),
+                good.raw_sha256)
+            with self.assertRaises(RawSourceError):
+                build_http_server(impostor2,self.data,port=0)
+
+    def test_direct_reader_cannot_serve_wrong_bytes_even_with_forged_index(self):
+        from engines.quran.q01c.reader import build_http_server
+        from engines.quran.q01b.tanzil import RawSourceError
+        with patch.object(official, "PINNED_OFFICIAL_DOMAIN_SHA256", self.hash):
+            index=self.load_test_source()
+            altered=self.data.replace("مِثَالٌ".encode(),"مُفْتَرًى".encode(),1)
+            with self.assertRaises(RawSourceError):
+                build_http_server(index,altered,port=0)
+
+    def test_q01f_navigation_is_only_for_prevalidated_sources(self):
+        from engines.quran.tafsir.catalog import catalog_for_ref,CatalogError
+        output=catalog_for_ref("2:1","tanzil_domain_unattested_export")
+        self.assertEqual(6,len(output["sources"]))
+        self.assertFalse(output["edition_verified"])
+        self.assertFalse(output["scholarly_verification"])
+        with self.assertRaises(CatalogError):
+            catalog_for_ref("2:1","synthetic_fixture")
+
     def test_download_failure_and_mismatch_do_not_start_server(self):
         for fetcher in (lambda method: b"bad", lambda method: (_ for _ in ()).throw(OSError("down"))):
             with self.subTest(fetcher=fetcher):
