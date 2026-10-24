@@ -103,6 +103,11 @@ def main(argv=None):
         check(script(driver,sid,
             "return document.querySelector('article.ayah').textContent.includes('استجابة Tanzil المثبتة')"),
             "mislabels a domain-source code path as a GitHub mirror")
+        # loadTafsirMetadata() inserts the two external citation links
+        # asynchronously after the verse itself; wait for them explicitly
+        # so a busy runner cannot race this mandatory assertion.
+        wait(driver,sid,
+            "return document.querySelectorAll('article.ayah .tafsir-links a').length===2")
         tafsir_links=script(driver,sid,
             "return Array.from(document.querySelectorAll('article.ayah .tafsir-links a')).map(a=>({href:a.href,target:a.target,rel:a.rel,policy:a.referrerPolicy}))")
         check(len(tafsir_links)==2,"Expected two external Ayat citation links, not copied tafsir text")
