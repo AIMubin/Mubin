@@ -87,6 +87,10 @@ def _failure() -> dict[str, Any]:
         "official_candidate_attested": False,
         "candidate_publisher_provenance_verified": False,
         "rights_verified": False,
+        "redistribution_approved": False,
+        "scholarly_verified": False,
+        "juristic_inference_allowed": False,
+        "public_fatwa_authorized": False,
         "eligible_for_religious_ruling": False,
         "candidate_raw_persisted_or_published": False,
     }
