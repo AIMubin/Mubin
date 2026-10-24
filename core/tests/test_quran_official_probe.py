@@ -89,6 +89,19 @@ class OfficialSourceProbeTests(unittest.TestCase):
                 self.assertEqual("unavailable_or_invalid",report["outcome"])
                 self.assertFalse(report["source_authenticated"])
 
+    def test_all_qualification_flags_remain_false_even_on_comparison_success(self):
+        with patch("qa.quran_official_probe.compare_raw",return_value=stub_result()):
+            response=run_probe(b"manifest",MIRROR,fetcher=lambda _:SOURCE)
+        self.assertEqual("comparison_available_not_authenticated",response["outcome"])
+        for key in ("source_authenticated","official_candidate_attested",
+                    "candidate_publisher_provenance_verified","rights_verified",
+                    "redistribution_approved","scholarly_verified",
+                    "juristic_inference_allowed","public_fatwa_authorized",
+                    "eligible_for_religious_ruling",
+                    "candidate_raw_persisted_or_published"):
+            self.assertIs(response[key],False,key)
+        self.assertIs(response["retrieved_over_official_domain_https"],False)
+
     def test_get_and_post_are_only_supported_fetch_modes(self):
         from qa.quran_official_probe import _fetch
         with self.assertRaises(ValueError):
