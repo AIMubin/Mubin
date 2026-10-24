@@ -140,18 +140,32 @@ class _VaultLock:
         self.fd = None
 
     def __enter__(self):
+        # Validate and UTF-8 encode operator-supplied metadata BEFORE creating
+        # any filesystem state. Arabic identifiers must not strand a lock.
+        if (type(self.operator) is not str or not 1 <= len(self.operator) <= 80 or
+                any(ord(ch) < 32 or ord(ch) == 127 for ch in self.operator)):
+            raise EvidenceError("INVALID_OPERATOR_IDENTIFIER")
+        try:
+            metadata = (self.operator + " " + str(int(time.time()))).encode("utf-8", "strict")
+        except UnicodeError as exc:
+            raise EvidenceError("INVALID_OPERATOR_IDENTIFIER") from exc
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        while True:
-            try:
-                self.fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-                os.write(self.fd, (self.operator + " " + str(int(time.time()))).encode("ascii"))
-                return self
-            except FileExistsError:
-                age = time.time() - self.path.stat().st_mtime
-                # Never break a lock purely by age: a legitimate operator
-                # may have paused, and stale deletion admits two writers.
-                # Manual recovery requires checking the holder first.
-                raise EvidenceError("REGISTRY_BUSY_ANOTHER_OPERATOR") from None
+        try:
+            self.fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+        except FileExistsError:
+            # Never break a live lock merely due to its age. The operator
+            # must investigate and perform explicit recovery if it is stale.
+            raise EvidenceError("REGISTRY_BUSY_ANOTHER_OPERATOR") from None
+        try:
+            if os.write(self.fd, metadata) != len(metadata):
+                raise OSError("short_lock_write")
+        except BaseException:
+            # __exit__ is never called when __enter__ raises.
+            os.close(self.fd)
+            self.fd = None
+            self.path.unlink(missing_ok=True)
+            raise EvidenceError("REGISTRY_LOCK_INIT_FAILED") from None
+        return self
 
     def __exit__(self, *_):
         if self.fd is not None:
