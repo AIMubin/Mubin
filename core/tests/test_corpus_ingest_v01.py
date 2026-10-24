@@ -6,6 +6,9 @@ import gzip
 import json
 from pathlib import Path
 import sqlite3
+import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -152,6 +155,55 @@ class CorpusImportTests(unittest.TestCase):
             with self.assertRaises(CorpusIngestError):
                 ingest_corpus(d,base,base/"private.sqlite3")
             self.assertFalse((base/"private.sqlite3").exists())
+
+    def test_concurrent_partial_imports_cannot_overwrite_one_snapshot(self):
+        # Force both operators to reach publication together. The old
+        # exists()-then-os.replace() path allowed TWO success receipts.
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            dbfile=root/"output"/"immutable.sqlite3"
+            inputs=[]
+            for n in (1,2):
+                folder=root/f"private-{n}"
+                folder.mkdir()
+                d=load_manifest()
+                item=d["sources"][n]
+                blob,raw_length=fake_quranenc(item["version"].split("@")[0])
+                item["sha256"]=sha256(blob).hexdigest()
+                item["compressed_bytes"]=len(blob)
+                item["uncompressed_bytes"]=raw_length
+                (folder/item["file_name"]).write_bytes(blob)
+                inputs.append((d,folder,item["id"]))
+            barrier=threading.Barrier(2)
+            original_link=os.link
+
+            def compete(source,destination):
+                barrier.wait(timeout=15)
+                return original_link(source,destination)
+
+            def attempt(task):
+                catalog,folder,sid=task
+                try:
+                    receipt=ingest_corpus(catalog,folder,dbfile,allow_partial=True)
+                    return ("ok",sid,receipt)
+                except CorpusIngestError as exc:
+                    return ("denied",sid,str(exc))
+
+            with patch("qa.corpus_ingest_v01.os.link",side_effect=compete):
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    results=list(executor.map(attempt,inputs))
+            passed=[x for x in results if x[0]=="ok"]
+            denied=[x for x in results if x[0]=="denied"]
+            self.assertEqual(1,len(passed),results)
+            self.assertEqual(1,len(denied),results)
+            self.assertEqual("output_already_exists_at_publish",denied[0][2])
+            self.assertEqual(6236,passed[0][2]["records"])
+            with sqlite3.connect(dbfile) as conn:
+                ids=[x[0] for x in conn.execute(
+                    "SELECT source_id FROM corpus_sources").fetchall()]
+                self.assertEqual([passed[0][1]],ids)
+                self.assertEqual("ok",conn.execute("PRAGMA quick_check").fetchone()[0])
+            self.assertEqual([],list(dbfile.parent.glob(".mubin-private-*")))
 
     def test_missing_sources_can_be_skipped_with_truthful_partial_report(self):
         d=load_manifest()
