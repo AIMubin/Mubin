@@ -87,7 +87,7 @@ def unified_lookup(adapters: PrivateResearchAdapters, reference: str, *,
                 entry["footnotes"] = outcome["footnotes"]
                 entry["text_included"] = outcome["text_included"]
                 entry["restricted_local_use_only"] = True
-        except (ResearchAdapterError, UnifiedRetrievalError) as exc:
+        except ResearchAdapterError as exc:
             if exc.code == "REFERENCE_NOT_PRESENT":
                 entry["coordinate_present"] = False
             else:
@@ -184,7 +184,7 @@ def main(argv=None):
             adapter_filter=None if args.adapters == "both" else args.adapters,
             include_text=args.include_text)
         code = 0
-    except ResearchAdapterError as exc:
+    except (ResearchAdapterError, UnifiedRetrievalError) as exc:
         report = {"contract": CONTRACT, "status": "REFUSED",
                   "reason_code": exc.code, "text_included": False,
                   "juristic_inference_allowed": False,
