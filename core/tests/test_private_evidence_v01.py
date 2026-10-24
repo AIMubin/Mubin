@@ -178,7 +178,7 @@ class EvidenceRegistryTests(unittest.TestCase):
         body["payload"]["corpus_records"] = 1
         lines[0] = json.dumps(body, ensure_ascii=False, sort_keys=True,
                               separators=(",", ":"))
-        self.registry.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self.registry.write_bytes((chr(10).join(lines) + chr(10)).encode("utf-8"))
         with self.assertRaisesRegex(ev.EvidenceError, "REGISTRY_CHAIN_INVALID"):
             self.verify()
 
@@ -194,7 +194,7 @@ class EvidenceRegistryTests(unittest.TestCase):
         body["entry_sha256"] = forged_sha
         lines[0] = json.dumps(body, ensure_ascii=False, sort_keys=True,
                               separators=(",", ":"))
-        self.registry.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self.registry.write_bytes((chr(10).join(lines) + chr(10)).encode("utf-8"))
         # attacker also rewrites the anchor file body (but lacks the key)
         anchor = self.anchor_dir / (self.registry.stem + "." + ev.ANCHOR_NAME)
         anchor_body = json.loads(anchor.read_text(encoding="utf-8"))
