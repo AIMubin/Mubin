@@ -303,7 +303,12 @@ def _load_registry(registry_path: Path) -> list[dict]:
     if not registry_path.exists():
         return []
     entries = []
-    for line in registry_path.read_text(encoding="utf-8").splitlines():
+    try:
+        existing = registry_path.read_bytes()
+        lines = existing.decode("utf-8", "strict").splitlines()
+    except (OSError, UnicodeError) as exc:
+        raise EvidenceError("REGISTRY_JSON_INVALID") from exc
+    for line in lines:
         if line.strip():
             try:
                 value = json.loads(line)
@@ -312,6 +317,11 @@ def _load_registry(registry_path: Path) -> list[dict]:
             if type(value) is not dict:
                 raise EvidenceError("REGISTRY_CHAIN_INVALID")
             entries.append(value)
+    # The MAC authenticates the parsed chain. Without this extra byte-level
+    # check an attacker can alter separators/whitespace without changing
+    # the hashes, and an append might bless a malformed JSONL log.
+    if existing != b"".join(_canonical(entry) + b"\\n" for entry in entries):
+        raise EvidenceError("REGISTRY_NONCANONICAL_BYTES")
     return entries
 
 
@@ -390,6 +400,17 @@ def _assert_anchored_head(entries: list[dict], registry_path: Path,
     return head
 
 
+def _assert_unchanged_vault(latest_payload: dict, observation: dict) -> None:
+    """Reject changed source bytes / receipts before a new anchored append."""
+    if (latest_payload.get("corpus_database_sha256") != observation["corpus_db"]["sha256"]
+            or latest_payload.get("sidecar_source_sha256") != observation["sidecar"]["sha256"]
+            or latest_payload.get("campaign_receipt_sha256") != observation["campaign_receipt_sha256"]
+            or latest_payload.get("corpus_sources") != observation["corpus_db"]["sources"]
+            or latest_payload.get("corpus_records") != observation["corpus_db"]["records"]
+            or latest_payload.get("sidecar_table_counts") != observation["sidecar"]["tables"]):
+        raise EvidenceError("VAULT_CHANGED_SINCE_LAST_ENTRY")
+
+
 def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
                     vault_dir: Path, sidecar_db: Path, campaign_id: str,
                     operator: str) -> dict:
@@ -405,6 +426,8 @@ def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
         _verify_chain(entries)
         previous = _assert_anchored_head(entries, registry_path, anchor_dir, key)
         entry, observation = build_registry_entry(vault_dir, sidecar_db, campaign_id)
+        if entries:
+            _assert_unchanged_vault(entries[-1]["payload"], observation)
         from datetime import datetime, timezone
         body = {
             "seq": len(entries) + 1, "prev_entry_sha256": previous,
@@ -456,12 +479,7 @@ def verify_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
     _verify_chain(entries)
     head = _assert_anchored_head(entries, registry_path, anchor_dir, key)
     # Latest entry must still describe the CURRENT vault bytes exactly.
-    latest_payload = entries[-1].get("payload", {}) if entries else {}
-    if (latest_payload.get("corpus_database_sha256") != observation["corpus_db"]["sha256"]
-            or latest_payload.get("sidecar_source_sha256") != observation["sidecar"]["sha256"]
-            or latest_payload.get("campaign_receipt_sha256") != observation["campaign_receipt_sha256"]
-            or latest_payload.get("corpus_sources") != observation["corpus_db"]["sources"]):
-        raise EvidenceError("VAULT_CHANGED_SINCE_LAST_ENTRY")
+    _assert_unchanged_vault(entries[-1]["payload"], observation)
     return {"status": "EVIDENCE_REGISTRY_VERIFIED",
             "entries": len(entries), "head_entry_sha256": head,
             "byte_integrity_verified": True,
