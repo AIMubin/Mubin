@@ -109,6 +109,17 @@ class QualificationLedgerTests(unittest.TestCase):
         self.assertEqual(current_state(self.ledger, "qe_ar_yaseer", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key),
                          "UNREVIEWED")
 
+    def test_source_rejection_takes_precedence_over_record_quarantine(self):
+        self.record(decision_id="review-r1", decision="SOURCE_REJECTED")
+        self.record(decision_id="review-r2", decision="RECORD_QUARANTINED",
+                    scope={"record_coordinates":["2:1"]})
+        self.assertEqual("SOURCE_REJECTED",current_state(
+            self.ledger,"qe_ar_muyassar","scholarly",
+            anchor_dir=self.anchor_dir,key_file=self.key,reference="2:1"))
+        self.assertEqual("SOURCE_REJECTED",current_state(
+            self.ledger,"qe_ar_muyassar","scholarly",
+            anchor_dir=self.anchor_dir,key_file=self.key,reference="2:3"))
+
     def test_self_review_and_system_reviewer_refused(self):
         for reviewer in ("system", "automation", "llm"):
             with self.assertRaisesRegex(QualificationError, "REVIEWER_INVALID"):
