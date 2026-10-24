@@ -124,7 +124,7 @@ def ksu_links(ref: str) -> dict[str, str]:
 def catalog_for_ref(ref: str, source_kind: str) -> dict[str,Any]:
     """Metadata response is never P1 evidence or permission to quote tafsir."""
     if type(source_kind) is not str or source_kind not in (
-            "unverified_github_mirror",):
+            "unverified_github_mirror", "tanzil_domain_unattested_export"):
         raise CatalogError("reference_source_not_eligible")
     links=ksu_links(ref)
     catalog=load_catalog()
