@@ -274,6 +274,40 @@ class EvidenceRegistryTests(unittest.TestCase):
                     pass
             self.assertTrue(lock.is_file())
 
+    def test_malformed_receipt_refuses_without_traceback(self):
+        receipt=self.vault/"receipts"/"operator-import-campaign-v01.json"
+        body=json.loads(receipt.read_text(encoding="utf-8"))
+        body["steps"]=[None]
+        receipt.write_text(json.dumps(body),encoding="utf-8")
+        with self.assertRaisesRegex(ev.EvidenceError,"CAMPAIGN_RECEIPT_INVALID"):
+            self.append()
+
+    def test_registry_wrong_json_type_refused(self):
+        self.append()
+        self.registry.write_text('[]'+chr(10),encoding="utf-8")
+        with self.assertRaisesRegex(ev.EvidenceError,"REGISTRY_CHAIN_INVALID"):
+            self.verify()
+
+    def test_head_anchor_wrong_json_type_refused(self):
+        self.append()
+        anchor=self.anchor_dir/(self.registry.stem+"."+ev.ANCHOR_NAME)
+        anchor.write_text('[]',encoding="utf-8")
+        with self.assertRaisesRegex(ev.EvidenceError,"HEAD_ANCHOR_FORMAT_INVALID"):
+            self.verify()
+
+    def test_head_anchor_signed_sequence_must_match_registry(self):
+        import hmac
+        self.append()
+        anchor=self.anchor_dir/(self.registry.stem+"."+ev.ANCHOR_NAME)
+        body=json.loads(anchor.read_text(encoding="utf-8"))
+        body["sequence"]=99
+        auth={k:v for k,v in body.items() if k!="head_hmac"}
+        body["head_hmac"]=hmac.new(self.key_file.read_bytes(),
+                                  _canonical(auth),hashlib.sha256).hexdigest()
+        anchor.write_text(json.dumps(body,sort_keys=True),encoding="utf-8")
+        with self.assertRaisesRegex(ev.EvidenceError,"HEAD_ANCHOR_HEAD_MISMATCH"):
+            self.verify()
+
     def test_anchor_inside_vault_refused(self):
         with self.assertRaisesRegex(ev.EvidenceError, "ANCHOR_INSIDE_VAULT_REFUSED"):
             ev.append_evidence(self.registry, self.vault, self.key_file,
