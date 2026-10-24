@@ -112,52 +112,113 @@ def _anchor_path(anchor_dir: Path, ledger_path: Path) -> Path:
 
 
 def read_head_anchor(anchor_dir: Path, ledger_path: Path, key: bytes) -> dict:
-    path = _anchor_path(anchor_dir, ledger_path)
+    path = _anchor_path(_guard_outside(anchor_dir, None), ledger_path)
     if path.is_symlink() or not path.is_file():
         raise QualificationError("HEAD_ANCHOR_MISSING")
-    body = json.loads(path.read_text(encoding="utf-8"))
-    mac = body.pop("head_hmac", "")
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, UnicodeError, OSError, RecursionError) as exc:
+        raise QualificationError("HEAD_ANCHOR_FORMAT_INVALID") from exc
+    if type(body) is not dict or set(body) != {
+            "registry", "head_entry_sha256", "sequence", "head_hmac"}:
+        raise QualificationError("HEAD_ANCHOR_FORMAT_INVALID")
+    mac = body.pop("head_hmac")
+    if type(mac) is not str or not SHA.fullmatch(mac):
+        raise QualificationError("HEAD_ANCHOR_FORMAT_INVALID")
     expected = hmac.new(key, _canonical(body), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, expected):
         raise QualificationError("HEAD_ANCHOR_MAC_INVALID")
+    if (body["registry"] != ledger_path.name
+            or type(body["head_entry_sha256"]) is not str
+            or not SHA.fullmatch(body["head_entry_sha256"])
+            or type(body["sequence"]) is not int
+            or body["sequence"] < 1):
+        raise QualificationError("HEAD_ANCHOR_FORMAT_INVALID")
     return body
 
 
+def _attested_entries(ledger_path: Path, anchor_dir: Path,
+                      key_file: Path, *, allow_initial=False) -> tuple[list[dict], str]:
+    """Trust a ledger only when its entire chain equals its signed anchor."""
+    ledger = _guard_outside(ledger_path, None)
+    anchor = _guard_outside(anchor_dir, None)
+    key_path = _guard_outside(key_file, None)
+    entries = _load(ledger)
+    _verify_chain(entries)
+    anchor_path = _anchor_path(anchor, ledger)
+    if not entries:
+        if allow_initial and not ledger.exists() and not anchor_path.exists():
+            return [], "0" * 64
+        raise QualificationError("LEDGER_UNPAIRED_OR_EMPTY")
+    try:
+        key = load_operator_key(key_path, create=False)
+    except EvidenceError as exc:
+        raise QualificationError("LEDGER_KEY_UNAVAILABLE") from exc
+    body = read_head_anchor(anchor, ledger, key)
+    head = entries[-1]["entry_sha256"]
+    if body["head_entry_sha256"] != head or body["sequence"] != len(entries):
+        raise QualificationError("HEAD_ANCHOR_HEAD_MISMATCH")
+    return entries, head
+
+
 def validate_decision(decision: dict) -> dict:
-    """Contract validation; refuse self-review, text and auto-promotion."""
+    """Schema, scope and disjoint-axis validation; NOT reviewer attestation."""
     _need(type(decision) is dict, "DECISION_SCHEMA_INVALID")
     required = {"decision_id", "axis", "source_id", "scope", "decision",
                 "reviewer", "reviewed_at_utc", "evidence_head_sha256", "notes"}
     _need(set(decision) == required, "DECISION_SCHEMA_INVALID")
-    _need(ID.fullmatch(decision["decision_id"]) is not None
-          and ID.fullmatch(decision["source_id"]) is not None,
-          "DECISION_ID_INVALID")
-    _need(decision["axis"] in AXES, "AXIS_INVALID")
+    for name in ("decision_id", "source_id", "axis", "decision", "reviewer",
+                 "reviewed_at_utc", "evidence_head_sha256", "notes"):
+        _need(type(decision[name]) is str, "DECISION_SCHEMA_INVALID")
+    _need(ID.fullmatch(decision["decision_id"]) is not None, "DECISION_ID_INVALID")
+    _need(decision["source_id"] in SOURCE_IDS, "SOURCE_NOT_ALLOWLISTED")
     axis, dec = decision["axis"], decision["decision"]
-    allowed = SCHOLARLY_DECISIONS if axis == "scholarly" else RIGHTS_DECISIONS
-    _need(dec in allowed, "DECISION_NOT_VALID_FOR_AXIS")
-    _need(type(decision["reviewer"]) is str and 3 <= len(decision["reviewer"]) <= 80
-          and decision["reviewer"].lower() not in ("system", "automation", "llm"),
+    _need(axis in AXES, "AXIS_INVALID")
+    other = RIGHTS_DECISIONS if axis == "scholarly" else SCHOLARLY_DECISIONS
+    if dec in other:
+        raise QualificationError("CROSS_AXIS_DECISION_REFUSED")
+    _need(dec in (SCHOLARLY_DECISIONS if axis == "scholarly"
+                  else RIGHTS_DECISIONS), "DECISION_NOT_VALID_FOR_AXIS")
+    reviewer = decision["reviewer"]
+    normalized = reviewer.strip().casefold()
+    _need(3 <= len(reviewer) <= 80 and normalized == reviewer.casefold()
+          and not any(ord(ch) < 32 or ord(ch) == 127 for ch in reviewer)
+          and normalized not in {"system", "automation", "llm", "ai", "bot", "codex",
+                                 "gpt", "model", "auto"},
           "REVIEWER_INVALID")
-    _need(re.fullmatch(r"20[0-9]{2}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]Z",
-                       decision["reviewed_at_utc"]) is not None,
-          "REVIEW_DATE_INVALID")
-    _need(SHA.fullmatch(decision["evidence_head_sha256"]) is not None,
+    stamp = decision["reviewed_at_utc"]
+    try:
+        instant = datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        _need(instant <= datetime.now(timezone.utc), "REVIEW_DATE_INVALID")
+    except ValueError as exc:
+        raise QualificationError("REVIEW_DATE_INVALID") from exc
+    _need(SHA.fullmatch(decision["evidence_head_sha256"]) is not None
+          and decision["evidence_head_sha256"] != "0" * 64,
           "EVIDENCE_HEAD_INVALID")
-    _need(type(decision["notes"]) is str and len(decision["notes"]) <= MAX_NOTES,
+    notes = decision["notes"]
+    _need(len(notes) <= MAX_NOTES and not any(ord(c) < 32 for c in notes),
           "NOTES_INVALID")
     scope = decision["scope"]
-    _need(type(scope) is dict and set(scope) <= {"record_coordinates", "full_source"}
-          and scope, "SCOPE_INVALID")
-    if "record_coordinates" in scope:
+    _need(type(scope) is dict, "SCOPE_INVALID")
+    if dec == "RECORD_QUARANTINED":
+        _need(set(scope) == {"record_coordinates"}, "SCOPE_INVALID")
         coords = scope["record_coordinates"]
-        _need(type(coords) is list and 1 <= len(coords) <= 6236 and
-              all(type(c) is str and re.fullmatch(
-                  r"(?:[1-9]|[1-9][0-9]|1[01][0-9]|11[0-4]):[1-9][0-9]{0,2}\Z", c)
-                  for c in coords), "SCOPE_COORDINATES_INVALID")
-    # A cross-axis decision is refused: the axes are independent by contract.
-    if axis == "rights" and dec in SCHOLARLY_DECISIONS - RIGHTS_DECISIONS:
-        raise QualificationError("CROSS_AXIS_DECISION_REFUSED")
+        _need(type(coords) is list and 1 <= len(coords) <= 6236
+              and all(type(c) is str for c in coords), "SCOPE_COORDINATES_INVALID")
+        parsed = []
+        for coordinate in coords:
+            try:
+                sv, av = coordinate.split(":")
+                sura, aya = int(sv), int(av)
+                canonical = f"{sura}:{aya}" == coordinate
+            except (ValueError, AttributeError):
+                raise QualificationError("SCOPE_COORDINATES_INVALID") from None
+            _need(canonical and 1 <= sura <= len(_VERSE_COUNTS)
+                  and 1 <= aya <= _VERSE_COUNTS[sura-1], "SCOPE_COORDINATES_INVALID")
+            parsed.append(coordinate)
+        _need(len(set(parsed)) == len(parsed), "SCOPE_COORDINATES_INVALID")
+    else:
+        _need(scope == {"full_source": True}, "SCOPE_INVALID")
     return decision
 
 
