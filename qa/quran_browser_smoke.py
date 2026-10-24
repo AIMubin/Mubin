@@ -44,7 +44,7 @@ def script(driver, sid, js):
     r=request(driver+'/session/'+sid+'/execute/sync','POST',
               {'script':js,'args':[]})
     if 'value' not in r:
-        raise AssertionError('WebDriver evaluation failed: '+str(r)[:400])
+        raise AssertionError('WebDriver evaluation failed without an evaluation value')
     return r['value']
 
 def wait(driver, sid, js):
@@ -96,7 +96,7 @@ def main():
                 'goog:chromeOptions':{'args':['--headless=new','--no-sandbox',
                      '--disable-dev-shm-usage','--window-size=1200,900']}}}})
         sid=response.get('sessionId') or response.get('value',{}).get('sessionId')
-        check(sid, 'Chrome session creation failed: '+str(response)[:450])
+        check(sid, 'Chrome session creation failed')
         request(driver+'/session/'+sid+'/url','POST',{'url':website})
         wait(driver,sid,"return document.querySelector('#source-details')?.textContent.includes('synthetic:q01b')")
         check(script(driver,sid,"return document.documentElement.getAttribute('dir')")== 'rtl',
@@ -140,7 +140,7 @@ def main():
         request(driver+'/session/'+sid+'/window/rect','POST',{'width':390,'height':840})
         dims=script(driver,sid,"return {width:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,dir:getComputedStyle(document.body).direction}")
         check(dims['dir']=='rtl' and dims['scroll']<=dims['width']+1,
-              'Mobile RTL layout overflows horizontally: '+str(dims))
+              'Mobile RTL layout overflows horizontally')
         try:
             request(website+'api/status',headers={'Host':'attacker.example'})
         except urllib.error.HTTPError as err:
