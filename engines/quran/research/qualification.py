@@ -25,7 +25,8 @@ from pathlib import Path
 
 from qa import private_evidence_v01 as evidence
 from qa.private_evidence_v01 import (
-    _VaultLock, _canonical, _guard_outside, load_operator_key,
+    _VaultLock, _canonical, _guard_outside, _guard_secret_location,
+    load_operator_key,
     EvidenceError,
 )
 from engines.quran.q01.engine import _VERSE_COUNTS
@@ -139,11 +140,14 @@ def read_head_anchor(anchor_dir: Path, ledger_path: Path, key: bytes) -> dict:
 
 
 def _attested_entries(ledger_path: Path, anchor_dir: Path,
-                      key_file: Path, *, allow_initial=False) -> tuple[list[dict], str]:
+                      key_file: Path, *, vault: Path, allow_initial=False) -> tuple[list[dict], str]:
     """Trust a ledger only when its entire chain equals its signed anchor."""
     ledger = _guard_outside(ledger_path, None)
-    anchor = _guard_outside(anchor_dir, None)
-    key_path = _guard_outside(key_file, None)
+    try:
+        anchor = _guard_secret_location(anchor_dir, Path(vault))
+        key_path = _guard_secret_location(key_file, Path(vault))
+    except EvidenceError as exc:
+        raise QualificationError("QUALIFICATION_SECRET_IN_VAULT_REFUSED") from exc
     entries = _load(ledger)
     _verify_chain(entries)
     anchor_path = _anchor_path(anchor, ledger)
@@ -229,8 +233,11 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
                     evidence_key: Path, vault: Path, sidecar_db: Path) -> dict:
     """Record exactly one human-provided decision; never grant public authority."""
     ledger_path = _guard_outside(ledger_path, None)
-    anchor_dir = _guard_outside(anchor_dir, None)
-    key_file = _guard_outside(key_file, None)
+    try:
+        anchor_dir = _guard_secret_location(anchor_dir, Path(vault))
+        key_file = _guard_secret_location(key_file, Path(vault))
+    except EvidenceError as exc:
+        raise QualificationError("QUALIFICATION_SECRET_IN_VAULT_REFUSED") from exc
     clean = validate_decision(decision)
     _need(type(operator) is str and operator.strip().casefold() != clean["reviewer"].strip().casefold(),
           "SELF_REVIEW_REFUSED")
@@ -249,7 +256,7 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
                 or observation.get("scholarly_verified") is not False):
             raise QualificationError("EVIDENCE_HEAD_NOT_ATTESTED")
         entries, previous = _attested_entries(ledger_path, anchor_dir, key_file,
-                                               allow_initial=True)
+                                               vault=vault, allow_initial=True)
         try:
             key = load_operator_key(key_file, create=not entries)
         except EvidenceError as exc:
@@ -296,14 +303,14 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
 
 
 def decisions_for(ledger_path: Path, source_id: str, axis: str | None = None,
-                  *, anchor_dir: Path, key_file: Path,
+                  *, anchor_dir: Path, key_file: Path, vault: Path,
                   reference: str | None = None) -> list[dict]:
     _need(type(source_id) is str and source_id in SOURCE_IDS, "SOURCE_NOT_ALLOWLISTED")
     _need(axis is None or axis in AXES, "AXIS_INVALID")
     if reference is not None:
         _valid_reference(reference)
     entries, _ = _attested_entries(ledger_path, anchor_dir, key_file,
-                                    allow_initial=True)
+                                    vault=vault, allow_initial=True)
     out = []
     for body in entries:
         payload = body["payload"]
@@ -335,12 +342,12 @@ def _valid_reference(reference: str) -> None:
 
 
 def current_state(ledger_path: Path, source_id: str, axis: str, *,
-                  anchor_dir: Path, key_file: Path,
+                  anchor_dir: Path, key_file: Path, vault: Path,
                   reference: str | None = None) -> str:
     """Full-source decisions remain global; quarantines affect only matching coordinates."""
     _need(axis in AXES, "AXIS_INVALID")
     items = decisions_for(ledger_path, source_id, axis, anchor_dir=anchor_dir,
-                          key_file=key_file, reference=reference)
+                          key_file=key_file, vault=vault, reference=reference)
     latest_full = DEFAULT_SCHOLARLY if axis == "scholarly" else DEFAULT_RIGHTS
     quarantined = False
     for item in items:
@@ -355,8 +362,10 @@ def current_state(ledger_path: Path, source_id: str, axis: str, *,
     return "RECORD_QUARANTINED" if quarantined else latest_full
 
 
-def verify_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path) -> dict:
-    entries, head = _attested_entries(ledger_path, anchor_dir, key_file)
+def verify_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path, *,
+                  vault: Path) -> dict:
+    entries, head = _attested_entries(ledger_path, anchor_dir, key_file,
+                                      vault=vault)
     return {"contract": CONTRACT, "status": "QUALIFICATION_LEDGER_VERIFIED",
             "entries": len(entries), "head_entry_sha256": head,
             "axes": sorted(AXES), "publication_granted": False,
@@ -385,11 +394,13 @@ def main(argv=None):
     state.add_argument("--axis", choices=tuple(AXES), required=True)
     state.add_argument("--anchor-dir", required=True)
     state.add_argument("--key-file", required=True)
+    state.add_argument("--vault", required=True)
     state.add_argument("--ref")
     check = sub.add_parser("verify")
     check.add_argument("--ledger", required=True)
     check.add_argument("--anchor-dir", required=True)
     check.add_argument("--key-file", required=True)
+    check.add_argument("--vault", required=True)
     args = parser.parse_args(argv)
     try:
         if args.action == "record":
@@ -406,14 +417,15 @@ def main(argv=None):
                       "state": current_state(
                           args.ledger, args.source_id, args.axis,
                           anchor_dir=args.anchor_dir, key_file=args.key_file,
-                          reference=args.ref),
+                          vault=args.vault, reference=args.ref),
                       "decisions": decisions_for(
                           args.ledger, args.source_id, args.axis,
                           anchor_dir=args.anchor_dir, key_file=args.key_file,
-                          reference=args.ref)}
+                          vault=args.vault, reference=args.ref)}
             code = 0
         else:
-            report = verify_ledger(args.ledger, args.anchor_dir, args.key_file)
+            report = verify_ledger(args.ledger, args.anchor_dir, args.key_file,
+                                   vault=args.vault)
             code = 0
     except (QualificationError, EvidenceError) as exc:
         report, code = {"status": "REFUSED", "reason_code": exc.code,
