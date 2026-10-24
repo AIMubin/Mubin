@@ -6,7 +6,7 @@
 
 `qa.quran_merge_readiness` now evaluates **one explicitly numbered pull request** targeting `main`. It is advisory-only and read-only. This is not a GitHub Rulesets evaluator, merge bot, branch-protection substitute, repository release gate, scripture source audit, or independent scholarly review.
 
-The local deterministic `assess_pr(snapshot, number)` function treats caller-supplied JSON as **untrusted** and always returns `merge_ready=false`, `eligible_for_auto_merge=false`. Even a crafted snapshot with all green CI and an independent approval cannot turn those fields true. `fetch_live` retrieves current GitHub metadata through a fixed host and restricted GET paths, rejects redirects, bounds JSON and refuses a changed main SHA. The CLI labels the live source only after retrieval.
+The local deterministic `assess_pr(snapshot, number)` function treats caller-supplied JSON as **untrusted** and always returns `merge_ready=false`, `eligible_for_auto_merge=false`. Even a crafted snapshot with all green CI and an independent approval cannot turn those fields true. `fetch_live` retrieves current GitHub metadata through a fixed host and restricted GET paths, rejects redirects, bounds JSON and rechecks both the main SHA and PR head/base/status at the end of the live fetch. A concurrently changed PR is refused rather than silently evaluated against an obsolete head. The CLI labels the live source only after retrieval.
 
 ### Checks covered
 
