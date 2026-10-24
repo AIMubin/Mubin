@@ -115,14 +115,19 @@ class EvidenceRegistryTests(unittest.TestCase):
     def tearDown(self):
         self._tmp.cleanup()
 
+    @property
+    def sidecar(self) -> Path:
+        return self.vault / ev.SIDECAR_DB_NAME
+
     def append(self, *, operator="op1"):
         return ev.append_evidence(self.registry, self.anchor_dir, self.key_file,
-                                  self.vault, "operator-local-private-corpus-import-v01",
+                                  self.vault, self.sidecar,
+                                  "operator-local-private-corpus-import-v01",
                                   operator)
 
     def verify(self):
         return ev.verify_evidence(self.registry, self.anchor_dir, self.key_file,
-                                  self.vault)
+                                  self.vault, self.sidecar)
 
     def test_append_then_verify_is_clean_and_metadata_only(self):
         out = self.append()
@@ -194,7 +199,8 @@ class EvidenceRegistryTests(unittest.TestCase):
     def test_anchor_inside_vault_refused(self):
         with self.assertRaisesRegex(ev.EvidenceError, "ANCHOR_INSIDE_VAULT_REFUSED"):
             ev.append_evidence(self.registry, self.vault, self.key_file,
-                               self.vault, "operator-local-private-corpus-import-v01", "op")
+                               self.vault, self.sidecar,
+                               "operator-local-private-corpus-import-v01", "op")
 
     def test_concurrent_append_serialized_by_lock(self):
         lock = ev._VaultLock(self.registry.parent / ev.LOCK_NAME, "holder")

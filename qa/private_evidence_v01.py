@@ -49,6 +49,10 @@ CORPUS_VERSES_PER_SOURCE = 6236
 class EvidenceError(ValueError):
     """Stable, non-disclosing refusal codes only."""
 
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
 
 def _need(ok, code):
     if not ok:
@@ -144,13 +148,18 @@ class _VaultLock:
         return False
 
 
-def verify_vault(vault_dir: Path, campaign_receipt: dict | None = None) -> dict:
+def verify_vault(vault_dir: Path, sidecar_db: Path,
+                 campaign_receipt: dict | None = None) -> dict:
     """Byte/integrity/counts verification of both vault databases.
 
-    Reads structure and digests only; no verse or commentary text is
-    returned or logged. Refuses on any single-byte mismatch.
+    The TafsirCenter sidecar lives wherever the operator keeps it (it is a
+    separately licensed original), so its path is supplied explicitly and
+    only its bytes and structure are read. Reads structure and digests
+    only; no verse or commentary text is returned or logged. Refuses on
+    any single-byte mismatch.
     """
     vault = _guard_outside(vault_dir, None)
+    sidecar_db = _guard_outside(sidecar_db, None)
     receipt_path = vault / RECEIPT_NAME
     if receipt_path.is_symlink() or not receipt_path.is_file():
         raise EvidenceError("CAMPAIGN_RECEIPT_MISSING")
@@ -166,7 +175,7 @@ def verify_vault(vault_dir: Path, campaign_receipt: dict | None = None) -> dict:
         raise EvidenceError("CAMPAIGN_RECEIPT_INVALID")
 
     # Sidecar: byte-verify against the frozen module pin, then structure.
-    sidecar_path = vault / SIDECAR_DB_NAME
+    sidecar_path = sidecar_db
     if sidecar_path.is_symlink():
         raise EvidenceError("PRIVATE_PATH_SYMLINK_REFUSED")
     if not sidecar_path.is_file():
@@ -241,9 +250,10 @@ def verify_vault(vault_dir: Path, campaign_receipt: dict | None = None) -> dict:
     }
 
 
-def build_registry_entry(vault_dir: Path, campaign_id: str) -> tuple[dict, dict]:
+def build_registry_entry(vault_dir: Path, sidecar_db: Path,
+                         campaign_id: str) -> tuple[dict, dict]:
     """One metadata-only registry entry describing the verified vault."""
-    observation = verify_vault(vault_dir)
+    observation = verify_vault(vault_dir, sidecar_db)
     entry = {
         "campaign_id": campaign_id,
         "sidecar_source_sha256": observation["sidecar"]["sha256"],
@@ -307,12 +317,13 @@ def read_head_anchor(anchor_dir: Path, registry_path: Path, key: bytes) -> dict:
 
 
 def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
-                    vault_dir: Path, campaign_id: str, operator: str) -> dict:
+                    vault_dir: Path, sidecar_db: Path, campaign_id: str,
+                    operator: str) -> dict:
     """Verify the vault, then atomically append one anchored entry."""
     registry_path = _guard_outside(registry_path, Path(vault_dir))
     anchor_dir = _guard_outside(anchor_dir, Path(vault_dir))
     key = load_operator_key(_guard_outside(key_file, Path(vault_dir)))
-    entry, observation = build_registry_entry(vault_dir, campaign_id)
+    entry, observation = build_registry_entry(vault_dir, sidecar_db, campaign_id)
     with _VaultLock(registry_path.parent / LOCK_NAME, operator):
         entries = _load_registry(registry_path)
         _verify_chain(entries)
@@ -356,12 +367,12 @@ def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
 
 
 def verify_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
-                    vault_dir: Path) -> dict:
+                    vault_dir: Path, sidecar_db: Path) -> dict:
     """Full verification: vault bytes + chain + HMAC anchor, no writes."""
     registry_path = _guard_outside(registry_path, Path(vault_dir))
     anchor_dir = _guard_outside(anchor_dir, Path(vault_dir))
     key = load_operator_key(_guard_outside(key_file, Path(vault_dir)))
-    observation = verify_vault(vault_dir)
+    observation = verify_vault(vault_dir, sidecar_db)
     entries = _load_registry(registry_path)
     _verify_chain(entries)
     anchor = read_head_anchor(anchor_dir, registry_path, key)
@@ -387,6 +398,7 @@ def main(argv=None):
     parser.add_argument("--registry", type=Path, required=True)
     parser.add_argument("--anchor-dir", type=Path, required=True)
     parser.add_argument("--key-file", type=Path, required=True)
+    parser.add_argument("--sidecar-db", type=Path, required=True)
     parser.add_argument("--campaign-id", default="operator-local-private-corpus-import-v01")
     parser.add_argument("--operator", default="local-operator")
     parser.add_argument("--check", action="store_true",
@@ -395,10 +407,10 @@ def main(argv=None):
     try:
         if args.check:
             report = verify_evidence(args.registry, args.anchor_dir,
-                                     args.key_file, args.vault)
+                                     args.key_file, args.vault, args.sidecar_db)
         else:
             report = append_evidence(args.registry, args.anchor_dir,
-                                     args.key_file, args.vault,
+                                     args.key_file, args.vault, args.sidecar_db,
                                      args.campaign_id, args.operator)
         code = 0
     except EvidenceError as exc:
