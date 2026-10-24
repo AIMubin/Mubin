@@ -1,0 +1,40 @@
+name: Mubin private evidence registry synthetic verification
+
+on:
+  pull_request:
+    paths:
+      - "qa/private_evidence_v01.py"
+      - "core/tests/test_private_evidence_v01.py"
+      - ".github/workflows/mubin-private-evidence.yml"
+  push:
+    branches: [main]
+    paths:
+      - "qa/private_evidence_v01.py"
+      - "core/tests/test_private_evidence_v01.py"
+      - ".github/workflows/mubin-private-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-evidence-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Offline synthetic-only chain, anchor and tamper tests
+        run: python -m unittest core.tests.test_private_evidence_v01 -v
+      - name: Compile local evidence tool
+        run: python -m compileall -q qa/private_evidence_v01.py
+
+# No vault access, downloads, keys, or artifact upload in CI.
+# The operator runs evidence append/verify against the real private vault
+# on local storage with the operator key kept outside the vault.
