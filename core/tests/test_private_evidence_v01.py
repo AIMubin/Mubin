@@ -348,6 +348,28 @@ class EvidenceRegistryTests(unittest.TestCase):
         self.assertEqual(before,self.registry.read_bytes())
         self.assertEqual(signed,anchor.read_bytes())
 
+    def test_arabic_operator_can_append_without_orphan_lock(self):
+        self.append(operator="مشغل-البحث")
+        self.assertEqual("EVIDENCE_REGISTRY_VERIFIED",self.verify()["status"])
+        self.assertFalse((self.registry.parent/ev.LOCK_NAME).exists())
+        self.append(operator="other")
+        self.assertEqual(2,self.verify()["entries"])
+
+    def test_lock_initialization_write_failure_unlinks_partial_lock(self):
+        import os
+        with patch.object(ev.os,"write",side_effect=OSError("synthetic_error")):
+            with self.assertRaisesRegex(ev.EvidenceError,"REGISTRY_LOCK_INIT_FAILED"):
+                with ev._VaultLock(self.registry.parent/ev.LOCK_NAME,"مشغل"):
+                    pass
+        self.assertFalse((self.registry.parent/ev.LOCK_NAME).exists())
+        self.append()
+        self.assertEqual(1,self.verify()["entries"])
+
+    def test_reject_invalid_operator_before_creating_lock(self):
+        with self.assertRaisesRegex(ev.EvidenceError,"INVALID_OPERATOR_IDENTIFIER"):
+            self.append(operator="bad"+chr(10)+"owner")
+        self.assertFalse((self.registry.parent/ev.LOCK_NAME).exists())
+
     def test_anchor_inside_vault_refused(self):
         with self.assertRaisesRegex(ev.EvidenceError, "ANCHOR_INSIDE_VAULT_REFUSED"):
             ev.append_evidence(self.registry, self.vault, self.key_file,
