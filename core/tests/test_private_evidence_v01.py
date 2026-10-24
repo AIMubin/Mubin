@@ -196,6 +196,74 @@ class EvidenceRegistryTests(unittest.TestCase):
                                     "HEAD_ANCHOR_(MAC_INVALID|HEAD_MISMATCH)"):
             self.verify()
 
+    def test_rehashed_history_refused_on_new_append_before_reanchoring(self):
+        """Recomputing a fully consistent chain cannot get a new valid MAC."""
+        self.append()
+        original_registry = self.registry.read_bytes()
+        original_anchor = (self.anchor_dir /
+            (self.registry.stem + "." + ev.ANCHOR_NAME)).read_bytes()
+        body = json.loads(original_registry.decode("utf-8"))
+        body["payload"]["corpus_records"] = 42
+        body["entry_sha256"] = _sha(_canonical({
+            k:v for k,v in body.items() if k!="entry_sha256"}))
+        forged = _canonical(body) + b"\\n"
+        self.registry.write_bytes(forged)
+        with self.assertRaisesRegex(ev.EvidenceError, "HEAD_ANCHOR_HEAD_MISMATCH"):
+            self.append()
+        self.assertEqual(forged, self.registry.read_bytes())
+        self.assertEqual(original_anchor, (self.anchor_dir /
+            (self.registry.stem + "." + ev.ANCHOR_NAME)).read_bytes())
+        self.assertNotEqual(original_registry, self.registry.read_bytes())
+
+    def test_receipt_same_meaning_new_bytes_refused(self):
+        self.append()
+        path=self.vault/"receipts"/"operator-import-campaign-v01.json"
+        body=json.loads(path.read_text(encoding="utf-8"))
+        path.write_text(json.dumps(body, separators=(",",":")),
+                        encoding="utf-8")
+        with self.assertRaisesRegex(ev.EvidenceError, "VAULT_CHANGED_SINCE_LAST_ENTRY"):
+            self.verify()
+
+    def test_missing_key_check_does_not_create_new_key(self):
+        self.append()
+        self.key_file.unlink()
+        with self.assertRaisesRegex(ev.EvidenceError, "OPERATOR_KEY_MISSING"):
+            self.verify()
+        self.assertFalse(self.key_file.exists())
+
+    def test_secret_key_and_anchor_nested_beneath_vault_refused(self):
+        nested=self.vault/"private"/"anchors"
+        with self.assertRaisesRegex(
+                ev.EvidenceError, "SECRET_OR_ANCHOR_INSIDE_VAULT_REFUSED"):
+            ev.append_evidence(self.registry,nested,self.key_file,
+                               self.vault,self.sidecar,"test","op")
+        self.assertFalse(nested.exists())
+        secret=self.vault/"private"/"operator.key"
+        with self.assertRaisesRegex(
+                ev.EvidenceError, "SECRET_OR_ANCHOR_INSIDE_VAULT_REFUSED"):
+            ev.append_evidence(self.registry,self.anchor_dir,secret,
+                               self.vault,self.sidecar,"test","op")
+        self.assertFalse(secret.exists())
+
+    def test_initial_check_requires_existing_anchored_registry(self):
+        with self.assertRaisesRegex(
+                ev.EvidenceError, "REGISTRY_EMPTY|REGISTRY_MISSING"):
+            self.verify()
+
+    def test_stale_lock_never_unlinks_busy_operator_lock(self):
+        import os
+        import time
+        lock=self.registry.parent/ev.LOCK_NAME
+        holder=ev._VaultLock(lock,"operator")
+        with holder:
+            old=time.time()-ev._VaultLock.STALE_SECONDS-50
+            os.utime(lock,(old,old))
+            with self.assertRaisesRegex(
+                    ev.EvidenceError,"REGISTRY_BUSY_ANOTHER_OPERATOR"):
+                with ev._VaultLock(lock,"second"):
+                    pass
+            self.assertTrue(lock.is_file())
+
     def test_anchor_inside_vault_refused(self):
         with self.assertRaisesRegex(ev.EvidenceError, "ANCHOR_INSIDE_VAULT_REFUSED"):
             ev.append_evidence(self.registry, self.vault, self.key_file,
