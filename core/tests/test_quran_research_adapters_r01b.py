@@ -219,7 +219,7 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
 
     def test_denies_sql_injection_bad_coordinates_and_unknown_tables(self):
         ad=self.adapters()
-        for ref in ("2:0","2:999","2:1 OR 1=1","1:8","0:1","2:001","2:1;DROP TABLE"):
+        for ref in ("2:0","2:999","2:1 OR 1=1","1:8","0:1","2:001","2:1;DROP TABLE","115:1","116:1","119:1","999:1"):
             with self.subTest(ref=ref),self.assertRaisesRegex(ResearchAdapterError,"REFERENCE_INVALID"):
                 ad.lookup(ref,"qe_ar_muyassar")
         for kind,sid in (("sidecar",'tafsir_tabary";DROP TABLE tafsir_tabary'),
