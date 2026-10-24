@@ -79,8 +79,9 @@ def _canonical(obj) -> bytes:
 def _guard_outside(path: Path, vault: Path) -> Path:
     """Refuse symlinks and anything resolving inside the public checkout."""
     candidate = Path(os.path.abspath(os.fspath(path)))
-    if candidate.is_symlink():
-        raise EvidenceError("PRIVATE_PATH_SYMLINK_REFUSED")
+    for component in (candidate, *candidate.parents):
+        if component.is_symlink() or (hasattr(component, "is_junction") and component.is_junction()):
+            raise EvidenceError("PRIVATE_PATH_SYMLINK_REFUSED")
     repo = Path(__file__).resolve().parents[1]
     resolved = candidate.resolve()
     if resolved == repo or repo in resolved.parents:
@@ -89,10 +90,19 @@ def _guard_outside(path: Path, vault: Path) -> Path:
         vault_resolved = Path(vault).resolve()
         if resolved == vault_resolved:
             raise EvidenceError("ANCHOR_INSIDE_VAULT_REFUSED")
+    return resolved
+
+
+def _guard_secret_location(path: Path, vault: Path) -> Path:
+    """Keys and MAC anchors must not be stored anywhere within the vault."""
+    candidate = _guard_outside(path, vault)
+    vault_resolved = Path(vault).resolve()
+    if vault_resolved in candidate.parents:
+        raise EvidenceError("SECRET_OR_ANCHOR_INSIDE_VAULT_REFUSED")
     return candidate
 
 
-def load_operator_key(key_file: Path) -> bytes:
+def load_operator_key(key_file: Path, *, create: bool = True) -> bytes:
     """Load (or create with 0600) the operator HMAC key OUTSIDE the vault."""
     path = Path(os.path.abspath(os.fspath(key_file)))
     if path.is_symlink():
@@ -102,6 +112,8 @@ def load_operator_key(key_file: Path) -> bytes:
         if len(key) < 32:
             raise EvidenceError("OPERATOR_KEY_TOO_SHORT")
         return key
+    if not create:
+        raise EvidenceError("OPERATOR_KEY_MISSING")
     import secrets
     key = secrets.token_bytes(48)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -136,9 +148,9 @@ class _VaultLock:
                 return self
             except FileExistsError:
                 age = time.time() - self.path.stat().st_mtime
-                if age > self.STALE_SECONDS:
-                    self.path.unlink(missing_ok=True)
-                    continue
+                # Never break a lock purely by age: a legitimate operator
+                # may have paused, and stale deletion admits two writers.
+                # Manual recovery requires checking the holder first.
                 raise EvidenceError("REGISTRY_BUSY_ANOTHER_OPERATOR") from None
 
     def __exit__(self, *_):
@@ -209,11 +221,11 @@ def verify_vault(vault_dir: Path, sidecar_db: Path,
                 "SELECT COUNT(*) FROM corpus_entries WHERE source_id=?",
                 (source_id,)).fetchone()[0]
             if count != CORPUS_VERSES_PER_SOURCE:
-                raise EvidenceError("CORPUS_RECORD_COUNT_CHANGED:" + source_id)
+                raise EvidenceError("CORPUS_RECORD_COUNT_CHANGED")
             if con.execute(
                     "SELECT COUNT(DISTINCT sura || ':' || aya) FROM corpus_entries "
                     "WHERE source_id=?", (source_id,)).fetchone()[0] != count:
-                raise EvidenceError("CORPUS_COORDINATE_CHANGED:" + source_id)
+                raise EvidenceError("CORPUS_COORDINATE_CHANGED")
             per_source[source_id] = {"kind": source_kind, "records": count,
                                      "sha256": raw_sha}
             total += count
@@ -313,7 +325,29 @@ def read_head_anchor(anchor_dir: Path, registry_path: Path, key: bytes) -> dict:
     expected = hmac.new(key, _canonical(body), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, expected):
         raise EvidenceError("HEAD_ANCHOR_MAC_INVALID")
+    if (set(body) != {"registry", "head_entry_sha256", "sequence"}
+            or body["registry"] != registry_path.name
+            or type(body["sequence"]) is not int
+            or body["sequence"] < 1
+            or type(body["head_entry_sha256"]) is not str
+            or not re.fullmatch(r"[0-9a-f]{64}", body["head_entry_sha256"])):
+        raise EvidenceError("HEAD_ANCHOR_FORMAT_INVALID")
     return body
+
+
+def _assert_anchored_head(entries: list[dict], registry_path: Path,
+                          anchor_dir: Path, key: bytes) -> str:
+    """Reject rehashed/rolled-back history BEFORE signing a new append."""
+    anchor_path = _head_anchor_path(anchor_dir, registry_path)
+    if not entries:
+        if registry_path.exists() or anchor_path.exists():
+            raise EvidenceError("UNPAIRED_INITIAL_REGISTRY_OR_ANCHOR")
+        return "0" * 64
+    anchor = read_head_anchor(anchor_dir, registry_path, key)
+    head = entries[-1]["entry_sha256"]
+    if anchor["head_entry_sha256"] != head or anchor["sequence"] != len(entries):
+        raise EvidenceError("HEAD_ANCHOR_HEAD_MISMATCH")
+    return head
 
 
 def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
@@ -321,13 +355,13 @@ def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
                     operator: str) -> dict:
     """Verify the vault, then atomically append one anchored entry."""
     registry_path = _guard_outside(registry_path, Path(vault_dir))
-    anchor_dir = _guard_outside(anchor_dir, Path(vault_dir))
-    key = load_operator_key(_guard_outside(key_file, Path(vault_dir)))
-    entry, observation = build_registry_entry(vault_dir, sidecar_db, campaign_id)
+    anchor_dir = _guard_secret_location(anchor_dir, Path(vault_dir))
+    key = load_operator_key(_guard_secret_location(key_file, Path(vault_dir)))
     with _VaultLock(registry_path.parent / LOCK_NAME, operator):
         entries = _load_registry(registry_path)
         _verify_chain(entries)
-        previous = entries[-1]["entry_sha256"] if entries else "0" * 64
+        previous = _assert_anchored_head(entries, registry_path, anchor_dir, key)
+        entry, observation = build_registry_entry(vault_dir, sidecar_db, campaign_id)
         from datetime import datetime, timezone
         body = {
             "seq": len(entries) + 1, "prev_entry_sha256": previous,
@@ -370,19 +404,18 @@ def verify_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
                     vault_dir: Path, sidecar_db: Path) -> dict:
     """Full verification: vault bytes + chain + HMAC anchor, no writes."""
     registry_path = _guard_outside(registry_path, Path(vault_dir))
-    anchor_dir = _guard_outside(anchor_dir, Path(vault_dir))
-    key = load_operator_key(_guard_outside(key_file, Path(vault_dir)))
+    anchor_dir = _guard_secret_location(anchor_dir, Path(vault_dir))
+    key = load_operator_key(_guard_secret_location(key_file, Path(vault_dir)), create=False)
     observation = verify_vault(vault_dir, sidecar_db)
     entries = _load_registry(registry_path)
     _verify_chain(entries)
-    anchor = read_head_anchor(anchor_dir, registry_path, key)
-    head = entries[-1]["entry_sha256"] if entries else "0" * 64
-    if anchor.get("head_entry_sha256") != head:
-        raise EvidenceError("HEAD_ANCHOR_HEAD_MISMATCH")
+    head = _assert_anchored_head(entries, registry_path, anchor_dir, key)
     # Latest entry must still describe the CURRENT vault bytes exactly.
     latest_payload = entries[-1].get("payload", {}) if entries else {}
     if (latest_payload.get("corpus_database_sha256") != observation["corpus_db"]["sha256"]
-            or latest_payload.get("sidecar_source_sha256") != observation["sidecar"]["sha256"]):
+            or latest_payload.get("sidecar_source_sha256") != observation["sidecar"]["sha256"]
+            or latest_payload.get("campaign_receipt_sha256") != observation["campaign_receipt_sha256"]
+            or latest_payload.get("corpus_sources") != observation["corpus_db"]["sources"]):
         raise EvidenceError("VAULT_CHANGED_SINCE_LAST_ENTRY")
     return {"status": "EVIDENCE_REGISTRY_VERIFIED",
             "entries": len(entries), "head_entry_sha256": head,
