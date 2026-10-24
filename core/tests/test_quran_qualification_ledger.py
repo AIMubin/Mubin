@@ -42,6 +42,7 @@ class QualificationLedgerTests(unittest.TestCase):
         self.ledger = self.base / "qualification-ledger.jsonl"
         self.anchor_dir = self.base / "anchors"
         self.key = self.base / "qualification.key"
+        self.vault = self.base / "synthetic-vault"
         evidence_report = {
             "status": "EVIDENCE_REGISTRY_VERIFIED",
             "byte_integrity_verified": True,
@@ -60,28 +61,28 @@ class QualificationLedgerTests(unittest.TestCase):
             evidence_registry=self.base / "mock-evidence.jsonl",
             evidence_anchor_dir=self.base / "mock-evidence-anchor",
             evidence_key=self.base / "mock-evidence.key",
-            vault=self.base / "synthetic-vault",
+            vault=self.vault,
             sidecar_db=self.base / "synthetic-sidecar.db")
 
     def test_axes_are_independent(self):
         self.record(axis="scholarly",
                     decision="SOURCE_TEXT_INTEGRITY_REVIEWED")
-        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "rights", anchor_dir=self.anchor_dir, key_file=self.key),
+        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "rights", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault),
                          "legal_review_pending")
         self.record(axis="rights", decision="INTERNAL_USE_CLEARED",
                     decision_id="review-0002")
-        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key),
+        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault),
                          "SOURCE_TEXT_INTEGRITY_REVIEWED")
-        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "rights", anchor_dir=self.anchor_dir, key_file=self.key),
+        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "rights", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault),
                          "INTERNAL_USE_CLEARED")
-        report = verify_ledger(self.ledger, self.anchor_dir, self.key)
+        report = verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
         self.assertEqual(report["entries"], 2)
         self.assertFalse(report["publication_granted"])
 
     def test_absent_decisions_leave_pending_defaults(self):
-        self.assertEqual(current_state(self.ledger, "qe_ar_yaseer", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key),
+        self.assertEqual(current_state(self.ledger, "qe_ar_yaseer", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault),
                          "UNREVIEWED")
-        self.assertEqual(current_state(self.ledger, "qe_ar_yaseer", "rights", anchor_dir=self.anchor_dir, key_file=self.key),
+        self.assertEqual(current_state(self.ledger, "qe_ar_yaseer", "rights", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault),
                          "legal_review_pending")
 
     def test_cross_axis_decision_refused(self):
@@ -95,18 +96,18 @@ class QualificationLedgerTests(unittest.TestCase):
         self.record(axis="scholarly", decision_id="review-q2",
                     decision="RECORD_QUARANTINED",
                     scope={"record_coordinates": ["2:1", "2:2"]})
-        states = decisions_for(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key)
+        states = decisions_for(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault)
         self.assertEqual(len(states), 2)
         self.assertEqual(states[-1]["scope"]["record_coordinates"], ["2:1", "2:2"])
         # latest decision wins per axis; the quarantine is scoped and additive
-        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key),
+        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault),
                          "SOURCE_TEXT_INTEGRITY_REVIEWED")
-        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key, reference="2:1"),
+        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault, reference="2:1"),
                          "RECORD_QUARANTINED")
-        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key, reference="2:3"),
+        self.assertEqual(current_state(self.ledger, "qe_ar_muyassar", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault, reference="2:3"),
                          "SOURCE_TEXT_INTEGRITY_REVIEWED")
         # a different source is unaffected
-        self.assertEqual(current_state(self.ledger, "qe_ar_yaseer", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key),
+        self.assertEqual(current_state(self.ledger, "qe_ar_yaseer", "scholarly", anchor_dir=self.anchor_dir, key_file=self.key,vault=self.vault),
                          "UNREVIEWED")
 
     def test_source_rejection_takes_precedence_over_record_quarantine(self):
@@ -115,10 +116,10 @@ class QualificationLedgerTests(unittest.TestCase):
                     scope={"record_coordinates":["2:1"]})
         self.assertEqual("SOURCE_REJECTED",current_state(
             self.ledger,"qe_ar_muyassar","scholarly",
-            anchor_dir=self.anchor_dir,key_file=self.key,reference="2:1"))
+            anchor_dir=self.anchor_dir,key_file=self.key,vault=self.vault,reference="2:1"))
         self.assertEqual("SOURCE_REJECTED",current_state(
             self.ledger,"qe_ar_muyassar","scholarly",
-            anchor_dir=self.anchor_dir,key_file=self.key,reference="2:3"))
+            anchor_dir=self.anchor_dir,key_file=self.key,vault=self.vault,reference="2:3"))
 
     def test_self_review_and_system_reviewer_refused(self):
         for reviewer in ("system", "automation", "llm"):
@@ -144,7 +145,7 @@ class QualificationLedgerTests(unittest.TestCase):
                               separators=(",", ":"))
         self.ledger.write_bytes((chr(10).join(lines) + chr(10)).encode("utf-8"))
         with self.assertRaisesRegex(QualificationError, "LEDGER_CHAIN_INVALID"):
-            verify_ledger(self.ledger, self.anchor_dir, self.key)
+            verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
 
     def test_forged_head_without_key_refused(self):
         self.record()
@@ -155,7 +156,7 @@ class QualificationLedgerTests(unittest.TestCase):
                           encoding="utf-8")
         with self.assertRaisesRegex(QualificationError,
                                     "HEAD_ANCHOR_(MAC_INVALID|HEAD_MISMATCH)"):
-            verify_ledger(self.ledger, self.anchor_dir, self.key)
+            verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
 
     def test_recomputed_history_cannot_be_legitimized_by_append(self):
         self.record()
@@ -187,10 +188,10 @@ class QualificationLedgerTests(unittest.TestCase):
         anchor.unlink()
         with self.assertRaisesRegex(QualificationError,"HEAD_ANCHOR_MISSING"):
             current_state(self.ledger,"qe_ar_muyassar","rights",
-                          anchor_dir=self.anchor_dir,key_file=self.key)
+                          anchor_dir=self.anchor_dir,key_file=self.key,vault=self.vault)
         with self.assertRaisesRegex(QualificationError,"HEAD_ANCHOR_MISSING"):
             decisions_for(self.ledger,"qe_ar_muyassar",
-                          anchor_dir=self.anchor_dir,key_file=self.key)
+                          anchor_dir=self.anchor_dir,key_file=self.key,vault=self.vault)
 
     def test_actual_r01a_head_must_match_decision(self):
         self.mock_evidence.return_value={
@@ -222,15 +223,48 @@ class QualificationLedgerTests(unittest.TestCase):
         self.record()
         self.key.unlink()
         with self.assertRaisesRegex(QualificationError,"LEDGER_KEY_UNAVAILABLE"):
-            verify_ledger(self.ledger,self.anchor_dir,self.key)
+            verify_ledger(self.ledger,self.anchor_dir,self.key,vault=self.vault)
         self.assertFalse(self.key.exists())
         with self.assertRaisesRegex(QualificationError,"LEDGER_KEY_UNAVAILABLE"):
             self.record(decision_id="review-0002")
         self.assertFalse(self.key.exists())
 
+    def test_hmac_anchor_inside_vault_refused_without_creating_ledger(self):
+        inside = self.vault / "nested" / "anchors"
+        with self.assertRaisesRegex(QualificationError,
+                                    "QUALIFICATION_SECRET_IN_VAULT_REFUSED"):
+            append_decision(
+                self.ledger,inside,self.key,decision(),"lead-operator",
+                evidence_registry=self.base/"mock-evidence.jsonl",
+                evidence_anchor_dir=self.base/"mock-evidence-anchor",
+                evidence_key=self.base/"mock-evidence.key",
+                vault=self.vault,sidecar_db=self.base/"synthetic-sidecar.db")
+        self.assertFalse(inside.exists())
+        self.assertFalse(self.ledger.exists())
+
+    def test_hmac_key_inside_vault_refused_for_append_and_verify(self):
+        inside = self.vault / "private" / "qualification.key"
+        with self.assertRaisesRegex(QualificationError,
+                                    "QUALIFICATION_SECRET_IN_VAULT_REFUSED"):
+            append_decision(
+                self.ledger,self.anchor_dir,inside,decision(),"lead-operator",
+                evidence_registry=self.base/"mock-evidence.jsonl",
+                evidence_anchor_dir=self.base/"mock-evidence-anchor",
+                evidence_key=self.base/"mock-evidence.key",
+                vault=self.vault,sidecar_db=self.base/"synthetic-sidecar.db")
+        self.assertFalse(inside.exists())
+        self.record()
+        with self.assertRaisesRegex(QualificationError,
+                                    "QUALIFICATION_SECRET_IN_VAULT_REFUSED"):
+            verify_ledger(self.ledger,self.anchor_dir,inside,vault=self.vault)
+        with self.assertRaisesRegex(QualificationError,
+                                    "QUALIFICATION_SECRET_IN_VAULT_REFUSED"):
+            current_state(self.ledger,"qe_ar_muyassar","scholarly",
+                          anchor_dir=self.anchor_dir,key_file=inside,vault=self.vault)
+
     def test_no_publication_authority_ever_reported(self):
         self.record()
-        report = verify_ledger(self.ledger, self.anchor_dir, self.key)
+        report = verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
         for flag in ("publication_granted", "scholarly_verified_globally",
                      "juristic_inference_allowed", "public_fatwa_authorized"):
             self.assertFalse(report[flag])
