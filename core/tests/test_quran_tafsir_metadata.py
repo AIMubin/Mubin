@@ -126,7 +126,7 @@ class TafsirSourceCatalogTests(unittest.TestCase):
                 validate_catalog(bad)
 
     def test_frontend_external_link_trust_boundary(self):
-        script=(DATA_PATH.parents[2]/"engines/quran/q01c/reader.js").read_text(encoding="utf-8")
+        script=(DATA_PATH.parents[3]/"engines/quran/q01c/reader.js").read_text(encoding="utf-8")
         self.assertIn("/api/tafsir-catalog?ref=",script)
         self.assertIn("sourceType!==\"unverified_github_mirror\"",script)
         self.assertIn('a.rel="noopener noreferrer"',script)
