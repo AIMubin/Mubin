@@ -53,6 +53,16 @@ class SidecarTests(unittest.TestCase):
             self.assertEqual('legal_review_pending',receipt['rights_status'])
             self.assertNotIn('نص تفسير',str(receipt))
 
+    def test_sqlite_uri_encodes_private_filename_with_spaces(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/"private tafsir source.db"
+            make_sample(path)
+            digest=hashlib.sha256(path.read_bytes()).hexdigest()
+            with patch("qa.tafsircenter_sidecar_v01.EXPECTED_SHA256",digest):
+                report=verify_sidecar(path,deep=False)
+            self.assertEqual(6236,report["multi_tafsir_coordinates"])
+            self.assertFalse(report["rights_verified"])
+
     def test_modify_db_bytes_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'private.db'
