@@ -98,6 +98,15 @@ class CorpusImportTests(unittest.TestCase):
         with self.assertRaises(CorpusIngestError):
             _safepath(REPO_ROOT/"source_text",output=False)
 
+    def test_private_file_paths_are_canonicalized_before_use(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base=Path(folder)
+            nested=base/"ordinary"/".."/"private-source"
+            self.assertEqual((base/"private-source").resolve(),_safepath(nested))
+            out=base/"ordinary"/".."/"private.sqlite3"
+            self.assertEqual((base/"private.sqlite3").resolve(),_safepath(out,output=True))
+            self.assertFalse(REPO_ROOT in _safepath(out,output=True).parents)
+
     def test_real_digest_of_package_required(self):
         blob,ln=fake_quranenc()
         item={"kind":"tafsir","compressed_bytes":len(blob),"sha256":"0"*64,"uncompressed_bytes":ln}
