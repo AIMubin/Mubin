@@ -251,10 +251,18 @@ def ingest_corpus(manifest: dict, input_dir: Path, output_db: Path, *, allow_par
         finally:
             conn.close()
         os.chmod(temporary, 0o600)
-        os.replace(temporary, destination)
-    except Exception:
+        # Atomic NO-REPLACE publication. The initial exists() check is only
+        # advisory: concurrent operator runs may race after that check.
+        # A hard link in the SAME directory/volume creates the final name only
+        # if absent; never overwrite a completed immutable private snapshot.
+        try:
+            os.link(temporary, destination)
+        except FileExistsError as exc:
+            raise CorpusIngestError("output_already_exists_at_publish") from exc
+        except OSError as exc:
+            raise CorpusIngestError("atomic_no_replace_publication_unavailable") from exc
+    finally:
         Path(temporary).unlink(missing_ok=True)
-        raise
     return {"contract":"mubin-private-corpus-receipt-v0.1",
             "imported_sources":imported,"skipped_sources":skipped,
             "records":records_imported,"internal_research_ready":True,
