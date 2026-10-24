@@ -34,6 +34,10 @@ async function loadTafsirMetadata(item,panel){
     if(!panel.isConnected)return; // stale search results must not be rehydrated
     if(d.reference!==item.reference || d.use_scope!=="external_navigation_only" ||
        d.text_import_allowed!==false || d.rights_verified!==false ||
+       d.source_authenticated!==false || d.scholarly_verified!==false ||
+       d.redistribution_approved!==false ||
+       d.juristic_inference_allowed!==false ||
+       d.public_fatwa_authorized!==false ||
        d.edition_verified!==false || d.p1_admitted!==false ||
        d.scholarly_verification!==false || d.ai_tafsir_generated!==false ||
        !Array.isArray(d.sources) || d.sources.length!==6 ||
