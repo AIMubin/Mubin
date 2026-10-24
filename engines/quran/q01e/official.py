@@ -56,7 +56,7 @@ def load_official_candidate(raw: bytes) -> SourceIndex:
         "reading": "hafs_an_asim_kufan",
         "rights_status": "requires_use_review",
         "authority_status": "unverified_tanzil_domain_response",
-        "source_observation": "research/quran/q01d-tanzil-domain-20261018.json",
+        "source_observation": "docs/research/QURAN-Q01E-DOMAIN-PROBE.md",
     }
     # Freeze nested preset too; callers cannot silently relabel source metadata.
     manifest["source_preset"] = MappingProxyType(dict(PRESET))
