@@ -133,6 +133,8 @@ class TafsirSourceCatalogTests(unittest.TestCase):
         self.assertIn('a.referrerPolicy="no-referrer"',script)
         self.assertIn("panel.isConnected",script)
         self.assertIn("d.rights_verified!==false",script)
+        self.assertIn("d.redistribution_approved!==false",script)
+        self.assertIn("d.public_fatwa_authorized!==false",script)
         self.assertIn("d.text_import_allowed!==false",script)
         self.assertNotIn(".innerHTML",script)
         self.assertNotIn("fetch(KSU_BASE",script)
@@ -145,6 +147,10 @@ class TafsirSourceCatalogTests(unittest.TestCase):
         self.assertFalse(output["ai_tafsir_generated"])
         self.assertFalse(output["p1_admitted"])
         self.assertFalse(output["rights_verified"])
+        for key in ("source_authenticated","scholarly_verified",
+                    "redistribution_approved","juristic_inference_allowed",
+                    "public_fatwa_authorized"):
+            self.assertFalse(output[key],key)
         self.assertNotIn("text",json.dumps(output,ensure_ascii=False).split('"sources":')[0])
 
     def test_fixture_browser_cannot_access_tafsir_endpoint(self):
