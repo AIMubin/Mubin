@@ -1,0 +1,59 @@
+name: Mubin Quran single PR merge-readiness advisory v2
+
+on:
+  pull_request:
+    paths:
+      - "qa/quran_merge_readiness.py"
+      - "core/tests/test_quran_merge_readiness.py"
+      - "docs/reviews/QURAN-MERGE-READINESS-V2.md"
+      - ".github/workflows/mubin-quran-merge-readiness.yml"
+  push:
+    branches: [main]
+    paths:
+      - "qa/quran_merge_readiness.py"
+      - "core/tests/test_quran_merge_readiness.py"
+      - "docs/reviews/QURAN-MERGE-READINESS-V2.md"
+      - ".github/workflows/mubin-quran-merge-readiness.yml"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Open PR to inspect (optional; zero skips live call)"
+        required: false
+        default: "0"
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  synthetic-advisory-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Verify synthetic fail-closed contract
+        run: python -m unittest core.tests.test_quran_merge_readiness -v
+
+  live-read-only-advisory:
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.pr_number != '0') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Read GitHub metadata without granting merge rights
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.pr_number }}
+        run: python -m qa.quran_merge_readiness --pr "$PR_NUMBER" --json
