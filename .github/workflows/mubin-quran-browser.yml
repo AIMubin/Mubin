@@ -1,0 +1,73 @@
+name: Mubin Quran real Chrome E2E smoke
+
+on:
+  pull_request:
+    paths:
+      - "qa/quran_browser_smoke.py"
+      - "qa/quran_official_chrome_smoke.py"
+      - "engines/quran/q01c/**"
+      - "engines/quran/q01e/**"
+      - "engines/quran/tafsir/**"
+      - ".github/workflows/mubin-quran-browser.yml"
+      - "docs/reviews/QURAN-CHROME-E2E-AUDIT.md"
+  push:
+    branches: [main]
+    paths:
+      - "qa/quran_browser_smoke.py"
+      - "qa/quran_official_chrome_smoke.py"
+      - "engines/quran/q01c/**"
+      - "engines/quran/q01e/**"
+      - "engines/quran/tafsir/**"
+      - ".github/workflows/mubin-quran-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chrome-synthetic-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Require real installed Chrome and matching ChromeDriver
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          command -v chromedriver
+          google-chrome --version
+          chromedriver --version
+      - name: Mandatory Chrome synthetic mini-source UI security and RTL
+        run: python -m qa.quran_browser_smoke
+      - name: Mandatory Chrome full synthetic 6236-row direct-reader and KSU metadata UI
+        run: python -m qa.quran_official_chrome_smoke --fixture
+
+  chrome-live-domain-advisory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Require Chrome and ChromeDriver
+        run: |
+          command -v google-chrome
+          command -v chromedriver
+      - name: Tanzil HTTPS + Chrome DOM (NONBLOCKING external advisory; inspect explicit PASS marker)
+        id: live
+        continue-on-error: true
+        run: python -m qa.quran_official_chrome_smoke --live
+      - name: Report advisory result without converting failure into proof
+        if: always()
+        env:
+          OUTCOME: ${{ steps.live.outcome }}
+        shell: bash
+        run: |
+          echo "REAL_TANZIL_CHROME_ADVISORY_STEP_OUTCOME=$OUTCOME"
+          echo "External availability is not required for synthetic Chrome E2E qualification."
+          echo "A green workflow is NOT evidence of external Chrome PASS; inspect the explicit result=PASS in previous step logs."
