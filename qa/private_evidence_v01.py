@@ -356,8 +356,11 @@ def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
     """Verify the vault, then atomically append one anchored entry."""
     registry_path = _guard_outside(registry_path, Path(vault_dir))
     anchor_dir = _guard_secret_location(anchor_dir, Path(vault_dir))
-    key = load_operator_key(_guard_secret_location(key_file, Path(vault_dir)))
+    guarded_key_file = _guard_secret_location(key_file, Path(vault_dir))
     with _VaultLock(registry_path.parent / LOCK_NAME, operator):
+        # Never silently rotate an existing registry's lost HMAC key.
+        initial = not registry_path.exists() and not _head_anchor_path(anchor_dir, registry_path).exists()
+        key = load_operator_key(guarded_key_file, create=initial)
         entries = _load_registry(registry_path)
         _verify_chain(entries)
         previous = _assert_anchored_head(entries, registry_path, anchor_dir, key)
@@ -408,6 +411,8 @@ def verify_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
     key = load_operator_key(_guard_secret_location(key_file, Path(vault_dir)), create=False)
     observation = verify_vault(vault_dir, sidecar_db)
     entries = _load_registry(registry_path)
+    if not entries:
+        raise EvidenceError("REGISTRY_EMPTY")
     _verify_chain(entries)
     head = _assert_anchored_head(entries, registry_path, anchor_dir, key)
     # Latest entry must still describe the CURRENT vault bytes exactly.
