@@ -66,12 +66,18 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackSer
     # Re-derive the loaded records from pinned original bytes; an otherwise
     # well-shaped SourceIndex can be forged by its public constructor.
     # This is a startup-only cost, not a per-request parser/normalizer.
-    try:
-        manifest_bytes=json.dumps(dict(index.manifest),ensure_ascii=True,
-            sort_keys=True,separators=(",",":")).encode("utf-8","strict")
-    except (TypeError,ValueError,UnicodeError) as exc:
-        raise RawSourceError("untrusted_source_manifest") from exc
-    checked=load_raw(manifest_bytes,raw)
+    if index.manifest.get("source_kind")=="tanzil_domain_unattested_export":
+        # A caller-constructed SourceIndex cannot self-attest by labeling its
+        # manifest "official": independently pin and reparse original bytes.
+        from engines.quran.q01e.official import load_official_candidate
+        checked=load_official_candidate(raw)
+    else:
+        try:
+            manifest_bytes=json.dumps(dict(index.manifest),ensure_ascii=True,
+                sort_keys=True,separators=(",",":")).encode("utf-8","strict")
+        except (TypeError,ValueError,UnicodeError) as exc:
+            raise RawSourceError("untrusted_source_manifest") from exc
+        checked=load_raw(manifest_bytes,raw)
     if checked.verses!=index.verses or dict(checked.manifest)!=dict(index.manifest):
         raise RawSourceError("source_index_not_derived_from_pinned_raw_bytes")
     if type(port) is not int or not 0<=port<=65535:
@@ -127,8 +133,12 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackSer
                     _decode_query(p.query,frozenset(),frozenset())
                     rep=index.report()
                     return self._json(200,{**rep,
-                        "display_provenance":"candidate_unverified_mirror" if
-                        rep["source_kind"]!="synthetic_fixture" else "synthetic_only",
+                        "display_provenance":(
+                            "observed_tanzil_domain_unattested" if
+                            rep["source_kind"]=="tanzil_domain_unattested_export" else
+                            "candidate_unverified_mirror" if
+                            rep["source_kind"]=="unverified_github_mirror" else
+                            "synthetic_only"),
                         "publisher_source":"Tanzil Project (attribution required)",
                         "official_tanzil_bytes_independently_verified":False})
                 if p.path=="/api/notice":
@@ -139,7 +149,9 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackSer
                 if p.path=="/api/tafsir-catalog":
                     # Only a loaded, byte-pinned real-source candidate may
                     # receive *external navigation metadata*. No text import.
-                    if index.manifest["source_kind"]!="unverified_github_mirror":
+                    if index.manifest["source_kind"] not in (
+                            "unverified_github_mirror",
+                            "tanzil_domain_unattested_export"):
                         return self._deny(403,"synthetic_or_unqualified_source")
                     from engines.quran.tafsir.catalog import catalog_for_ref, CatalogError
                     try:
