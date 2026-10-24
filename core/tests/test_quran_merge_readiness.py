@@ -155,7 +155,7 @@ class QuranReadinessV2Tests(unittest.TestCase):
         received = []
         mapping = {
             "/branches/main": [d["main"], d["main"]],
-            "/pulls/89": [d["pr"]],
+            "/pulls/89": [d["pr"], d["pr"]],
             "/compare/" + MAIN + "..." + HEAD: [d["comparison"]],
             "/commits/" + HEAD + "/check-runs?per_page=100": [d["check_listing"]],
             "/pulls/89/reviews?per_page=100": [d["reviews"]],
@@ -165,7 +165,7 @@ class QuranReadinessV2Tests(unittest.TestCase):
             return copy.deepcopy(mapping[path].pop(0))
         with patch("qa.quran_merge_readiness._get_api", side_effect=fake):
             actual = fetch_live(NUMBER)
-        self.assertEqual(6, len(received))
+        self.assertEqual(7, len(received))
         self.assertEqual("provided_snapshot_untrusted",
                          assess_pr(actual, NUMBER)["data_source"])
 
@@ -174,10 +174,32 @@ class QuranReadinessV2Tests(unittest.TestCase):
         newer = copy.deepcopy(d["main"])
         newer["commit"]["sha"] = "f" * 40
         sequence = [d["main"], d["pr"], d["comparison"],
-                    d["check_listing"], d["reviews"], newer]
+                    d["check_listing"], d["reviews"], newer, d["pr"]]
         with patch("qa.quran_merge_readiness._get_api", side_effect=sequence):
             with self.assertRaisesRegex(ReadinessError,
                                         "MAIN_CHANGED_DURING_READ"):
+                fetch_live(NUMBER)
+
+    def test_live_fetch_fails_on_concurrent_pr_head_change(self):
+        d = fixture()
+        new_pr = copy.deepcopy(d["pr"])
+        new_pr["head"]["sha"] = "f" * 40
+        sequence = [d["main"], d["pr"], d["comparison"],
+                    d["check_listing"], d["reviews"], d["main"], new_pr]
+        with patch("qa.quran_merge_readiness._get_api", side_effect=sequence):
+            with self.assertRaisesRegex(ReadinessError,
+                                        "PR_CHANGED_DURING_READ"):
+                fetch_live(NUMBER)
+
+    def test_live_fetch_fails_on_concurrent_pr_draft_change(self):
+        d = fixture()
+        new_pr = copy.deepcopy(d["pr"])
+        new_pr["draft"] = True
+        sequence = [d["main"], d["pr"], d["comparison"],
+                    d["check_listing"], d["reviews"], d["main"], new_pr]
+        with patch("qa.quran_merge_readiness._get_api", side_effect=sequence):
+            with self.assertRaisesRegex(ReadinessError,
+                                        "PR_CHANGED_DURING_READ"):
                 fetch_live(NUMBER)
 
     def test_cli_never_promotes_forged_live_json(self):
