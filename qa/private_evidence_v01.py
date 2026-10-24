@@ -179,9 +179,12 @@ def verify_vault(vault_dir: Path, sidecar_db: Path,
     receipt = json.loads(receipt_raw.decode("utf-8"))
     if type(receipt) is not dict or receipt.get("campaign") != "operator-local-private-corpus-import-v01":
         raise EvidenceError("CAMPAIGN_RECEIPT_INVALID")
-    if receipt.get("limits", {}).get("scholarly_verified") is not False:
+    if (type(receipt.get("limits")) is not dict or
+            receipt["limits"].get("scholarly_verified") is not False or
+            type(receipt.get("steps")) is not list or
+            not all(type(step) is dict for step in receipt["steps"])):
         raise EvidenceError("CAMPAIGN_RECEIPT_INVALID")
-    steps = {step.get("step"): step for step in receipt.get("steps", [])}
+    steps = {step.get("step"): step for step in receipt["steps"]}
     corpus_step = steps.get("permanent_private_corpus_import")
     if not corpus_step:
         raise EvidenceError("CAMPAIGN_RECEIPT_INVALID")
@@ -237,8 +240,12 @@ def verify_vault(vault_dir: Path, sidecar_db: Path,
         con.close()
 
     # Campaign receipt must reference exactly these digests and counts.
-    imported = {item["id"]: item for item in corpus_step.get("sources", [])}
-    if len(imported) != CORPUS_SOURCES:
+    listed = corpus_step.get("sources", [])
+    if (type(listed) is not list or
+            not all(type(item) is dict and type(item.get("id")) is str for item in listed)):
+        raise EvidenceError("CAMPAIGN_RECEIPT_INVALID")
+    imported = {item["id"]: item for item in listed}
+    if len(imported) != CORPUS_SOURCES or len(listed) != CORPUS_SOURCES:
         raise EvidenceError("CAMPAIGN_RECEIPT_INVALID")
     for source_id, meta in per_source.items():
         item = imported.get(source_id)
@@ -298,16 +305,42 @@ def _load_registry(registry_path: Path) -> list[dict]:
     entries = []
     for line in registry_path.read_text(encoding="utf-8").splitlines():
         if line.strip():
-            entries.append(json.loads(line))
+            try:
+                value = json.loads(line)
+            except (ValueError, TypeError, RecursionError) as exc:
+                raise EvidenceError("REGISTRY_JSON_INVALID") from exc
+            if type(value) is not dict:
+                raise EvidenceError("REGISTRY_CHAIN_INVALID")
+            entries.append(value)
     return entries
 
 
 def _verify_chain(entries: list[dict]) -> None:
     previous = "0" * 64
     for i, body in enumerate(entries, 1):
-        recorded = body.get("entry_sha256")
+        expected_keys = {"seq", "prev_entry_sha256", "recorded_at_utc",
+                         "operator", "payload", "entry_sha256"}
+        if (type(body) is not dict or set(body) != expected_keys or
+                type(body["seq"]) is not int or body["seq"] != i or
+                type(body["payload"]) is not dict or
+                type(body["operator"]) is not str or
+                type(body["recorded_at_utc"]) is not str or
+                type(body["prev_entry_sha256"]) is not str or
+                type(body["entry_sha256"]) is not str):
+            raise EvidenceError("REGISTRY_CHAIN_INVALID")
+        flags = body["payload"]
+        if (flags.get("source_authenticated") is not False or
+                flags.get("rights_status") != "legal_review_pending" or
+                flags.get("rights_verified") is not False or
+                flags.get("scholarly_verified") is not False or
+                flags.get("p1_admitted") is not False or
+                flags.get("juristic_inference_allowed") is not False or
+                flags.get("public_fatwa_authorized") is not False or
+                flags.get("text_included") is not False):
+            raise EvidenceError("REGISTRY_AUTHORITY_FLAGS_INVALID")
+        recorded = body["entry_sha256"]
         payload = {k: v for k, v in body.items() if k != "entry_sha256"}
-        if recorded != _sha(_canonical(payload)) or body.get("prev_entry_sha256") != previous:
+        if recorded != _sha(_canonical(payload)) or body["prev_entry_sha256"] != previous:
             raise EvidenceError("REGISTRY_CHAIN_INVALID")
         previous = recorded
 
@@ -320,8 +353,15 @@ def read_head_anchor(anchor_dir: Path, registry_path: Path, key: bytes) -> dict:
     path = _head_anchor_path(_guard_outside(anchor_dir, None), registry_path)
     if path.is_symlink() or not path.is_file():
         raise EvidenceError("HEAD_ANCHOR_MISSING")
-    body = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, UnicodeError, RecursionError) as exc:
+        raise EvidenceError("HEAD_ANCHOR_FORMAT_INVALID") from exc
+    if type(body) is not dict:
+        raise EvidenceError("HEAD_ANCHOR_FORMAT_INVALID")
     mac = body.pop("head_hmac", "")
+    if type(mac) is not str or not re.fullmatch(r"[0-9a-f]{64}", mac):
+        raise EvidenceError("HEAD_ANCHOR_FORMAT_INVALID")
     expected = hmac.new(key, _canonical(body), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, expected):
         raise EvidenceError("HEAD_ANCHOR_MAC_INVALID")
