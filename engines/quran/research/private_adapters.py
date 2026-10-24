@@ -49,7 +49,7 @@ def _reference(ref: str) -> tuple[int, int]:
     if type(ref) is not str or not REF.fullmatch(ref):
         _deny("REFERENCE_INVALID")
     s, a = (int(n) for n in ref.split(":"))
-    if a > _VERSE_COUNTS[s - 1]:
+    if not 1 <= s <= len(_VERSE_COUNTS) or a > _VERSE_COUNTS[s - 1]:
         _deny("REFERENCE_INVALID")
     return s, a
 
