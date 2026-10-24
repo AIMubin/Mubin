@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+import unicodedata
 from typing import Any
 
 from engines.quran.q01.engine import _VERSE_COUNTS
@@ -35,7 +36,9 @@ def _label(value: Any, *, nullable: bool = False) -> bool:
         return False
     if value != value.strip() or not any("\u0621" <= c <= "\u064a" for c in value):
         return False
-    return not any(c in value for c in "<>{}[]\r\n\t\x00")
+    return not any(c in value for c in "<>{}[]\r\n\t\x00" + chr(92)) and not any(
+        unicodedata.category(c) == "Cf" for c in value
+    )
 
 
 def validate_catalog(data: Any) -> dict[str, Any]:
