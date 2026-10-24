@@ -349,6 +349,9 @@ def current_state(ledger_path: Path, source_id: str, axis: str, *,
         elif (reference is not None and axis == "scholarly"
               and item["decision"] == "RECORD_QUARANTINED"):
             quarantined = True
+    # A source-wide rejection is stricter than a record-only quarantine.
+    if latest_full == "SOURCE_REJECTED":
+        return "SOURCE_REJECTED"
     return "RECORD_QUARANTINED" if quarantined else latest_full
 
 
