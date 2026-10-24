@@ -65,11 +65,17 @@ def _sha(data: bytes) -> str:
 def _safepath(value: Path, *, output: bool = False) -> Path:
     # Corpus data never belongs in the public Git checkout. No symlinked leaves.
     path = Path(value).expanduser().absolute()
-    if path.is_symlink() or path.resolve() == REPO_ROOT or REPO_ROOT in path.resolve().parents:
+    if path.is_symlink():
         raise CorpusIngestError("public_checkout_or_symlink_destination_forbidden")
-    if output and path.suffix != ".sqlite3":
+    # Canonicalize the complete path (including ancestor symlinks) before
+    # creating output directories or reading source files. The caller must
+    # never write into the checkout via an alias.
+    resolved = path.resolve()
+    if resolved == REPO_ROOT or REPO_ROOT in resolved.parents:
+        raise CorpusIngestError("public_checkout_or_symlink_destination_forbidden")
+    if output and resolved.suffix != ".sqlite3":
         raise CorpusIngestError("output_must_be_sqlite3")
-    return path
+    return resolved
 
 
 def load_manifest(path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
