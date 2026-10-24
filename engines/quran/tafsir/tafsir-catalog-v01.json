@@ -1,0 +1,84 @@
+{
+  "contract": "mubin-tafsir-metadata-v0.1",
+  "platform": {
+    "id": "ksu_ayat",
+    "display_ar": "مشروع آيات — جامعة الملك سعود",
+    "navigation_base": "https://quran.ksu.edu.sa/index.php",
+    "origin_reported": "KSU Ayat describes commentary content as sourced from mosshaf.com; individual editions not verified",
+    "rights_status": "not_verified"
+  },
+  "sources": [
+    {
+      "id": "tafsir_muyassar",
+      "title_ar": "التفسير الميسر",
+      "author_ar": null,
+      "edition": null,
+      "source_status": "metadata_only_unreviewed",
+      "rights_status": "not_verified",
+      "text_ingested": false,
+      "allowed_for_local_quotation": false,
+      "p1_eligible": false,
+      "link_scope": "ksu_navigation_not_book_text"
+    },
+    {
+      "id": "tafsir_saadi",
+      "title_ar": "تيسير الكريم الرحمن في تفسير كلام المنان",
+      "author_ar": "عبد الرحمن بن ناصر السعدي",
+      "edition": null,
+      "source_status": "metadata_only_unreviewed",
+      "rights_status": "not_verified",
+      "text_ingested": false,
+      "allowed_for_local_quotation": false,
+      "p1_eligible": false,
+      "link_scope": "ksu_navigation_not_book_text"
+    },
+    {
+      "id": "tafsir_baghawi",
+      "title_ar": "معالم التنزيل",
+      "author_ar": "الحسين بن مسعود البغوي",
+      "edition": null,
+      "source_status": "metadata_only_unreviewed",
+      "rights_status": "not_verified",
+      "text_ingested": false,
+      "allowed_for_local_quotation": false,
+      "p1_eligible": false,
+      "link_scope": "ksu_navigation_not_book_text"
+    },
+    {
+      "id": "tafsir_ibn_kathir",
+      "title_ar": "تفسير القرآن العظيم",
+      "author_ar": "إسماعيل بن عمر ابن كثير",
+      "edition": null,
+      "source_status": "metadata_only_unreviewed",
+      "rights_status": "not_verified",
+      "text_ingested": false,
+      "allowed_for_local_quotation": false,
+      "p1_eligible": false,
+      "link_scope": "ksu_navigation_not_book_text"
+    },
+    {
+      "id": "tafsir_qurtubi",
+      "title_ar": "الجامع لأحكام القرآن",
+      "author_ar": "محمد بن أحمد القرطبي",
+      "edition": null,
+      "source_status": "metadata_only_unreviewed",
+      "rights_status": "not_verified",
+      "text_ingested": false,
+      "allowed_for_local_quotation": false,
+      "p1_eligible": false,
+      "link_scope": "ksu_navigation_not_book_text"
+    },
+    {
+      "id": "tafsir_tabari",
+      "title_ar": "جامع البيان عن تأويل آي القرآن",
+      "author_ar": "محمد بن جرير الطبري",
+      "edition": null,
+      "source_status": "metadata_only_unreviewed",
+      "rights_status": "not_verified",
+      "text_ingested": false,
+      "allowed_for_local_quotation": false,
+      "p1_eligible": false,
+      "link_scope": "ksu_navigation_not_book_text"
+    }
+  ]
+}
