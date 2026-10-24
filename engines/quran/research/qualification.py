@@ -25,7 +25,11 @@ from pathlib import Path
 
 from qa.private_evidence_v01 import (
     _VaultLock, _canonical, _guard_outside, load_operator_key,
+    EvidenceError,
 )
+from engines.quran.q01.engine import _VERSE_COUNTS
+from qa.corpus_ingest_v01 import VALID_IDS
+from qa.tafsircenter_sidecar_v01 import TABLES_AR
 
 VERSION = "quran-qualification-ledger/v0.1.0"
 CONTRACT = "mubin-source-qualification-ledger-v0.1"
@@ -36,7 +40,8 @@ SCHOLARLY_DECISIONS = frozenset((
 RIGHTS_DECISIONS = frozenset((
     "INTERNAL_USE_CLEARED", "NOT_CLEARED", "RESTRICTED_USE_SCOPE"))
 RECORD_DECISIONS = SCHOLARLY_DECISIONS & {"RECORD_QUARANTINED"}
-ID = re.compile(r"[a-z][a-z0-9._:-]{2,127}\Z")
+ID = re.compile(r"[A-Za-z][A-Za-z0-9._:-]{2,127}\Z")
+SOURCE_IDS = frozenset(VALID_IDS) | frozenset(TABLES_AR) | {"QuranTafseer"}
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 DEFAULT_SCHOLARLY = "UNREVIEWED"
 DEFAULT_RIGHTS = "legal_review_pending"
@@ -66,19 +71,38 @@ def _load(path: Path) -> list[dict]:
         raise QualificationError("LEDGER_SYMLINK_REFUSED")
     if not path.exists():
         return []
-    entries = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            entries.append(json.loads(line))
+    try:
+        raw = path.read_bytes()
+        lines = raw.decode("utf-8", "strict").split(chr(10))
+        entries = [json.loads(line) for line in lines if line]
+    except (OSError, ValueError, UnicodeError, TypeError, RecursionError) as exc:
+        raise QualificationError("LEDGER_FORMAT_INVALID") from exc
+    if not all(type(entry) is dict for entry in entries):
+        raise QualificationError("LEDGER_FORMAT_INVALID")
+    if raw != b"".join(_canonical(entry) + bytes([10]) for entry in entries):
+        raise QualificationError("LEDGER_NONCANONICAL_BYTES")
     return entries
 
 
 def _verify_chain(entries: list[dict]) -> None:
     previous = "0" * 64
     for i, body in enumerate(entries, 1):
-        recorded = body.get("entry_sha256")
+        keys = {"seq", "prev_entry_sha256", "recorded_at_utc",
+                "operator", "payload", "entry_sha256"}
+        if (type(body) is not dict or set(body) != keys
+                or type(body["seq"]) is not int or body["seq"] != i
+                or type(body["prev_entry_sha256"]) is not str
+                or type(body["entry_sha256"]) is not str
+                or type(body["operator"]) is not str
+                or type(body["recorded_at_utc"]) is not str
+                or type(body["payload"]) is not dict):
+            raise QualificationError("LEDGER_CHAIN_INVALID")
+        validate_decision(body["payload"])
+        recorded = body["entry_sha256"]
         payload = {k: v for k, v in body.items() if k != "entry_sha256"}
-        if recorded != _sha(_canonical(payload)) or body.get("prev_entry_sha256") != previous:
+        if (not SHA.fullmatch(recorded)
+                or recorded != _sha(_canonical(payload))
+                or body["prev_entry_sha256"] != previous):
             raise QualificationError("LEDGER_CHAIN_INVALID")
         previous = recorded
 
