@@ -86,7 +86,8 @@ function appendTafsir(item,card){
   const panel=document.createElement("section");
   panel.className="tafsir-links";
   panel.setAttribute("aria-label","إحالات تفاسير خارجية غير محققة");
-  if(sourceType!=="unverified_github_mirror"){
+  if(sourceType!=="unverified_github_mirror"&&
+     sourceType!=="tanzil_domain_unattested_export"){
     plain(panel,"p","إحالات التفسير معطلة لبيانات الاختبار الاصطناعية أو للمصادر غير المؤهلة.");
   }else{
     plain(panel,"p","جارٍ تحميل الإحالات الببليوغرافية المحلية…");
@@ -97,7 +98,8 @@ function appendTafsir(item,card){
   plain(ai,"strong","التحليل الآلي — غير مفعّل");
   plain(ai,"p","لم يُنشئ مُبين تفسيرًا آليًا أو حكمًا شرعيًا لهذه الآية.");
   card.appendChild(ai);
-  if(sourceType==="unverified_github_mirror")void loadTafsirMetadata(item,panel);
+  if(sourceType==="unverified_github_mirror"||
+     sourceType==="tanzil_domain_unattested_export")void loadTafsirMetadata(item,panel);
 }
 function renderHit(item){
   const card=document.createElement("article");card.className="ayah";
@@ -109,7 +111,9 @@ function renderHit(item){
   const meta=document.createElement("small");
   meta.textContent=(sourceType==="synthetic_fixture" ?
     "نص اصطناعي للتجربة؛ ليس آية قرآنية" :
-    "نص مرآة غير موثّقة رسميًا؛ منسوب إلى Tanzil")
+    (sourceType==="tanzil_domain_unattested_export" ?
+      "نص استجابة Tanzil المثبتة؛ أصالة الطبعة غير معتمدة" :
+      "نص مرآة غير موثّقة رسميًا؛ منسوب إلى Tanzil"))
     +" · مصدر: "+item.source_id;
   card.append(ref,text,meta);
   appendTafsir(item,card);
