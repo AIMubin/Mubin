@@ -182,7 +182,7 @@ class QuranReadinessV2Tests(unittest.TestCase):
 
     def test_cli_never_promotes_forged_live_json(self):
         with patch("qa.quran_merge_readiness.fetch_live", return_value=fixture()):
-            with patch("qa.quran_merge_readiness.print") as printer:
+            with patch("builtins.print") as printer:
                 self.assertEqual(0, main(["--pr", str(NUMBER), "--json"]))
         report = json.loads(printer.call_args.args[0])
         self.assertFalse(report["merge_ready"])
@@ -192,7 +192,7 @@ class QuranReadinessV2Tests(unittest.TestCase):
     def test_live_unavailable_returns_safe_status_and_exit_2(self):
         with patch("qa.quran_merge_readiness.fetch_live",
                    side_effect=ReadinessError("GITHUB_API_UNAVAILABLE_OR_INVALID")):
-            with patch("qa.quran_merge_readiness.print") as printer:
+            with patch("builtins.print") as printer:
                 self.assertEqual(2, main(["--pr", str(NUMBER)]))
         result = json.loads(printer.call_args.args[0])
         self.assertEqual("unavailable", result["data_source"])
