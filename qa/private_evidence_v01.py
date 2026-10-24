@@ -117,7 +117,7 @@ def load_operator_key(key_file: Path, *, create: bool = True) -> bytes:
     import secrets
     key = secrets.token_bytes(48)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
     try:
         os.write(fd, key)
     finally:
