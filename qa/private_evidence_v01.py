@@ -305,7 +305,7 @@ def _load_registry(registry_path: Path) -> list[dict]:
     entries = []
     try:
         existing = registry_path.read_bytes()
-        lines = existing.decode("utf-8", "strict").splitlines()
+        lines = existing.decode("utf-8", "strict").split(chr(10))
     except (OSError, UnicodeError) as exc:
         raise EvidenceError("REGISTRY_JSON_INVALID") from exc
     for line in lines:
