@@ -27,3 +27,15 @@ small{display:block;color:#51626d;overflow-wrap:anywhere}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;text-align:left;background:#f1f4f5;padding:10px;border-radius:8px;font-size:.75rem}
 footer{margin:30px 0;color:#526779;text-align:center;font-size:.9rem}
 @media(max-width:680px){.search-card{grid-template-columns:1fr}.line{flex-wrap:wrap}.line input{flex-basis:100%}button{width:100%}}
+
+/* Metadata and external navigation are a separate, unverified trust zone. */
+.tafsir-links{margin-top:16px;padding:14px;background:#f2f6fa;border:1px solid #d4e2e9;border-radius:10px}
+.tafsir-links h3{font-size:1rem;margin:0 0 8px}
+.tafsir-links p{font-size:.9rem;line-height:1.8}
+.tafsir-outbound{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.tafsir-outbound a{display:block;padding:10px;border:1px solid #aac9dd;border-radius:7px;background:white;overflow-wrap:anywhere}
+.tafsir-bibliography{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0;padding:0}
+.tafsir-bibliography li{background:white;border:1px solid #d9e2e8;border-radius:6px;padding:8px;line-height:1.8;font-size:.88rem}
+.ai-explanation{margin:12px 0 0;padding:12px;background:#faf8f4;border:1px dashed #c4c5ba;border-radius:10px}
+.ai-explanation p{line-height:1.8;font-size:.9rem;margin:8px 0 0}
+@media(max-width:680px){.tafsir-bibliography{grid-template-columns:1fr}.tafsir-outbound{display:block}.tafsir-outbound a+a{margin-top:9px}}
