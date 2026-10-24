@@ -198,11 +198,16 @@ class CorpusImportTests(unittest.TestCase):
             self.assertEqual(1,len(denied),results)
             self.assertEqual("output_already_exists_at_publish",denied[0][2])
             self.assertEqual(6236,passed[0][2]["records"])
-            with sqlite3.connect(dbfile) as conn:
+            conn=sqlite3.connect(dbfile)
+            try:
                 ids=[x[0] for x in conn.execute(
                     "SELECT source_id FROM corpus_sources").fetchall()]
                 self.assertEqual([passed[0][1]],ids)
                 self.assertEqual("ok",conn.execute("PRAGMA quick_check").fetchone()[0])
+            finally:
+                # Connection context manager only commits/rolls back; it does
+                # NOT close the Windows file handle before TempDir cleanup.
+                conn.close()
             self.assertEqual([],list(dbfile.parent.glob(".mubin-private-*")))
 
     def test_missing_sources_can_be_skipped_with_truthful_partial_report(self):
