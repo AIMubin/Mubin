@@ -23,6 +23,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from qa import private_evidence_v01 as evidence
 from qa.private_evidence_v01 import (
     _VaultLock, _canonical, _guard_outside, load_operator_key,
     EvidenceError,
@@ -223,7 +224,9 @@ def validate_decision(decision: dict) -> dict:
 
 
 def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
-                    decision: dict, operator: str) -> dict:
+                    decision: dict, operator: str, *,
+                    evidence_registry: Path, evidence_anchor_dir: Path,
+                    evidence_key: Path, vault: Path, sidecar_db: Path) -> dict:
     """Record exactly one human-provided decision; never grant public authority."""
     ledger_path = _guard_outside(ledger_path, None)
     anchor_dir = _guard_outside(anchor_dir, None)
@@ -232,6 +235,19 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
     _need(type(operator) is str and operator.strip().casefold() != clean["reviewer"].strip().casefold(),
           "SELF_REVIEW_REFUSED")
     with _VaultLock(ledger_path.parent / LOCK_NAME, operator):
+        try:
+            observation = evidence.verify_evidence(
+                evidence_registry, evidence_anchor_dir, evidence_key,
+                vault, sidecar_db)
+        except (EvidenceError, OSError, ValueError) as exc:
+            raise QualificationError("EVIDENCE_VERIFICATION_FAILED") from exc
+        if (observation.get("status") != "EVIDENCE_REGISTRY_VERIFIED"
+                or observation.get("byte_integrity_verified") is not True
+                or observation.get("head_entry_sha256") != clean["evidence_head_sha256"]
+                or observation.get("rights_status") != "legal_review_pending"
+                or observation.get("source_authenticated") is not False
+                or observation.get("scholarly_verified") is not False):
+            raise QualificationError("EVIDENCE_HEAD_NOT_ATTESTED")
         entries, previous = _attested_entries(ledger_path, anchor_dir, key_file,
                                                allow_initial=True)
         try:
@@ -286,7 +302,8 @@ def decisions_for(ledger_path: Path, source_id: str, axis: str | None = None,
     _need(axis is None or axis in AXES, "AXIS_INVALID")
     if reference is not None:
         _valid_reference(reference)
-    entries, _ = _attested_entries(ledger_path, anchor_dir, key_file)
+    entries, _ = _attested_entries(ledger_path, anchor_dir, key_file,
+                                    allow_initial=True)
     out = []
     for body in entries:
         payload = body["payload"]
@@ -354,10 +371,18 @@ def main(argv=None):
     record.add_argument("--key-file", required=True)
     record.add_argument("--decision-json", required=True)
     record.add_argument("--operator", required=True)
+    record.add_argument("--evidence-registry", required=True)
+    record.add_argument("--evidence-anchor-dir", required=True)
+    record.add_argument("--evidence-key", required=True)
+    record.add_argument("--vault", required=True)
+    record.add_argument("--sidecar-db", required=True)
     state = sub.add_parser("state")
     state.add_argument("--ledger", required=True)
     state.add_argument("--source-id", required=True)
     state.add_argument("--axis", choices=tuple(AXES), required=True)
+    state.add_argument("--anchor-dir", required=True)
+    state.add_argument("--key-file", required=True)
+    state.add_argument("--ref")
     check = sub.add_parser("verify")
     check.add_argument("--ledger", required=True)
     check.add_argument("--anchor-dir", required=True)
@@ -366,18 +391,28 @@ def main(argv=None):
     try:
         if args.action == "record":
             decision = json.loads(Path(args.decision_json).read_text(encoding="utf-8"))
-            report = append_decision(args.ledger, args.anchor_dir,
-                                     args.key_file, decision, args.operator)
+            report = append_decision(
+                args.ledger, args.anchor_dir, args.key_file, decision, args.operator,
+                evidence_registry=args.evidence_registry,
+                evidence_anchor_dir=args.evidence_anchor_dir,
+                evidence_key=args.evidence_key, vault=args.vault,
+                sidecar_db=args.sidecar_db)
             code = 0
         elif args.action == "state":
             report = {"source_id": args.source_id, "axis": args.axis,
-                      "state": current_state(args.ledger, args.source_id, args.axis),
-                      "decisions": decisions_for(args.ledger, args.source_id, args.axis)}
+                      "state": current_state(
+                          args.ledger, args.source_id, args.axis,
+                          anchor_dir=args.anchor_dir, key_file=args.key_file,
+                          reference=args.ref),
+                      "decisions": decisions_for(
+                          args.ledger, args.source_id, args.axis,
+                          anchor_dir=args.anchor_dir, key_file=args.key_file,
+                          reference=args.ref)}
             code = 0
         else:
             report = verify_ledger(args.ledger, args.anchor_dir, args.key_file)
             code = 0
-    except QualificationError as exc:
+    except (QualificationError, EvidenceError) as exc:
         report, code = {"status": "REFUSED", "reason_code": exc.code,
                         "text_included": False}, 1
     except (OSError, ValueError, TypeError, KeyError, UnicodeError):
