@@ -308,6 +308,46 @@ class EvidenceRegistryTests(unittest.TestCase):
         with self.assertRaisesRegex(ev.EvidenceError,"HEAD_ANCHOR_HEAD_MISMATCH"):
             self.verify()
 
+    def test_append_refuses_semantically_same_rewritten_receipt(self):
+        """Codex P1: changed current vault evidence must not gain a new MAC."""
+        self.append()
+        before=self.registry.read_bytes()
+        anchor=self.anchor_dir/(self.registry.stem+"."+ev.ANCHOR_NAME)
+        anchor_before=anchor.read_bytes()
+        receipt=self.vault/"receipts"/"operator-import-campaign-v01.json"
+        body=json.loads(receipt.read_text(encoding="utf-8"))
+        receipt.write_text(json.dumps(body,separators=(",",":")),encoding="utf-8")
+        with self.assertRaisesRegex(ev.EvidenceError,"VAULT_CHANGED_SINCE_LAST_ENTRY"):
+            self.append()
+        self.assertEqual(before,self.registry.read_bytes())
+        self.assertEqual(anchor_before,anchor.read_bytes())
+
+    def test_append_refuses_modified_sqlite_with_same_record_counts(self):
+        self.append()
+        db=self.vault/ev.CORPUS_DB_NAME
+        con=sqlite3.connect(db)
+        try:
+            con.execute("UPDATE corpus_entries SET text='changed-synthetic' "
+                        "WHERE source_id='synthetic-source-1' AND sura=1 AND aya=1")
+            con.commit()
+            self.assertEqual("ok",con.execute("PRAGMA quick_check").fetchone()[0])
+        finally:
+            con.close()
+        with self.assertRaisesRegex(ev.EvidenceError,"VAULT_CHANGED_SINCE_LAST_ENTRY"):
+            self.append()
+
+    def test_append_rejects_unterminated_jsonl_without_corrupting_anchor(self):
+        """Codex P2: missing final LF may not yield concatenated JSON objects."""
+        self.append()
+        anchor=self.anchor_dir/(self.registry.stem+"."+ev.ANCHOR_NAME)
+        signed=anchor.read_bytes()
+        self.registry.write_bytes(self.registry.read_bytes().rstrip(bytes([10])))
+        before=self.registry.read_bytes()
+        with self.assertRaisesRegex(ev.EvidenceError,"REGISTRY_NONCANONICAL_BYTES"):
+            self.append()
+        self.assertEqual(before,self.registry.read_bytes())
+        self.assertEqual(signed,anchor.read_bytes())
+
     def test_anchor_inside_vault_refused(self):
         with self.assertRaisesRegex(ev.EvidenceError, "ANCHOR_INSIDE_VAULT_REFUSED"):
             ev.append_evidence(self.registry, self.vault, self.key_file,
