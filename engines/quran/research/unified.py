@@ -130,19 +130,22 @@ def unified_lookup(adapters: PrivateResearchAdapters, reference: str, *,
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Local metadata-first private retrieval (research-only)")
-    parser.add_argument("--ref", required=True)
-    parser.add_argument("--vault", required=True)
-    parser.add_argument("--corpus-db", required=True)
-    parser.add_argument("--sidecar-db", required=True)
-    parser.add_argument("--registry", required=True)
-    parser.add_argument("--anchor-dir", required=True)
-    parser.add_argument("--evidence-key", required=True)
-    parser.add_argument("--adapters", choices=("both", "corpus", "sidecar"),
+    sub = parser.add_subparsers(dest="action", required=True)
+    lookup_parser = sub.add_parser("lookup",
+                                   help="one reference across pinned sources")
+    lookup_parser.add_argument("--ref", required=True)
+    lookup_parser.add_argument("--vault", required=True)
+    lookup_parser.add_argument("--corpus-db", required=True)
+    lookup_parser.add_argument("--sidecar-db", required=True)
+    lookup_parser.add_argument("--registry", required=True)
+    lookup_parser.add_argument("--anchor-dir", required=True)
+    lookup_parser.add_argument("--evidence-key", required=True)
+    lookup_parser.add_argument("--adapters", choices=("both", "corpus", "sidecar"),
                         default="both")
-    parser.add_argument("--include-text", action="store_true",
+    lookup_parser.add_argument("--include-text", action="store_true",
                         help="requires a trusted-issuer signed local permit")
-    parser.add_argument("--permit-path")
-    parser.add_argument("--permit-key")
+    lookup_parser.add_argument("--permit-path")
+    lookup_parser.add_argument("--permit-key")
     args = parser.parse_args(argv)
     adapters = PrivateResearchAdapters(
         vault=args.vault, corpus_db=args.corpus_db, sidecar_db=args.sidecar_db,
