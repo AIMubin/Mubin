@@ -320,7 +320,7 @@ def _load_registry(registry_path: Path) -> list[dict]:
     # The MAC authenticates the parsed chain. Without this extra byte-level
     # check an attacker can alter separators/whitespace without changing
     # the hashes, and an append might bless a malformed JSONL log.
-    if existing != b"".join(_canonical(entry) + b"\\n" for entry in entries):
+    if existing != b"".join(_canonical(entry) + bytes([10]) for entry in entries):
         raise EvidenceError("REGISTRY_NONCANONICAL_BYTES")
     return entries
 
