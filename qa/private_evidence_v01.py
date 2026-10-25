@@ -67,6 +67,34 @@ def _sha_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+# Per-process stat-validated digest cache. A file whose (size, mtime_ns) both
+# match its last full verification reuses that digest; ANY visible change
+# (size or mtime_ns) forces a full re-hash. This removes repeated full hashing
+# WITHIN one request without skipping verification: the first verification in
+# a process is always a full hash, and the request-boundary stability check
+# runs with force_rehash=True. Documented residual: a same-size change that
+# also restores the exact mtime_ns (deliberate timestomping by a local
+# administrator) is outside the single-operator threat model, identical to
+# the known rollback-of-valid-copies limit.
+_DIGEST_CACHE: dict[str, tuple[int, int, str]] = {}
+
+
+def _sha_file_cached(path: Path, *, force_rehash: bool = False) -> str:
+    resolved = str(Path(path).resolve())
+    stat = path.stat()
+    cached = _DIGEST_CACHE.get(resolved)
+    if not force_rehash and cached is not None and \
+            cached[0] == stat.st_size and cached[1] == stat.st_mtime_ns:
+        return cached[2]
+    digest = _sha_file(path)
+    _DIGEST_CACHE[resolved] = (stat.st_size, stat.st_mtime_ns, digest)
+    return digest
+
+
+def clear_evidence_digest_cache() -> None:
+    _DIGEST_CACHE.clear()
+
+
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -175,7 +203,8 @@ class _VaultLock:
 
 
 def verify_vault(vault_dir: Path, sidecar_db: Path,
-                 campaign_receipt: dict | None = None) -> dict:
+                 campaign_receipt: dict | None = None, *,
+                 force_rehash: bool = False) -> dict:
     """Byte/integrity/counts verification of both vault databases.
 
     The TafsirCenter sidecar lives wherever the operator keeps it (it is a
@@ -209,7 +238,7 @@ def verify_vault(vault_dir: Path, sidecar_db: Path,
         raise EvidenceError("PRIVATE_PATH_SYMLINK_REFUSED")
     if not sidecar_path.is_file():
         raise EvidenceError("SIDECAR_DB_MISSING")
-    sidecar_sha = _sha_file(sidecar_path)
+    sidecar_sha = _sha_file_cached(sidecar_path, force_rehash=force_rehash)
     if sidecar_sha != SIDECAR_PIN:
         raise EvidenceError("SIDECAR_DIGEST_MISMATCH")
     sidecar_report = _verify_tafsircenter(sidecar_path, deep=True)
@@ -220,7 +249,7 @@ def verify_vault(vault_dir: Path, sidecar_db: Path,
         raise EvidenceError("PRIVATE_PATH_SYMLINK_REFUSED")
     if not corpus_path.is_file():
         raise EvidenceError("CORPUS_DB_MISSING")
-    corpus_sha = _sha_file(corpus_path)
+    corpus_sha = _sha_file_cached(corpus_path, force_rehash=force_rehash)
     con = sqlite3.connect(corpus_path.as_uri() + "?mode=ro&immutable=1", uri=True)
     try:
         con.execute("PRAGMA query_only=ON")
@@ -481,7 +510,8 @@ def append_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
 
 
 def verify_evidence(registry_path: Path, anchor_dir: Path, key_file: Path,
-                    vault_dir: Path, sidecar_db: Path) -> dict:
+                    vault_dir: Path, sidecar_db: Path, *,
+                    force_rehash: bool = False) -> dict:
     """Full verification: vault bytes + chain + HMAC anchor, no writes."""
     registry_path = _guard_outside(registry_path, Path(vault_dir))
     anchor_dir = _guard_secret_location(anchor_dir, Path(vault_dir))

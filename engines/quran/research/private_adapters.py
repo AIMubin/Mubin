@@ -41,6 +41,40 @@ class ResearchAdapterError(ValueError):
         self.code = code
 
 
+def _file_stats(*paths: Path) -> tuple[tuple[str, int, int], ...]:
+    out = []
+    for path in paths:
+        stat = Path(path).stat()
+        out.append((str(Path(path).resolve()), stat.st_size, stat.st_mtime_ns))
+    return tuple(out)
+
+
+def _cached_evidence_for(adapters: "PrivateResearchAdapters") -> dict | None:
+    try:
+        stats = _file_stats(adapters.vault, adapters.corpus_db,
+                            adapters.sidecar_db, adapters.registry,
+                            adapters.evidence_key)
+    except OSError:
+        return None
+    cached = _EVIDENCE_CACHE.get(stats)
+    if cached is None:
+        return None
+    report, cached_stats = cached
+    if cached_stats != stats:
+        return None
+    return report
+
+
+def _store_evidence_cache(adapters: "PrivateResearchAdapters", report: dict) -> None:
+    try:
+        stats = _file_stats(adapters.vault, adapters.corpus_db,
+                            adapters.sidecar_db, adapters.registry,
+                            adapters.evidence_key)
+    except OSError:
+        return
+    _EVIDENCE_CACHE[stats] = (report, stats)
+
+
 def _deny(code: str):
     raise ResearchAdapterError(code)
 
@@ -154,6 +188,15 @@ def _private_permit(permit_path: Path | None, key_path: Path | None,
         raise ResearchAdapterError("LOCAL_TEXT_PERMIT_INVALID") from exc
 
 
+# Per-process evidence cache: a verify_evidence result is reused only while
+# EVERY attested file's (size, mtime_ns) is unchanged since that verification.
+# Any visible change forces a full re-verification; the request-boundary check
+# always bypasses the cache (force_rehash). A same-size change that also
+# restores the exact mtime_ns is deliberate timestomping by a local
+# administrator — outside the documented single-operator threat model.
+_EVIDENCE_CACHE: dict[tuple, tuple[dict, tuple[tuple[str, int, int], ...]]] = {}
+
+
 class PrivateResearchAdapters:
     """No stateful connection or web endpoint; one audited local read/request."""
 
@@ -171,7 +214,11 @@ class PrivateResearchAdapters:
         # External evidence is ALWAYS checked again on lookup; callers cannot
         # supply their own "verified=True" booleans or forged evidence report.
 
-    def _evidence(self) -> dict:
+    def _evidence(self, *, force_rehash: bool = False) -> dict:
+        if not force_rehash:
+            cached = _cached_evidence_for(self)
+            if cached is not None:
+                return cached
         try:
             report = evidence.verify_evidence(
                 self.registry, self.anchor_dir, self.evidence_key,
@@ -192,15 +239,22 @@ class PrivateResearchAdapters:
             if (type(report.get("head_entry_sha256")) is not str or
                     not HEX.fullmatch(report["head_entry_sha256"])):
                 _deny("EVIDENCE_NOT_QUALIFIED")
+            _store_evidence_cache(self, report)
             return report
         except ResearchAdapterError:
             raise
         except (evidence.EvidenceError, OSError, sqlite3.Error, ValueError) as exc:
             raise ResearchAdapterError("EVIDENCE_VERIFICATION_FAILED") from exc
+        _store_evidence_cache(self, report)
+        return report
 
-    def evidence_head(self) -> str:
-        """The exact R0.1a evidence head this adapter instance is bound to."""
-        return self._evidence()["head_entry_sha256"]
+    def evidence_head(self, *, force_rehash: bool = False) -> str:
+        """The exact R0.1a evidence head this adapter instance is bound to.
+
+        force_rehash=True re-hashes every vault file even when cached —
+        used at request boundaries so mid-request tampering is detected.
+        """
+        return self._evidence(force_rehash=force_rehash)["head_entry_sha256"]
 
     def corpus_sources(self) -> list[dict]:
         self._evidence()

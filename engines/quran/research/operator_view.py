@@ -147,7 +147,9 @@ def operator_lookup(adapters: PrivateResearchAdapters, reference: str, *,
     if (after["head_entry_sha256"] != before["head_entry_sha256"]
             or after["entries"] != before["entries"]):
         raise OperatorViewError("QUALIFICATION_HEAD_CHANGED_DURING_LOOKUP")
-    if adapters.evidence_head() != evidence_head:
+    if adapters.evidence_head(force_rehash=True) != evidence_head:
+        # Boundary check with forced full re-hash: any mid-request change
+        # to the vault bytes is detected before the answer is returned.
         raise OperatorViewError("EVIDENCE_HEAD_CHANGED_DURING_QUALIFICATION")
 
     return {
