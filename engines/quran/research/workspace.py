@@ -12,11 +12,12 @@ from __future__ import annotations
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+from html import escape as escape_html
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
 
 from engines.quran.research.operator_view import (
-    operator_lookup, OperatorViewError)
+    operator_lookup, OperatorViewError, _states as _qualified_states)
 from engines.quran.research import qualification as qual
 from engines.quran.research.private_adapters import (
     PrivateResearchAdapters, ResearchAdapterError)
@@ -60,6 +61,8 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
 
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
+        server_version = "MubinOperator/0.1"
+        sys_version = ""
         def log_message(self, fmt, *args):
             pass  # never log request queries (may contain references)
         def _send(self, status, data, media):
@@ -99,6 +102,8 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
             if parts.scheme or parts.netloc or parts.fragment or \
                     parts.path not in ("/", "/api/states", "/api/lookup"):
                 return self._deny(404, "route_not_found")
+            if parts.path in ("/", "/api/states") and parts.query:
+                return self._deny(400, "invalid_query")
             try:
                 if parts.path == "/":
                     return self._send(200, _workspace_html(adapters, qual_args),
@@ -119,61 +124,107 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                 return self._json(409, {"status": "REFUSED",
                                         "reason_code": exc.code,
                                         "text_included": False})
-            except (ValueError, KeyError) as exc:
-                return self._json(400, {"status": "REFUSED",
-                                        "reason_code": "invalid_request",
+            except WorkspaceError as exc:
+                return self._json(409, {"status": "REFUSED",
+                                        "reason_code": exc.code,
+                                        "text_included": False})
+            except (ValueError, KeyError, TypeError, UnicodeError, OSError):
+                return self._json(409, {"status": "REFUSED",
+                                        "reason_code": "workspace_internal_refusal",
                                         "text_included": False})
 
     return ThreadingHTTPServer(("127.0.0.1", port), Handler)
 
 
-def _per_source_states(qual_args) -> tuple[list[dict], str]:
-    """Per-source states; an uninitialized ledger is itself a status
-    (defaults + not_initialized), not a refusal — this is a status view."""
-    rows = []
+def _per_source_states(adapters, qual_args) -> tuple[list[dict], str, str, int, str]:
+    """Signed, evidence-bound status snapshot. Never promote stale decisions.
+
+    Missing ledger = explicitly *not initialized* (pending defaults);
+    an empty/unpaired, damaged or rolled-back initialized ledger is REFUSED.
+    Source-level states exclude record-scoped quarantines, reported separately.
+    """
+    evidence_head = adapters.evidence_head()
+    ledger = qual_args["ledger"]
+    anchors = qual_args["qualification_anchor_dir"]
+    key = qual_args["qualification_key"]
+    vault = qual_args["vault"]
     ledger_state = "initialized"
-    for source_id in sorted(set(qual.SOURCE_IDS)):
-        try:
-            scholarly = qual.current_state(
-                qual_args["ledger"], source_id, "scholarly",
-                anchor_dir=qual_args["qualification_anchor_dir"],
-                key_file=qual_args["qualification_key"], vault=qual_args["vault"])
-            rights = qual.current_state(
-                qual_args["ledger"], source_id, "rights",
-                anchor_dir=qual_args["qualification_anchor_dir"],
-                key_file=qual_args["qualification_key"], vault=qual_args["vault"])
-        except qual.QualificationError as exc:
-            if exc.code in ("LEDGER_NOT_INITIALIZED", "LEDGER_UNPAIRED_OR_EMPTY"):
-                ledger_state = "not_initialized"
-                scholarly = qual.DEFAULT_SCHOLARLY
-                rights = qual.DEFAULT_RIGHTS
-            else:
-                raise
-        rows.append({"source_id": source_id,
-                     "scholarly_decision_state": scholarly,
-                     "rights_decision_state": rights})
-    return rows, ledger_state
+    before = None
+    entries = []
+    try:
+        before = qual.verify_ledger(ledger, anchors, key, vault=vault)
+        entries, signed_head = qual._attested_entries(
+            ledger, anchors, key, vault=vault, allow_initial=True)
+        if (signed_head != before["head_entry_sha256"]
+                or len(entries) != before["entries"]):
+            raise WorkspaceError("qualification_head_changed_during_lookup")
+    except qual.QualificationError as exc:
+        if exc.code != "LEDGER_NOT_INITIALIZED" or before is not None:
+            raise
+        ledger_state = "not_initialized"
+
+    rows = []
+    for source_id in sorted(qual.SOURCE_IDS):
+        source = [entry["payload"] for entry in entries
+                  if entry["payload"]["source_id"] == source_id]
+        full = [item for item in source
+                if item["scope"] == {"full_source": True}]
+        scholarly, rights, matched, stale = _qualified_states(
+            full, evidence_head)
+        rows.append({
+            "source_id": source_id,
+            "scholarly_decision_state": scholarly,
+            "rights_decision_state": rights,
+            "matching_evidence_decisions": matched,
+            "historical_evidence_decisions_present": stale,
+            "record_quarantines_present": any(
+                item["decision"] == "RECORD_QUARANTINED" for item in source),
+        })
+
+    try:
+        after = qual.verify_ledger(ledger, anchors, key, vault=vault)
+    except qual.QualificationError as exc:
+        if exc.code != "LEDGER_NOT_INITIALIZED" or before is not None:
+            raise
+        after = None
+    if ((before is None) != (after is None)
+            or (before is not None and (
+                before["head_entry_sha256"] != after["head_entry_sha256"]
+                or before["entries"] != after["entries"]))):
+        raise WorkspaceError("qualification_head_changed_during_lookup")
+    if adapters.evidence_head() != evidence_head:
+        raise WorkspaceError("evidence_head_changed_during_lookup")
+    head = before["head_entry_sha256"] if before is not None else "0" * 64
+    count = before["entries"] if before is not None else 0
+    return rows, ledger_state, head, count, evidence_head
 
 
 def _states_payload(adapters, qual_args) -> dict:
-    head = adapters.evidence_head()
-    rows, ledger_state = _per_source_states(qual_args)
+    rows, ledger_state, head, count, evidence_head = _per_source_states(
+        adapters, qual_args)
     return {"contract": CONTRACT, "engine": VERSION,
-            "evidence_head_sha256": head, "ledger_state": ledger_state,
+            "evidence_head_sha256": evidence_head,
+            "qualification_head_sha256": head,
+            "qualification_decisions": count,
+            "ledger_state": ledger_state,
             "sources": rows,
+            "source_authenticated": False, "scholarly_verified": False,
+            "rights_verified": False, "edition_verified": False,
             "text_included": False, "publication_allowed": False,
             "juristic_inference_allowed": False,
             "public_fatwa_authorized": False}
 
 
 def _workspace_html(adapters, qual_args) -> bytes:
-    head = adapters.evidence_head()
-    rows, ledger_state = _per_source_states(qual_args)
+    rows, ledger_state, _, _, head = _per_source_states(adapters, qual_args)
     rows_html = []
     for row in rows:
-        rows_html.append(f"<tr><td>{row['source_id']}</td>"
-                         f"<td>{row['scholarly_decision_state']}</td>"
-                         f"<td>{row['rights_decision_state']}</td></tr>")
+        rows_html.append(
+            "<tr><td>" + escape_html(row["source_id"]) + "</td>"
+            + "<td>" + escape_html(row["scholarly_decision_state"]) + "</td>"
+            + "<td>" + escape_html(row["rights_decision_state"]) + "</td>"
+            + "<td>" + ("نعم" if row["record_quarantines_present"] else "لا")
+            + "</td></tr>")
     notice = ("السجل غير مهيأ بعد — قرارات التأهيل الحقيقية تنتظر مراجعين مستقلين."
               if ledger_state == "not_initialized" else "")
     html = (
@@ -182,9 +233,9 @@ def _workspace_html(adapters, qual_args) -> bytes:
         '</head><body dir="rtl" lang="ar">'
         "<h1>مساحة المشغل — عرض حالات التأهيل</h1>"
         "<p>بيانات وصفية فقط؛ لا نصوص؛ رأس الأدلة: "
-        + head[:16] + "…</p>"
+        + escape_html(head[:16]) + "…</p>"
         "<table><thead><tr><th>المصدر</th><th>محور السلامة</th>"
-        "<th>محور الحقوق</th></tr></thead><tbody>"
+        "<th>محور الحقوق</th><th>حجر سجلات</th></tr></thead><tbody>"
         + "".join(rows_html) +
         "</tbody></table>"
         + (f"<p>{notice}</p>" if notice else "")
