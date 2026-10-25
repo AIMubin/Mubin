@@ -22,6 +22,7 @@ from engines.quran.research import qualification as qual
 from engines.quran.research.private_adapters import (
     PrivateResearchAdapters, ResearchAdapterError)
 from qa import private_evidence_v01 as evidence
+from qa.corpus_snapshot_v01 import resolve_current_snapshot
 
 VERSION = "quran-operator-workspace/i0.1b"
 CONTRACT = "mubin-operator-workspace-v0.1"
@@ -51,13 +52,23 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                            qualification_anchor_dir: Path,
                            qualification_key: Path, port: int = 0):
     """LOOPBACK-ONLY metadata workspace; never serves private text."""
+    # I0.1c: pin the immutable snapshot when available (performance path);
+    # fall back to the mutable vault original when no snapshot exists yet.
+    try:
+        snapshot = resolve_current_snapshot(Path(vault))
+        pinned_corpus_db = snapshot["corpus_db"]
+        snapshot_revision = snapshot["revision_id"]
+    except Exception:
+        pinned_corpus_db = Path(corpus_db)
+        snapshot_revision = ""
     adapters = PrivateResearchAdapters(
-        vault=Path(vault), corpus_db=Path(corpus_db), sidecar_db=Path(sidecar_db),
+        vault=Path(vault), corpus_db=pinned_corpus_db, sidecar_db=Path(sidecar_db),
         registry=Path(registry), anchor_dir=Path(anchor_dir),
         evidence_key=Path(evidence_key))
     qual_args = dict(ledger=Path(qualification_ledger),
                      qualification_anchor_dir=Path(qualification_anchor_dir),
-                     qualification_key=Path(qualification_key), vault=Path(vault))
+                     qualification_key=Path(qualification_key), vault=Path(vault),
+                     snapshot_revision=snapshot_revision)
 
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
@@ -114,7 +125,9 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                                   keep_blank_values=True, max_num_fields=3)
                 if set(params) != {"ref"} or len(params["ref"]) != 1:
                     return self._deny(400, "invalid_query")
-                report = operator_lookup(adapters, params["ref"][0], **qual_args)
+                lookup_args = {k: v for k, v in qual_args.items()
+                               if k != "snapshot_revision"}
+                report = operator_lookup(adapters, params["ref"][0], **lookup_args)
                 return self._json(200, report)
             except OperatorViewError as exc:
                 return self._json(409, {"status": "REFUSED",
