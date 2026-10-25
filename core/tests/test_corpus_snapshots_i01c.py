@@ -94,6 +94,7 @@ class SnapshotTests(unittest.TestCase):
         report = self.publish()
         revision = self.vault / "snapshots" / report["revision_id"]
         original = revision / "corpus.sqlite3"
+        original.chmod(0o600)  # Windows denies unlink of a read-only file
         original.unlink()
         import os
         os.link(self.corpus, original)
