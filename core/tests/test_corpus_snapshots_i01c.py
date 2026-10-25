@@ -119,6 +119,14 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(resolve_current_snapshot(self.vault)["revision_id"],
                          report["revision_id"])
 
+    def test_broken_latest_yields_safe_refusal_code(self):
+        self.publish()
+        latest = self.vault / "LATEST.json"
+        latest.write_text("{malformed-json", encoding="utf-8")
+        with self.assertRaisesRegex(
+                SnapshotError, "SNAPSHOT_FORMAT_OR_IO_ERROR"):
+            resolve_current_snapshot(self.vault)
+
     def test_revision_b_published_session_on_a_is_unaffected(self):
         """A session pinned to Revision A completes on A even after B."""
         self.publish()
