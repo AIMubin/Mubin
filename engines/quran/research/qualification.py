@@ -507,8 +507,9 @@ def current_state(ledger_path: Path, source_id: str, axis: str, *,
 
 def verify_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path, *,
                   vault: Path) -> dict:
+    # An explicitly initialized sequence-zero continuity witness is verifiable.
     entries, head = _attested_entries(ledger_path, anchor_dir, key_file,
-                                      vault=vault)
+                                      vault=vault, allow_initial=True)
     return {"contract": CONTRACT, "status": "QUALIFICATION_LEDGER_VERIFIED",
             "entries": len(entries), "head_entry_sha256": head,
             "axes": sorted(AXES), "publication_granted": False,
