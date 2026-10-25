@@ -48,7 +48,9 @@ SHA = re.compile(r"[0-9a-f]{64}\Z")
 DEFAULT_SCHOLARLY = "UNREVIEWED"
 DEFAULT_RIGHTS = "legal_review_pending"
 LOCK_NAME = ".qualification-ledger.lock"
+CONTINUITY_NAME = "qualification-ledger.continuity-anchor.json"
 MAX_NOTES = 400
+INIT_SEQUENCE = 0
 
 
 class QualificationError(ValueError):
@@ -109,6 +111,114 @@ def _verify_chain(entries: list[dict]) -> None:
         previous = recorded
 
 
+def _continuity_path(anchor_dir: Path, ledger_path: Path) -> Path:
+    return anchor_dir / (ledger_path.stem + ".continuity-anchor.json")
+
+
+def _continuity_valid(path: Path, key: bytes, ledger_path: Path) -> dict | None:
+    """Return the continuity body when its HMAC and identity check out."""
+    if path.is_symlink() or not path.is_file():
+        return None
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, UnicodeError, OSError):
+        return None
+    if type(body) is not dict or body.get("action") != "qualification_ledger_continuity" \
+            or body.get("registry") != ledger_path.name:
+        return None
+    mac = body.pop("continuity_hmac", "")
+    expected = hmac.new(key, _canonical(body), hashlib.sha256).hexdigest()
+    body["continuity_hmac"] = mac
+    if not hmac.compare_digest(mac, expected):
+        return None
+    return body
+
+
+def initialize_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path, *,
+                      vault: Path, evidence_registry: Path,
+                      evidence_anchor_dir: Path, evidence_key: Path,
+                      sidecar_db: Path, operator: str) -> dict:
+    """EXPLICIT one-time initialization with a signed continuity anchor.
+
+    The continuity anchor (sequence=0) lives OUTSIDE the vault and proves the
+    ledger exists. After any append its sequence advances, so a later
+    simultaneous deletion of the ledger and the head anchor is detected and
+    refused instead of silently starting a fresh history.
+    """
+    ledger_path = _guard_outside(ledger_path, None)
+    try:
+        anchor_dir_g = _guard_secret_location(anchor_dir, Path(vault))
+        key_file_g = _guard_secret_location(key_file, Path(vault))
+    except EvidenceError as exc:
+        raise QualificationError("QUALIFICATION_SECRET_IN_VAULT_REFUSED") from exc
+    evidence_registry = _guard_outside(evidence_registry, None)
+    evidence_anchor_dir = _guard_outside(evidence_anchor_dir, None)
+    evidence_key = _guard_outside(evidence_key, None)
+    sidecar_db = _guard_outside(sidecar_db, None)
+    key = load_operator_key(key_file_g, create=True)
+    if ledger_path.exists() or _anchor_path(anchor_dir_g, ledger_path).exists():
+        raise QualificationError("LEDGER_ALREADY_INITIALIZED")
+    if _continuity_path(anchor_dir_g, ledger_path).exists():
+        raise QualificationError("LEDGER_ALREADY_INITIALIZED")
+    try:
+        observation = evidence.verify_evidence(
+            evidence_registry, evidence_anchor_dir, evidence_key,
+            vault, sidecar_db)
+    except (EvidenceError, OSError, ValueError) as exc:
+        raise QualificationError("EVIDENCE_VERIFICATION_FAILED") from exc
+    _need(observation.get("status") == "EVIDENCE_REGISTRY_VERIFIED",
+          "EVIDENCE_NOT_QUALIFIED")
+    normalized = operator.strip().casefold()
+    _need(3 <= len(operator) <= 80
+          and normalized not in {"system", "automation", "llm", "ai", "bot",
+                                 "codex", "gpt", "model", "auto"},
+          "OPERATOR_INVALID")
+    continuity = {
+        "action": "qualification_ledger_continuity",
+        "registry": ledger_path.name,
+        "sequence": INIT_SEQUENCE,
+        "head_entry_sha256": "0" * 64,
+        "bound_evidence_head": observation["head_entry_sha256"],
+        "initialized_by": operator,
+        "initialized_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    mac = hmac.new(key, _canonical(continuity), hashlib.sha256).hexdigest()
+    anchor_dir_g.mkdir(parents=True, exist_ok=True)
+    tmp = anchor_dir_g / (".cont-" + str(os.getpid()) + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                 getattr(os, "O_BINARY", 0), 0o600)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(_canonical({**continuity, "continuity_hmac": mac}) + bytes([10]))
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp, _continuity_path(anchor_dir_g, ledger_path))
+    return {"status": "QUALIFICATION_LEDGER_INITIALIZED",
+            "registry": ledger_path.name,
+            "bound_evidence_head": observation["head_entry_sha256"],
+            "publication_granted": False, "juristic_inference_allowed": False,
+            "public_fatwa_authorized": False}
+
+
+def _advance_continuity(anchor_dir: Path, ledger_path: Path, key: bytes,
+                        sequence: int, head_entry_sha256: str) -> None:
+    path = _continuity_path(anchor_dir, ledger_path)
+    current = _continuity_valid(path, key, ledger_path)
+    _need(current is not None, "CONTINUITY_ANCHOR_MISSING")
+    _need(sequence == current["sequence"] + 1, "CONTINUITY_SEQUENCE_LAG")
+    body = {k: v for k, v in current.items() if k != "continuity_hmac"}
+    body["sequence"] = sequence
+    body["head_entry_sha256"] = head_entry_sha256
+    mac = hmac.new(key, _canonical(body), hashlib.sha256).hexdigest()
+    tmp = path.parent / (".cont-" + str(os.getpid()) + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                 getattr(os, "O_BINARY", 0), 0o600)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(_canonical({**body, "continuity_hmac": mac}) + bytes([10]))
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp, path)
+
+
 def _anchor_path(anchor_dir: Path, ledger_path: Path) -> Path:
     return anchor_dir / (ledger_path.stem + ".qualification-head-anchor.json")
 
@@ -151,9 +261,27 @@ def _attested_entries(ledger_path: Path, anchor_dir: Path,
     entries = _load(ledger)
     _verify_chain(entries)
     anchor_path = _anchor_path(anchor, ledger)
+    continuity_path = _continuity_path(anchor, ledger)
     if not entries:
-        if allow_initial and not ledger.exists() and not anchor_path.exists():
-            return [], "0" * 64
+        try:
+            key = load_operator_key(key_path, create=False)
+        except EvidenceError:
+            key = None
+        continuity = _continuity_valid(continuity_path, key, ledger) if key else None
+        files_absent = not ledger.exists() and not anchor_path.exists()
+        if files_absent:
+            if continuity is not None and continuity["sequence"] >= 1:
+                # A signed continuity anchor with sequence >= 1 proves real
+                # decision history existed here: silent re-initialization
+                # after deleting the ledger and head anchor is refused.
+                raise QualificationError("LEDGER_HISTORY_DESTROYED_REFUSED")
+            if continuity is not None and continuity["sequence"] == 0:
+                # Freshly initialized: the first decision may be appended.
+                if allow_initial:
+                    return [], "0" * 64
+                raise QualificationError("LEDGER_UNPAIRED_OR_EMPTY")
+            if continuity is None:
+                raise QualificationError("LEDGER_NOT_INITIALIZED")
         raise QualificationError("LEDGER_UNPAIRED_OR_EMPTY")
     try:
         key = load_operator_key(key_path, create=False)
@@ -258,7 +386,7 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
         entries, previous = _attested_entries(ledger_path, anchor_dir, key_file,
                                                vault=vault, allow_initial=True)
         try:
-            key = load_operator_key(key_file, create=not entries)
+            key = load_operator_key(key_file, create=False)
         except EvidenceError as exc:
             raise QualificationError("LEDGER_KEY_UNAVAILABLE") from exc
         _need(not any(e["payload"]["decision_id"] == clean["decision_id"]
@@ -295,6 +423,8 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
         finally:
             temp.unlink(missing_ok=True)
             anchor_tmp.unlink(missing_ok=True)
+        _advance_continuity(anchor_dir, ledger_path, key,
+                            body["seq"], entry_sha)
     return {"status": "QUALIFICATION_DECISION_RECORDED",
             "decision_id": clean["decision_id"], "entry_sha256": entry_sha,
             "axis": clean["axis"], "decision": clean["decision"],
@@ -377,6 +507,16 @@ def verify_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path, *,
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
+    init = sub.add_parser("init")
+    init.add_argument("--ledger", required=True)
+    init.add_argument("--anchor-dir", required=True)
+    init.add_argument("--key-file", required=True)
+    init.add_argument("--operator", required=True)
+    init.add_argument("--evidence-registry", required=True)
+    init.add_argument("--evidence-anchor-dir", required=True)
+    init.add_argument("--evidence-key", required=True)
+    init.add_argument("--vault", required=True)
+    init.add_argument("--sidecar-db", required=True)
     record = sub.add_parser("record")
     record.add_argument("--ledger", required=True)
     record.add_argument("--anchor-dir", required=True)
@@ -403,7 +543,15 @@ def main(argv=None):
     check.add_argument("--vault", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.action == "record":
+        if args.action == "init":
+            report = initialize_ledger(
+                args.ledger, args.anchor_dir, args.key_file,
+                vault=args.vault, evidence_registry=args.evidence_registry,
+                evidence_anchor_dir=args.evidence_anchor_dir,
+                evidence_key=args.evidence_key, sidecar_db=args.sidecar_db,
+                operator=args.operator)
+            code = 0
+        elif args.action == "record":
             decision = json.loads(Path(args.decision_json).read_text(encoding="utf-8"))
             report = append_decision(
                 args.ledger, args.anchor_dir, args.key_file, decision, args.operator,
