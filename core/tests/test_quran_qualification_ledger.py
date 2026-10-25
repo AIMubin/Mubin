@@ -6,7 +6,6 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from qa.private_evidence_v01 import _canonical
 from hashlib import sha256
 
 from engines.quran.research.qualification import (
@@ -324,7 +323,7 @@ class QualificationLedgerTests(unittest.TestCase):
                               encoding="utf-8")
         # A continuity anchor failing its HMAC is treated as absent:
         # the append then refuses as not-initialized (fail-closed).
-        with self.assertRaisesRegex(QualificationError, "LEDGER_NOT_INITIALIZED"):
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_ANCHOR_INVALID"):
             self.record()
 
     def test_continuity_inside_vault_refused(self):
@@ -339,6 +338,102 @@ class QualificationLedgerTests(unittest.TestCase):
                 evidence_key=self.base / "mock-evidence.key",
                 sidecar_db=self.base / "synthetic-sidecar.db",
                 operator="lead-operator")
+
+
+    def test_nonempty_ledger_refuses_missing_continuity(self):
+        self.record()
+        old_ledger = self.ledger.read_bytes()
+        old_head = (self.anchor_dir /
+                    "qualification-ledger.qualification-head-anchor.json").read_bytes()
+        (self.anchor_dir / "qualification-ledger.continuity-anchor.json").unlink()
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_ANCHOR_INVALID"):
+            verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_ANCHOR_INVALID"):
+            current_state(self.ledger, "qe_ar_muyassar", "scholarly",
+                          anchor_dir=self.anchor_dir, key_file=self.key, vault=self.vault)
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_ANCHOR_INVALID"):
+            self.record(decision_id="review-0002")
+        self.assertEqual(self.ledger.read_bytes(), old_ledger)
+        self.assertEqual((self.anchor_dir /
+                          "qualification-ledger.qualification-head-anchor.json").read_bytes(),
+                         old_head)
+
+    def test_rollback_of_ledger_and_head_detected(self):
+        self.record()
+        head_path = self.anchor_dir / "qualification-ledger.qualification-head-anchor.json"
+        first_ledger = self.ledger.read_bytes()
+        first_head = head_path.read_bytes()
+        self.record(decision_id="review-0002", axis="rights",
+                    decision="INTERNAL_USE_CLEARED")
+        self.ledger.write_bytes(first_ledger)
+        head_path.write_bytes(first_head)
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_HEAD_MISMATCH"):
+            verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_HEAD_MISMATCH"):
+            self.record(decision_id="review-0003")
+
+    def test_rollback_of_continuity_witness_detected(self):
+        self.record()
+        path = self.anchor_dir / "qualification-ledger.continuity-anchor.json"
+        old = path.read_bytes()
+        self.record(decision_id="review-0002", axis="rights",
+                    decision="INTERNAL_USE_CLEARED")
+        path.write_bytes(old)
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_HEAD_MISMATCH"):
+            verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_HEAD_MISMATCH"):
+            self.record(decision_id="review-0003")
+
+    def test_bad_hmac_type_is_refused_as_untrusted_continuity(self):
+        self.record()
+        path = self.anchor_dir / "qualification-ledger.continuity-anchor.json"
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["continuity_hmac"] = 10
+        path.write_text(json.dumps(body), encoding="utf-8")
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_ANCHOR_INVALID"):
+            verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
+
+    def test_bad_sequence_type_is_refused_as_untrusted_continuity(self):
+        self.record()
+        path = self.anchor_dir / "qualification-ledger.continuity-anchor.json"
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["sequence"] = "two"
+        path.write_text(json.dumps(body), encoding="utf-8")
+        with self.assertRaisesRegex(QualificationError, "CONTINUITY_ANCHOR_INVALID"):
+            verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
+
+    def test_initialize_rejects_inconsistent_evidence_flags(self):
+        self.mock_evidence.return_value = {
+            "status": "EVIDENCE_REGISTRY_VERIFIED",
+            "byte_integrity_verified": False,
+            "head_entry_sha256": HEAD,
+            "rights_status": "legal_review_pending",
+            "source_authenticated": False, "scholarly_verified": False}
+        with self.assertRaisesRegex(QualificationError, "EVIDENCE_NOT_QUALIFIED"):
+            self.initialize()
+        self.assertFalse(self.key.exists())
+        self.assertFalse(
+            (self.anchor_dir / "qualification-ledger.continuity-anchor.json").exists())
+
+    def test_cli_has_explicit_initialize(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from engines.quran.research.qualification import main
+        out = StringIO()
+        with redirect_stdout(out):
+            code = main([
+                "init", "--ledger", str(self.ledger),
+                "--anchor-dir", str(self.anchor_dir),
+                "--key-file", str(self.key),
+                "--operator", "lead-operator",
+                "--evidence-registry", str(self.base / "mock-evidence.jsonl"),
+                "--evidence-anchor-dir", str(self.base / "mock-evidence-anchor"),
+                "--evidence-key", str(self.base / "mock-evidence.key"),
+                "--vault", str(self.vault),
+                "--sidecar-db", str(self.base / "synthetic-sidecar.db")])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out.getvalue())["status"],
+                         "QUALIFICATION_LEDGER_INITIALIZED")
 
     def test_no_publication_authority_ever_reported(self):
         self.record()
