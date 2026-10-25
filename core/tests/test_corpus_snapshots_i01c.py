@@ -102,6 +102,23 @@ class SnapshotTests(unittest.TestCase):
                 SnapshotError, "SNAPSHOT_SHARED_INODE_REFUSED"):
             resolve_current_snapshot(self.vault)
 
+    def test_corrupted_snapshot_bytes_refused_at_resolution(self):
+        report = self.publish()
+        path = (self.vault / "snapshots" / report["revision_id"] /
+                "corpus.sqlite3")
+        path.chmod(0o600)
+        path.write_bytes(b"corrupted-revision")
+        with self.assertRaisesRegex(
+                SnapshotError, "SNAPSHOT_CORPUS_DIGEST_MISMATCH"):
+            resolve_current_snapshot(self.vault)
+
+    def test_revision_id_is_full_sha256_not_legacy_short_prefix(self):
+        report = self.publish()
+        self.assertRegex(report["revision_id"], r"^r[0-9a-f]{64}$")
+        self.assertNotEqual(report["revision_id"], report["revision_id"][:9])
+        self.assertEqual(resolve_current_snapshot(self.vault)["revision_id"],
+                         report["revision_id"])
+
     def test_revision_b_published_session_on_a_is_unaffected(self):
         """A session pinned to Revision A completes on A even after B."""
         self.publish()
