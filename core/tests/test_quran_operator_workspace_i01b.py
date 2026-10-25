@@ -170,6 +170,97 @@ class WorkspaceTests(unittest.TestCase):
             evidence_key=self.evidence_key,
             sidecar_db=self.sidecar, operator="lead-operator")
 
+    def _record(self, decision_type, *, axis="scholarly", scope=None):
+        from datetime import datetime, timezone
+        scope = scope if scope is not None else {"full_source": True}
+        record = {
+            "decision_id": "synthetic-" + decision_type.lower().replace("_", "-"),
+            "axis": axis, "source_id": "qe_ar_muyassar",
+            "scope": scope, "decision": decision_type,
+            "reviewer": "independent-human-reviewer",
+            "reviewed_at_utc": datetime.now(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"),
+            "evidence_head_sha256": self.mock_evidence.return_value[
+                "head_entry_sha256"],
+            "notes": "synthetic-only local fixture",
+        }
+        qual.append_decision(
+            self.qual_ledger, self.qual_anchor, self.qual_key,
+            record, "lead-operator", evidence_registry=self.registry,
+            evidence_anchor_dir=self.anchor,
+            evidence_key=self.evidence_key, vault=self.vault,
+            sidecar_db=self.sidecar)
+
+    def _state(self, source_id="qe_ar_muyassar"):
+        status, _, body = self._get("/api/states")
+        result = json.loads(body)
+        return status, result, next((
+            row for row in result.get("sources", [])
+            if row["source_id"] == source_id), None)
+
+    def test_never_treat_unpaired_initialized_ledger_as_uninitialized(self):
+        self.qual_initialize()
+        self.qual_ledger.write_bytes(b"")  # continuity exists; no decision file pair
+        for path in ("/", "/api/states"):
+            status, _, body = self._get(path)
+            self.assertEqual(status, 409)
+            self.assertIn(b"LEDGER_UNPAIRED_OR_EMPTY", body)
+            self.assertNotIn(str(self.qual_ledger).encode(), body)
+
+    def test_stale_positive_status_never_promotes(self):
+        self.qual_initialize()
+        self._record("SOURCE_TEXT_INTEGRITY_REVIEWED")
+        status, payload, row = self._state()
+        self.assertEqual(status, 200)
+        self.assertEqual(row["scholarly_decision_state"],
+                         "SOURCE_TEXT_INTEGRITY_REVIEWED")
+        self.assertEqual(row["matching_evidence_decisions"], 1)
+        self.mock_evidence.return_value["head_entry_sha256"] = "c" * 64
+        status, payload, row = self._state()
+        self.assertEqual(status, 200)
+        self.assertEqual(row["scholarly_decision_state"], "UNREVIEWED")
+        self.assertEqual(row["matching_evidence_decisions"], 0)
+        self.assertTrue(row["historical_evidence_decisions_present"])
+        self.assertFalse(payload["scholarly_verified"])
+        self.assertFalse(payload["publication_allowed"])
+
+    def test_historical_rejection_is_sticky_and_quarantines_stay_scoped(self):
+        self.qual_initialize()
+        self._record("SOURCE_REJECTED")
+        self.mock_evidence.return_value["head_entry_sha256"] = "c" * 64
+        status, _, row = self._state()
+        self.assertEqual(status, 200)
+        self.assertEqual(row["scholarly_decision_state"], "SOURCE_REJECTED")
+        self.assertTrue(row["historical_evidence_decisions_present"])
+
+    def test_record_quarantine_not_misrepresented_as_source_wide(self):
+        self.qual_initialize()
+        self._record("RECORD_QUARANTINED",
+                     scope={"record_coordinates": ["2:1"]})
+        status, _, row = self._state()
+        self.assertEqual(status, 200)
+        self.assertEqual(row["scholarly_decision_state"], "UNREVIEWED")
+        self.assertTrue(row["record_quarantines_present"])
+        status, _, body = self._get("/api/lookup?ref=2:1")
+        self.assertEqual(status, 200)
+        source = next(s for s in json.loads(body)["sources"]
+                      if s["source_id"] == "qe_ar_muyassar")
+        self.assertEqual(source["scholarly_decision_state"], "RECORD_QUARANTINED")
+
+    def test_evidence_head_changed_during_state_snapshot_refused(self):
+        before = dict(self.mock_evidence.return_value)
+        after = dict(before, head_entry_sha256="c" * 64)
+        self.mock_evidence.side_effect = [before, after]
+        status, _, body = self._get("/api/states")
+        self.assertEqual(status, 409)
+        self.assertIn(b"evidence_head_changed_during_lookup", body)
+
+    def test_query_not_accepted_on_static_routes(self):
+        for path in ("/?unexpected=1", "/api/states?ref=2:1"):
+            status, _, body = self._get(path)
+            self.assertEqual(status, 400)
+            self.assertIn(b"invalid_query", body)
+
     def test_invalid_host_refused(self):
         status, _, body = self._get("/", host="evil.example.com:1")
         self.assertEqual(status, 403)
