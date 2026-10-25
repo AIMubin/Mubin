@@ -32,7 +32,7 @@ VERSION = "corpus-snapshot/v0.1.0"
 CONTRACT = "mubin-corpus-snapshot-v0.1"
 SNAPSHOTS_DIR = "snapshots"
 LATEST_NAME = "LATEST.json"
-REV_RE = re.compile(r"r[0-9a-f]{8}\Z")
+REV_RE = re.compile(r"r[0-9a-f]{64}\Z")
 
 
 class SnapshotError(ValueError):
@@ -190,7 +190,7 @@ def publish_snapshot(vault: Path, corpus_db: Path, sidecar_db: Path, *,
         _need(sidecar_sha == EXPECTED_SHA256,
               "SNAPSHOT_SIDECAR_PIN_MISMATCH")
         seed = corpus_sha + sidecar_sha + campaign_receipt_sha256
-        revision_id = "r" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:8]
+        revision_id = "r" + hashlib.sha256(seed.encode("utf-8")).hexdigest()
         root = snapshots_root(vault)
         root.mkdir(parents=True, exist_ok=True)
         revision_dir = root / revision_id
