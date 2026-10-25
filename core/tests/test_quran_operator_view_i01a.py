@@ -24,7 +24,7 @@ class FakeAdapters:
         self.head_calls = 0
         self.change_after_second = False
 
-    def evidence_head(self, force_rehash=False):
+    def evidence_head(self):
         self.head_calls += 1
         if self.change_after_second and self.head_calls >= 3:
             return "d" * 64
