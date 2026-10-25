@@ -8,6 +8,7 @@ on:
       - "engines/quran/research/qualification.py"
       - "engines/quran/research/private_adapters.py"
       - "core/tests/test_quran_operator_view_i01a.py"
+      - "docs/research/QURAN-I01A-OPERATOR-INTEGRATION.md"
       - ".github/workflows/mubin-quran-operator-integration.yml"
   push:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - "engines/quran/research/qualification.py"
       - "engines/quran/research/private_adapters.py"
       - "core/tests/test_quran_operator_view_i01a.py"
+      - "docs/research/QURAN-I01A-OPERATOR-INTEGRATION.md"
       - ".github/workflows/mubin-quran-operator-integration.yml"
   workflow_dispatch:
 
