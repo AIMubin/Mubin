@@ -21,6 +21,9 @@ import hashlib
 import json
 import os
 import re
+import secrets
+import shutil
+import stat
 from pathlib import Path
 
 from qa import private_evidence_v01 as evidence
@@ -56,14 +59,16 @@ def _sha_file(path: Path) -> str:
 def _write_atomic(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.parent / (".tmp-" + str(os.getpid()) + "-" + path.name)
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC |
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
                  getattr(os, "O_BINARY", 0), 0o600)
     try:
-        os.write(fd, data)
-        os.fsync(fd)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(tmp, path)
     finally:
-        os.close(fd)
-    os.replace(tmp, path)
+        tmp.unlink(missing_ok=True)
 
 
 def snapshots_root(vault: Path) -> Path:
@@ -90,10 +95,31 @@ def resolve_current_snapshot(vault: Path) -> dict:
     _need(type(revision_id) is str and REV_RE.fullmatch(revision_id) is not None,
           "SNAPSHOT_REVISION_INVALID")
     revision_dir = snapshots_root(vault) / revision_id
+    _need(revision_dir.is_dir() and not revision_dir.is_symlink(),
+          "SNAPSHOT_REVISION_INVALID")
     manifest_path = revision_dir / "revision.json"
-    _need(manifest_path.is_file(), "SNAPSHOT_MANIFEST_MISSING")
+    _need(manifest_path.is_file() and not manifest_path.is_symlink(),
+          "SNAPSHOT_MANIFEST_MISSING")
+    _need(_sha_file(manifest_path) == body["manifest_sha256"],
+          "SNAPSHOT_MANIFEST_DIGEST_MISMATCH")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    _need(manifest.get("revision_id") == revision_id,
+    _need(type(manifest) is dict and
+          set(manifest) == {"contract", "version", "revision_id",
+                            "corpus_sha256", "sidecar_sha256",
+                            "campaign_receipt_sha256", "immutable",
+                            "text_included", "publication_allowed",
+                            "source_authenticated", "scholarly_verified",
+                            "rights_verified"} and
+          manifest["contract"] == CONTRACT and
+          manifest["version"] == VERSION and
+          manifest["revision_id"] == revision_id and
+          manifest["immutable"] is True and
+          all(manifest[k] is False for k in
+              ("text_included", "publication_allowed",
+               "source_authenticated", "scholarly_verified",
+               "rights_verified")) and
+          type(manifest["campaign_receipt_sha256"]) is str and
+          re.fullmatch(r"[0-9a-f]{64}", manifest["campaign_receipt_sha256"]),
           "SNAPSHOT_MANIFEST_MISMATCH")
     corpus_path = revision_dir / "corpus.sqlite3"
     sidecar_path = revision_dir / "sidecar.db"
@@ -101,6 +127,9 @@ def resolve_current_snapshot(vault: Path) -> dict:
           "SNAPSHOT_CORPUS_MISSING")
     _need(sidecar_path.is_file() and not sidecar_path.is_symlink(),
           "SNAPSHOT_SIDECAR_MISSING")
+    # Never claim an existing shared-inode revision is isolated.
+    _need(corpus_path.stat().st_nlink == 1 and sidecar_path.stat().st_nlink == 1,
+          "SNAPSHOT_SHARED_INODE_REFUSED")
     corpus_sha = _sha_file(corpus_path)
     sidecar_sha = _sha_file(sidecar_path)
     _need(corpus_sha == manifest.get("corpus_sha256") ==
@@ -114,58 +143,99 @@ def resolve_current_snapshot(vault: Path) -> dict:
             "text_included": False, "publication_allowed": False}
 
 
+def _copy_verified(src: Path, dst: Path, expected_digest: str) -> None:
+    """Create an inode-independent copy; never alias the mutable input."""
+    before = src.stat()
+    with src.open("rb") as stream_in, dst.open("xb") as stream_out:
+        shutil.copyfileobj(stream_in, stream_out, 1024 * 1024)
+        stream_out.flush()
+        os.fsync(stream_out.fileno())
+    after = src.stat()
+    _need((before.st_dev, before.st_ino, before.st_size,
+           before.st_mtime_ns, before.st_ctime_ns) ==
+          (after.st_dev, after.st_ino, after.st_size,
+           after.st_mtime_ns, after.st_ctime_ns),
+          "SNAPSHOT_INPUT_CHANGED_DURING_COPY")
+    _need(_sha_file(dst) == expected_digest,
+          "SNAPSHOT_COPY_DIGEST_MISMATCH")
+    # Best-effort read-only permissions: trusted operator storage is assumed,
+    # since a user with write/owner rights can chmod/replace snapshots.
+    dst.chmod(stat.S_IRUSR)
+    _need(dst.stat().st_nlink == 1, "SNAPSHOT_SHARED_INODE_REFUSED")
+
+
 def publish_snapshot(vault: Path, corpus_db: Path, sidecar_db: Path, *,
                      campaign_receipt_sha256: str) -> dict:
-    """Publish the current verified databases as a NEW immutable revision.
+    """Copy-verify and atomically publish a physically isolated revision.
 
-    corpus_db must be a verified, no-replace published file (R0.1a flow).
-    sidecar_db must match the frozen sidecar pin. Both are hard-linked into
-    the revision directory (never copied, never mutated); the revision
-    manifest and the LATEST pointer are written atomically.
+    This is a trusted single-operator filesystem model, not WORM storage.
+    The caller is responsible for establishing authoritative source integrity
+    and HMAC evidence linkage before publishing; digest checks here identify
+    bytes, not the scientific/legal provenance of those bytes.
     """
-    vault = Path(vault)
-    corpus_db = Path(corpus_db)
-    sidecar_db = Path(sidecar_db)
-    for path in (corpus_db, sidecar_db):
-        _need(path.is_file() and not path.is_symlink(),
-              "SNAPSHOT_INPUT_MISSING_OR_SYMLINK")
-    corpus_sha = _sha_file(corpus_db)
-    sidecar_sha = _sha_file(sidecar_db)
-    _need(sidecar_sha == __import__(
-        "qa.tafsircenter_sidecar_v01", fromlist=["x"]).EXPECTED_SHA256,
-        "SNAPSHOT_SIDECAR_PIN_MISMATCH")
-    manifest_digest_source = corpus_sha + sidecar_sha + campaign_receipt_sha256
-    revision_id = "r" + hashlib.sha256(
-        manifest_digest_source.encode("utf-8")).hexdigest()[:8]
-    revision_dir = snapshots_root(vault) / revision_id
-    _need(not revision_dir.exists(), "SNAPSHOT_REVISION_ALREADY_PUBLISHED")
-    revision_dir.mkdir(parents=True, exist_ok=True)
-    os.link(corpus_db, revision_dir / "corpus.sqlite3")
-    os.link(sidecar_db, revision_dir / "sidecar.db")
-    manifest = {
-        "contract": CONTRACT, "version": VERSION,
-        "revision_id": revision_id,
-        "corpus_sha256": corpus_sha, "sidecar_sha256": sidecar_sha,
-        "campaign_receipt_sha256": campaign_receipt_sha256,
-        "immutable": True, "text_included": False,
-        "publication_allowed": False, "source_authenticated": False,
-        "scholarly_verified": False, "rights_verified": False,
-    }
-    _write_atomic(revision_dir / "revision.json",
-                  json.dumps(manifest, ensure_ascii=False, sort_keys=True,
-                             indent=2).encode("utf-8"))
-    latest_body = {
-        "revision_id": revision_id,
-        "corpus_sha256": corpus_sha, "sidecar_sha256": sidecar_sha,
-        "manifest_sha256": _sha_file(revision_dir / "revision.json"),
-        "published_utc": __import__("datetime").datetime.now(
-            __import__("datetime").timezone.utc).isoformat(),
-    }
-    _write_atomic(vault / LATEST_NAME,
-                  json.dumps(latest_body, ensure_ascii=False, sort_keys=True,
-                             indent=2).encode("utf-8"))
-    return {"status": "SNAPSHOT_PUBLISHED", "revision_id": revision_id,
+    try:
+        vault = evidence._guard_outside(Path(vault), None)
+        corpus_db = evidence._guard_outside(Path(corpus_db), None)
+        sidecar_db = evidence._guard_outside(Path(sidecar_db), None)
+        _need(vault.is_dir(), "SNAPSHOT_VAULT_MISSING")
+        _need(type(campaign_receipt_sha256) is str and
+              re.fullmatch(r"[0-9a-f]{64}", campaign_receipt_sha256) is not None,
+              "SNAPSHOT_RECEIPT_DIGEST_INVALID")
+        for path in (corpus_db, sidecar_db):
+            _need(path.is_file() and not path.is_symlink(),
+                  "SNAPSHOT_INPUT_MISSING_OR_SYMLINK")
+        corpus_sha = _sha_file(corpus_db)
+        sidecar_sha = _sha_file(sidecar_db)
+        from qa.tafsircenter_sidecar_v01 import EXPECTED_SHA256
+        _need(sidecar_sha == EXPECTED_SHA256,
+              "SNAPSHOT_SIDECAR_PIN_MISMATCH")
+        seed = corpus_sha + sidecar_sha + campaign_receipt_sha256
+        revision_id = "r" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:8]
+        root = snapshots_root(vault)
+        root.mkdir(parents=True, exist_ok=True)
+        revision_dir = root / revision_id
+        _need(not revision_dir.exists(), "SNAPSHOT_REVISION_ALREADY_PUBLISHED")
+        stage_dir = root / (".stage-" + secrets.token_hex(16))
+        stage_dir.mkdir(mode=0o700)
+        try:
+            _copy_verified(corpus_db, stage_dir / "corpus.sqlite3", corpus_sha)
+            _copy_verified(sidecar_db, stage_dir / "sidecar.db", sidecar_sha)
+            manifest = {
+                "contract": CONTRACT, "version": VERSION,
+                "revision_id": revision_id,
+                "corpus_sha256": corpus_sha, "sidecar_sha256": sidecar_sha,
+                "campaign_receipt_sha256": campaign_receipt_sha256,
+                "immutable": True, "text_included": False,
+                "publication_allowed": False, "source_authenticated": False,
+                "scholarly_verified": False, "rights_verified": False,
+            }
+            _write_atomic(stage_dir / "revision.json",
+                          json.dumps(manifest, ensure_ascii=False,
+                                     sort_keys=True, indent=2).encode("utf-8"))
+            # In the single-operator model, never replace an existing revision.
+            _need(not revision_dir.exists(),
+                  "SNAPSHOT_REVISION_ALREADY_PUBLISHED")
+            stage_dir.rename(revision_dir)
+        finally:
+            if stage_dir.exists():
+                shutil.rmtree(stage_dir)
+        latest_body = {
+            "revision_id": revision_id,
             "corpus_sha256": corpus_sha, "sidecar_sha256": sidecar_sha,
-            "immutable": True, "supersedes_previous": True,
-            "text_included": False, "publication_allowed": False,
-            "scholarly_verified": False, "source_authenticated": False}
+            "manifest_sha256": _sha_file(revision_dir / "revision.json"),
+            "published_utc": __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc).isoformat(),
+        }
+        _write_atomic(vault / LATEST_NAME,
+                      json.dumps(latest_body, ensure_ascii=False,
+                                 sort_keys=True, indent=2).encode("utf-8"))
+        return {"status": "SNAPSHOT_PUBLISHED", "revision_id": revision_id,
+                "corpus_sha256": corpus_sha, "sidecar_sha256": sidecar_sha,
+                "immutable": True, "supersedes_previous": True,
+                "text_included": False, "publication_allowed": False,
+                "scholarly_verified": False, "source_authenticated": False}
+    except (OSError, ValueError, TypeError, KeyError, UnicodeError,
+            evidence.EvidenceError) as exc:
+        if isinstance(exc, SnapshotError):
+            raise
+        raise SnapshotError("SNAPSHOT_FILESYSTEM_OR_FORMAT_ERROR") from exc
