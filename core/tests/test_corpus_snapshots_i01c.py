@@ -64,6 +64,43 @@ class SnapshotTests(unittest.TestCase):
                                     "SNAPSHOT_SIDECAR_PIN_MISMATCH"):
             self.publish()
 
+    def test_mutating_original_after_publish_cannot_change_revision(self):
+        report = self.publish()
+        revision = self.vault / "snapshots" / report["revision_id"]
+        frozen_corpus = (revision / "corpus.sqlite3").read_bytes()
+        frozen_sidecar = (revision / "sidecar.db").read_bytes()
+        self.corpus.write_bytes(b"corpus-original-changed-after-publish")
+        self.sidecar.write_bytes(b"sidecar-original-changed-after-publish")
+        self.assertEqual((revision / "corpus.sqlite3").read_bytes(),
+                         frozen_corpus)
+        self.assertEqual((revision / "sidecar.db").read_bytes(),
+                         frozen_sidecar)
+        self.assertNotEqual(self.corpus.stat().st_ino,
+                            (revision / "corpus.sqlite3").stat().st_ino)
+        self.assertEqual(resolve_current_snapshot(self.vault)["revision_id"],
+                         report["revision_id"])
+
+    def test_revision_manifest_digest_is_bound_to_latest(self):
+        report = self.publish()
+        manifest = self.vault / "snapshots" / report["revision_id"] / "revision.json"
+        doc = json.loads(manifest.read_text(encoding="utf-8"))
+        doc["publication_allowed"] = True
+        manifest.write_text(json.dumps(doc), encoding="utf-8")
+        with self.assertRaisesRegex(
+                SnapshotError, "SNAPSHOT_MANIFEST_DIGEST_MISMATCH"):
+            resolve_current_snapshot(self.vault)
+
+    def test_old_hardlink_revision_is_refused_not_labeled_immutable(self):
+        report = self.publish()
+        revision = self.vault / "snapshots" / report["revision_id"]
+        original = revision / "corpus.sqlite3"
+        original.unlink()
+        import os
+        os.link(self.corpus, original)
+        with self.assertRaisesRegex(
+                SnapshotError, "SNAPSHOT_SHARED_INODE_REFUSED"):
+            resolve_current_snapshot(self.vault)
+
     def test_revision_b_published_session_on_a_is_unaffected(self):
         """A session pinned to Revision A completes on A even after B."""
         self.publish()
@@ -90,7 +127,7 @@ class SnapshotTests(unittest.TestCase):
         body["corpus_sha256"] = "f" * 64
         manifest.write_text(json.dumps(body), encoding="utf-8")
         with self.assertRaisesRegex(SnapshotError,
-                                    "SNAPSHOT_CORPUS_DIGEST_MISMATCH|SNAPSHOT_MANIFEST_MISMATCH"):
+                                    "SNAPSHOT_CORPUS_DIGEST_MISMATCH|SNAPSHOT_MANIFEST_MISMATCH|SNAPSHOT_MANIFEST_DIGEST_MISMATCH"):
             resolve_current_snapshot(self.vault)
 
 
