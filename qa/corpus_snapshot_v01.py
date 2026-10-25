@@ -75,21 +75,26 @@ def snapshots_root(vault: Path) -> Path:
     return Path(vault) / SNAPSHOTS_DIR
 
 
-def resolve_current_snapshot(vault: Path) -> dict:
+def _resolve_current_snapshot(vault: Path) -> dict:
     """Resolve the LATEST pointer to a fully consistent revision bundle.
 
     Refuses if the pointer, the revision manifest, or any pinned file is
     missing or altered: a session never silently upgrades, and a destroyed
     snapshot is reported rather than ignored.
     """
-    vault = Path(vault)
+    vault = evidence._guard_outside(Path(vault), None)
+    root = snapshots_root(vault)
+    _need(not root.is_symlink(), "SNAPSHOT_ROOT_SYMLINK_REFUSED")
     latest = vault / LATEST_NAME
     if latest.is_symlink() or not latest.is_file():
         raise SnapshotError("SNAPSHOT_LATEST_MISSING")
     body = json.loads(latest.read_text(encoding="utf-8"))
     _need(type(body) is dict and
           set(body) == {"revision_id", "corpus_sha256", "sidecar_sha256",
-                        "published_utc", "manifest_sha256"},
+                        "published_utc", "manifest_sha256"} and
+          all(type(body[k]) is str for k in body) and
+          all(re.fullmatch(r"[0-9a-f]{64}", body[k]) is not None for k in
+              ("corpus_sha256", "sidecar_sha256", "manifest_sha256")),
           "SNAPSHOT_LATEST_INVALID")
     revision_id = body["revision_id"]
     _need(type(revision_id) is str and REV_RE.fullmatch(revision_id) is not None,
@@ -143,6 +148,18 @@ def resolve_current_snapshot(vault: Path) -> dict:
             "text_included": False, "publication_allowed": False}
 
 
+def resolve_current_snapshot(vault: Path) -> dict:
+    """Fail closed with stable refusal codes; no private filesystem paths."""
+    try:
+        return _resolve_current_snapshot(vault)
+    except SnapshotError:
+        raise
+    except (OSError, ValueError, TypeError, KeyError, UnicodeError,
+            evidence.EvidenceError) as exc:
+        raise SnapshotError("SNAPSHOT_FORMAT_OR_IO_ERROR") from exc
+
+
+
 def _copy_verified(src: Path, dst: Path, expected_digest: str) -> None:
     """Create an inode-independent copy; never alias the mutable input."""
     before = src.stat()
@@ -192,6 +209,7 @@ def publish_snapshot(vault: Path, corpus_db: Path, sidecar_db: Path, *,
         seed = corpus_sha + sidecar_sha + campaign_receipt_sha256
         revision_id = "r" + hashlib.sha256(seed.encode("utf-8")).hexdigest()
         root = snapshots_root(vault)
+        _need(not root.is_symlink(), "SNAPSHOT_ROOT_SYMLINK_REFUSED")
         root.mkdir(parents=True, exist_ok=True)
         revision_dir = root / revision_id
         _need(not revision_dir.exists(), "SNAPSHOT_REVISION_ALREADY_PUBLISHED")
