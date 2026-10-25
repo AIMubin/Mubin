@@ -215,5 +215,72 @@ class OperatorViewTests(unittest.TestCase):
         self.assertNotIn("/unused", buf.getvalue())
 
 
+class OperatorSignedEndToEndTests(unittest.TestCase):
+    def test_real_hmac_ledger_and_two_private_adapters_on_synthetic_fixture(self):
+        """Real SQLite adapters and HMAC continuity; mocked R0.1a source proof."""
+        from pathlib import Path
+        from core.tests.test_quran_research_unified_r01c import UnifiedRetrievalTests
+
+        fixture = UnifiedRetrievalTests("test_metadata_contract_shape_and_nonpromotion")
+        fixture.setUp()
+        try:
+            ledger = fixture.root / "qualification-ledger.jsonl"
+            anchors = fixture.root / "qualification-anchors"
+            key = fixture.root / "qualification.key"
+            qual.initialize_ledger(
+                ledger, anchors, key, vault=fixture.vault,
+                evidence_registry=fixture.registry,
+                evidence_anchor_dir=fixture.anchor,
+                evidence_key=fixture.evidence_key,
+                sidecar_db=fixture.sidecar,
+                operator="human-operator-id")
+            initial = operator_lookup(
+                fixture.adapters, "2:1", ledger=ledger,
+                qualification_anchor_dir=anchors,
+                qualification_key=key, vault=fixture.vault)
+            self.assertEqual(len(initial["sources"]), 11)
+            self.assertEqual(initial["qualification_decisions"], 0)
+            self.assertFalse(initial["publication_allowed"])
+            self.assertNotIn("invented-tafsir-test-only", json.dumps(initial))
+            from datetime import datetime, timezone
+            decision_record = {
+                "decision_id": "synthetic-review-001",
+                "axis": "scholarly", "source_id": "qe_ar_muyassar",
+                "scope": {"full_source": True},
+                "decision": "SOURCE_TEXT_INTEGRITY_REVIEWED",
+                "reviewer": "independent-scholarly-reviewer",
+                "reviewed_at_utc": datetime.now(timezone.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"),
+                "evidence_head_sha256": fixture.mock_evidence.return_value[
+                    "head_entry_sha256"],
+                "notes": "synthetic-only marker; no source authentication",
+            }
+            qual.append_decision(
+                ledger, anchors, key, decision_record, "human-operator-id",
+                evidence_registry=fixture.registry,
+                evidence_anchor_dir=fixture.anchor,
+                evidence_key=fixture.evidence_key, vault=fixture.vault,
+                sidecar_db=fixture.sidecar)
+            result = operator_lookup(
+                fixture.adapters, "2:1", ledger=ledger,
+                qualification_anchor_dir=anchors,
+                qualification_key=key, vault=fixture.vault)
+            one = next(row for row in result["sources"]
+                       if row["source_id"] == "qe_ar_muyassar")
+            untouched = next(row for row in result["sources"]
+                             if row["source_id"] == "tafsir_tabary")
+            self.assertEqual(one["scholarly_decision_state"],
+                             "SOURCE_TEXT_INTEGRITY_REVIEWED")
+            self.assertEqual(untouched["scholarly_decision_state"],
+                             "UNREVIEWED")
+            self.assertFalse(result["scholarly_verified"])
+            self.assertFalse(result["publication_allowed"])
+            self.assertFalse(result["juristic_inference_allowed"])
+            self.assertNotIn("invented-quran-coordinate-fixture",
+                             json.dumps(result))
+        finally:
+            fixture.doCleanups()
+
+
 if __name__ == "__main__":
     unittest.main()
