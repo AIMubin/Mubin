@@ -196,6 +196,23 @@ class OperatorViewTests(unittest.TestCase):
                 with self.assertRaisesRegex(OperatorViewError, "RESEARCH_NOT_METADATA_ONLY"):
                     self.lookup()
 
+    def test_mismatched_adapter_and_source_identity_refused(self):
+        from engines.quran.research import operator_view
+        response = {
+            "contract": "mubin-private-retrieval-v0.1",
+            "reference": "2:1", "research_mode": "metadata_only",
+            "evidence_head_sha256": HEAD,
+            "sources": [{
+                "source_id": "qe_ar_muyassar",
+                "adapter": "tafsircenter_sidecar",
+                "coordinate_present": True,
+                "text_included": False}],
+            **{key: False for key in operator_view._UNVERIFIED},
+        }
+        with patch.object(operator_view, "unified_lookup", return_value=response):
+            with self.assertRaisesRegex(OperatorViewError, "RESEARCH_SOURCE_INVALID"):
+                self.lookup()
+
     def test_cli_refuses_bad_ref_without_text_or_traceback(self):
         argv = ["lookup", "--ref", "115:1", "--vault", "/unused/vault",
                 "--corpus-db", "/unused/corpus", "--sidecar-db", "/unused/sidecar",
