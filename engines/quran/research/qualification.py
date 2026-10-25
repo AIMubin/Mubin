@@ -48,7 +48,6 @@ SHA = re.compile(r"[0-9a-f]{64}\Z")
 DEFAULT_SCHOLARLY = "UNREVIEWED"
 DEFAULT_RIGHTS = "legal_review_pending"
 LOCK_NAME = ".qualification-ledger.lock"
-CONTINUITY_NAME = "qualification-ledger.continuity-anchor.json"
 MAX_NOTES = 400
 INIT_SEQUENCE = 0
 
@@ -116,23 +115,33 @@ def _continuity_path(anchor_dir: Path, ledger_path: Path) -> Path:
 
 
 def _continuity_valid(path: Path, key: bytes, ledger_path: Path) -> dict | None:
-    """Return the continuity body when its HMAC and identity check out."""
+    """Authenticate a strictly typed continuity witness; invalid means untrusted."""
     if path.is_symlink() or not path.is_file():
         return None
     try:
         body = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, UnicodeError, OSError):
+    except (ValueError, UnicodeError, OSError, TypeError, RecursionError):
         return None
-    if type(body) is not dict or body.get("action") != "qualification_ledger_continuity" \
-            or body.get("registry") != ledger_path.name:
+    fields = {"action", "registry", "sequence", "head_entry_sha256",
+              "bound_evidence_head", "initialized_by", "initialized_utc",
+              "continuity_hmac"}
+    if type(body) is not dict or set(body) != fields:
         return None
-    mac = body.pop("continuity_hmac", "")
-    expected = hmac.new(key, _canonical(body), hashlib.sha256).hexdigest()
-    body["continuity_hmac"] = mac
-    if not hmac.compare_digest(mac, expected):
+    if (body["action"] != "qualification_ledger_continuity"
+            or body["registry"] != ledger_path.name
+            or type(body["sequence"]) is not int or body["sequence"] < 0
+            or any(type(body[name]) is not str for name in
+                   ("action", "registry", "head_entry_sha256",
+                    "bound_evidence_head", "initialized_by", "initialized_utc",
+                    "continuity_hmac"))
+            or any(not SHA.fullmatch(body[name]) for name in
+                   ("head_entry_sha256", "bound_evidence_head", "continuity_hmac"))
+            or (body["sequence"] == 0) != (body["head_entry_sha256"] == "0" * 64)):
         return None
-    return body
-
+    unsigned = {name: value for name, value in body.items()
+                if name != "continuity_hmac"}
+    expected = hmac.new(key, _canonical(unsigned), hashlib.sha256).hexdigest()
+    return body if hmac.compare_digest(body["continuity_hmac"], expected) else None
 
 def initialize_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path, *,
                       vault: Path, evidence_registry: Path,
@@ -251,7 +260,7 @@ def read_head_anchor(anchor_dir: Path, ledger_path: Path, key: bytes) -> dict:
 
 def _attested_entries(ledger_path: Path, anchor_dir: Path,
                       key_file: Path, *, vault: Path, allow_initial=False) -> tuple[list[dict], str]:
-    """Trust a ledger only when its entire chain equals its signed anchor."""
+    """Authenticate the decision chain against BOTH signed anchors."""
     ledger = _guard_outside(ledger_path, None)
     try:
         anchor = _guard_secret_location(anchor_dir, Path(vault))
@@ -262,37 +271,31 @@ def _attested_entries(ledger_path: Path, anchor_dir: Path,
     _verify_chain(entries)
     anchor_path = _anchor_path(anchor, ledger)
     continuity_path = _continuity_path(anchor, ledger)
-    if not entries:
-        try:
-            key = load_operator_key(key_path, create=False)
-        except EvidenceError:
-            key = None
-        continuity = _continuity_valid(continuity_path, key, ledger) if key else None
-        files_absent = not ledger.exists() and not anchor_path.exists()
-        if files_absent:
-            if continuity is not None and continuity["sequence"] >= 1:
-                # A signed continuity anchor with sequence >= 1 proves real
-                # decision history existed here: silent re-initialization
-                # after deleting the ledger and head anchor is refused.
-                raise QualificationError("LEDGER_HISTORY_DESTROYED_REFUSED")
-            if continuity is not None and continuity["sequence"] == 0:
-                # Freshly initialized: the first decision may be appended.
-                if allow_initial:
-                    return [], "0" * 64
-                raise QualificationError("LEDGER_UNPAIRED_OR_EMPTY")
-            if continuity is None:
-                raise QualificationError("LEDGER_NOT_INITIALIZED")
+    files_absent = not ledger.exists() and not anchor_path.exists()
+    if not entries and not files_absent:
         raise QualificationError("LEDGER_UNPAIRED_OR_EMPTY")
+    if not entries and files_absent and not continuity_path.exists():
+        raise QualificationError("LEDGER_NOT_INITIALIZED")
     try:
         key = load_operator_key(key_path, create=False)
     except EvidenceError as exc:
         raise QualificationError("LEDGER_KEY_UNAVAILABLE") from exc
+    continuity = _continuity_valid(continuity_path, key, ledger)
+    _need(continuity is not None, "CONTINUITY_ANCHOR_INVALID")
+    if not entries:
+        if continuity["sequence"] >= 1:
+            raise QualificationError("LEDGER_HISTORY_DESTROYED_REFUSED")
+        if allow_initial:
+            return [], "0" * 64
+        raise QualificationError("LEDGER_UNPAIRED_OR_EMPTY")
     body = read_head_anchor(anchor, ledger, key)
     head = entries[-1]["entry_sha256"]
     if body["head_entry_sha256"] != head or body["sequence"] != len(entries):
         raise QualificationError("HEAD_ANCHOR_HEAD_MISMATCH")
+    if (continuity["sequence"] != len(entries)
+            or continuity["head_entry_sha256"] != head):
+        raise QualificationError("CONTINUITY_HEAD_MISMATCH")
     return entries, head
-
 
 def validate_decision(decision: dict) -> dict:
     """Schema, scope and disjoint-axis validation; NOT reviewer attestation."""
