@@ -32,11 +32,11 @@ class FakeAdapters:
 
     def corpus_sources(self):
         return [{"source_id": "qe_ar_muyassar",
-                 "source_kind": "tafsir", "adapter": "corpus"}]
+                 "source_kind": "tafsir", "adapter": "quranenc_corpus"}]
 
     def sidecar_sources(self):
         return [{"source_id": "tafsir_tabary",
-                 "source_kind": "tafsir", "adapter": "sidecar"}]
+                 "source_kind": "tafsir", "adapter": "tafsircenter_sidecar"}]
 
     def lookup(self, reference, source_id, *, adapter, include_text=False):
         if include_text:
@@ -78,7 +78,7 @@ class OperatorViewTests(unittest.TestCase):
         self.assertEqual(result["evidence_head_sha256"], HEAD)
         self.assertEqual(len(result["sources"]), 2)
         self.assertEqual({s["adapter"] for s in result["sources"]},
-                         {"corpus", "sidecar"})
+                         {"quranenc_corpus", "tafsircenter_sidecar"})
         self.assertNotIn("DO-NOT-EXPOSE", json.dumps(result))
         self.assertNotIn('"text":', json.dumps(result))
         for row in result["sources"]:
@@ -142,7 +142,7 @@ class OperatorViewTests(unittest.TestCase):
 
     def test_filter_reaches_source_adapters(self):
         rows = self.lookup(adapter_filter="corpus")["sources"]
-        self.assertEqual([s["adapter"] for s in rows], ["corpus"])
+        self.assertEqual([s["adapter"] for s in rows], ["quranenc_corpus"])
 
     def test_invalid_reference_rejected_before_retrieval(self):
         with self.assertRaises(qual.QualificationError):
