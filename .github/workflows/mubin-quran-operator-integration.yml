@@ -1,0 +1,46 @@
+name: Mubin I0.1a operator qualified retrieval (synthetic only)
+
+on:
+  pull_request:
+    paths:
+      - "engines/quran/research/operator_view.py"
+      - "engines/quran/research/unified.py"
+      - "engines/quran/research/qualification.py"
+      - "engines/quran/research/private_adapters.py"
+      - "core/tests/test_quran_operator_view_i01a.py"
+      - ".github/workflows/mubin-quran-operator-integration.yml"
+  push:
+    branches: [main]
+    paths:
+      - "engines/quran/research/operator_view.py"
+      - "engines/quran/research/unified.py"
+      - "engines/quran/research/qualification.py"
+      - "engines/quran/research/private_adapters.py"
+      - "core/tests/test_quran_operator_view_i01a.py"
+      - ".github/workflows/mubin-quran-operator-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-operator-qualification:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Check source compiles
+        run: python -m compileall -q engines/quran/research core/tests/test_quran_operator_view_i01a.py
+      - name: Metadata integration, signed ledger, and unified adapter regressions
+        run: python -m unittest core.tests.test_quran_operator_view_i01a core.tests.test_quran_research_unified_r01c core.tests.test_quran_qualification_ledger -v
+      - name: CLI syntax is operator-only
+        run: python -m engines.quran.research.operator_view --help
+
+# Synthetic-only; never upload key material, operator vaults or scripture text.
