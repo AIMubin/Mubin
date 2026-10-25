@@ -435,6 +435,16 @@ class QualificationLedgerTests(unittest.TestCase):
         self.assertEqual(json.loads(out.getvalue())["status"],
                          "QUALIFICATION_LEDGER_INITIALIZED")
 
+    def test_explicit_empty_initialization_can_be_verified(self):
+        self.initialize()
+        report = verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
+        self.assertEqual(report["status"], "QUALIFICATION_LEDGER_VERIFIED")
+        self.assertEqual(report["entries"], 0)
+        self.assertEqual(report["head_entry_sha256"], "0" * 64)
+        self.assertFalse(self.ledger.exists())
+        self.assertFalse((self.anchor_dir /
+                          "qualification-ledger.qualification-head-anchor.json").exists())
+
     def test_no_publication_authority_ever_reported(self):
         self.record()
         report = verify_ledger(self.ledger, self.anchor_dir, self.key, vault=self.vault)
