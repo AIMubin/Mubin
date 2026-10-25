@@ -113,7 +113,7 @@ def operator_lookup(adapters: PrivateResearchAdapters, reference: str, *,
                 or type(src.get("source_id")) is not str
                 or src["source_id"] not in qual.SOURCE_IDS
                 or src["source_id"] in seen
-                or src.get("adapter") not in ("corpus", "sidecar")
+                or src.get("adapter") not in ("quranenc_corpus", "tafsircenter_sidecar")
                 or type(src.get("coordinate_present")) is not bool
                 or src.get("text_included") is not False
                 or any(src.get(k) is not v for k, v in _UNVERIFIED.items()
