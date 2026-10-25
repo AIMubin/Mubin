@@ -14,8 +14,9 @@ import re
 from pathlib import Path
 
 from engines.quran.research.private_adapters import (
-    PrivateResearchAdapters, ResearchAdapterError,
+    PrivateResearchAdapters, ResearchAdapterError, SIDE_TABLES,
 )
+from qa.corpus_ingest_v01 import VALID_IDS
 from engines.quran.research.unified import (
     CONTRACT as RETRIEVAL_CONTRACT,
     MODE_METADATA, UnifiedRetrievalError, unified_lookup,
@@ -114,6 +115,10 @@ def operator_lookup(adapters: PrivateResearchAdapters, reference: str, *,
                 or src["source_id"] not in qual.SOURCE_IDS
                 or src["source_id"] in seen
                 or src.get("adapter") not in ("quranenc_corpus", "tafsircenter_sidecar")
+                or (src.get("adapter") == "quranenc_corpus"
+                    and src["source_id"] not in VALID_IDS)
+                or (src.get("adapter") == "tafsircenter_sidecar"
+                    and src["source_id"] not in SIDE_TABLES)
                 or type(src.get("coordinate_present")) is not bool
                 or src.get("text_included") is not False
                 or any(src.get(k) is not v for k, v in _UNVERIFIED.items()
