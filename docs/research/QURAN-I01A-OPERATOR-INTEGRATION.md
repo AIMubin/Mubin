@@ -82,8 +82,11 @@ keys remain managed separately by the operator.
       core.tests.test_quran_research_unified_r01c \
       core.tests.test_quran_qualification_ledger -v
 
-Ubuntu + Windows GitHub CI uses entirely synthetic adapters and mocked
-attestation. Live private-vault testing can be completed only by an authorized
+Ubuntu + Windows GitHub CI uses synthetic SQLite adapter databases
+and an actual HMAC-signed qualification ledger/continuity anchor in its
+end-to-end test. The upstream R0.1a source-vault evidence attestation remains
+mocked; no real corpus enters hosted CI. Live private-vault testing can be
+completed only by an authorized
 human operator on the local secured machine, and synthetic success must not
 be presented as real-world scholarly or legal qualification.
 
