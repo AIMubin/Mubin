@@ -164,56 +164,66 @@ def initialize_ledger(ledger_path: Path, anchor_dir: Path, key_file: Path, *,
     evidence_anchor_dir = _guard_outside(evidence_anchor_dir, None)
     evidence_key = _guard_outside(evidence_key, None)
     sidecar_db = _guard_outside(sidecar_db, None)
-    key = load_operator_key(key_file_g, create=True)
-    if ledger_path.exists() or _anchor_path(anchor_dir_g, ledger_path).exists():
-        raise QualificationError("LEDGER_ALREADY_INITIALIZED")
-    if _continuity_path(anchor_dir_g, ledger_path).exists():
-        raise QualificationError("LEDGER_ALREADY_INITIALIZED")
-    try:
-        observation = evidence.verify_evidence(
-            evidence_registry, evidence_anchor_dir, evidence_key,
-            vault, sidecar_db)
-    except (EvidenceError, OSError, ValueError) as exc:
-        raise QualificationError("EVIDENCE_VERIFICATION_FAILED") from exc
-    _need(observation.get("status") == "EVIDENCE_REGISTRY_VERIFIED",
-          "EVIDENCE_NOT_QUALIFIED")
-    normalized = operator.strip().casefold()
-    _need(3 <= len(operator) <= 80
-          and normalized not in {"system", "automation", "llm", "ai", "bot",
-                                 "codex", "gpt", "model", "auto"},
-          "OPERATOR_INVALID")
-    continuity = {
-        "action": "qualification_ledger_continuity",
-        "registry": ledger_path.name,
-        "sequence": INIT_SEQUENCE,
-        "head_entry_sha256": "0" * 64,
-        "bound_evidence_head": observation["head_entry_sha256"],
-        "initialized_by": operator,
-        "initialized_utc": datetime.now(timezone.utc).isoformat(),
-    }
-    mac = hmac.new(key, _canonical(continuity), hashlib.sha256).hexdigest()
-    anchor_dir_g.mkdir(parents=True, exist_ok=True)
-    tmp = anchor_dir_g / (".cont-" + str(os.getpid()) + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
-                 getattr(os, "O_BINARY", 0), 0o600)
-    with os.fdopen(fd, "wb") as handle:
-        handle.write(_canonical({**continuity, "continuity_hmac": mac}) + bytes([10]))
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(tmp, _continuity_path(anchor_dir_g, ledger_path))
-    return {"status": "QUALIFICATION_LEDGER_INITIALIZED",
+    # Use the same inter-process lock as decision appends.
+    with _VaultLock(ledger_path.parent / LOCK_NAME, operator):
+        if ledger_path.exists() or _anchor_path(anchor_dir_g, ledger_path).exists():
+            raise QualificationError("LEDGER_ALREADY_INITIALIZED")
+        if _continuity_path(anchor_dir_g, ledger_path).exists():
+            raise QualificationError("LEDGER_ALREADY_INITIALIZED")
+        try:
+            observation = evidence.verify_evidence(
+                evidence_registry, evidence_anchor_dir, evidence_key,
+                vault, sidecar_db)
+        except (EvidenceError, OSError, ValueError) as exc:
+            raise QualificationError("EVIDENCE_VERIFICATION_FAILED") from exc
+        _need(observation.get("status") == "EVIDENCE_REGISTRY_VERIFIED"
+              and observation.get("byte_integrity_verified") is True
+              and observation.get("rights_status") == "legal_review_pending"
+              and observation.get("source_authenticated") is False
+              and observation.get("scholarly_verified") is False
+              and type(observation.get("head_entry_sha256")) is str
+              and SHA.fullmatch(observation["head_entry_sha256"]) is not None,
+              "EVIDENCE_NOT_QUALIFIED")
+        normalized = operator.strip().casefold()
+        _need(3 <= len(operator) <= 80
+              and normalized not in {"system", "automation", "llm", "ai", "bot",
+                                     "codex", "gpt", "model", "auto"},
+              "OPERATOR_INVALID")
+        key = load_operator_key(key_file_g, create=True)
+        continuity = {
+            "action": "qualification_ledger_continuity",
             "registry": ledger_path.name,
+            "sequence": INIT_SEQUENCE,
+            "head_entry_sha256": "0" * 64,
             "bound_evidence_head": observation["head_entry_sha256"],
-            "publication_granted": False, "juristic_inference_allowed": False,
-            "public_fatwa_authorized": False}
-
+            "initialized_by": operator,
+            "initialized_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        mac = hmac.new(key, _canonical(continuity), hashlib.sha256).hexdigest()
+        anchor_dir_g.mkdir(parents=True, exist_ok=True)
+        tmp = anchor_dir_g / (".cont-" + str(os.getpid()) + ".tmp")
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                     getattr(os, "O_BINARY", 0), 0o600)
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(_canonical({**continuity, "continuity_hmac": mac}) + bytes([10]))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, _continuity_path(anchor_dir_g, ledger_path))
+        return {"status": "QUALIFICATION_LEDGER_INITIALIZED",
+                "registry": ledger_path.name,
+                "bound_evidence_head": observation["head_entry_sha256"],
+                "publication_granted": False, "juristic_inference_allowed": False,
+                "public_fatwa_authorized": False}
+    
 
 def _advance_continuity(anchor_dir: Path, ledger_path: Path, key: bytes,
-                        sequence: int, head_entry_sha256: str) -> None:
+                        sequence: int, head_entry_sha256: str,
+                        previous_head: str) -> None:
     path = _continuity_path(anchor_dir, ledger_path)
     current = _continuity_valid(path, key, ledger_path)
     _need(current is not None, "CONTINUITY_ANCHOR_MISSING")
     _need(sequence == current["sequence"] + 1, "CONTINUITY_SEQUENCE_LAG")
+    _need(previous_head == current["head_entry_sha256"], "CONTINUITY_HEAD_MISMATCH")
     body = {k: v for k, v in current.items() if k != "continuity_hmac"}
     body["sequence"] = sequence
     body["head_entry_sha256"] = head_entry_sha256
@@ -427,7 +437,7 @@ def append_decision(ledger_path: Path, anchor_dir: Path, key_file: Path,
             temp.unlink(missing_ok=True)
             anchor_tmp.unlink(missing_ok=True)
         _advance_continuity(anchor_dir, ledger_path, key,
-                            body["seq"], entry_sha)
+                            body["seq"], entry_sha, previous)
     return {"status": "QUALIFICATION_DECISION_RECORDED",
             "decision_id": clean["decision_id"], "entry_sha256": entry_sha,
             "axis": clean["axis"], "decision": clean["decision"],
