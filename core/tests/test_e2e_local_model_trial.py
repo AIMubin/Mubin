@@ -118,6 +118,9 @@ class LocalDualTrialTests(unittest.TestCase):
         self.assertTrue(result["runtime"]["two_local_chat_completion_responses_received"])
         self.assertFalse(result["independent_model_execution_proven"])
         self.assertFalse(result["runtime"]["actual_distinct_model_weights_independently_attested"])
+        self.assertTrue(result["runtime"]["immediate_network_destination_loopback_only"])
+        self.assertFalse(result["runtime"]["local_server_forwarding_independently_excluded"])
+        self.assertNotIn("source_text_sent_to_external_host", result["runtime"])
         self.assertEqual(len(FakeConnection.calls), 2)
         a, b = FakeConnection.calls
         self.assertEqual((a[1], b[1]), (8181, 8282))
