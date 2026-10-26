@@ -13,8 +13,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from engines.e2e.scientific_benchmark import CasebookError, load_casebook
+from engines.e2e.frozen_preflight import preflight_frozen_packet
 from engines.e2e.witness_science import (
-    TrialError, _canonical, _local_json, _require, _witness_packet,
+    TrialError, _canonical, _local_json, _require,
     run_trial,
 )
 
@@ -132,14 +133,11 @@ def execute_local_dual_model(*, casebook: dict, packet: dict, case_id: str,
                              evaluator_url: str, evaluator_model: str,
                              critic_url: str, critic_model: str) -> dict:
     """Dispatch two separate model calls; never pass agent A output to B."""
-    _require(case_id == "AMR-01-P", "LOCAL_CASE_NOT_ADMITTED")
-    case = next((c for c in casebook["cases"] if c["id"] == case_id), None)
-    _require(case is not None, "LOCAL_CASE_NOT_ADMITTED")
-    digest, witness_ids, state = _witness_packet(case, packet)
-    _require(state["three_witness_roles_present"]
-             and state["exact_candidate_substring_in_verse_bytes"]
-             and state["family_labels_distinct"],
-             "LOCAL_EVIDENCE_INSUFFICIENT")
+    # No witness text leaves this process until ALL frozen-manifest
+    # identity, digest and source-local byte checks succeed.
+    preflight = preflight_frozen_packet(
+        casebook=casebook, packet=packet, case_id=case_id)
+    digest = preflight["evidence_packet_sha256"]
     ehost = _endpoint(evaluator_url)
     chost = _endpoint(critic_url)
     _require(ehost != chost, "LOCAL_ENDPOINTS_MUST_DIFFER")
@@ -168,6 +166,7 @@ def execute_local_dual_model(*, casebook: dict, packet: dict, case_id: str,
     result["runtime"] = {
         "contract": CONTRACT,
         "two_local_chat_completion_responses_received": True,
+        "frozen_repository_excerpt_manifest_matched_before_dispatch": True,
         "two_distinct_loopback_endpoints_used": True,
         "actual_distinct_model_weights_independently_attested": False,
         # We can prove only the immediate socket destination. A process
@@ -184,18 +183,30 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", default="AMR-01-P")
     parser.add_argument("--packet", type=Path, required=True)
-    parser.add_argument("--evaluator-url", required=True)
-    parser.add_argument("--evaluator-model", required=True)
-    parser.add_argument("--critic-url", required=True)
-    parser.add_argument("--critic-model", required=True)
+    parser.add_argument("--preflight-only", action="store_true",
+                        help="Check exact pinned local bytes; make no model calls")
+    parser.add_argument("--evaluator-url")
+    parser.add_argument("--evaluator-model")
+    parser.add_argument("--critic-url")
+    parser.add_argument("--critic-model")
     args = parser.parse_args(argv)
     try:
         casebook, _ = load_casebook()
         packet = _local_json(args.packet)
-        report = execute_local_dual_model(
-            casebook=casebook, packet=packet, case_id=args.case,
-            evaluator_url=args.evaluator_url, evaluator_model=args.evaluator_model,
-            critic_url=args.critic_url, critic_model=args.critic_model)
+        if args.preflight_only:
+            report = preflight_frozen_packet(
+                casebook=casebook, packet=packet, case_id=args.case)
+        else:
+            _require(all(type(value) is str and value for value in (
+                args.evaluator_url, args.evaluator_model,
+                args.critic_url, args.critic_model)),
+                "LOCAL_MODEL_ARGUMENTS_REQUIRED")
+            report = execute_local_dual_model(
+                casebook=casebook, packet=packet, case_id=args.case,
+                evaluator_url=args.evaluator_url,
+                evaluator_model=args.evaluator_model,
+                critic_url=args.critic_url,
+                critic_model=args.critic_model)
         code = 0
     except (TrialError, CasebookError, OSError, TypeError, KeyError) as exc:
         report = {
