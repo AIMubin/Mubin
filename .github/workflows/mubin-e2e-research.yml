@@ -9,7 +9,9 @@ on:
       - "core/tests/test_e2e_evaluation.py"
       - "core/tests/test_e2e_scientific_benchmark.py"
       - "core/tests/test_e2e_witness_science.py"
+      - "core/tests/test_e2e_local_model_trial.py"
       - "evaluation/benchmarks/e2e_amr_cases_v01.json"
+      - "evaluation/evidence/amr_2_43_local_excerpt_digests_v01.json"
       - "engines/quran/research/operator_view.py"
       - "engines/quran/research/unified.py"
       - "engines/quran/research/qualification.py"
@@ -21,6 +23,7 @@ on:
       - "docs/research/E2E-014-METADATA-EVALUATION.md"
       - "docs/research/E2E-014B1-AMR-CASEBOOK.md"
       - "docs/research/E2E-014B2-WITNESS-TRIAL.md"
+      - "docs/research/E2E-014B3-LOCAL-TRIAL.md"
       - "engines/quran/research/workspace.py"
   push:
     branches: [main]
@@ -32,7 +35,9 @@ on:
       - "core/tests/test_e2e_evaluation.py"
       - "core/tests/test_e2e_scientific_benchmark.py"
       - "core/tests/test_e2e_witness_science.py"
+      - "core/tests/test_e2e_local_model_trial.py"
       - "evaluation/benchmarks/e2e_amr_cases_v01.json"
+      - "evaluation/evidence/amr_2_43_local_excerpt_digests_v01.json"
       - ".github/workflows/mubin-e2e-research.yml"
   workflow_dispatch:
 permissions:
@@ -53,6 +58,6 @@ jobs:
       - name: Install P0 validation dependencies
         run: python -m pip install -r core/requirements-test.txt
       - name: E2E synthetic SQLite + signed qualification + Usul pilot
-        run: python -m unittest core.tests.test_e2e_research_slice core.tests.test_semantic_linkage core.tests.test_e2e_workspace_e013 core.tests.test_e2e_evaluation core.tests.test_e2e_scientific_benchmark core.tests.test_e2e_witness_science -v
+        run: python -m unittest core.tests.test_e2e_research_slice core.tests.test_semantic_linkage core.tests.test_e2e_workspace_e013 core.tests.test_e2e_evaluation core.tests.test_e2e_scientific_benchmark core.tests.test_e2e_witness_science core.tests.test_e2e_local_model_trial -v
       - name: Compile entrypoints
         run: python -m compileall -q engines/e2e engines/quran/research/workspace.py
