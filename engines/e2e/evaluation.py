@@ -9,6 +9,7 @@ Not a scholarly, edition, rights, semantic-inference or fatwa assessment.
 from __future__ import annotations
 
 import json
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -81,7 +82,7 @@ def _oracle_snapshot(corpus_db: Path, sidecar_db: Path, refs: list[str]) -> tupl
     expected_sidecar = set(SIDE_TABLES)
     existence: dict[tuple[str, str], bool] = {}
     try:
-        with _read_db(corpus_db) as corpus, _read_db(sidecar_db) as sidecar:
+        with closing(_read_db(corpus_db)) as corpus, closing(_read_db(sidecar_db)) as sidecar:
             physical_corpus = {
                 r[0] for r in corpus.execute("SELECT source_id FROM corpus_sources")}
             physical_sidecar = {
@@ -153,7 +154,8 @@ def _provenance(sources: list[dict], corpus_ids: set, side_ids: set) -> dict:
 
 
 def _qualification(sources: list[dict], *, ledger: Path, anchor_dir: Path,
-                   key_file: Path, vault: Path, evidence_head: str) -> dict:
+                   key_file: Path, vault: Path, evidence_head: str,
+                   ref: str) -> dict:
     """Signed-ledger policy consistency, NOT independent scholarly adjudication."""
     checks = []
     # Signed ledger validation is mandatory; never use a default value
@@ -163,7 +165,7 @@ def _qualification(sources: list[dict], *, ledger: Path, anchor_dir: Path,
         sid = row["source_id"]
         decisions = qual.decisions_for(
             ledger, sid, anchor_dir=anchor_dir, key_file=key_file,
-            vault=vault, reference=row["verse_locator"])
+            vault=vault, reference=ref)
         scholarly, rights, count, stale = _states(decisions, evidence_head)
         checks.extend((
             _check("qualification_scholarly_" + sid,
@@ -217,7 +219,7 @@ def _abstention(result: dict) -> dict:
 def _authority(result: dict) -> dict:
     limits = result["limits"]
     sources = result["quran_retrieval"]["sources"]
-    entries = [("limits", limits), ("quran_retrieval", result["quran_retrieval"])]
+    entries = [("limits", limits)]
     entries += [(s["source_id"], s) for s in sources]
     checks = []
     for name, item in entries:
@@ -287,7 +289,8 @@ def run_full_evaluation(adapters: PrivateResearchAdapters,
         _complete_sources(sources, corpus_ids, side_ids, physical_corpus, physical_sidecar),
         _qualification(sources, ledger=Path(ledger), anchor_dir=Path(anchor_dir),
                        key_file=Path(key_file), vault=Path(vault),
-                       evidence_head=result["quran_retrieval"]["evidence_head_sha256"]),
+                       evidence_head=result["quran_retrieval"]["evidence_head_sha256"],
+                       ref=refs[0]),
         _gaps(result),
         _abstention(result),
         _authority(result),
