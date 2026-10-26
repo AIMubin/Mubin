@@ -13,6 +13,8 @@ import unittest
 from unittest.mock import patch
 
 from engines.e2e.scientific_benchmark import load_casebook
+from engines.e2e.frozen_preflight import preflight_frozen_packet
+from engines.e2e.witness_science import _canonical
 from engines.e2e.local_model_trial import (
     TrialError, _endpoint, execute_local_dual_model, _model_decision,
 )
@@ -72,6 +74,36 @@ def w(role, rid, url, family, content):
                 sha256=hashlib.sha256(content.encode()).hexdigest())
 
 
+def synthetic_pin(packet):
+    """Invented receipt for CI only, never a real 2:43 textual witness."""
+    return {
+        "contract": "mubin-e2e-014b3-cited-excerpt-digests-v0.1",
+        "case_id": "AMR-01-P", "reference": "2:43",
+        "candidate_word": "أَقِيمُوا",
+        "packet_canonical_sha256":
+            hashlib.sha256(_canonical(packet)).hexdigest(),
+        "witness_records": [
+            {key: (row["sha256"] if key == "local_excerpt_sha256"
+                   else row[key])
+             for key in ("id", "role", "url", "family",
+                         "local_excerpt_sha256")}
+            for row in packet["witnesses"]
+        ],
+        "upstream_source_byte_attested": False,
+        "original_quran_edition_authenticated": False,
+        "original_tafsir_edition_authenticated": False,
+        "independent_model_pair_executed": False,
+        "source_authenticated": False,
+        "scholarly_verified": False,
+        "publication_allowed": False,
+        "juristic_inference_allowed": False,
+        "public_fatwa_authorized": False,
+        "p1_admitted": False,
+        "scientific_gold_label": None,
+        "rights_status": "legal_review_pending",
+    }
+
+
 class LocalDualTrialTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -95,6 +127,7 @@ class LocalDualTrialTests(unittest.TestCase):
                   "قاعدة اصطناعية مخصصة للاختبار البرمجي"),
             ],
         }
+        self.manifest = synthetic_pin(self.packet)
         FakeConnection.calls = []
         FakeConnection.behavior = {}
 
@@ -105,7 +138,9 @@ class LocalDualTrialTests(unittest.TestCase):
                         critic_url=C, critic_model="model-B")
         defaults.update(kwargs)
         with patch("engines.e2e.local_model_trial.http.client.HTTPConnection",
-                   FakeConnection):
+                   FakeConnection), patch(
+                       "engines.e2e.frozen_preflight._load_manifest",
+                       return_value=self.manifest):
             return execute_local_dual_model(**defaults)
 
     def test_two_local_calls_with_isolated_prompts(self):
@@ -119,6 +154,7 @@ class LocalDualTrialTests(unittest.TestCase):
         self.assertFalse(result["independent_model_execution_proven"])
         self.assertFalse(result["runtime"]["actual_distinct_model_weights_independently_attested"])
         self.assertTrue(result["runtime"]["immediate_network_destination_loopback_only"])
+        self.assertTrue(result["runtime"]["frozen_repository_excerpt_manifest_matched_before_dispatch"])
         self.assertFalse(result["runtime"]["local_server_forwarding_independently_excluded"])
         self.assertNotIn("source_text_sent_to_external_host", result["runtime"])
         self.assertEqual(len(FakeConnection.calls), 2)
@@ -135,6 +171,58 @@ class LocalDualTrialTests(unittest.TestCase):
         encoded = json.dumps(result, ensure_ascii=False)
         for source in self.packet["witnesses"]:
             self.assertNotIn(source["text"], encoded)
+
+    def test_preflight_is_offline_and_pinned(self):
+        with patch("engines.e2e.frozen_preflight._load_manifest",
+                   return_value=self.manifest):
+            result = preflight_frozen_packet(
+                casebook=self.book, packet=self.packet,
+                case_id="AMR-01-P")
+        self.assertEqual(result["status"],
+                         "LOCAL_FROZEN_EXCERPT_BYTE_PIN_MATCH")
+        self.assertTrue(result["frozen_repository_excerpt_manifest_matched"])
+        self.assertFalse(result["independent_model_pair_executed"])
+        self.assertFalse(result["source_authenticated"])
+        self.assertFalse(result["source_text_included"])
+        self.assertEqual(FakeConnection.calls, [])
+
+    def test_rehashed_changed_witness_is_rejected_before_http(self):
+        packet = copy.deepcopy(self.packet)
+        packet["witnesses"][1]["text"] += " تغيير اصطناعي"
+        packet["witnesses"][1]["sha256"] = hashlib.sha256(
+            packet["witnesses"][1]["text"].encode("utf-8")).hexdigest()
+        with self.assertRaisesRegex(
+                TrialError, "LOCAL_WITNESS_PIN_MISMATCH"):
+            self.run_fake(packet=packet)
+        self.assertEqual(FakeConnection.calls, [])
+
+    def test_changed_canonical_packet_pin_is_rejected_before_http(self):
+        self.manifest["packet_canonical_sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+                TrialError, "LOCAL_PACKET_PIN_MISMATCH"):
+            self.run_fake()
+        self.assertEqual(FakeConnection.calls, [])
+
+    def test_relabelled_source_family_is_rejected_before_http(self):
+        packet = copy.deepcopy(self.packet)
+        packet["witnesses"][1]["family"] = "impostor-tafsir-source"
+        with self.assertRaisesRegex(
+                TrialError, "LOCAL_WITNESS_PIN_MISMATCH"):
+            self.run_fake(packet=packet)
+        self.assertEqual(FakeConnection.calls, [])
+
+    def test_manifest_with_text_or_authority_promotion_fails(self):
+        self.manifest["witness_records"][1]["text"] = "private excerpt"
+        with self.assertRaisesRegex(
+                TrialError, "LOCAL_PIN_MANIFEST_INVALID"):
+            self.run_fake()
+        self.assertEqual(FakeConnection.calls, [])
+        self.manifest = synthetic_pin(self.packet)
+        self.manifest["source_authenticated"] = True
+        with self.assertRaisesRegex(
+                TrialError, "LOCAL_PIN_MANIFEST_INVALID"):
+            self.run_fake()
+        self.assertEqual(FakeConnection.calls, [])
 
     def test_agreement_is_uncertified(self):
         result = self.run_fake()
