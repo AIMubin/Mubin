@@ -141,6 +141,9 @@ def research_slice(
             raise ResearchSliceError("E2E_LINKAGE_REFERENCE_MISMATCH")
         if proposal["evidence_head_sha256"] != qualified["evidence_head_sha256"]:
             raise ResearchSliceError("E2E_LINKAGE_EVIDENCE_HEAD_MISMATCH")
+        if not any(row["coordinate_present"] is True
+                   for row in qualified["sources"]):
+            raise ResearchSliceError("E2E_LINKAGE_COORDINATE_NOT_RETRIEVED")
         research_linkage = {
             "status": "PROPOSED_NOT_CERTIFIED",
             "quran_coordinate_role": "OPERATOR_RECORDED_RESEARCH_CANDIDATE",
