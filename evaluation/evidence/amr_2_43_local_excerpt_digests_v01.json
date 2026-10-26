@@ -1,0 +1,46 @@
+{
+  "contract": "mubin-e2e-014b3-cited-excerpt-digests-v0.1",
+  "case_id": "AMR-01-P",
+  "reference": "2:43",
+  "candidate_word": "أَقِيمُوا",
+  "observed_date": "2026-10-26",
+  "packet_canonical_sha256": "bc2f326e119052b415ca78077d2d21d2ee924b082e2e22bfdbc50f19183c15bc",
+  "evidence_status": "PUBLIC_RENDERED_PAGE_SHORT_EXCERPTS_NOT_UPSTREAM_BYTE_AUTHENTICATED",
+  "witness_records": [
+    {
+      "id": "v",
+      "role": "verse",
+      "url": "https://quran.com/2/43",
+      "family": "quran.com-quran-reading",
+      "local_excerpt_sha256": "32939386c70545d86ea1f8449aba8b9978cd3db74f202ad9ad8c527560731cc9"
+    },
+    {
+      "id": "t",
+      "role": "tafsir",
+      "url": "https://quran.ksu.edu.sa/tafseer/qortobi/sura2-aya43.html",
+      "family": "quran-ksu-qurtubi-reading",
+      "local_excerpt_sha256": "02b118a375ec81ebdc3759ffcc0c88ff16ea24c073746edaa6f86891ef258f27"
+    },
+    {
+      "id": "u",
+      "role": "usul",
+      "url": "https://www.islamicbook.ws/asol/alwrqat.html",
+      "family": "islamicbook-waraqat-reading",
+      "local_excerpt_sha256": "c8420e6582056ca83158e6ba4b49d8c653971757b1b027dbb150470aeee5aa83"
+    }
+  ],
+  "upstream_source_byte_attested": false,
+  "original_quran_edition_authenticated": false,
+  "original_tafsir_edition_authenticated": false,
+  "independent_model_pair_executed": false,
+  "source_authenticated": false,
+  "scholarly_verified": false,
+  "publication_allowed": false,
+  "juristic_inference_allowed": false,
+  "public_fatwa_authorized": false,
+  "p1_admitted": false,
+  "scientific_gold_label": null,
+  "qarinah_full_scope_examined": false,
+  "rights_status": "legal_review_pending",
+  "caveat": "Metadata and local excerpt digests only; neither upstream content custody nor licensing, morphological or juristic conclusion follows from digest comparison."
+}
