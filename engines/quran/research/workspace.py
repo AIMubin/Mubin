@@ -22,6 +22,8 @@ from engines.quran.research import qualification as qual
 from engines.quran.research.private_adapters import (
     PrivateResearchAdapters, ResearchAdapterError)
 from qa import private_evidence_v01 as evidence
+from engines.quran.research.pinned_session import (
+    PinnedSnapshotSession, PinnedSessionError)
 
 VERSION = "quran-operator-workspace/i0.1b"
 CONTRACT = "mubin-operator-workspace-v0.1"
@@ -49,12 +51,22 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                            registry: Path, anchor_dir: Path,
                            evidence_key: Path, qualification_ledger: Path,
                            qualification_anchor_dir: Path,
-                           qualification_key: Path, port: int = 0):
+                           qualification_key: Path, port: int = 0,
+                           pinned_snapshot: bool = False):
     """LOOPBACK-ONLY metadata workspace; never serves private text."""
-    adapters = PrivateResearchAdapters(
-        vault=Path(vault), corpus_db=Path(corpus_db), sidecar_db=Path(sidecar_db),
-        registry=Path(registry), anchor_dir=Path(anchor_dir),
-        evidence_key=Path(evidence_key))
+    # Explicit opt-in: verify BOTH large data files and signed R0.1a head
+    # once at startup. Normal mode remains byte-for-byte compatible with
+    # the previously published I0.1b server contract.
+    session = (PinnedSnapshotSession(
+        vault=Path(vault), corpus_db=Path(corpus_db),
+        sidecar_db=Path(sidecar_db), registry=Path(registry),
+        anchor_dir=Path(anchor_dir), evidence_key=Path(evidence_key))
+        if pinned_snapshot else None)
+    adapters = (session.adapters if session is not None else
+                PrivateResearchAdapters(
+                    vault=Path(vault), corpus_db=Path(corpus_db),
+                    sidecar_db=Path(sidecar_db), registry=Path(registry),
+                    anchor_dir=Path(anchor_dir), evidence_key=Path(evidence_key)))
     qual_args = dict(ledger=Path(qualification_ledger),
                      qualification_anchor_dir=Path(qualification_anchor_dir),
                      qualification_key=Path(qualification_key), vault=Path(vault))
@@ -105,16 +117,25 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
             if parts.path in ("/", "/api/states") and parts.query:
                 return self._deny(400, "invalid_query")
             try:
+                if session is not None:
+                    session.verify_live()
                 if parts.path == "/":
-                    return self._send(200, _workspace_html(adapters, qual_args),
-                                      "text/html; charset=utf-8")
+                    payload = _workspace_html(adapters, qual_args)
+                    if session is not None:
+                        session.verify_live()
+                    return self._send(200, payload, "text/html; charset=utf-8")
                 if parts.path == "/api/states":
-                    return self._json(200, _states_payload(adapters, qual_args))
+                    payload = _states_payload(adapters, qual_args)
+                    if session is not None:
+                        session.verify_live()
+                    return self._json(200, payload)
                 params = parse_qs(parts.query, strict_parsing=True,
                                   keep_blank_values=True, max_num_fields=3)
                 if set(params) != {"ref"} or len(params["ref"]) != 1:
                     return self._deny(400, "invalid_query")
                 report = operator_lookup(adapters, params["ref"][0], **qual_args)
+                if session is not None:
+                    session.verify_live()
                 return self._json(200, report)
             except OperatorViewError as exc:
                 return self._json(409, {"status": "REFUSED",
@@ -124,7 +145,7 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                 return self._json(409, {"status": "REFUSED",
                                         "reason_code": exc.code,
                                         "text_included": False})
-            except WorkspaceError as exc:
+            except (WorkspaceError, PinnedSessionError) as exc:
                 return self._json(409, {"status": "REFUSED",
                                         "reason_code": exc.code,
                                         "text_included": False})
@@ -256,14 +277,26 @@ def main(argv=None):
     parser.add_argument("--qualification-anchor-dir", required=True)
     parser.add_argument("--qualification-key", required=True)
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--pinned-snapshot", action="store_true",
+                        help="Full verification at startup; metadata-only pinned requests")
     args = parser.parse_args(argv)
-    server = build_workspace_server(
-        vault=args.vault, corpus_db=args.corpus_db, sidecar_db=args.sidecar_db,
-        registry=args.registry, anchor_dir=args.anchor_dir,
-        evidence_key=args.evidence_key,
-        qualification_ledger=args.qualification_ledger,
-        qualification_anchor_dir=args.qualification_anchor_dir,
-        qualification_key=args.qualification_key, port=args.port)
+    try:
+        server = build_workspace_server(
+            vault=args.vault, corpus_db=args.corpus_db, sidecar_db=args.sidecar_db,
+            registry=args.registry, anchor_dir=args.anchor_dir,
+            evidence_key=args.evidence_key,
+            qualification_ledger=args.qualification_ledger,
+            qualification_anchor_dir=args.qualification_anchor_dir,
+            qualification_key=args.qualification_key, port=args.port,
+            pinned_snapshot=args.pinned_snapshot)
+    except (PinnedSessionError, evidence.EvidenceError,
+            ValueError, OSError, TypeError, KeyError) as exc:
+        # Never render a filesystem path, signing key or private verse.
+        code = exc.code if isinstance(
+            exc, (PinnedSessionError, evidence.EvidenceError)) else "WORKSPACE_STARTUP_REFUSED"
+        print(json.dumps({"status": "REFUSED", "reason_code": code,
+                          "text_included": False}))
+        return 1
     host, port = server.server_address[:2]
     print(json.dumps({"status": "WORKSPACE_LISTENING",
                       "bind": f"127.0.0.1:{port}",
