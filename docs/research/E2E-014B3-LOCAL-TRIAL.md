@@ -18,6 +18,16 @@ The model endpoint must produce a single Chat Completions-style object with `mod
 
 `SUPPORTED`, `REFUTED` and `UNDETERMINED` remain **model hypotheses**, not certified scientific facts, rights decisions, or fatwas. Unknown `evidence_ids`, replayed/duplicate response IDs, missing/forged model identity and malformed/extra fields fail closed.
 
+> **E2E-01.4b.4 revision:** The production launcher now requires the
+> operator packet to match the exact frozen receipt in
+> `evaluation/evidence/amr_2_43_local_excerpt_digests_v01.json`
+> **before dispatch**. First run
+> `python -m engines.e2e.local_model_trial --case AMR-01-P --packet /private/operator/2-43-witness.json --preflight-only`
+> without any model servers. An arbitrary new self-hashed local excerpt
+> no longer qualifies for model dispatch. See
+> [E2E-01.4b.4](E2E-014B4-PINNED-PREFLIGHT.md). These checks still
+> cannot authenticate original publisher bytes.
+>
 ## Run locally with two independently operated models
 
 Start **two separate already installed model servers**, for example on ports 8181 and 8282 with explicitly different model weights and appropriate ownership/permission controls. The exact invocation depends on your local inference stack; **no model is installed or started by this repository**.
