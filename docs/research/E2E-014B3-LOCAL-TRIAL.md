@@ -36,6 +36,33 @@ python -m engines.e2e.local_model_trial \
 
 The response is a **single metadata-only JSON object**. It records that two valid local HTTP responses were received, their distinct requested model IDs and response IDs, source URLs, packet hash and source-local UTF-8 hashes. It **does not record full witness text, prompts, HTTP tokens or free-text agent responses**. Save the JSON along with the git SHA and casebook SHA for reproducibility; do not put sensitive witness packets, source database material or signing keys in the repo.
 
+## First real-source excerpt digest record
+
+`evaluation/evidence/amr_2_43_local_excerpt_digests_v01.json`
+stores only citations, family labels and **SHA256 of three short local
+UTF-8 excerpts**, one each from the public Quran.com 2:43 reading,
+al-Qurtubi's explanation of the verse on King Saud University's Quran
+site, and the digital `الورقات` under `الأمر`. The exact canonical
+JSON packet hash is
+`bc2f326e119052b415ca78077d2d21d2ee924b082e2e22bfdbc50f19183c15bc`.
+
+The snippet bytes were manually assembled from publicly **rendered**
+online source readings during AI source research, not obtained as
+authenticated original publisher bytes. They may be checked locally
+against the three canonical URLs but they do **not** prove a protected
+Quran-vault match, scholarly edition attribution, permissions, or a
+valid fatwa. No source body is checked into Git. The local sample
+packet remains outside the repository; all six authority flags in the
+manifest are false. The manifest is tested for structure, no leaked
+`text` field, accurate number of roles and explicit absence of
+independent model results.
+
+**Real AI execution has NOT taken place for this sample.** The runner
+and local sample packet make the next actual two-server experiment
+reproducible without a mandatory human reviewer, but the outcome
+remains `UNDETERMINED` until those model calls and their evidence
+checks occur.
+
 ## Required scientific limitations
 
 1. Local SHA recomputation verifies packet *self-consistency*, not that the excerpt bytes actually match the upstream web source, a canonical Tanzil/KFGQPC edition, a private vault entry or publisher custody. Upstream source identity is still `UNVERIFIED`.
