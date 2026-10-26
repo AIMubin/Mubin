@@ -120,6 +120,81 @@ class PinnedWorkspaceTests(unittest.TestCase):
         self.assertEqual(payload["qualification_decisions"], 0)
         self.assertFalse(payload["juristic_inference_allowed"])
 
+    def test_p2_snapshot_modified_after_full_hash_before_session_pin_refused(self):
+        # Codex P2 reproduction: publish/resolve already checked SHA-256,
+        # then mutate the snapshot BEFORE the session records its baseline.
+        from engines.quran.research.pinned_session import (
+            PinnedSnapshotSession, PinnedSessionError)
+        real_resolve = resolve_current_snapshot
+
+        def mutate_after_resolver(vault):
+            checked = real_resolve(vault)
+            path = checked["corpus_db"]
+            path.chmod(0o600)
+            with path.open("ab") as stream:
+                stream.write(b"undetected-under-old-post-verification-baseline")
+            return checked
+
+        with patch(
+            "engines.quran.research.pinned_session.resolve_current_snapshot",
+            side_effect=mutate_after_resolver):
+            with self.assertRaisesRegex(
+                    PinnedSessionError, "PINNED_FILES_CHANGED_DURING_STARTUP"):
+                PinnedSnapshotSession(
+                    vault=self.vault, corpus_db=self.corpus,
+                    sidecar_db=self.sidecar, registry=self.registry,
+                    anchor_dir=self.anchor, evidence_key=self.evidence_key)
+
+    def test_original_changed_after_full_verification_before_pin_refused(self):
+        # A legitimate snapshot still exists; the original sidecar bytes
+        # changed between its full original verification and the session pin.
+        from engines.quran.research.pinned_session import (
+            PinnedSnapshotSession, PinnedSessionError)
+        real_resolve = resolve_current_snapshot
+
+        def mutate_original_after_verification(vault):
+            checked = real_resolve(vault)
+            with self.sidecar.open("ab") as stream:
+                stream.write(b"changed-after-original-verification")
+            return checked
+
+        with patch(
+            "engines.quran.research.pinned_session.resolve_current_snapshot",
+            side_effect=mutate_original_after_verification):
+            with self.assertRaisesRegex(
+                    PinnedSessionError, "PINNED_FILES_CHANGED_DURING_STARTUP"):
+                PinnedSnapshotSession(
+                    vault=self.vault, corpus_db=self.corpus,
+                    sidecar_db=self.sidecar, registry=self.registry,
+                    anchor_dir=self.anchor, evidence_key=self.evidence_key)
+
+    def test_latest_pointer_moves_during_initialization_refused(self):
+        # Switching LATEST after startup is allowed; moving it DURING the
+        # verification that establishes the first trusted pin is not.
+        from engines.quran.research.pinned_session import (
+            PinnedSnapshotSession, PinnedSessionError)
+        real_resolve = resolve_current_snapshot
+
+        def publish_b_after_verification(vault):
+            checked = real_resolve(vault)
+            other = self.root / "other-corpus.sqlite3"
+            other.write_bytes(b"synthetic-new-revision-B")
+            publish_snapshot(
+                self.vault, other, self.sidecar,
+                campaign_receipt_sha256=_digest(
+                    (self.vault / ev.RECEIPT_NAME).read_bytes()))
+            return checked
+
+        with patch(
+            "engines.quran.research.pinned_session.resolve_current_snapshot",
+            side_effect=publish_b_after_verification):
+            with self.assertRaisesRegex(
+                    PinnedSessionError, "PINNED_FILES_CHANGED_DURING_STARTUP"):
+                PinnedSnapshotSession(
+                    vault=self.vault, corpus_db=self.corpus,
+                    sidecar_db=self.sidecar, registry=self.registry,
+                    anchor_dir=self.anchor, evidence_key=self.evidence_key)
+
     def test_wrong_campaign_receipt_manifest_refused_at_startup(self):
         # Both snapshot SQLite digests still match signed evidence, but the
         # publisher has supplied an unrelated campaign receipt hash.
