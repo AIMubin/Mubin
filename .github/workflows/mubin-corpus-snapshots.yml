@@ -5,12 +5,18 @@ on:
     paths:
       - "qa/corpus_snapshot_v01.py"
       - "core/tests/test_corpus_snapshots_i01c.py"
+      - "qa/private_evidence_v01.py"
+      - "qa/tafsircenter_sidecar_v01.py"
+      - "docs/research/QURAN-I01C-EVIDENCE-SNAPSHOTS.md"
       - ".github/workflows/mubin-corpus-snapshots.yml"
   push:
     branches: [main]
     paths:
       - "qa/corpus_snapshot_v01.py"
       - "core/tests/test_corpus_snapshots_i01c.py"
+      - "qa/private_evidence_v01.py"
+      - "qa/tafsircenter_sidecar_v01.py"
+      - "docs/research/QURAN-I01C-EVIDENCE-SNAPSHOTS.md"
       - ".github/workflows/mubin-corpus-snapshots.yml"
   workflow_dispatch:
 
