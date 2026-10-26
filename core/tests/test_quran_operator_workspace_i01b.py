@@ -97,8 +97,10 @@ class WorkspaceTests(unittest.TestCase):
         thread = __import__("threading").Thread(
             target=self.server.serve_forever, daemon=True)
         thread.start()
-        self.addCleanup(self.server.shutdown)
+        # unittest cleanups run LIFO: stop the serving loop before closing
+        # its socket, avoiding WinError 10038 on Windows test runners.
         self.addCleanup(self.server.server_close)
+        self.addCleanup(self.server.shutdown)
 
     def _get(self, path, *, host=None, origin=None, fetch_site=None):
         conn = httpclient.HTTPConnection("127.0.0.1", self.port, timeout=10)

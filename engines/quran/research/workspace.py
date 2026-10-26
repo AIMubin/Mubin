@@ -24,6 +24,7 @@ from engines.quran.research.private_adapters import (
 from qa import private_evidence_v01 as evidence
 from engines.quran.research.pinned_session import (
     PinnedSnapshotSession, PinnedSessionError)
+from engines.e2e.workspace_view import render_research_html
 
 VERSION = "quran-operator-workspace/i0.1b"
 CONTRACT = "mubin-operator-workspace-v0.1"
@@ -52,8 +53,19 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                            evidence_key: Path, qualification_ledger: Path,
                            qualification_anchor_dir: Path,
                            qualification_key: Path, port: int = 0,
-                           pinned_snapshot: bool = False):
+                           pinned_snapshot: bool = False,
+                           linkage_observation: dict | None = None):
     """LOOPBACK-ONLY metadata workspace; never serves private text."""
+    if linkage_observation is not None:
+        if type(linkage_observation) is not dict:
+            raise WorkspaceError("RESEARCH_OBSERVATION_INVALID")
+        try:
+            # Do not load Usul/P0 dependencies for the legacy metadata-only
+            # workspace unless an E2E observation is explicitly supplied.
+            from engines.e2e.semantic_linkage import build_linkage
+            build_linkage(**linkage_observation)
+        except (ImportError, ValueError, TypeError) as exc:
+            raise WorkspaceError("RESEARCH_OBSERVATION_INVALID") from exc
     # Explicit opt-in: verify BOTH large data files and signed R0.1a head
     # once at startup. Normal mode remains byte-for-byte compatible with
     # the previously published I0.1b server contract.
@@ -112,7 +124,9 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                 return self._deny(414, "request_target_too_long")
             parts = urlsplit(self.path)
             if parts.scheme or parts.netloc or parts.fragment or \
-                    parts.path not in ("/", "/api/states", "/api/lookup"):
+                    parts.path not in (
+                        "/", "/api/states", "/api/lookup",
+                        "/research", "/api/research"):
                 return self._deny(404, "route_not_found")
             if parts.path in ("/", "/api/states") and parts.query:
                 return self._deny(400, "invalid_query")
@@ -133,6 +147,34 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                                   keep_blank_values=True, max_num_fields=3)
                 if set(params) != {"ref"} or len(params["ref"]) != 1:
                     return self._deny(400, "invalid_query")
+                if parts.path in ("/research", "/api/research"):
+                    try:
+                        from engines.e2e.research_slice import (
+                            research_slice, ResearchSliceError,
+                            QUESTION as RESEARCH_QUESTION)
+                    except ImportError as exc:
+                        raise WorkspaceError(
+                            "RESEARCH_DEPENDENCY_UNAVAILABLE") from exc
+                    ref = params["ref"][0]
+                    proposal = (
+                        linkage_observation
+                        if linkage_observation is not None and
+                        linkage_observation["verse_ref"] == ref else None)
+                    try:
+                        report = research_slice(
+                            adapters, ref, RESEARCH_QUESTION,
+                            linkage_observation=proposal, **qual_args)
+                    except ResearchSliceError as exc:
+                        raise WorkspaceError(exc.code) from exc
+                    if parts.path == "/research":
+                        html = render_research_html(report)
+                        if session is not None:
+                            session.verify_live()
+                        return self._send(
+                            200, html, "text/html; charset=utf-8")
+                    if session is not None:
+                        session.verify_live()
+                    return self._json(200, report)
                 report = operator_lookup(adapters, params["ref"][0], **qual_args)
                 if session is not None:
                     session.verify_live()
@@ -149,7 +191,8 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                 return self._json(409, {"status": "REFUSED",
                                         "reason_code": exc.code,
                                         "text_included": False})
-            except (ValueError, KeyError, TypeError, UnicodeError, OSError):
+            except (ValueError, KeyError, TypeError, UnicodeError,
+                    OSError, RuntimeError):
                 return self._json(409, {"status": "REFUSED",
                                         "reason_code": "workspace_internal_refusal",
                                         "text_included": False})
@@ -253,6 +296,7 @@ def _workspace_html(adapters, qual_args) -> bytes:
         "<title>مُبين — مساحة المشغل البحثية (بيانات وصفية فقط)</title>"
         '</head><body dir="rtl" lang="ar">'
         "<h1>مساحة المشغل — عرض حالات التأهيل</h1>"
+        '<nav><a href="/research?ref=2:43">مسار البحث العلمي — باب الأمر</a></nav>'
         "<p>بيانات وصفية فقط؛ لا نصوص؛ رأس الأدلة: "
         + escape_html(head[:16]) + "…</p>"
         "<table><thead><tr><th>المصدر</th><th>محور السلامة</th>"
@@ -263,6 +307,32 @@ def _workspace_html(adapters, qual_args) -> bytes:
         + "<p>لا تُمنح أي صلاحية نشر أو اعتماد علمي أو استنباط أو فتوى.</p>"
         "</body></html>")
     return html.encode("utf-8")
+
+
+def load_research_observation(path: Path, *, vault: Path) -> dict:
+    """Read a bounded OPERATOR-LOCAL claim at startup, never on HTTP input.
+
+    The file is outside the vault and not exposed as a browser endpoint.
+    Its observation fields remain untrusted (especially text SHA and notes).
+    """
+    file = Path(path)
+    v = Path(vault).resolve()
+    if (file.is_symlink() or not file.is_file()
+            or file.resolve().is_relative_to(v)):
+        raise WorkspaceError("RESEARCH_OBSERVATION_FILE_REFUSED")
+    try:
+        with file.open("rb") as stream:
+            raw = stream.read(8193)
+        if not raw or len(raw) > 8192:
+            raise WorkspaceError("RESEARCH_OBSERVATION_FILE_REFUSED")
+        payload = json.loads(raw.decode("utf-8", "strict"))
+        if type(payload) is not dict:
+            raise WorkspaceError("RESEARCH_OBSERVATION_FILE_REFUSED")
+        from engines.e2e.semantic_linkage import build_linkage
+        build_linkage(**payload)
+        return payload
+    except (OSError, ImportError, UnicodeError, ValueError, TypeError) as exc:
+        raise WorkspaceError("RESEARCH_OBSERVATION_FILE_REFUSED") from exc
 
 
 def main(argv=None):
@@ -279,8 +349,14 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--pinned-snapshot", action="store_true",
                         help="Full verification at startup; metadata-only pinned requests")
+    parser.add_argument("--research-observation-file", type=Path,
+                        help="Optional local E2E-01.2 operator proposal JSON (no verse text)")
     args = parser.parse_args(argv)
     try:
+        observation = (
+            load_research_observation(
+                args.research_observation_file, vault=Path(args.vault))
+            if args.research_observation_file is not None else None)
         server = build_workspace_server(
             vault=args.vault, corpus_db=args.corpus_db, sidecar_db=args.sidecar_db,
             registry=args.registry, anchor_dir=args.anchor_dir,
@@ -288,8 +364,9 @@ def main(argv=None):
             qualification_ledger=args.qualification_ledger,
             qualification_anchor_dir=args.qualification_anchor_dir,
             qualification_key=args.qualification_key, port=args.port,
-            pinned_snapshot=args.pinned_snapshot)
-    except (PinnedSessionError, evidence.EvidenceError,
+            pinned_snapshot=args.pinned_snapshot,
+            linkage_observation=observation)
+    except (PinnedSessionError, evidence.EvidenceError, WorkspaceError,
             ValueError, OSError, TypeError, KeyError) as exc:
         # Never render a filesystem path, signing key or private verse.
         code = exc.code if isinstance(
