@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -207,6 +208,27 @@ class LocalDualTrialTests(unittest.TestCase):
         with self.assertRaisesRegex(
                 TrialError, "TRIAL_AGENT_INDEPENDENCE_UNESTABLISHED"):
             self.run_fake()
+
+    def test_real_cited_excerpt_manifest_is_pinned_metadata_not_gold(self):
+        path = (Path(__file__).resolve().parents[2]
+                / "evaluation/evidence/amr_2_43_local_excerpt_digests_v01.json")
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["case_id"], "AMR-01-P")
+        self.assertEqual(manifest["reference"], "2:43")
+        self.assertEqual(len(manifest["witness_records"]), 3)
+        self.assertEqual({r["role"] for r in manifest["witness_records"]},
+                         {"verse", "tafsir", "usul"})
+        self.assertEqual(len(manifest["packet_canonical_sha256"]), 64)
+        for source in manifest["witness_records"]:
+            self.assertEqual(len(source["local_excerpt_sha256"]), 64)
+            self.assertNotIn("text", source)
+        self.assertFalse(manifest["independent_model_pair_executed"])
+        self.assertFalse(manifest["upstream_source_byte_attested"])
+        self.assertIsNone(manifest["scientific_gold_label"])
+        for key in ("scholarly_verified", "source_authenticated",
+                    "publication_allowed", "juristic_inference_allowed",
+                    "public_fatwa_authorized", "p1_admitted"):
+            self.assertIs(manifest[key], False)
 
     def test_only_first_scoped_case_runs(self):
         with self.assertRaisesRegex(TrialError, "LOCAL_CASE_NOT_ADMITTED"):
