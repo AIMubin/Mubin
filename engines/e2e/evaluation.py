@@ -280,7 +280,9 @@ def run_full_evaluation(adapters: PrivateResearchAdapters,
             sid = src["source_id"]
             coords.append(_check(
                 f"coordinate_{ref}_{sid}",
-                src.get("coordinate_present") is oracle.get((ref, sid)),
+                ((ref, sid) in oracle
+                 and type(src.get("coordinate_present")) is bool
+                 and src["coordinate_present"] == oracle[(ref, sid)]),
                 f"family={src.get('adapter')} expected={oracle.get((ref,sid))} "
                 f"reported={src.get('coordinate_present')}",
                 "critical"))
