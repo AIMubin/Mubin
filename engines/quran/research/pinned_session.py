@@ -84,6 +84,11 @@ class PinnedSnapshotSession:
         self._expected_digests = {
             "corpus_database_sha256": snapshot["corpus_sha256"],
             "sidecar_source_sha256": snapshot["sidecar_sha256"],
+            # Receipt identity also participates in content-addressed
+            # revision identity. Without this check, unrelated campaign
+            # provenance could be silently attached to an otherwise valid
+            # corpus/sidecar byte pair.
+            "campaign_receipt_sha256": snapshot["manifest"]["campaign_receipt_sha256"],
         }
         self._watched = (
             original_corpus, original_sidecar,
