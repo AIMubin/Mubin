@@ -58,7 +58,9 @@ def _sha_file(path: Path) -> str:
 
 def _write_atomic(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.parent / (".tmp-" + str(os.getpid()) + "-" + path.name)
+    # Unique name permits retry after an interrupted process left a temp file.
+    # O_EXCL still prevents accidental reuse or symlink substitution.
+    tmp = path.parent / (".tmp-" + secrets.token_hex(16) + "-" + path.name)
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
                  getattr(os, "O_BINARY", 0), 0o600)
     try:
@@ -126,6 +128,13 @@ def _resolve_current_snapshot(vault: Path) -> dict:
           type(manifest["campaign_receipt_sha256"]) is str and
           re.fullmatch(r"[0-9a-f]{64}", manifest["campaign_receipt_sha256"]),
           "SNAPSHOT_MANIFEST_MISMATCH")
+    # The revision ID is a content address, not merely a syntactically valid
+    # directory name. Recompute it from the exact committed manifest fields.
+    expected_revision_id = "r" + hashlib.sha256((
+        manifest["corpus_sha256"] + manifest["sidecar_sha256"] +
+        manifest["campaign_receipt_sha256"]).encode("utf-8")).hexdigest()
+    _need(revision_id == expected_revision_id,
+          "SNAPSHOT_REVISION_ID_MISMATCH")
     corpus_path = revision_dir / "corpus.sqlite3"
     sidecar_path = revision_dir / "sidecar.db"
     _need(corpus_path.is_file() and not corpus_path.is_symlink(),
