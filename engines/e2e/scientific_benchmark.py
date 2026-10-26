@@ -90,6 +90,22 @@ def validate_casebook(data: Any) -> None:
         _require(ref in LOCKED_GROUPS[split]
                  and row.get("group_id") == "verse:" + ref,
                  "CASEBOOK_SPLIT_INVALID")
+        # Never award a source-conflict negative for an INVALID ref/null/object.
+        # The deliberately constructed wrong-ref pair is frozen, not merely
+        # a string inequality with the genuine Quran witness locator.
+        alleged = row.get("asserted_word_reference")
+        _require(type(alleged) is str,
+                 "CASEBOOK_ASSERTED_REFERENCE_INVALID")
+        try:
+            _reference(alleged)
+        except ValueError as exc:
+            raise CasebookError("CASEBOOK_ASSERTED_REFERENCE_INVALID") from exc
+        cohort = LOCKED_GROUPS["development"] + LOCKED_GROUPS["holdout"]
+        expected_negative = cohort[(cohort.index(ref) + 1) % len(cohort)]
+        _require(
+            alleged == (expected_negative if kind == "CONSTRUCTED_NEGATIVE"
+                        else ref),
+            "CASEBOOK_ASSERTED_REFERENCE_MISMATCH")
         _require(row.get("quran_witness_url")
                  == "https://quran.com/" + ref.replace(":", "/"),
                  "CASEBOOK_WITNESS_LOCATOR_INVALID")
