@@ -68,10 +68,50 @@ class EvaluationTests(unittest.TestCase):
         report = self.run_eval(["2:43"])
         group = next(g for g in report["groups"]
                      if g["group"] == "coordinate_accuracy")
-        self.assertEqual(len(group["checks"]), 11)
+        coordinate_checks = [c for c in group["checks"]
+                             if c["check"].startswith("coordinate_2:43_")]
+        self.assertEqual(len(coordinate_checks), 11)
         self.assertTrue(group["passed"])
         self.assertTrue(all(c["passed"] and "expected=False" in c["detail"]
-                            for c in group["checks"]))
+                            for c in coordinate_checks))
+
+    def test_p2_missing_all_sources_for_second_reference_is_critical(self):
+        # Codex P2 reproduction: earlier code counted only the rows returned
+        # for each ref. The first reference's 11 valid rows concealed an
+        # EMPTY, forged second reference response and returned all_passed.
+        real_operator = eva.operator_lookup
+        def selectively_omit(adapters, ref, **kwargs):
+            result = real_operator(adapters, ref, **kwargs)
+            if ref == "2:43":
+                result["sources"] = []
+            return result
+        with patch.object(eva, "operator_lookup", side_effect=selectively_omit):
+            report = self.run_eval(["2:1", "2:43"])
+        self.assertFalse(report["all_passed"])
+        self.assertGreaterEqual(report["critical_failures"], 12)
+        coordinate = next(g for g in report["groups"]
+                          if g["group"] == "coordinate_accuracy")
+        self.assertFalse(coordinate["passed"])
+        self.assertFalse(next(
+            c for c in coordinate["checks"]
+            if c["check"] == "coordinate_source_coverage_2:43")["passed"])
+
+    def test_one_missing_or_duplicate_source_for_secondary_reference_fails(self):
+        real_operator = eva.operator_lookup
+        for distortion in ("missing", "duplicate"):
+            def distorted(adapters, ref, **kwargs):
+                result = real_operator(adapters, ref, **kwargs)
+                if ref == "2:43":
+                    if distortion == "missing":
+                        result["sources"].pop()
+                    else:
+                        result["sources"][-1] = result["sources"][0].copy()
+                return result
+            with self.subTest(distortion=distortion):
+                with patch.object(eva, "operator_lookup", side_effect=distorted):
+                    report = self.run_eval(["2:1", "2:43"])
+                self.assertFalse(report["all_passed"])
+                self.assertGreater(report["critical_failures"], 0)
 
     def test_false_negative_in_one_adapter_detected_as_critical(self):
         real_lookup = self.adapters.lookup
