@@ -1,98 +1,156 @@
-"""E2E-01.4 evaluation framework tests. Synthetic only."""
+"""E2E-01.4: source-family independent oracle + signed-qualification evaluation.
+
+Reuses production-like SYNTHETIC Quran/tafsir SQLite and an actually signed
+qualification ledger from the already passing E2E-01.1 fixture.
+No Quran/Tafsir text, source secrets or actual vault in Git.
+"""
 from __future__ import annotations
+
 import json
-from pathlib import Path
-import sqlite3
-import tempfile
 import unittest
 from unittest.mock import patch
 
-from engines.e2e.evaluation import run_full_evaluation
-from engines.quran.research.private_adapters import PrivateResearchAdapters
-from engines.quran.research.qualification import initialize_ledger
-from qa import private_evidence_v01 as ev
-from qa.corpus_ingest_v01 import load_manifest
+from core.tests import test_e2e_research_slice as e2e_fixture
+from core.tests import test_quran_operator_workspace_i01b as workspace_fixture
+from engines.e2e import evaluation as eva
+from engines.e2e.research_slice import QUESTION
+from engines.quran.research.private_adapters import ResearchAdapterError
+from engines.quran.research import qualification as qual
 
-HEAD = "d" * 64
 
-
-class TestEvaluation(unittest.TestCase):
+class EvaluationTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
-        self.vault = self.root / "vault"
-        self.vault.mkdir()
-        self.corpus = self.vault / "mubin-private-corpus-v01.sqlite3"
-        self.sidecar = self.root / "sidecar.db"
-        self.registry = self.root / "registry.jsonl"
-        self.anchor = self.root / "anchors"
-        self.anchor.mkdir(parents=True, exist_ok=True)
-        self.ekey = self.root / "evidence.key"
-        self.ekey.write_bytes(b"x" * 48)
-        self.qledger = self.root / "qual.jsonl"
-        self.qanchor = self.root / "qanchors"
-        self.qanchor.mkdir(parents=True, exist_ok=True)
-        self.qkey = self.root / "qual.key"
-        self.qkey.write_bytes(b"q" * 48)
-        manifest = load_manifest()
-        db = sqlite3.connect(self.corpus)
-        db.executescript("""
-            CREATE TABLE corpus_sources(source_id TEXT PRIMARY KEY, source_kind TEXT,
-              version TEXT, raw_sha256 TEXT, rights_status TEXT,
-              publication_enabled INTEGER, source_authenticated INTEGER, p1_admitted INTEGER);
-            CREATE TABLE corpus_entries(source_id TEXT, sura INTEGER, aya INTEGER,
-              source_kind TEXT, text TEXT, footnotes TEXT, PRIMARY KEY(source_id,sura,aya));
-        """)
-        for s in manifest["sources"]:
-            db.execute("INSERT INTO corpus_sources VALUES(?,?,?,?,?,?,?,?)",
-                (s["id"],s["kind"],s["version"],s["sha256"],
-                 "legal_review_pending",0,0,0))
-            db.execute("INSERT INTO corpus_entries VALUES(?,?,?,?,?,?)",
-                (s["id"],2,1,s["kind"],"synthetic","fn"))
-        db.commit(); db.close()
-        conn = sqlite3.connect(self.sidecar)
-        for tbl in ("tafsir_tabary","tafsir_katheer","tafsir_baghawy",
-                    "tafsir_saadi","tafsir_moyassar"):
-            conn.execute(f'CREATE TABLE "{tbl}" (sura INT,aya INT,tafsir TEXT)')
-            conn.execute(f'INSERT INTO "{tbl}" VALUES (2,1,?)',("syn",))
-        conn.execute('CREATE TABLE "QuranTafseer" (surahNo INT,ayahNo INT,Mukhtasarar TEXT)')
-        conn.execute('INSERT INTO "QuranTafseer" VALUES (2,1,?)',("syn",))
-        conn.commit(); conn.close()
-        report = {"status": "EVIDENCE_REGISTRY_VERIFIED",
-            "byte_integrity_verified": True, "head_entry_sha256": HEAD,
-            "rights_status": "legal_review_pending",
-            "source_authenticated": False, "scholarly_verified": False,
-            "text_included": False}
-        self.mock_ev = patch(
-            "engines.quran.research.private_adapters.evidence.verify_evidence",
-            return_value=report)
-        self.mock_ev.start()
-        self.addCleanup(self.mock_ev.stop)
-        initialize_ledger(self.qledger, self.qanchor, self.qkey,
-            vault=self.vault, evidence_registry=self.registry,
-            evidence_anchor_dir=self.anchor, evidence_key=self.ekey,
-            sidecar_db=self.sidecar, operator="lead-operator")
+        e2e_fixture.E2EResearchSliceTests.setUp(self)
 
-    def test_evaluation_runs_all_groups(self):
-        from engines.quran.research.private_adapters import PrivateResearchAdapters as PRA
-        adapters = PRA(vault=self.vault, corpus_db=self.corpus,
-            sidecar_db=self.sidecar, registry=self.registry,
-            anchor_dir=self.anchor, evidence_key=self.ekey)
-        result = run_full_evaluation(adapters, self.corpus, self.vault, self.qledger,
-            self.qanchor, self.qkey, ["2:1"], "دلالة صيغة الأمر والقرائن المؤثرة فيه")
-        self.assertTrue(result["all_passed"])
-        self.assertEqual(result["critical_failures"], 0)
-        self.assertTrue(result["total"] > 0)
+    def run_eval(self, refs=None):
+        return eva.run_full_evaluation(
+            self.adapters, self.corpus, self.vault,
+            self.qual_ledger, self.qual_anchor, self.qual_key,
+            ["2:1", "2:43"] if refs is None else refs, QUESTION)
 
-    def test_cannot_automate_reported(self):
-        from engines.quran.research.private_adapters import PrivateResearchAdapters as PRA
-        adapters = PRA(vault=self.vault, corpus_db=self.corpus,
-            sidecar_db=self.sidecar, registry=self.registry,
-            anchor_dir=self.anchor, evidence_key=self.ekey)
-        result = run_full_evaluation(adapters, self.corpus, self.qledger,
-            self.qanchor, self.qkey, ["2:1"], "دلالة صيغة الأمر والقرائن المؤثرة فيه")
-        self.assertTrue(len(result.get("cannot_automate", [])) >= 5)
+    def test_eight_groups_pass_actual_synthetic_sqlite_and_signed_ledger(self):
+        report = self.run_eval()
+        self.assertEqual(report["contract"], eva.CONTRACT)
+        self.assertEqual(len(report["groups"]), 8)
+        self.assertEqual(
+            {g["group"] for g in report["groups"]},
+            {"coordinate_accuracy", "source_completeness",
+             "qualification_consistency", "gap_completeness", "abstention",
+             "authority_flags", "determinism", "source_provenance"})
+        self.assertTrue(report["all_passed"], report)
+        self.assertEqual(report["failed"], 0)
+        self.assertEqual(report["critical_failures"], 0)
+        self.assertGreaterEqual(report["total"], 65)
+        self.assertEqual(report["passed"], report["total"])
+        for k in ("source_authenticated", "scholarly_verified",
+                  "rights_verified", "publication_allowed",
+                  "juristic_inference_allowed", "public_fatwa_authorized",
+                  "p1_admitted", "text_included"):
+            self.assertIs(report[k], False)
+        self.assertGreaterEqual(len(report["cannot_automate"]), 6)
+
+    def test_sidecar_six_and_corpus_five_are_two_independent_families(self):
+        report = self.run_eval(["2:1"])
+        completeness = next(g for g in report["groups"]
+                            if g["group"] == "source_completeness")
+        self.assertTrue(completeness["passed"])
+        checks = {c["check"]: c for c in completeness["checks"]}
+        self.assertTrue(checks["corpus_sources_complete"]["passed"])
+        self.assertTrue(checks["sidecar_sources_complete"]["passed"])
+        self.assertTrue(checks["unified_sources_unique_and_complete"]["passed"])
+        provenance = next(g for g in report["groups"]
+                          if g["group"] == "source_provenance")
+        self.assertTrue(provenance["passed"])
+        self.assertTrue(any(c["check"] == "provenance_QuranTafseer"
+                            for c in provenance["checks"]))
+
+    def test_coordinate_absent_in_both_dbs_correctly_passes(self):
+        report = self.run_eval(["2:43"])
+        group = next(g for g in report["groups"]
+                     if g["group"] == "coordinate_accuracy")
+        self.assertEqual(len(group["checks"]), 11)
+        self.assertTrue(group["passed"])
+        self.assertTrue(all(c["passed"] and "expected=False" in c["detail"]
+                            for c in group["checks"]))
+
+    def test_false_negative_in_one_adapter_detected_as_critical(self):
+        real_lookup = self.adapters.lookup
+        def false_missing(reference, source_id, **kwargs):
+            if reference == "2:1" and source_id == "tafsir_tabary":
+                raise ResearchAdapterError("REFERENCE_NOT_PRESENT")
+            return real_lookup(reference, source_id, **kwargs)
+        with patch.object(self.adapters, "lookup", side_effect=false_missing):
+            report = self.run_eval(["2:1"])
+        self.assertFalse(report["all_passed"])
+        self.assertGreaterEqual(report["critical_failures"], 1)
+        coordinate = next(g for g in report["groups"]
+                          if g["group"] == "coordinate_accuracy")
+        failed = [x["check"] for x in coordinate["checks"] if not x["passed"]]
+        self.assertEqual(failed, ["coordinate_2:1_tafsir_tabary"])
+
+    def test_missing_reported_corpus_source_is_not_green(self):
+        real_sources = self.adapters.corpus_sources
+        with patch.object(self.adapters, "corpus_sources",
+                          side_effect=lambda: real_sources()[:-1]):
+            report = self.run_eval(["2:1"])
+        source = next(g for g in report["groups"]
+                      if g["group"] == "source_completeness")
+        self.assertFalse(source["passed"])
+        self.assertFalse(report["all_passed"])
+
+    def test_signed_rejection_is_consistent_not_turned_unreviewed(self):
+        workspace_fixture.WorkspaceTests._record(self, "SOURCE_REJECTED")
+        report = self.run_eval(["2:1"])
+        self.assertTrue(report["all_passed"], report)
+        qualified = next(g for g in report["groups"]
+                         if g["group"] == "qualification_consistency")
+        self.assertTrue(qualified["passed"])
+
+    def test_corrupt_signed_ledger_refuses_entire_evaluation(self):
+        self.qual_ledger.write_bytes(b"tampered")
+        with self.assertRaises(qual.QualificationError):
+            self.run_eval(["2:1"])
+
+    def test_authority_flag_promotion_never_counts_as_success(self):
+        original = eva.research_slice
+        def forbidden_promotion(*args, **kwargs):
+            result = original(*args, **kwargs)
+            result["limits"]["publication_allowed"] = True
+            return result
+        with patch.object(eva, "research_slice",
+                          side_effect=forbidden_promotion):
+            report = self.run_eval(["2:1"])
+        self.assertFalse(report["all_passed"])
+        self.assertGreaterEqual(report["critical_failures"], 1)
+        group = next(g for g in report["groups"]
+                     if g["group"] == "authority_flags")
+        self.assertFalse(group["passed"])
+
+    def test_valid_refs_are_required_and_no_vacuous_pass(self):
+        for refs in ([], ["2:1", "2:1"], ["bad"], "2:1",
+                     ["2:1"] * 33):
+            with self.subTest(refs=refs), self.assertRaises(eva.EvaluationError):
+                self.run_eval(refs)
+
+    def test_corpus_db_must_match_adapter_anchor(self):
+        with self.assertRaisesRegex(
+                eva.EvaluationError, "EVALUATION_CORPUS_PATH_MISMATCH"):
+            eva.run_full_evaluation(
+                self.adapters, self.sidecar, self.vault,
+                self.qual_ledger, self.qual_anchor, self.qual_key,
+                ["2:1"], QUESTION)
+
+    def test_no_source_text_or_private_key_paths_in_report(self):
+        raw = json.dumps(self.run_eval(["2:1"]), ensure_ascii=False)
+        self.assertNotIn(workspace_fixture.PLACEHOLDER, raw)
+        self.assertNotIn("synthetic-footnote-only", raw)
+        self.assertNotIn(str(self.vault), raw)
+        self.assertNotIn(str(self.evidence_key), raw)
+
+    def test_same_reference_set_yields_deterministic_result(self):
+        a = json.dumps(self.run_eval(["2:1"]), ensure_ascii=False, sort_keys=True)
+        b = json.dumps(self.run_eval(["2:1"]), ensure_ascii=False, sort_keys=True)
+        self.assertEqual(a, b)
 
 
 if __name__ == "__main__":
