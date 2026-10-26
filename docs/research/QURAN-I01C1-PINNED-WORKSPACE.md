@@ -11,6 +11,14 @@ license or scholarly attestation. Mubin global version is `0.1.0-alpha`.
    verification and resolves the current I0.1c Snapshot (full corpus and
    sidecar SHA-256). Source, sidecar **and campaign receipt** digests must match the last authenticated
    registry payload, and its HMAC head must be unchanged.
+   The startup verifier captures the identities of the original corpus,
+   original sidecar, campaign receipt, both snapshot databases, and the
+   snapshot manifest **before** any full hashing. It also captures the initial
+   LATEST pointer identity and its full revision ID before trusting the
+   pointer. After full R0.1a and snapshot verification, every identity and
+   the original LATEST pointer are rechecked. Any mutation or a changing
+   pointer **during startup** refuses the session; no newly modified bytes
+   can become the post-verification trusted baseline.
 2. The process pins exact two database paths, their full-content hashes and
    filesystem identities. An initial bad/mismatched snapshot fails closed.
    The pointer must use a **full** revision identifier (`r` plus 64 lowercase
