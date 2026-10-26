@@ -14,7 +14,7 @@ The eight checks are:
 
 1. `coordinate_accuracy`: each returned `coordinate_present` is compared
    to **independently queried** SQLite row existence for that exact verse,
-   using the correct family. QuranEnc/quran uses `corpus_entries`; the
+   using the correct family. **For every evaluated reference**, all eleven\n   distinct source identities and their correct adapter families must be\n   present in the response; a complete first reference cannot conceal\n   missing or duplicated sources for another reference. QuranEnc/quran uses `corpus_entries`; the
    TafsirCenter sidecar uses its five Tafsir tables plus
    `QuranTafseer`, which has distinct column names. A false coordinate
    can be **correct**: do not assume all eleven sources contain every ref.
@@ -56,7 +56,7 @@ qualification ledger; only the original R0.1a **expensive vault verifier**
 is mocked, not the source lookups or qualification policy. Tests require
 real DB-negative coordinates, independent sidecar/corpus catalogs, signed
 reject states, detection of a deliberately falsified row-presence indicator,
-incomplete catalog, authority flag promotion and refusal for forged ledger,
+incomplete catalog and missing/duplicated rows on a second reference,\n   authority flag promotion and refusal for forged ledger,
 as well as no private text/secret leakage. The corpus, Tafsir and keys used
 in tests are **invented**. This does NOT reproduce the operator's real
 vault report or constitute human review.
