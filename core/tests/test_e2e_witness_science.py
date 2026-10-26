@@ -149,7 +149,6 @@ class LocalWitnessTrialTests(unittest.TestCase):
         s = json.dumps(self.score(), ensure_ascii=False)
         for w in self.packet["witnesses"]:
             self.assertNotIn(w["text"], s)
-        self.assertNotIn("source_text", s)
         self.assertIn("source_text_included", s)
 
     def test_duplicate_role_and_source_ids_refused(self):
