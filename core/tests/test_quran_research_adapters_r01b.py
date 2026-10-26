@@ -45,6 +45,25 @@ def _permit(path, key, *, source_ids=None, head=HEAD, duration=3600,
     path.write_bytes(ev._canonical(payload))
 
 
+def _attested_entry(corpus_digest: str, sidecar_digest: str) -> dict:
+    """Build a fully hash-linked synthetic R0.1a entry (HMAC head is stubbed)."""
+    body = {
+        "seq": 1, "prev_entry_sha256": "0" * 64,
+        "recorded_at_utc": "2026-10-26T00:00:00+00:00",
+        "operator": "synthetic-test",
+        "payload": {
+            "corpus_database_sha256": corpus_digest,
+            "sidecar_source_sha256": sidecar_digest,
+            "source_authenticated": False,
+            "rights_status": "legal_review_pending",
+            "rights_verified": False, "scholarly_verified": False,
+            "p1_admitted": False, "juristic_inference_allowed": False,
+            "public_fatwa_authorized": False, "text_included": False,
+        },
+    }
+    return {**body, "entry_sha256": sha256(ev._canonical(body)).hexdigest()}
+
+
 class PrivateResearchAdaptersTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -272,9 +291,10 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
         mockmodule.resolve_current_snapshot = lambda vault: {
             "corpus_db": path, "sidecar_db": sidecar,
             "corpus_sha256": "b" * 64, "sidecar_sha256": "c" * 64}
-        fake_signed_entries = [{"entry_sha256": HEAD,
-            "payload": {"corpus_database_sha256": "d" * 64,
-                        "sidecar_source_sha256": "c" * 64}}]
+        fake_signed_entries = [_attested_entry("d" * 64, "c" * 64)]
+        self.mock_evidence.return_value = {
+            **self.evidence_report,
+            "head_entry_sha256": fake_signed_entries[0]["entry_sha256"]}
         with patch.dict(sys.modules, {"qa.corpus_snapshot_v01": mockmodule}), \
              patch.object(ev, "_load_registry", return_value=fake_signed_entries):
             with self.assertRaisesRegex(
@@ -294,9 +314,10 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
             publish_snapshot(self.vault, self.corpus, self.sidecar,
                              campaign_receipt_sha256=receipt)
         pinned = resolve_current_snapshot(self.vault)
-        entries = [{"entry_sha256": HEAD, "payload": {
-            "corpus_database_sha256": corpus_digest,
-            "sidecar_source_sha256": sidecar_digest}}]
+        entries = [_attested_entry(corpus_digest, sidecar_digest)]
+        signed_head = entries[0]["entry_sha256"]
+        self.mock_evidence.return_value = {
+            **self.evidence_report, "head_entry_sha256": signed_head}
         with patch.object(ev, "_load_registry", return_value=entries):
             adapter = self.adapters(
                 corpus_db=pinned["corpus_db"], sidecar_db=pinned["sidecar_db"])
@@ -304,7 +325,7 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
             self.assertTrue(result["coordinate_present"])
             self.assertFalse(result["text_included"])
             self.assertFalse(result["publication_allowed"])
-            self.assertEqual(result["evidence_head_sha256"], HEAD)
+            self.assertEqual(result["evidence_head_sha256"], signed_head)
 
     def test_snapshot_rejects_reloaded_registry_head_not_in_signed_report(self):
         from qa.corpus_snapshot_v01 import (
@@ -316,12 +337,47 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
                 self.vault, self.corpus, self.sidecar,
                 campaign_receipt_sha256=sha256(b"receipt").hexdigest())
         pinned = resolve_current_snapshot(self.vault)
-        entries = [{"entry_sha256": "b" * 64, "payload": {
-            "corpus_database_sha256": pinned["corpus_sha256"],
-            "sidecar_source_sha256": pinned["sidecar_sha256"]}}]
+        entries = [_attested_entry(
+            pinned["corpus_sha256"], pinned["sidecar_sha256"])]
         with patch.object(ev, "_load_registry", return_value=entries):
             with self.assertRaisesRegex(
                     ResearchAdapterError, "SNAPSHOT_EVIDENCE_HEAD_CHANGED"):
+                self.adapters(
+                    corpus_db=pinned["corpus_db"],
+                    sidecar_db=pinned["sidecar_db"]).corpus_sources()
+
+    def test_reloaded_payload_forgery_retaining_old_head_is_refused(self):
+        # Regression for Codex P1 on PR #105: the unverified registry reader
+        # can return modified digest fields while retaining entry_sha256.
+        # Equality with the signed head is not enough without _verify_chain.
+        from qa.corpus_snapshot_v01 import (
+            publish_snapshot, resolve_current_snapshot)
+        from qa import tafsircenter_sidecar_v01 as sidecar_mod
+        digest = sha256(self.sidecar.read_bytes()).hexdigest()
+        with patch.object(sidecar_mod, "EXPECTED_SHA256", digest):
+            publish_snapshot(
+                self.vault, self.corpus, self.sidecar,
+                campaign_receipt_sha256=sha256(b"receipt").hexdigest())
+        pinned = resolve_current_snapshot(self.vault)
+        originally_attested = _attested_entry(
+            "f" * 64, pinned["sidecar_sha256"])
+        self.mock_evidence.return_value = {
+            **self.evidence_report,
+            "head_entry_sha256": originally_attested["entry_sha256"]}
+        forged = {**originally_attested,
+                  "payload": {**originally_attested["payload"],
+                              "corpus_database_sha256": pinned["corpus_sha256"]}}
+        # The injected payload now names the snapshot corpus exactly,
+        # but was never part of the attested hash chain.
+        self.assertEqual(forged["entry_sha256"],
+                         originally_attested["entry_sha256"])
+        self.assertNotEqual(
+            sha256(ev._canonical({k: v for k, v in forged.items()
+                                  if k != "entry_sha256"})).hexdigest(),
+            forged["entry_sha256"])
+        with patch.object(ev, "_load_registry", return_value=[forged]):
+            with self.assertRaisesRegex(
+                    ResearchAdapterError, "EVIDENCE_VERIFICATION_FAILED"):
                 self.adapters(
                     corpus_db=pinned["corpus_db"],
                     sidecar_db=pinned["sidecar_db"]).corpus_sources()
