@@ -21,6 +21,11 @@ from engines.usul.pilots.amr_default import run_pilot
 class E2EResearchSliceTests(unittest.TestCase):
     def setUp(self):
         workspace_fixture.WorkspaceTests.setUp(self)
+        # Reuse only its signed SQLite/ledger fixtures, not its HTTP server.
+        # Stop the idle server thread before cleanup closes its socket:
+        # on Windows the reverse order causes WinError 10038 despite tests
+        # reporting OK. E2E-01.1 does not expose an HTTP endpoint.
+        self.server.shutdown()
         workspace_fixture.WorkspaceTests.qual_initialize(self)
         self.adapters = PrivateResearchAdapters(
             vault=self.vault, corpus_db=self.corpus, sidecar_db=self.sidecar,
