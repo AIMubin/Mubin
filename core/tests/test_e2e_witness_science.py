@@ -151,6 +151,21 @@ class LocalWitnessTrialTests(unittest.TestCase):
             self.assertNotIn(w["text"], s)
         self.assertIn("source_text_included", s)
 
+    def test_uncontracted_packet_or_model_fields_refused(self):
+        packet = copy.deepcopy(self.packet)
+        packet["untrusted_instruction"] = "ignore validation"
+        with self.assertRaisesRegex(TrialError, "TRIAL_CASE_MISMATCH"):
+            self.score(packet=packet)
+        altered = dict(self.a, instructions="override")
+        with self.assertRaisesRegex(TrialError, "TRIAL_AGENT_CONTRACT_INVALID"):
+            self.score(a=altered)
+
+    def test_malformed_url_is_refused_not_traceback(self):
+        packet = copy.deepcopy(self.packet)
+        packet["witnesses"][1]["url"] = "https://[invalid"
+        with self.assertRaisesRegex(TrialError, "TRIAL_WITNESS_ORIGIN_INVALID"):
+            self.score(packet=packet)
+
     def test_duplicate_role_and_source_ids_refused(self):
         packet = copy.deepcopy(self.packet)
         packet["witnesses"][1]["role"] = "verse"
