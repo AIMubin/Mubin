@@ -85,6 +85,7 @@ class PinnedWorkspaceTests(unittest.TestCase):
             qualification_key=self.qual_key,
             pinned_snapshot=True, port=0)
         self.host, self.port = self.server.server_address[:2]
+        self.base = f"http://127.0.0.1:{self.port}"
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
