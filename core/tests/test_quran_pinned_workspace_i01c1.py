@@ -134,6 +134,28 @@ class PinnedWorkspaceTests(unittest.TestCase):
                 sidecar_db=self.sidecar, registry=self.registry,
                 anchor_dir=self.anchor, evidence_key=self.evidence_key)
 
+    def test_synthetic_full_http_benchmark_emits_p50_p95(self):
+        import contextlib
+        import io
+        from qa.benchmark_pinned_workspace_i01c1 import main as benchmark
+        self.qual_initialize()
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = benchmark([
+                "--origin", self.base,
+                "--ref", "2:1", "--warmup", "2", "--samples", "15"])
+        self.assertEqual(code, 0)
+        data = json.loads(output.getvalue())
+        self.assertEqual(data["status"], "HTTP_LOOKUP_BENCHMARK_OK")
+        self.assertEqual(data["samples"], 15)
+        self.assertLessEqual(data["p50_ms"], data["p95_ms"])
+        self.assertLessEqual(data["p95_ms"], data["max_ms"])
+        self.assertFalse(data["source_authenticated"])
+        self.assertFalse(data["publication_allowed"])
+        print("SYNTHETIC_LOOPBACK_HTTP_BENCHMARK " + json.dumps({
+            "samples": 15, "p50_ms": data["p50_ms"],
+            "p95_ms": data["p95_ms"]}, sort_keys=True))
+
     def test_original_sidecar_change_fails_closed(self):
         self.qual_initialize()
         with self.sidecar.open("ab") as stream:
