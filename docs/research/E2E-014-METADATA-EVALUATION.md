@@ -74,12 +74,16 @@ do not claim inherited passing checks for deleted or replaced code.
 The report says **cannot_automate** for scholarly authenticity of verse or
 tafsir interpretation, edition or custody, rights or redistribution,
 juristic soundness, P1 admissibility and **truth of the semantic
-verse-to-rule relationship**. Two green automated evaluators do not provide
-independent scholarly review. We still need a source-disjoint,
-independently human-adjudicated *small* dataset with positive, incorrect
-and unresolved links, plus attributed Quran/Tafsir and al-Waraqat witnesses.
-If those witnesses are unavailable or are unreviewed, classify the case
-`UNDETERMINED`; never promote model consensus into certification.
+verse-to-rule relationship**. Two green automated evaluators do not by themselves establish
+scholarly authenticity. The next AI-only research stage uses a bounded,
+source-linked casebook and independent AI evaluator/critic attempts to
+verify Quran/Tafsir/al-Waraqat witnesses and test positive, incorrect
+and unresolved relations. No human-review gate is required to progress
+this research. If source witnesses are unavailable, unauthenticated or
+inconclusive, classify the case `UNDETERMINED`; never promote model
+consensus into certification. See [E2E-01.4b.1](E2E-014B1-AMR-CASEBOOK.md).
+Scientific, source-authenticity, rights, public-use and fatwa authority
+remain separate from engineering or AI research milestones.
 
 All `source_authenticated`, `scholarly_verified`, `rights_verified`,
 `publication_allowed`, `juristic_inference_allowed`,
