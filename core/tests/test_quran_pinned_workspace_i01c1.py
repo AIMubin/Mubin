@@ -200,6 +200,38 @@ class PinnedWorkspaceTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(len(json.loads(raw)["sources"]), 11)
 
+    def test_authenticated_new_evidence_head_requires_repin(self):
+        self.qual_initialize()
+        first = json.loads(self.registry.read_text(encoding="utf-8"))
+        next_entry = {
+            "seq": 2, "prev_entry_sha256": first["entry_sha256"],
+            "operator": "synthetic-operator-2",
+            "recorded_at_utc": "2026-10-26T01:00:00+00:00",
+            "payload": first["payload"],
+        }
+        next_head = _digest(ev._canonical(next_entry))
+        self.registry.write_bytes(
+            ev._canonical(first) + b"\n" +
+            ev._canonical({**next_entry, "entry_sha256": next_head}) + b"\n")
+        anchor = {"registry": self.registry.name,
+                  "head_entry_sha256": next_head, "sequence": 2}
+        anchor["head_hmac"] = hmac.new(
+            self.evidence_key.read_bytes(), ev._canonical(anchor),
+            hashlib.sha256).hexdigest()
+        (self.anchor / (self.registry.stem + "." + ev.ANCHOR_NAME)).write_bytes(
+            ev._canonical(anchor) + b"\n")
+        status, _, raw = self._get("/api/lookup?ref=2:1")
+        self.assertEqual(status, 409)
+        self.assertIn(b"PINNED_EVIDENCE_HEAD_CHANGED", raw)
+
+    def test_hmac_anchor_corruption_fails_closed(self):
+        self.qual_initialize()
+        anchor = self.anchor / (self.registry.stem + "." + ev.ANCHOR_NAME)
+        anchor.write_bytes(b'{"tampered":"without-the-hmac-key"}')
+        status, _, raw = self._get("/api/lookup?ref=2:1")
+        self.assertEqual(status, 409)
+        self.assertIn(b"PINNED_SESSION_VERIFICATION_FAILED", raw)
+
     def test_qualification_corruption_still_refused(self):
         self.qual_initialize()
         self.qual_ledger.write_bytes(b"")
