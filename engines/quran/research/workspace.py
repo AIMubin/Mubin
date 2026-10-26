@@ -24,9 +24,6 @@ from engines.quran.research.private_adapters import (
 from qa import private_evidence_v01 as evidence
 from engines.quran.research.pinned_session import (
     PinnedSnapshotSession, PinnedSessionError)
-from engines.e2e.research_slice import (
-    research_slice, ResearchSliceError, QUESTION as RESEARCH_QUESTION)
-from engines.e2e.semantic_linkage import build_linkage, LinkageError
 from engines.e2e.workspace_view import render_research_html
 
 VERSION = "quran-operator-workspace/i0.1b"
@@ -63,8 +60,11 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
         if type(linkage_observation) is not dict:
             raise WorkspaceError("RESEARCH_OBSERVATION_INVALID")
         try:
+            # Do not load Usul/P0 dependencies for the legacy metadata-only
+            # workspace unless an E2E observation is explicitly supplied.
+            from engines.e2e.semantic_linkage import build_linkage
             build_linkage(**linkage_observation)
-        except (LinkageError, TypeError) as exc:
+        except (ImportError, ValueError, TypeError) as exc:
             raise WorkspaceError("RESEARCH_OBSERVATION_INVALID") from exc
     # Explicit opt-in: verify BOTH large data files and signed R0.1a head
     # once at startup. Normal mode remains byte-for-byte compatible with
@@ -148,14 +148,24 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                 if set(params) != {"ref"} or len(params["ref"]) != 1:
                     return self._deny(400, "invalid_query")
                 if parts.path in ("/research", "/api/research"):
+                    try:
+                        from engines.e2e.research_slice import (
+                            research_slice, ResearchSliceError,
+                            QUESTION as RESEARCH_QUESTION)
+                    except ImportError as exc:
+                        raise WorkspaceError(
+                            "RESEARCH_DEPENDENCY_UNAVAILABLE") from exc
                     ref = params["ref"][0]
                     proposal = (
                         linkage_observation
                         if linkage_observation is not None and
                         linkage_observation["verse_ref"] == ref else None)
-                    report = research_slice(
-                        adapters, ref, RESEARCH_QUESTION,
-                        linkage_observation=proposal, **qual_args)
+                    try:
+                        report = research_slice(
+                            adapters, ref, RESEARCH_QUESTION,
+                            linkage_observation=proposal, **qual_args)
+                    except ResearchSliceError as exc:
+                        raise WorkspaceError(exc.code) from exc
                     if parts.path == "/research":
                         html = render_research_html(report)
                         if session is not None:
@@ -169,7 +179,7 @@ def build_workspace_server(*, vault: Path, corpus_db: Path, sidecar_db: Path,
                 if session is not None:
                     session.verify_live()
                 return self._json(200, report)
-            except (OperatorViewError, ResearchSliceError) as exc:
+            except OperatorViewError as exc:
                 return self._json(409, {"status": "REFUSED",
                                         "reason_code": exc.code,
                                         "text_included": False})
@@ -318,9 +328,10 @@ def load_research_observation(path: Path, *, vault: Path) -> dict:
         payload = json.loads(raw.decode("utf-8", "strict"))
         if type(payload) is not dict:
             raise WorkspaceError("RESEARCH_OBSERVATION_FILE_REFUSED")
+        from engines.e2e.semantic_linkage import build_linkage
         build_linkage(**payload)
         return payload
-    except (OSError, UnicodeError, ValueError, TypeError, LinkageError) as exc:
+    except (OSError, ImportError, UnicodeError, ValueError, TypeError) as exc:
         raise WorkspaceError("RESEARCH_OBSERVATION_FILE_REFUSED") from exc
 
 
