@@ -116,6 +116,29 @@ class AmrCasebookTests(unittest.TestCase):
             with self.subTest(tweak=tweak), self.assertRaises(CasebookError):
                 validate_casebook(bad)
 
+    def test_codex_p2_malformed_alleged_reference_never_scores_conflict(self):
+        # Prior P2: None / out-of-range refs / JSON objects used to pass
+        # because "different from source ref" alone counted as a negative.
+        for alleged in (None, "2:999", {"sura": 2, "aya": 44}, [], 0,
+                        "random", "2:44"):
+            bad = copy.deepcopy(self.book)
+            target = next(row for row in bad["cases"]
+                          if row["id"] == "AMR-01-N")
+            target["asserted_word_reference"] = alleged
+            with self.subTest(alleged=alleged), self.assertRaises(
+                    CasebookError):
+                validate_casebook(bad)
+
+    def test_valid_but_swapped_negative_pair_is_not_frozen_baseline(self):
+        bad = copy.deepcopy(self.book)
+        target = next(row for row in bad["cases"]
+                      if row["id"] == "AMR-05-N")
+        self.assertEqual(target["asserted_word_reference"], "24:56")
+        target["asserted_word_reference"] = "2:43"
+        with self.assertRaisesRegex(
+                CasebookError, "CASEBOOK_ASSERTED_REFERENCE_MISMATCH"):
+            validate_casebook(bad)
+
     def test_missing_cases_fail_not_return_empty_scorecard(self):
         bad = copy.deepcopy(self.book)
         bad["cases"] = bad["cases"][:-1]
