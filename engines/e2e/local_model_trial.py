@@ -170,7 +170,10 @@ def execute_local_dual_model(*, casebook: dict, packet: dict, case_id: str,
         "two_local_chat_completion_responses_received": True,
         "two_distinct_loopback_endpoints_used": True,
         "actual_distinct_model_weights_independently_attested": False,
-        "source_text_sent_to_external_host": False,
+        # We can prove only the immediate socket destination. A process
+        # listening on localhost may itself forward requests elsewhere.
+        "immediate_network_destination_loopback_only": True,
+        "local_server_forwarding_independently_excluded": False,
         "quran_upstream_witness_independently_authenticated": False,
         "llm_reports_executed_in_caller_environment": True,
     }
