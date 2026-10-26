@@ -1,77 +1,117 @@
-"""E2E-01.1 integrated research slice tests. Synthetic only."""
+"""E2E-01.1: genuine synthetic SQLite + signed qualification integration.
+
+Reuses I0.1b's actual operator test fixture (11 sources, private texts), not
+a mocked-out unified lookup or current_state. No scripture/keys in Git.
+"""
 from __future__ import annotations
-import hashlib, json
-from pathlib import Path
-import sqlite3, tempfile, unittest
+
+import json
+import unittest
 from unittest.mock import patch
-from engines.e2e.research_slice import research_slice
+
+from core.tests import test_quran_operator_workspace_i01b as workspace_fixture
+from engines.e2e.research_slice import (
+    CONTRACT, QUESTION, ResearchSliceError, research_slice, main,
+)
 from engines.quran.research.private_adapters import PrivateResearchAdapters
-from engines.quran.research.qualification import initialize_ledger
-from engines.quran.research.unified import CONTRACT as RC
-from qa import private_evidence_v01 as ev
-from qa.corpus_ingest_v01 import load_manifest
+from engines.quran.research import qualification as qual
+from engines.usul.pilots.amr_default import run_pilot
 
-HEAD = "d" * 64
-PH = "synthetic-placeholder"
 
-class T(unittest.TestCase):
-    def setUp(s):
-        s.tmp = tempfile.TemporaryDirectory(); s.addCleanup(s.tmp.cleanup)
-        s.root = Path(s.tmp.name)
-        s.vault = s.root / "vault"; s.vault.mkdir()
-        s.corpus = s.vault / "mubin-private-corpus-v01.sqlite3"
-        s.sidecar = s.root / "sidecar.db"
-        s.registry = s.root / "registry.jsonl"
-        s.anchor = s.root / "anchors"; s.anchor.mkdir(parents=True, exist_ok=True)
-        s.ekey = s.root / "evidence.key"; s.ekey.write_bytes(b"x" * 48)
-        s.qledger = s.root / "qual.jsonl"
-        s.qanchor = s.root / "qanchors"; s.qanchor.mkdir(parents=True, exist_ok=True)
-        s.qkey = s.root / "qual.key"; s.qkey.write_bytes(b"q" * 48)
-        manifest = load_manifest()
-        db = sqlite3.connect(s.corpus)
-        db.executescript("CREATE TABLE corpus_sources(source_id TEXT PRIMARY KEY,source_kind TEXT,version TEXT,raw_sha256 TEXT,rights_status TEXT,publication_enabled INT,source_authenticated INT,p1_admitted INT);CREATE TABLE corpus_entries(source_id TEXT,sura INT,aya INT,source_kind TEXT,text TEXT,footnotes TEXT,PRIMARY KEY(source_id,sura,aya));")
-        for src in manifest["sources"]:
-            db.execute("INSERT INTO corpus_sources VALUES(?,?,?,?,?,?,?,?)",(src["id"],src["kind"],src["version"],src["sha256"],"legal_review_pending",0,0,0))
-            db.execute("INSERT INTO corpus_entries VALUES(?,?,?,?,?,?)",(src["id"],2,1,src["kind"],PH,"fn"))
-        db.commit(); db.close()
-        conn = sqlite3.connect(s.sidecar)
-        for tbl in ("tafsir_tabary","tafsir_katheer","tafsir_baghawy","tafsir_saadi","tafsir_moyassar"):
-            conn.execute(f'CREATE TABLE "{tbl}" (sura INT,aya INT,tafsir TEXT)')
-            conn.execute(f'INSERT INTO "{tbl}" VALUES (2,1,?)',("syn",))
-        conn.execute('CREATE TABLE "QuranTafseer" (surahNo INT,ayahNo INT,Mukhtasarar TEXT)')
-        conn.execute('INSERT INTO "QuranTafseer" VALUES (2,1,?)',("syn",))
-        conn.commit(); conn.close()
-        report = {"status":"EVIDENCE_REGISTRY_VERIFIED","byte_integrity_verified":True,"head_entry_sha256":HEAD,"rights_status":"legal_review_pending","source_authenticated":False,"scholarly_verified":False,"text_included":False}
-        s.mock_ev = patch("engines.quran.research.private_adapters.evidence.verify_evidence",return_value=report)
-        s.mock_ev.start(); s.addCleanup(s.mock_ev.stop)
-        s.mock_head = patch.object(PrivateResearchAdapters,"evidence_head",return_value=HEAD)
-        s.mock_head.start(); s.addCleanup(s.mock_head.stop)
-        initialize_ledger(s.qledger,s.qanchor,s.qkey,vault=s.vault,evidence_registry=s.registry,evidence_anchor_dir=s.anchor,evidence_key=s.ekey,sidecar_db=s.sidecar,operator="lead-operator")
-        retrieval = {"contract":RC,"reference":"2:1","research_mode":"metadata_only","evidence_head_sha256":HEAD,"text_included":False,"source_authenticated":False,"scholarly_verified":False,"rights_status":"legal_review_pending","sources":[{"source_id":src["id"],"source_kind":src["kind"],"adapter":"quranenc_corpus","coordinate_present":True,"text_included":False,"edition_verified":False,"rights_status":"legal_review_pending","scholarly_verified":False,"p1_admitted":False} for src in manifest["sources"]]}
-        s.mock_ret = patch("engines.quran.research.unified.unified_lookup",return_value=retrieval)
-        s.mock_ret.start(); s.addCleanup(s.mock_ret.stop)
+class E2EResearchSliceTests(unittest.TestCase):
+    def setUp(self):
+        workspace_fixture.WorkspaceTests.setUp(self)
+        workspace_fixture.WorkspaceTests.qual_initialize(self)
+        self.adapters = PrivateResearchAdapters(
+            vault=self.vault, corpus_db=self.corpus, sidecar_db=self.sidecar,
+            registry=self.registry, anchor_dir=self.anchor,
+            evidence_key=self.evidence_key)
 
-    def test_result(self):
-        adapters = PrivateResearchAdapters(vault=self.vault,corpus_db=self.corpus,sidecar_db=self.sidecar,registry=self.registry,anchor_dir=self.anchor,evidence_key=self.ekey)
-        result = research_slice(adapters,"2:1","دلالة الأمر",ledger=self.qledger,qualification_anchor_dir=self.qanchor,qualification_key=self.qkey,vault=self.vault)
-        self.assertEqual(result["contract"],"mubin-e2e-research-v0.1")
-        for key in ("quran_retrieval","usul_analysis","qualification_states","gaps","undetermined","limits"): self.assertIn(key,result)
-        for k,v in result["limits"].items(): self.assertFalse(v)
+    def output(self, *, reference="2:1", question=QUESTION):
+        return research_slice(
+            self.adapters, reference, question,
+            ledger=self.qual_ledger,
+            qualification_anchor_dir=self.qual_anchor,
+            qualification_key=self.qual_key, vault=self.vault)
 
-    def test_deterministic(self):
-        a = json.dumps(self.test_result and self.test_result(),sort_keys=True,ensure_ascii=False) if False else ""
-        adapters = PrivateResearchAdapters(vault=self.vault,corpus_db=self.corpus,sidecar_db=self.sidecar,registry=self.registry,anchor_dir=self.anchor,evidence_key=self.ekey)
-        a = json.dumps(research_slice(adapters,"2:1","دلالة الأمر",ledger=self.qledger,qualification_anchor_dir=self.qanchor,qualification_key=self.qkey,vault=self.vault),sort_keys=True,ensure_ascii=False)
-        b = json.dumps(research_slice(adapters,"2:1","دلالة الأمر",ledger=self.qledger,qualification_anchor_dir=self.qanchor,qualification_key=self.qkey,vault=self.vault),sort_keys=True,ensure_ascii=False)
-        self.assertEqual(a,b)
+    def test_actual_eleven_source_integration_with_synthetic_sqlite(self):
+        out = self.output()
+        self.assertEqual(out["contract"], CONTRACT)
+        self.assertEqual(out["research_mode"], "metadata_only")
+        self.assertEqual(out["quran_retrieval"]["contract"],
+                         "mubin-operator-qualified-retrieval-v0.1")
+        self.assertEqual(len(out["quran_retrieval"]["sources"]), 11)
+        self.assertTrue(all(row["coordinate_present"]
+                            for row in out["quran_retrieval"]["sources"]))
+        self.assertEqual(len(out["qualification_states"]), 11)
+        self.assertEqual(out["usul_analysis"]["pilot"], "waraqat-bab-al-amr")
+        self.assertEqual(out["usul_analysis"]["scenario_kind"],
+                         "SYNTHETIC_TEST_INPUTS")
+        self.assertEqual(len(out["usul_analysis"]["cases"]), 4)
+        self.assertFalse(out["research_linkage"]["verse_is_evidence_for_usul_rule"])
+        self.assertEqual(out["research_linkage"]["status"], "UNASSESSED")
+        self.assertFalse(out["limits"]["source_authenticated"])
+        self.assertFalse(out["limits"]["public_fatwa_authorized"])
 
-    def test_no_text_leak(self):
-        adapters = PrivateResearchAdapters(vault=self.vault,corpus_db=self.corpus,sidecar_db=self.sidecar,registry=self.registry,anchor_dir=self.anchor,evidence_key=self.ekey)
-        result = research_slice(adapters,"2:1","دلالة الأمر",ledger=self.qledger,qualification_anchor_dir=self.qanchor,qualification_key=self.qkey,vault=self.vault)
-        raw = json.dumps(result,ensure_ascii=False)
-        self.assertNotIn(PH,raw)
+    def test_determinism_on_unchanged_signed_inputs(self):
+        left = json.dumps(self.output(), sort_keys=True, ensure_ascii=False)
+        right = json.dumps(self.output(), sort_keys=True, ensure_ascii=False)
+        self.assertEqual(left, right)
 
-def research_slice_helper(*args,**kw): pass
-PH = "synthetic-placeholder"
+    def test_no_private_text_or_rule_excerpt_leaked(self):
+        text = json.dumps(self.output(), ensure_ascii=False)
+        self.assertNotIn(workspace_fixture.PLACEHOLDER, text)
+        self.assertNotIn("synthetic-footnote-only", text)
+        self.assertNotIn("وصيغته افعل", text)
+        self.assertFalse(self.output()["limits"]["text_included"])
 
-if __name__ == "__main__": unittest.main()
+    def test_out_of_scope_question_refused_not_answered_with_fixed_pilot(self):
+        with self.assertRaisesRegex(
+                ResearchSliceError, "E2E_QUESTION_OUT_OF_SCOPE"):
+            self.output(question="ما حكم مسألة لا علاقة لها بباب الأمر؟")
+
+    def test_real_signed_ledger_rejection_not_reported_as_unreviewed(self):
+        workspace_fixture.WorkspaceTests._record(
+            self, "SOURCE_REJECTED")
+        out = self.output()
+        self.assertEqual(
+            out["qualification_states"]["qe_ar_muyassar"]["scholarly"],
+            "SOURCE_REJECTED")
+        self.assertFalse(out["limits"]["scholarly_verified"])
+
+    def test_ledger_tamper_refused(self):
+        self.qual_ledger.write_bytes(b"unsigned-forgery")
+        with self.assertRaises(qual.QualificationError):
+            self.output()
+
+    def test_evidence_head_change_during_pilot_refused(self):
+        def change_mid_pilot():
+            result = run_pilot()
+            self.mock_evidence.return_value["head_entry_sha256"] = "c" * 64
+            return result
+        with patch("engines.e2e.research_slice.run_pilot",
+                   side_effect=change_mid_pilot):
+            with self.assertRaisesRegex(
+                    ResearchSliceError, "E2E_EVIDENCE_HEAD_CHANGED"):
+                self.output()
+
+    def test_cli_refuses_unavailable_private_paths_without_traceback(self):
+        import contextlib
+        import io
+        fake = str(self.root / "not-found")
+        argv = ["--ref", "2:1", "--question", QUESTION]
+        for flag in ("vault", "corpus-db", "sidecar-db", "registry",
+                     "anchor-dir", "evidence-key", "qualification-ledger",
+                     "qualification-anchor-dir", "qualification-key"):
+            argv.extend(["--" + flag, fake])
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(main(argv), 1)
+        refused = json.loads(output.getvalue())
+        self.assertEqual(refused["status"], "REFUSED")
+        self.assertFalse(refused["text_included"])
+        self.assertNotIn(fake, output.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main()
