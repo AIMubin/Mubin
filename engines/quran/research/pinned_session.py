@@ -11,6 +11,8 @@ Changing the authenticated evidence head fails closed until restart/re-pin.
 from __future__ import annotations
 
 from pathlib import Path
+import json
+import re
 
 from engines.quran.research.private_adapters import (
     PrivateResearchAdapters, ResearchAdapterError,
@@ -63,6 +65,28 @@ class PinnedSnapshotSession:
             "PINNED_ORIGINAL_CORPUS_NOT_CANONICAL")
         _need(self.vault.is_dir(), "PINNED_VAULT_MISSING")
 
+        # Record identities BEFORE either expensive verifier reads the bytes.
+        # Reading LATEST here only identifies candidate paths: its contents
+        # are NOT trusted until resolve_current_snapshot authenticates the
+        # pointer, manifest, revision content address and both full digests.
+        latest = ev._guard_outside(self.vault / "LATEST.json", None)
+        latest_before = _fingerprint(latest)
+        latest_body = json.loads(latest.read_text(encoding="utf-8"))
+        revision_id = (latest_body.get("revision_id")
+                       if type(latest_body) is dict else None)
+        _need(type(revision_id) is str and
+              re.fullmatch(r"r[0-9a-f]{64}", revision_id) is not None,
+              "PINNED_STARTUP_REVISION_INVALID")
+        revision_dir = self.vault / "snapshots" / revision_id
+        initial_paths = (
+            original_corpus, original_sidecar,
+            self.vault / ev.RECEIPT_NAME,
+            revision_dir / "corpus.sqlite3",
+            revision_dir / "sidecar.db",
+            revision_dir / "revision.json",
+        )
+        preverified_stats = tuple(_fingerprint(p) for p in initial_paths)
+
         # These two expensive operations occur before any HTTP listener is
         # started. Never call them from the steady-state request path.
         report = ev.verify_evidence(
@@ -76,6 +100,18 @@ class PinnedSnapshotSession:
               len(report["head_entry_sha256"]) == 64,
               "PINNED_EVIDENCE_NOT_VERIFIED")
         snapshot = resolve_current_snapshot(self.vault)
+        # A tamper between full hashing and fingerprint capture must never
+        # become the trusted baseline. Compare against the PRE-verification
+        # identities and the initially seen LATEST pointer. A real LATEST B
+        # publication AFTER startup remains valid and never repoints A.
+        _need(snapshot["revision_id"] == revision_id and
+              ev._guard_outside(snapshot["corpus_db"], None) == initial_paths[3] and
+              ev._guard_outside(snapshot["sidecar_db"], None) == initial_paths[4],
+              "PINNED_REVISION_CHANGED_DURING_STARTUP")
+        _need(_fingerprint(latest) == latest_before and
+              tuple(_fingerprint(p) for p in initial_paths) ==
+              preverified_stats,
+              "PINNED_FILES_CHANGED_DURING_STARTUP")
         self.head = report["head_entry_sha256"]
         self.revision = snapshot["revision_id"]
         self.corpus_db = ev._guard_outside(snapshot["corpus_db"], None)
@@ -90,13 +126,10 @@ class PinnedSnapshotSession:
             # corpus/sidecar byte pair.
             "campaign_receipt_sha256": snapshot["manifest"]["campaign_receipt_sha256"],
         }
-        self._watched = (
-            original_corpus, original_sidecar,
-            self.vault / ev.RECEIPT_NAME,
-            self.corpus_db, self.sidecar_db,
-            self.vault / "snapshots" / self.revision / "revision.json",
-        )
-        self._stats = tuple(_fingerprint(p) for p in self._watched)
+        # Use the pre-verification baselines, NOT a freshly captured
+        # post-verification identity that could enshrine an altered file.
+        self._watched = initial_paths
+        self._stats = preverified_stats
         self.verify_live()
         self.adapters = PinnedResearchAdapters(self)
 
