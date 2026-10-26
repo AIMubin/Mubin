@@ -4,14 +4,29 @@ on:
   pull_request:
     paths:
       - "engines/quran/research/workspace.py"
+      - "engines/quran/research/pinned_session.py"
+      - "qa/corpus_snapshot_v01.py"
+      - "qa/private_evidence_v01.py"
+      - "engines/quran/research/private_adapters.py"
+      - "engines/quran/research/operator_view.py"
+      - "engines/quran/research/qualification.py"
       - "core/tests/test_quran_operator_workspace_i01b.py"
+      - "core/tests/test_quran_pinned_workspace_i01c1.py"
       - ".github/workflows/mubin-operator-workspace.yml"
       - "docs/research/QURAN-I01B-UNIFIED-EXPERIENCE.md"
+      - "docs/research/QURAN-I01C1-PINNED-WORKSPACE.md"
   push:
     branches: [main]
     paths:
       - "engines/quran/research/workspace.py"
+      - "engines/quran/research/pinned_session.py"
+      - "qa/corpus_snapshot_v01.py"
+      - "qa/private_evidence_v01.py"
+      - "engines/quran/research/private_adapters.py"
+      - "engines/quran/research/operator_view.py"
+      - "engines/quran/research/qualification.py"
       - "core/tests/test_quran_operator_workspace_i01b.py"
+      - "core/tests/test_quran_pinned_workspace_i01c1.py"
       - ".github/workflows/mubin-operator-workspace.yml"
   workflow_dispatch:
 
@@ -32,8 +47,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Offline synthetic-only workspace security tests
-        run: python -m unittest core.tests.test_quran_operator_workspace_i01b -v
+        run: python -m unittest core.tests.test_quran_operator_workspace_i01b core.tests.test_quran_pinned_workspace_i01c1 -v
       - name: Compile workspace server
-        run: python -m compileall -q engines/quran/research/workspace.py
+        run: python -m compileall -q engines/quran/research/workspace.py engines/quran/research/pinned_session.py qa/benchmark_pinned_workspace_i01c1.py
 
 # No real vault, keys, permits, or scripture content in CI.
