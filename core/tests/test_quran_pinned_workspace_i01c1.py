@@ -14,8 +14,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from core.tests.test_quran_operator_workspace_i01b import (
-    WorkspaceTests, PLACEHOLDER)
+from core.tests import test_quran_operator_workspace_i01b as workspace_fixtures
 from engines.quran.research.workspace import build_workspace_server
 from qa import private_evidence_v01 as ev
 from qa import tafsircenter_sidecar_v01 as sidecar_mod
@@ -27,13 +26,13 @@ def _digest(data: bytes):
 
 
 class PinnedWorkspaceTests(unittest.TestCase):
-    _get = WorkspaceTests._get
-    qual_initialize = WorkspaceTests.qual_initialize
+    _get = workspace_fixtures.WorkspaceTests._get
+    qual_initialize = workspace_fixtures.WorkspaceTests.qual_initialize
 
     def setUp(self):
         # Reuse the canonical synthetic metadata-schema fixture without
         # subclassing/rerunning I0.1b's separate behavioral test suite.
-        WorkspaceTests.setUp(self)
+        workspace_fixtures.WorkspaceTests.setUp(self)
         self.server.shutdown()
         self.server.server_close()
         receipt = self.vault / ev.RECEIPT_NAME
@@ -51,6 +50,7 @@ class PinnedWorkspaceTests(unittest.TestCase):
         payload = {
             "corpus_database_sha256": _digest(self.corpus.read_bytes()),
             "sidecar_source_sha256": sidecar_sha,
+            "campaign_receipt_sha256": _digest(receipt.read_bytes()),
             "source_authenticated": False, "rights_status": "legal_review_pending",
             "rights_verified": False, "scholarly_verified": False,
             "p1_admitted": False, "juristic_inference_allowed": False,
@@ -106,7 +106,7 @@ class PinnedWorkspaceTests(unittest.TestCase):
                 self.assertFalse(payload["text_included"])
                 self.assertFalse(payload["publication_allowed"])
                 self.assertFalse(payload["public_fatwa_authorized"])
-                self.assertNotIn(PLACEHOLDER, raw.decode("utf-8"))
+                self.assertNotIn(workspace_fixtures.PLACEHOLDER, raw.decode("utf-8"))
         self.mock_evidence.assert_not_called()
 
     def test_signed_states_endpoint_still_works_without_rehash(self):
@@ -119,6 +119,21 @@ class PinnedWorkspaceTests(unittest.TestCase):
         self.assertEqual(payload["qualification_decisions"], 0)
         self.assertFalse(payload["juristic_inference_allowed"])
 
+    def test_wrong_campaign_receipt_manifest_refused_at_startup(self):
+        # Both snapshot SQLite digests still match signed evidence, but the
+        # publisher has supplied an unrelated campaign receipt hash.
+        from engines.quran.research.pinned_session import (
+            PinnedSnapshotSession, PinnedSessionError)
+        publish_snapshot(
+            self.vault, self.corpus, self.sidecar,
+            campaign_receipt_sha256=_digest(b"unrelated-campaign"))
+        with self.assertRaisesRegex(
+                PinnedSessionError, "PINNED_EVIDENCE_DIGEST_CHANGED"):
+            PinnedSnapshotSession(
+                vault=self.vault, corpus_db=self.corpus,
+                sidecar_db=self.sidecar, registry=self.registry,
+                anchor_dir=self.anchor, evidence_key=self.evidence_key)
+
     def test_original_sidecar_change_fails_closed(self):
         self.qual_initialize()
         with self.sidecar.open("ab") as stream:
@@ -126,7 +141,7 @@ class PinnedWorkspaceTests(unittest.TestCase):
         status, _, raw = self._get("/api/lookup?ref=2:1")
         self.assertEqual(status, 409)
         self.assertIn(b"PINNED_FILES_CHANGED", raw)
-        self.assertNotIn(PLACEHOLDER.encode(), raw)
+        self.assertNotIn(workspace_fixtures.PLACEHOLDER.encode(), raw)
 
     def test_snapshot_byte_mutation_fails_closed(self):
         self.qual_initialize()
