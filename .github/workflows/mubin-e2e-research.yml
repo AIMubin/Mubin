@@ -11,6 +11,7 @@ on:
       - "core/tests/test_e2e_witness_science.py"
       - "core/tests/test_e2e_local_model_trial.py"
       - "evaluation/benchmarks/e2e_amr_cases_v01.json"
+      - "evaluation/evidence/amr_2_43_local_excerpt_digests_v01.json"
       - "engines/quran/research/operator_view.py"
       - "engines/quran/research/unified.py"
       - "engines/quran/research/qualification.py"
@@ -36,6 +37,7 @@ on:
       - "core/tests/test_e2e_witness_science.py"
       - "core/tests/test_e2e_local_model_trial.py"
       - "evaluation/benchmarks/e2e_amr_cases_v01.json"
+      - "evaluation/evidence/amr_2_43_local_excerpt_digests_v01.json"
       - ".github/workflows/mubin-e2e-research.yml"
   workflow_dispatch:
 permissions:
