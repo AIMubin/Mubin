@@ -58,6 +58,7 @@ def _local_json(path: Path) -> dict:
 
 def _witness_packet(case: dict, packet: dict) -> tuple[str, tuple[str, ...], dict]:
     _require(type(packet) is dict
+             and set(packet) == {"case_id", "reference", "witnesses"}
              and packet.get("case_id") == case["id"]
              and packet.get("reference") == case["reference"],
              "TRIAL_CASE_MISMATCH")
@@ -85,7 +86,10 @@ def _witness_packet(case: dict, packet: dict) -> tuple[str, tuple[str, ...], dic
         _require(type(url) is str and len(url) <= 350
                  and type(fam) is str and 1 <= len(fam) <= 100,
                  "TRIAL_WITNESS_ORIGIN_INVALID")
-        u = urlsplit(url)
+        try:
+            u = urlsplit(url)
+        except ValueError as exc:
+            raise TrialError("TRIAL_WITNESS_ORIGIN_INVALID") from exc
         _require(u.scheme == "https" and bool(u.hostname)
                  and not u.username and not u.password and not u.fragment,
                  "TRIAL_WITNESS_ORIGIN_INVALID")
@@ -133,6 +137,8 @@ def _witness_packet(case: dict, packet: dict) -> tuple[str, tuple[str, ...], dic
 def _agent(report: dict, expected_role: str, digest: str,
            witness_ids: tuple[str, ...]) -> dict:
     _require(type(report) is dict
+             and set(report) == {"role", "model_id", "provider", "run_id",
+                                 "packet_sha256", "decision", "evidence_ids"}
              and report.get("role") == expected_role
              and report.get("packet_sha256") == digest
              and report.get("decision") in DECISIONS,
