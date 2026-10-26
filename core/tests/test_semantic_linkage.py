@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+import sqlite3
 from unittest.mock import patch
 
 from engines.e2e.semantic_linkage import (
@@ -138,6 +139,20 @@ class TestResearchSliceIntegration(unittest.TestCase):
         # Reuse real synthetic corpus+sidecar SQLite and qualified operator
         # fixture without rediscovering its eight unrelated tests.
         e2e_fixtures.E2EResearchSliceTests.setUp(self)
+        # Make 2:43 genuinely retrievable in the SYNTHETIC SQLite fixtures,
+        # rather than accepting an operator proposal for an empty coordinate.
+        with sqlite3.connect(self.corpus) as db:
+            db.execute("""INSERT INTO corpus_entries
+                SELECT source_id, 2, 43, source_kind, text, footnotes
+                FROM corpus_entries WHERE sura=2 AND aya=1""")
+        with sqlite3.connect(self.sidecar) as db:
+            for name in ("tafsir_tabary", "tafsir_katheer",
+                         "tafsir_baghawy", "tafsir_saadi", "tafsir_moyassar"):
+                db.execute(f'INSERT INTO "{name}" SELECT 2,43,tafsir '
+                           f'FROM "{name}" WHERE sura=2 AND aya=1')
+            db.execute('INSERT INTO "QuranTafseer" '
+                       'SELECT 2,43,Mukhtasarar FROM "QuranTafseer" '
+                       'WHERE surahNo=2 AND ayahNo=1')
 
     def _run(self, *, props=None, reference="2:43"):
         proposal = example(
@@ -170,6 +185,11 @@ class TestResearchSliceIntegration(unittest.TestCase):
         with self.assertRaisesRegex(
                 ResearchSliceError, "E2E_LINKAGE_REFERENCE_MISMATCH"):
             self._run(props={"verse_ref": "2:44"})
+
+    def test_unretrieved_coordinate_refused(self):
+        with self.assertRaisesRegex(
+                ResearchSliceError, "E2E_LINKAGE_COORDINATE_NOT_RETRIEVED"):
+            self._run(reference="2:44")
 
 
 if __name__ == "__main__":
