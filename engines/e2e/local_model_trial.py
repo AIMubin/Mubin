@@ -1,7 +1,7 @@
 """E2E-01.4b.3: run two separate LOCAL model endpoints on a pinned packet.
 
 Operator runs locally where permitted witness snippets are accessible.
-No internet/cloud egress: hard-coded literal loopback IPs and fixed path.
+Only literal loopback socket targets; local proxy forwarding is not excluded.
 Does not certify source custody, juristic reasoning, model independence or fatwa.
 """
 from __future__ import annotations
@@ -38,8 +38,8 @@ _SYSTEM = (
 def _endpoint(url: str) -> tuple[str, int]:
     """Accept ONLY literal loopback addresses and a fixed route.
 
-    No DNS names, TLS proxies, remote redirects, API credentials or
-    arbitrary local paths. Prevents exfiltration of operator-local text.
+    No DNS names, remote redirects, API credentials or arbitrary paths.
+    Prevents direct remote destinations, but NOT local server forwarding.
     """
     _require(type(url) is str and 0 < len(url) <= 120,
              "LOCAL_ENDPOINT_INVALID")
