@@ -52,8 +52,8 @@ class SnapshotTests(unittest.TestCase):
         resolved = resolve_current_snapshot(self.vault)
         self.assertEqual(resolved["revision_id"], report["revision_id"])
         self.assertTrue(resolved["immutable"])
-        # no-replace: publishing the SAME files again under a new revision id
-        # is allowed (content-addressed), but the old revision dir is intact
+        # A revision is content-addressed: the same source and receipt
+        # must resolve to the same identifier, not generate a new version.
         first = self.vault / "snapshots" / report["revision_id"]
         self.assertTrue((first / "corpus.sqlite3").is_file())
         self.assertTrue((first / "sidecar.db").is_file())
@@ -126,6 +126,52 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(
                 SnapshotError, "SNAPSHOT_FORMAT_OR_IO_ERROR"):
             resolve_current_snapshot(self.vault)
+
+    def test_content_address_must_match_manifest_and_latest(self):
+        import hashlib
+        report = self.publish()
+        old_id = report["revision_id"]
+        # Construct a self-consistent but falsely renamed bundle: pointer
+        # and manifest digests are recomputed, but the content-addressed name
+        # cannot be replaced with an arbitrary valid 64-hex revision ID.
+        fake_id = "r" + "f" * 64
+        self.assertNotEqual(fake_id, old_id)
+        root = self.vault / "snapshots"
+        (root / old_id).rename(root / fake_id)
+        manifest_path = root / fake_id / "revision.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["revision_id"] = fake_id
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        latest_path = self.vault / "LATEST.json"
+        latest = json.loads(latest_path.read_text(encoding="utf-8"))
+        latest["revision_id"] = fake_id
+        latest["manifest_sha256"] = _sha(manifest_path.read_bytes())
+        latest_path.write_text(json.dumps(latest), encoding="utf-8")
+        with self.assertRaisesRegex(
+                SnapshotError, "SNAPSHOT_REVISION_ID_MISMATCH"):
+            resolve_current_snapshot(self.vault)
+
+    def test_stale_atomic_temp_file_does_not_block_new_publication(self):
+        import os
+        self.publish()
+        # Legacy deterministic temp filename may remain after interruption.
+        stale = self.vault / (".tmp-" + str(os.getpid()) + "-LATEST.json")
+        stale.write_bytes(b"stale-from-aborted-process")
+        changed = self.root / "corpus-B.sqlite3"
+        changed.write_bytes(b"corpus-B-bytes")
+        result = publish_snapshot(
+            self.vault, changed, self.sidecar,
+            campaign_receipt_sha256=self.receipt)
+        self.assertEqual(
+            result["revision_id"],
+            resolve_current_snapshot(self.vault)["revision_id"])
+        self.assertEqual(stale.read_bytes(), b"stale-from-aborted-process")
+
+    def test_exact_same_contents_cannot_publish_twice(self):
+        self.publish()
+        with self.assertRaisesRegex(
+                SnapshotError, "SNAPSHOT_REVISION_ALREADY_PUBLISHED"):
+            self.publish()
 
     def test_revision_b_published_session_on_a_is_unaffected(self):
         """A session pinned to Revision A completes on A even after B."""
