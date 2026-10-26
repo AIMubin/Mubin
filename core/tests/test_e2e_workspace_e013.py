@@ -75,7 +75,6 @@ class ResearchWorkspaceTests(unittest.TestCase):
         self.assertIn("UNASSESSED", text)
         self.assertIn("باب الأمر", text)
         self.assertIn("مصادر القرآن والتفسير", text)
-        self.assertIn("القرائن", text) if False else None
         self.assertNotIn(workspace_fixture.PLACEHOLDER, text)
         self.assertNotIn("synthetic-footnote-only", text)
         self.assertNotIn(str(self.evidence_key), text)
@@ -174,6 +173,7 @@ class ResearchWorkspaceTests(unittest.TestCase):
 
 class PinnedResearchRouteTests(unittest.TestCase):
     _get = pinned_fixtures.PinnedWorkspaceTests._get
+    qual_initialize = workspace_fixture.WorkspaceTests.qual_initialize
 
     def setUp(self):
         pinned_fixtures.PinnedWorkspaceTests.setUp(self)
