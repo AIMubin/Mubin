@@ -221,6 +221,11 @@ class PrivateResearchAdapters:
                 entries = evidence._load_registry(self.registry)
                 if not entries:
                     _deny("SNAPSHOT_EVIDENCE_REGISTRY_EMPTY")
+                # _load_registry only checks canonical JSONL formatting. Its
+                # entry_sha256 fields are untrusted until the entire reloaded
+                # chain has been cryptographically recomputed. This check
+                # prevents a swapped payload from reusing an old head string.
+                evidence._verify_chain(entries)
                 # This payload is read AFTER verify_evidence. Bind it back
                 # to the exact HMAC-verified report head, otherwise an
                 # appended/replaced ledger could be read under the old head.
