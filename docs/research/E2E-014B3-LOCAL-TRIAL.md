@@ -8,7 +8,7 @@ E2E-01.4b.1 shipped 24 source-referenced research cases. E2E-01.4b.2 shipped a h
 
 The runner `engines/e2e/local_model_trial.py` takes the operator's legally permitted, local UTF-8 witness packet as input. It sends identical witness data to **two separately configured, already running OpenAI-compatible chat-completion servers**. One model is instructed to assess supporting evidence; the other independently attempts falsification and contextual/qarīnah objections. Each session sees the same packet, **not the other model's answer**.
 
-**Only literal** `http://127.0.0.1:<port>/v1/chat/completions` or `http://[::1]:<port>/v1/chat/completions` **are allowed.** The two endpoints and model IDs must differ. No DNS resolution, redirects, custom URL path, remote TLS/provider endpoints, background agent service or arbitrary network egress. The HTTP transport uses only the Python standard library, sends POST JSON, sets `temperature=0` and `stream=false`, and has a 30-second socket timeout and bounded request/response lengths.
+**Only literal** `http://127.0.0.1:<port>/v1/chat/completions` or `http://[::1]:<port>/v1/chat/completions` **are allowed.** The two endpoints and model IDs must differ. No DNS resolution, redirects, custom URL path or direct remote TLS/provider endpoints. **The localhost listener may be a proxy that forwards elsewhere; the CLI cannot attest otherwise.** The HTTP transport uses only the Python standard library, sends POST JSON, sets `temperature=0` and `stream=false`, and has a 30-second socket timeout and bounded request/response lengths.
 
 The model endpoint must produce a single Chat Completions-style object with `model` matching the configured model ID, a bounded `id`, and `choices[0].message.content` containing **only** JSON:
 
@@ -34,7 +34,7 @@ python -m engines.e2e.local_model_trial \
   --critic-model <model-B-id>
 ```
 
-The response is a **single metadata-only JSON object**. It records that two valid local HTTP responses were received, their distinct requested model IDs and response IDs, source URLs, packet hash and source-local UTF-8 hashes. It **does not record full witness text, prompts, HTTP tokens or free-text agent responses**. Save the JSON along with the git SHA and casebook SHA for reproducibility; do not put sensitive witness packets, source database material or signing keys in the repo.
+The response is a **single metadata-only JSON object**. Its runtime metadata guarantees only an immediate loopback socket destination, not that a model server or local proxy never forwarded text to another machine. It records that two valid local HTTP responses were received, their distinct requested model IDs and response IDs, source URLs, packet hash and source-local UTF-8 hashes. It **does not record full witness text, prompts, HTTP tokens or free-text agent responses**. Save the JSON along with the git SHA and casebook SHA for reproducibility; do not put sensitive witness packets, source database material or signing keys in the repo.
 
 ## First real-source excerpt digest record
 
@@ -71,7 +71,7 @@ checks occur.
 4. Citation-ID validation proves only that the model cited an ID in the supplied packet, **not** that the citation truly supports its argument. Independent source interpretation and qarinah analysis remain an open scientific task.
 5. A narrow 2:43 verse excerpt, Qurtubi's statement about the imperative, and al-Waraqat's default-rule excerpt are a stronger source-grounded candidate than mere verse co-location. But they do **not** settle all other command meanings, contextual qarinah or downstream legal implications.
 6. A fabricated or rejected packet must never lead to any `SUPPORTED` published verdict. Even matching model opinions yield `AI_AGREEMENT_UNCERTIFIED`; disagreements yield `AI_DISAGREEMENT`; insufficient source types / lexical match cause `LOCAL_EVIDENCE_INSUFFICIENT` **before any HTTP call**.
-7. Model endpoints may store prompt content outside Mubin's control. Run only locally administered endpoints, isolate machines and logs, and obtain appropriate rights before processing third-party source text.
+7. Model endpoints may store or **forward prompt content** outside Mubin's control even when listening on loopback. The report therefore sets `immediate_network_destination_loopback_only=true` but `local_server_forwarding_independently_excluded=false`. Run only locally administered endpoints with independently checked forwarding/log policies, isolate machines and logs, and obtain appropriate rights before processing third-party source text.
 
 ## Test evidence versus real scientific run
 
