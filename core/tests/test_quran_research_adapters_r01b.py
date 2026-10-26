@@ -236,6 +236,51 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
         with self.assertRaisesRegex(ResearchAdapterError,"CORPUS_PATH_NOT_ANCHORED"):
             self.adapters(corpus_db=wrong).corpus_sources()
 
+    def test_snapshot_prefix_collision_is_never_sufficient_to_grant_access(self):
+        # A sibling like 'snapshots-evil' shares the old string prefix.
+        wrong = self.vault / "snapshots-evil" / "r-fake" / "corpus.sqlite3"
+        wrong.parent.mkdir(parents=True)
+        wrong.write_bytes(self.corpus.read_bytes())
+        with self.assertRaisesRegex(
+                ResearchAdapterError,
+                "CORPUS_PATH_NOT_ANCHORED"):
+            self.adapters(corpus_db=wrong).corpus_sources()
+
+    def test_snapshot_like_file_without_manifest_is_refused(self):
+        # Mere existence of a path inside /snapshots was the old bypass.
+        wrong = self.vault / "snapshots" / ("r" + "e" * 64) / "corpus.sqlite3"
+        wrong.parent.mkdir(parents=True)
+        wrong.write_bytes(self.corpus.read_bytes())
+        with self.assertRaisesRegex(
+                ResearchAdapterError,
+                "SNAPSHOT_RESOLVER_NOT_AVAILABLE|SNAPSHOT_VERIFICATION_FAILED"):
+            self.adapters(corpus_db=wrong).corpus_sources()
+
+    def test_snapshot_resolver_result_still_requires_signed_evidence_digest(self):
+        from types import ModuleType
+        from unittest.mock import patch
+        import sys
+        path = self.vault / "snapshots" / ("r" + "a" * 64) / "corpus.sqlite3"
+        sidecar = path.parent / "sidecar.db"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(self.corpus.read_bytes())
+        sidecar.write_bytes(self.sidecar.read_bytes())
+        mockmodule = ModuleType("qa.corpus_snapshot_v01")
+        class TestSnapshotError(ValueError):
+            pass
+        mockmodule.SnapshotError = TestSnapshotError
+        mockmodule.resolve_current_snapshot = lambda vault: {
+            "corpus_db": path, "sidecar_db": sidecar,
+            "corpus_sha256": "b" * 64, "sidecar_sha256": "c" * 64}
+        fake_signed_entries = [{
+            "payload": {"corpus_database_sha256": "d" * 64,
+                        "sidecar_source_sha256": "c" * 64}}]
+        with patch.dict(sys.modules, {"qa.corpus_snapshot_v01": mockmodule}), \
+             patch.object(ev, "_load_registry", return_value=fake_signed_entries):
+            with self.assertRaisesRegex(
+                    ResearchAdapterError, "SNAPSHOT_EVIDENCE_DIGEST_MISMATCH"):
+                self.adapters(corpus_db=path, sidecar_db=sidecar).corpus_sources()
+
     def test_reject_private_data_residing_in_public_checkout(self):
         from qa.corpus_ingest_v01 import REPO_ROOT
         with self.assertRaisesRegex(ResearchAdapterError,"PRIVATE_DATABASE_UNAVAILABLE"):

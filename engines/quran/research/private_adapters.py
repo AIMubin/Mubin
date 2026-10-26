@@ -183,12 +183,50 @@ class PrivateResearchAdapters:
                     or report.get("rights_status") != "legal_review_pending"
                     or report.get("text_included") is not False):
                 _deny("EVIDENCE_NOT_QUALIFIED")
-            # verify_evidence uses the hard-pinned private corpus filename.
+            # Default: only the fixed R0.1a corpus path is permitted.
+            # I0.1c snapshots require independent manifest + digest checks:
+            # a filename prefix or a path under "snapshots" never suffices.
             corpus = evidence._guard_outside(self.corpus_db, None)
-            canonical = evidence._guard_outside(
+            canonical_vault = evidence._guard_outside(
                 self.vault / evidence.CORPUS_DB_NAME, None)
-            if corpus != canonical:
-                _deny("CORPUS_PATH_NOT_ANCHORED")
+            if corpus != canonical_vault:
+                # Path-component containment (not a vulnerable string prefix).
+                snapshot_root = evidence._guard_outside(
+                    self.vault / "snapshots", None)
+                if snapshot_root not in corpus.parents:
+                    _deny("CORPUS_PATH_NOT_ANCHORED")
+                try:
+                    # Introduced by PR #104. Fail closed until it is merged.
+                    from qa.corpus_snapshot_v01 import (
+                        resolve_current_snapshot, SnapshotError)
+                except ImportError:
+                    _deny("SNAPSHOT_RESOLVER_NOT_AVAILABLE")
+                try:
+                    pinned = resolve_current_snapshot(self.vault)
+                except (SnapshotError, OSError, ValueError, TypeError) as exc:
+                    raise ResearchAdapterError(
+                        "SNAPSHOT_VERIFICATION_FAILED") from exc
+                expected_corpus = evidence._guard_outside(
+                    pinned["corpus_db"], None)
+                expected_sidecar = evidence._guard_outside(
+                    pinned["sidecar_db"], None)
+                supplied_sidecar = evidence._guard_outside(
+                    self.sidecar_db, None)
+                if corpus != expected_corpus or supplied_sidecar != expected_sidecar:
+                    _deny("SNAPSHOT_PATH_NOT_ATTESTED")
+                # R0.1a verified the original vault and the HMAC registry.
+                # Compare the snapshot bytes with that attested registry head.
+                # Old A after evidence B is NOT yet supported; that needs a
+                # dedicated revision-bound attestation/session contract.
+                entries = evidence._load_registry(self.registry)
+                if not entries:
+                    _deny("SNAPSHOT_EVIDENCE_REGISTRY_EMPTY")
+                attested = entries[-1]["payload"]
+                if (pinned["corpus_sha256"] !=
+                        attested.get("corpus_database_sha256")
+                        or pinned["sidecar_sha256"] !=
+                        attested.get("sidecar_source_sha256")):
+                    _deny("SNAPSHOT_EVIDENCE_DIGEST_MISMATCH")
             if (type(report.get("head_entry_sha256")) is not str or
                     not HEX.fullmatch(report["head_entry_sha256"])):
                 _deny("EVIDENCE_NOT_QUALIFIED")
