@@ -221,6 +221,14 @@ class PrivateResearchAdapters:
                 entries = evidence._load_registry(self.registry)
                 if not entries:
                     _deny("SNAPSHOT_EVIDENCE_REGISTRY_EMPTY")
+                # This payload is read AFTER verify_evidence. Bind it back
+                # to the exact HMAC-verified report head, otherwise an
+                # appended/replaced ledger could be read under the old head.
+                if (type(report.get("head_entry_sha256")) is not str or
+                        not HEX.fullmatch(report["head_entry_sha256"]) or
+                        entries[-1].get("entry_sha256") !=
+                        report["head_entry_sha256"]):
+                    _deny("SNAPSHOT_EVIDENCE_HEAD_CHANGED")
                 attested = entries[-1]["payload"]
                 if (pinned["corpus_sha256"] !=
                         attested.get("corpus_database_sha256")
