@@ -273,18 +273,36 @@ def run_full_evaluation(adapters: PrivateResearchAdapters,
         adapters.corpus_db, adapters.sidecar_db, refs)
     sources = result["quran_retrieval"]["sources"]
     coords = []
+    expected_ids = corpus_ids | side_ids
     for ref in refs:
         report = (result["quran_retrieval"] if ref == refs[0]
                   else operator_lookup(adapters, ref, **args))
-        for src in report["sources"]:
-            sid = src["source_id"]
+        returned = report["sources"]
+        actual_ids = [row["source_id"] for row in returned]
+        # A single complete first-reference response MUST NOT mask omitted
+        # source rows for a second/third reference. Each reference is scored
+        # against the full 11-ID allowlist, not just what was returned.
+        coords.append(_check(
+            f"coordinate_source_coverage_{ref}",
+            len(returned) == len(expected_ids)
+            and set(actual_ids) == expected_ids,
+            f"expected={len(expected_ids)} returned={len(returned)} "
+            f"unique={len(set(actual_ids))}",
+            "critical"))
+        returned_by_id = {row["source_id"]: row for row in returned}
+        for sid in sorted(expected_ids):
+            src = returned_by_id.get(sid)
+            expected_adapter = ("quranenc_corpus" if sid in corpus_ids
+                                else "tafsircenter_sidecar")
             coords.append(_check(
                 f"coordinate_{ref}_{sid}",
-                ((ref, sid) in oracle
-                 and type(src.get("coordinate_present")) is bool
-                 and src["coordinate_present"] == oracle[(ref, sid)]),
-                f"family={src.get('adapter')} expected={oracle.get((ref,sid))} "
-                f"reported={src.get('coordinate_present')}",
+                src is not None
+                and src.get("adapter") == expected_adapter
+                and (ref, sid) in oracle
+                and type(src.get("coordinate_present")) is bool
+                and src["coordinate_present"] == oracle[(ref, sid)],
+                f"family={expected_adapter} expected={oracle.get((ref,sid))} "
+                f"reported={None if src is None else src.get('coordinate_present')}",
                 "critical"))
     groups = [
         _group("coordinate_accuracy", coords),
