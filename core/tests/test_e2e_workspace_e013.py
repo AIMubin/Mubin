@@ -56,6 +56,11 @@ class ResearchWorkspaceTests(unittest.TestCase):
             qualification_key=self.qual_key,
             linkage_observation=observation, port=0)
         self.host, self.port = self.server.server_address[:2]
+        # ThreadingHTTPServer defaults to daemon worker threads; on Windows
+        # an in-flight immutable SQLite connection can outlive tempfile
+        # cleanup. Track non-daemon request threads so server_close joins them
+        # BEFORE the temporary databases are removed.
+        self.server.daemon_threads = False
         # Each _start_server creates distinct cleanup closures: leaving the
         # prior server closed is harmless (shutdown is idempotent).
         srv = self.server
