@@ -272,7 +272,7 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
         mockmodule.resolve_current_snapshot = lambda vault: {
             "corpus_db": path, "sidecar_db": sidecar,
             "corpus_sha256": "b" * 64, "sidecar_sha256": "c" * 64}
-        fake_signed_entries = [{
+        fake_signed_entries = [{"entry_sha256": HEAD,
             "payload": {"corpus_database_sha256": "d" * 64,
                         "sidecar_source_sha256": "c" * 64}}]
         with patch.dict(sys.modules, {"qa.corpus_snapshot_v01": mockmodule}), \
@@ -280,6 +280,51 @@ class PrivateResearchAdaptersTests(unittest.TestCase):
             with self.assertRaisesRegex(
                     ResearchAdapterError, "SNAPSHOT_EVIDENCE_DIGEST_MISMATCH"):
                 self.adapters(corpus_db=path, sidecar_db=sidecar).corpus_sources()
+
+    def test_real_snapshot_library_binds_verified_paths_and_current_head(self):
+        # Integration uses actual PR #104 resolver and real synthetic SQLite,
+        # not a mocked out snapshot-path check.
+        from qa.corpus_snapshot_v01 import (
+            publish_snapshot, resolve_current_snapshot)
+        from qa import tafsircenter_sidecar_v01 as sidecar_mod
+        corpus_digest = sha256(self.corpus.read_bytes()).hexdigest()
+        sidecar_digest = sha256(self.sidecar.read_bytes()).hexdigest()
+        receipt = sha256(b"synthetic-receipt").hexdigest()
+        with patch.object(sidecar_mod, "EXPECTED_SHA256", sidecar_digest):
+            publish_snapshot(self.vault, self.corpus, self.sidecar,
+                             campaign_receipt_sha256=receipt)
+        pinned = resolve_current_snapshot(self.vault)
+        entries = [{"entry_sha256": HEAD, "payload": {
+            "corpus_database_sha256": corpus_digest,
+            "sidecar_source_sha256": sidecar_digest}}]
+        with patch.object(ev, "_load_registry", return_value=entries):
+            adapter = self.adapters(
+                corpus_db=pinned["corpus_db"], sidecar_db=pinned["sidecar_db"])
+            result = adapter.lookup("2:1", "qe_ar_muyassar")
+            self.assertTrue(result["coordinate_present"])
+            self.assertFalse(result["text_included"])
+            self.assertFalse(result["publication_allowed"])
+            self.assertEqual(result["evidence_head_sha256"], HEAD)
+
+    def test_snapshot_rejects_reloaded_registry_head_not_in_signed_report(self):
+        from qa.corpus_snapshot_v01 import (
+            publish_snapshot, resolve_current_snapshot)
+        from qa import tafsircenter_sidecar_v01 as sidecar_mod
+        digest = sha256(self.sidecar.read_bytes()).hexdigest()
+        with patch.object(sidecar_mod, "EXPECTED_SHA256", digest):
+            publish_snapshot(
+                self.vault, self.corpus, self.sidecar,
+                campaign_receipt_sha256=sha256(b"receipt").hexdigest())
+        pinned = resolve_current_snapshot(self.vault)
+        entries = [{"entry_sha256": "b" * 64, "payload": {
+            "corpus_database_sha256": pinned["corpus_sha256"],
+            "sidecar_source_sha256": pinned["sidecar_sha256"]}}]
+        with patch.object(ev, "_load_registry", return_value=entries):
+            with self.assertRaisesRegex(
+                    ResearchAdapterError, "SNAPSHOT_EVIDENCE_HEAD_CHANGED"):
+                self.adapters(
+                    corpus_db=pinned["corpus_db"],
+                    sidecar_db=pinned["sidecar_db"]).corpus_sources()
 
     def test_reject_private_data_residing_in_public_checkout(self):
         from qa.corpus_ingest_v01 import REPO_ROOT
