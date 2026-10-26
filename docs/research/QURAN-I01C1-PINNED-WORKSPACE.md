@@ -9,7 +9,7 @@ license or scholarly attestation. Mubin global version is `0.1.0-alpha`.
 1. The operator starts the existing workspace CLI with `--pinned-snapshot`.
    Before listening, startup runs **full** R0.1a vault, registry and HMAC
    verification and resolves the current I0.1c Snapshot (full corpus and
-   sidecar SHA-256). Source and sidecar digests must match the last authenticated
+   sidecar SHA-256). Source, sidecar **and campaign receipt** digests must match the last authenticated
    registry payload, and its HMAC head must be unchanged.
 2. The process pins exact two database paths, their full-content hashes and
    filesystem identities. An initial bad/mismatched snapshot fails closed.
@@ -20,7 +20,7 @@ license or scholarly attestation. Mubin global version is `0.1.0-alpha`.
 3. Every HTTP request revalidates file identity `dev/ino/size/mtime_ns/ctime_ns/
    nlink`, recomputes the **small** hash-linked evidence JSONL chain, verifies
    the independently keyed HMAC head anchor, and requires the pinned head and
-   SHA-256 metadata. The R0.1d qualification ledger is **independently
+   SHA-256 metadata (including the campaign receipt digest). The R0.1d qualification ledger is **independently
    authenticated on every lookup/state request** by the existing APIs; it
    is not cached. Every successful HTTP response is re-guarded before send.
 4. There is **no per-request full hash** of the original corpus (15.9MB) or
@@ -88,7 +88,8 @@ python -m unittest core.tests.test_quran_operator_workspace_i01b core.tests.test
 Scenarios include old I0.1b backward compatibility, successful metadata
 lookup over genuinely published synthetic snapshots, prohibition on per-request
 bulk rehash, bad Origin/private-text route refusal, original/snapshot file
-mutation refusal, forged registry content retaining a stale head, qualification
+mutation refusal, forged registry content retaining a stale head, receipt provenance
+mismatch, qualification
 corruption refusal, and Revision A pinning despite a new LATEST pointer.
 
 All authority gates remain `false`: `source_authenticated`,
