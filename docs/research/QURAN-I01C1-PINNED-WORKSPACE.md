@@ -13,7 +13,9 @@ license or scholarly attestation. Mubin global version is `0.1.0-alpha`.
    registry payload, and its HMAC head must be unchanged.
 2. The process pins exact two database paths, their full-content hashes and
    filesystem identities. An initial bad/mismatched snapshot fails closed.
-   A new `LATEST.json` alone does **not** move already-open operator sessions:
+   The pointer must use a **full** revision identifier (`r` plus 64 lowercase
+   hexadecimal characters); a human-readable eight-character abbreviation
+   is not a valid on-disk Revision ID. A new `LATEST.json` alone does **not** move already-open operator sessions:
    the process remains on its original revision until restarted. If the
    **evidence head** or observed original/snapshot file identities change,
    requests are refused rather than silently switching to Revision B.
