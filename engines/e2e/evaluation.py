@@ -1,196 +1,314 @@
-"""E2E-01.4: automated evaluation of the integrated research slice.
+"""E2E-01.4: reproducible METADATA evaluation of the existing research slice.
 
-Evaluates per source family (corpus vs sidecar) and the unified aggregate.
-Measures what CAN be automated. Reports what CANNOT.
+Eight automated groups. Independently compare each reported coordinate with
+the correct read-only SQLite source family, rather than using corpus_entries
+as the oracle for the six TafsirCenter sidecar tables.
+
+Not a scholarly, edition, rights, semantic-inference or fatwa assessment.
 """
 from __future__ import annotations
 
-import json, sqlite3
-from engines.quran.research.private_adapters import PrivateResearchAdapters
-from engines.quran.research.qualification import current_state
-from engines.quran.research.unified import unified_lookup
-from engines.e2e.research_slice import research_slice
+import json
+from pathlib import Path
+import sqlite3
+from typing import Any
 
-VERSION = "e2e-evaluation/0.1.0"
+from engines.e2e.research_slice import research_slice, QUESTION
+from engines.quran.research.operator_view import operator_lookup, _states
+from engines.quran.research.private_adapters import (
+    PrivateResearchAdapters, SIDE_TABLES, _reference,
+)
+from engines.quran.research import qualification as qual
+from qa.corpus_ingest_v01 import load_manifest
+from qa import private_evidence_v01 as evidence
+
 CONTRACT = "mubin-e2e-evaluation-v0.1"
-ALL_FLAGS = ("scholarly_verified", "source_authenticated", "rights_verified",
+VERSION = "e2e-evaluation/0.1.1"
+AUTHORITY_FLAGS = (
+    "scholarly_verified", "source_authenticated", "rights_verified",
     "publication_allowed", "redistribution_approved", "edition_verified",
     "p1_admitted", "juristic_inference_allowed", "public_fatwa_authorized",
-    "text_included")
+    "text_included",
+)
+_NON_AUTOMATABLE = (
+    "scholarly authenticity of verse text or tafsir interpretation",
+    "edition identity or publisher custody",
+    "rights clearance or redistribution authorisation",
+    "juristic inference soundness or fatwa authorisation",
+    "p1 evidence admission",
+    "semantic correctness of the proposed verse-to-Usul relationship",
+)
 
 
-def _check(name, passed, detail="", severity="major"):
-    return {"check": name, "passed": passed, "detail": detail, "severity": severity}
+class EvaluationError(ValueError):
+    """Stable non-disclosing evaluation refusal."""
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
 
 
-def _get_db_sources(db_path):
-    """Get source IDs from a SQLite DB's corpus_sources table (if exists)."""
+def _check(name: str, passed: bool, detail: str = "",
+           severity: str = "major") -> dict:
+    if type(passed) is not bool:
+        raise EvaluationError("EVALUATION_BOOLEAN_INVALID")
+    return {"check": name, "passed": passed, "detail": detail,
+            "severity": severity}
+
+
+def _group(name: str, checks: list[dict]) -> dict:
+    # No empty groups and no vacuous success on skipped evaluation.
+    return {"group": name, "checks": checks,
+            "passed": bool(checks) and all(c["passed"] for c in checks)}
+
+
+def _read_db(path: Path):
+    """Same anchored, read-only immutable files as the existing adapters."""
     try:
-        con = sqlite3.connect(db_path.as_uri() + "?mode=ro", uri=True)
-        con.execute("PRAGMA query_only=ON")
-        ids = {r[0] for r in con.execute("SELECT source_id FROM corpus_sources").fetchall()}
-        con.close()
-        return ids
-    except (sqlite3.Error, OSError):
-        return set()
+        safe = evidence._guard_outside(Path(path), None)
+        if not safe.is_file() or safe.is_symlink():
+            raise EvaluationError("EVALUATION_DB_UNAVAILABLE")
+        db = sqlite3.connect(safe.as_uri() + "?mode=ro&immutable=1",
+                             uri=True, timeout=3)
+        db.execute("PRAGMA query_only=ON")
+        return db
+    except (sqlite3.Error, OSError, evidence.EvidenceError) as exc:
+        raise EvaluationError("EVALUATION_DB_UNAVAILABLE") from exc
 
 
-def evaluate_coordinate_accuracy(adapters, vault, refs):
-    """Check coordinate_present per source against the correct source DB."""
-    checks = []
-    result = unified_lookup(adapters, refs[0])
-    # For each source in the result, check coordinate_present
-    for src in result.get("sources", []):
-        sid = src["source_id"]
-        present = src.get("coordinate_present")
-        checks.append(_check(f"coord_{sid}", present is True,
-            f"present={present}", "critical"))
-    return {"group": "coordinate_accuracy", "checks": checks,
-            "passed": all(c["passed"] for c in checks)}
+def _oracle_snapshot(corpus_db: Path, sidecar_db: Path, refs: list[str]) -> tuple:
+    """Fetch independently from both SQLite families; never read text."""
+    expected_corpus = {item["id"] for item in load_manifest()["sources"]}
+    expected_sidecar = set(SIDE_TABLES)
+    existence: dict[tuple[str, str], bool] = {}
+    try:
+        with _read_db(corpus_db) as corpus, _read_db(sidecar_db) as sidecar:
+            physical_corpus = {
+                r[0] for r in corpus.execute("SELECT source_id FROM corpus_sources")}
+            physical_sidecar = {
+                r[0] for r in sidecar.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+            for ref in refs:
+                sura, aya = _reference(ref)
+                for sid in expected_corpus:
+                    existence[(ref, sid)] = corpus.execute(
+                        "SELECT 1 FROM corpus_entries "
+                        "WHERE source_id=? AND sura=? AND aya=? LIMIT 1",
+                        (sid, sura, aya)).fetchone() is not None
+                for sid in expected_sidecar:
+                    # SQL identifiers come ONLY from the hard-coded allowlist.
+                    s_col, a_col = (("surahNo", "ayahNo") if sid == "QuranTafseer"
+                                    else ("sura", "aya"))
+                    existence[(ref, sid)] = sidecar.execute(
+                        f'SELECT 1 FROM "{sid}" WHERE "{s_col}"=? '
+                        f'AND "{a_col}"=? LIMIT 1', (sura, aya)
+                    ).fetchone() is not None
+    except (sqlite3.Error, OSError, ValueError) as exc:
+        raise EvaluationError("EVALUATION_DB_QUERY_REFUSED") from exc
+    return expected_corpus, expected_sidecar, physical_corpus, physical_sidecar, existence
 
 
-def evaluate_corpus_source_completeness(adapters, snapshot_corpus_db):
-    """Check that all 5 QuranEnc/quran sources are reported."""
-    result = unified_lookup(adapters, snapshot_corpus_db,
-        "2:1") if hasattr(adapters, 'vault') else {}
-    reported = {s["source_id"] for s in result.get("sources", [])
-                if s.get("adapter") == "quranenc_corpus"}
-    expected = {"quran_tanzil_uthmani_hafs_20261018",
-                "qe_ar_muyassar", "qe_ar_mukhtasar",
-                "qe_ar_yaseer", "qe_ar_nafahat"}
-    ok = expected == reported
-    return {"group": "corpus_completeness",
-            "checks": [_check("corpus_sources_complete", ok,
-                f"missing={sorted(expected-reported)} extra={sorted(reported-expected)}")],
-            "passed": ok}
-
-
-def evaluate_sidecar_source_completeness(adapters, sidecar_sources_reported):
-    """Check that sidecar adapter reports the expected TafsirCenter tables."""
-    expected_tables = {"tafsir_tabary", "tafsir_katheer", "tafsir_baghawy",
-                       "tafsir_saadi", "tafsir_moyassar", "QuranTafseer"}
-    reported = {s["source_id"] for s in sidecar_sources_reported
-                if s.get("adapter") == "tafsircenter_sidecar"}
-    ok = expected_tables == reported
-    return {"group": "sidecar_completeness",
-            "checks": [_check("sidecar_tables_complete", ok,
-                f"missing={sorted(expected_tables-reported)} extra={sorted(reported-expected)}")],
-            "passed": ok}
-
-
-def evaluate_unified_source_completeness(all_sources):
-    """Check that the unified result contains all expected sources without unjustified duplication."""
-    ids = [s["source_id"] for s in all_sources]
-    ok = len(ids) == len(set(ids))
-    return {"group": "unified_completeness",
-            "checks": [_check("no_unjustified_duplication", ok,
-                f"count={len(ids)} unique={len(set(ids))}")],
-            "passed": ok}
-
-
-def evaluate_source_provenance(all_sources):
-    """Check that each source is correctly attributed to its adapter family."""
-    checks = []
-    for s in all_sources:
-        sid = s.get("source_id", "")
-        adapter = s.get("adapter", "")
-        expected_adapter = "quranenc_corpus" if "qe_" in sid or "quran_tanzil" in sid else                           "tafsircenter_sidecar" if "tafsir_" in sid else "unknown"
-        checks.append(_check(f"provenance_{sid}", adapter == expected_adapter,
-            f"adapter={adapter} expected={expected_adapter}"))
-    return {"group": "source_provenance", "checks": checks,
-            "passed": all(c["passed"] for c in checks)}
-
-
-def evaluate_qualification_consistency(ledger, anchor_dir, key_file, vault,
-                                        adapters, ref):
-    result = unified_lookup(adapters, ref)
-    checks = []
-    for src in result.get("sources", []):
-        sid = src["source_id"]
-        ls = current_state(ledger, sid, "scholarly",
-                          anchor_dir=anchor_dir, key_file=key_file, vault=vault)
-        lr = current_state(ledger, sid, "rights",
-                          anchor_dir=anchor_dir, key_file=key_file, vault=vault)
-        rs = src.get("scholarly_decision_state", "UNREVIEWED")
-        rr = src.get("rights_decision_state", "legal_review_pending")
-        checks.append(_check(f"qual_{sid}_scholarly", rs == ls,
-            f"ledger={ls} reported={rs}"))
-        checks.append(_check(f"qual_{sid}_rights", rr == lr,
-            f"ledger={lr} reported={rr}"))
-    return {"group": "qualification_consistency", "checks": checks,
-            "passed": all(c["passed"] for c in checks)}
-
-
-def evaluate_gap_completeness(result):
-    types = {g["type"] for g in result.get("gaps", [])}
-    checks = [_check("edition_unverified", "edition_unverified" in types),
-              _check("scholarly_review_pending", "scholarly_review_pending" in types),
-              _check("rights_review_pending", "rights_review_pending" in types)]
-    return {"group": "gap_completeness", "checks": checks,
-            "passed": all(c["passed"] for c in checks)}
-
-
-def evaluate_abstention(result):
-    und = result.get("undetermined", [])
-    limits = result.get("limits", {})
-    ok_und = len(und) >= 3
-    ok_lim = all(v is False for v in limits.values())
-    return {"group": "abstention",
-            "checks": [_check("undetermined_count", ok_und, f"count={len(und)}"),
-                       _check("limits_all_false", ok_lim)],
-            "passed": ok_und and ok_lim}
-
-
-def evaluate_authority_flags(result):
-    top = {k: result.get(k) for k in ALL_FLAGS if k in result}
-    all_false = all(v is False for v in top.values())
-    return {"group": "authority_flags",
-            "checks": [_check("all_false", all_false, json.dumps(top))],
-            "passed": all_false}
-
-
-def evaluate_determinism(adapters, ref, question, *, ledger, anchor_dir, key_file, vault):
-    a = json.dumps(research_slice(adapters, ref, question, ledger=ledger,
-        qualification_anchor_dir=anchor_dir, qualification_key=key_file,
-        vault=vault), ensure_ascii=False, sort_keys=True)
-    b = json.dumps(research_slice(adapters, ref, question, ledger=ledger,
-        qualification_anchor_dir=anchor_dir, qualification_key=key_file,
-        vault=vault), ensure_ascii=False, sort_keys=True)
-    return {"group": "determinism",
-            "checks": [_check("deterministic", a == b)],
-            "passed": a == b}
-
-
-def run_full_evaluation(adapters, snapshot_corpus_db, vault, ledger,
-                         anchor_dir, key_file, refs, question):
-    groups = [
-        evaluate_coordinate_accuracy(adapters, snapshot_corpus_db, refs),
-        evaluate_source_completeness(adapters, snapshot_corpus_db, refs[0]),
+def _complete_sources(sources: list[dict], corpus_ids: set, side_ids: set,
+                      physical_corpus: set, physical_sidecar: set) -> dict:
+    corpus_reported = [s["source_id"] for s in sources
+                       if s["adapter"] == "quranenc_corpus"]
+    sidecar_reported = [s["source_id"] for s in sources
+                        if s["adapter"] == "tafsircenter_sidecar"]
+    all_reported = [s["source_id"] for s in sources]
+    checks = [
+        _check("corpus_catalog_matches_manifest",
+               physical_corpus == corpus_ids, "corpus source catalog", "critical"),
+        _check("sidecar_tables_present",
+               side_ids.issubset(physical_sidecar),
+               "six allowlisted sidecar tables", "critical"),
+        _check("corpus_sources_complete",
+               set(corpus_reported) == corpus_ids
+               and len(corpus_reported) == len(corpus_ids),
+               f"expected={len(corpus_ids)} reported={len(corpus_reported)}",
+               "critical"),
+        _check("sidecar_sources_complete",
+               set(sidecar_reported) == side_ids
+               and len(sidecar_reported) == len(side_ids),
+               f"expected={len(side_ids)} reported={len(sidecar_reported)}",
+               "critical"),
+        _check("unified_sources_unique_and_complete",
+               set(all_reported) == corpus_ids | side_ids
+               and len(all_reported) == len(corpus_ids) + len(side_ids),
+               f"expected={len(corpus_ids)+len(side_ids)} reported={len(all_reported)}",
+               "critical"),
     ]
-    result = research_slice(adapters, refs[0], question, ledger=ledger,
-                            qualification_anchor_dir=anchor_dir,
-                            qualification_key=key_file, vault=vault)
-    groups.append(evaluate_qualification_consistency(ledger, anchor_dir, key_file, vault, adapters, refs[0]))
-    groups.append(evaluate_gap_completeness(result))
-    groups.append(evaluate_abstention(result))
-    groups.append(evaluate_authority_flags(result))
-    groups.append(evaluate_determinism(adapters, refs[0], question,
-                 ledger=ledger, anchor_dir=anchor_dir, key_file=key_file, vault=vault))
+    return _group("source_completeness", checks)
+
+
+def _provenance(sources: list[dict], corpus_ids: set, side_ids: set) -> dict:
     checks = []
-    for g in groups: checks.extend(g.get("checks", []))
-    crit = [c for c in checks if not c["passed"] and c.get("severity") == "critical"]
-    return {"contract": CONTRACT, "version": VERSION,
-        "total": len(checks), "passed": sum(1 for c in checks if c["passed"]),
-        "failed": sum(1 for c in checks if not c["passed"]),
-        "critical_failures": len(crit), "groups": groups,
-        "all_passed": len(crit) == 0,
-        "cannot_automate": [
-            "scholarly authenticity of verse text or tafsir interpretation",
-            "edition identity or publisher custody",
-            "rights clearance or redistribution authorisation",
-            "juristic inference soundness or fatwa authorisation",
-            "p1 evidence admission"],
-        "text_included": False}
+    for row in sources:
+        sid = row["source_id"]
+        expected = ("quranenc_corpus" if sid in corpus_ids else
+                    "tafsircenter_sidecar" if sid in side_ids else "unknown")
+        checks.append(_check(
+            "provenance_" + sid, row.get("adapter") == expected
+            and expected != "unknown",
+            f"reported={row.get('adapter')} expected={expected}"))
+    return _group("source_provenance", checks)
 
 
-from engines.quran.research.unified import unified_lookup
+def _qualification(sources: list[dict], *, ledger: Path, anchor_dir: Path,
+                   key_file: Path, vault: Path, evidence_head: str) -> dict:
+    """Signed-ledger policy consistency, NOT independent scholarly adjudication."""
+    checks = []
+    # Signed ledger validation is mandatory; never use a default value
+    # when verification fails, and never compare against raw unified rows.
+    qual.verify_ledger(ledger, anchor_dir, key_file, vault=vault)
+    for row in sources:
+        sid = row["source_id"]
+        decisions = qual.decisions_for(
+            ledger, sid, anchor_dir=anchor_dir, key_file=key_file,
+            vault=vault, reference=row["verse_locator"])
+        scholarly, rights, count, stale = _states(decisions, evidence_head)
+        checks.extend((
+            _check("qualification_scholarly_" + sid,
+                   row["scholarly_decision_state"] == scholarly),
+            _check("qualification_rights_" + sid,
+                   row["rights_decision_state"] == rights),
+            _check("qualification_head_scope_" + sid,
+                   row["matching_evidence_decisions"] == count
+                   and row["historical_evidence_decisions_present"] == stale),
+        ))
+    return _group("qualification_consistency", checks)
+
+
+def _gaps(result: dict) -> dict:
+    sources = result["quran_retrieval"]["sources"]
+    gaps = {(g["type"], g["source_id"]) for g in result["gaps"]}
+    checks = [
+        _check("edition_unverified",
+               ("edition_unverified", "pilot:waraqat-bab-al-amr") in gaps),
+        _check("semantic_link_unassessed",
+               ("semantic_link_unassessed", "pilot:waraqat-bab-al-amr") in gaps),
+        _check("hadith_retrieval_missing",
+               ("hadith_retrieval_missing", "hadith") in gaps),
+    ]
+    for src in sources:
+        sid = src["source_id"]
+        if src["scholarly_decision_state"] == "UNREVIEWED":
+            checks.append(_check(
+                "scholarly_gap_" + sid, ("scholarly_review_pending", sid) in gaps))
+        if src["rights_decision_state"] == "legal_review_pending":
+            checks.append(_check(
+                "rights_gap_" + sid, ("rights_review_pending", sid) in gaps))
+    return _group("gap_completeness", checks)
+
+
+def _abstention(result: dict) -> dict:
+    und = result["undetermined"]
+    link = result["research_linkage"]
+    return _group("abstention", [
+        _check("undetermined_nonempty",
+               type(und) is list and len(und) >= 3
+               and all(type(x) is str and bool(x.strip()) for x in und)),
+        _check("link_not_certified",
+               link["status"] in ("UNASSESSED", "PROPOSED_NOT_CERTIFIED")
+               and link["verse_is_evidence_for_usul_rule"] is False),
+        _check("synthetic_scenarios_not_promoted",
+               link["synthetic_scenarios_are_real_case_evidence"] is False),
+    ])
+
+
+def _authority(result: dict) -> dict:
+    limits = result["limits"]
+    sources = result["quran_retrieval"]["sources"]
+    entries = [("limits", limits), ("quran_retrieval", result["quran_retrieval"])]
+    entries += [(s["source_id"], s) for s in sources]
+    checks = []
+    for name, item in entries:
+        fields = (AUTHORITY_FLAGS if name == "limits" else
+                  ("text_included", "publication_allowed",
+                   "juristic_inference_allowed", "public_fatwa_authorized"))
+        for key in fields:
+            # Missing required guard values are failures, not skipped checks.
+            checks.append(_check(f"authority_{name}_{key}",
+                                 item.get(key) is False, severity="critical"))
+    checks.append(_check("rights_status_pending",
+                         limits.get("rights_status") == "legal_review_pending",
+                         severity="critical"))
+    return _group("authority_flags", checks)
+
+
+def _determinism(adapters, ref, question, args: dict, first: dict) -> dict:
+    second = research_slice(adapters, ref, question, **args)
+    canonical = lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False,
+                                     separators=(",", ":"), allow_nan=False)
+    return _group("determinism",
+                  [_check("identical_report", canonical(first) == canonical(second))])
+
+
+def run_full_evaluation(adapters: PrivateResearchAdapters,
+                        snapshot_corpus_db: Path, vault: Path,
+                        ledger: Path, anchor_dir: Path, key_file: Path,
+                        refs: list[str], question: str) -> dict[str, Any]:
+    """Run eight bounded checks; refusal on invalid/untrusted inputs.
+
+    A green report certifies only metadata consistency on the checked refs.
+    It does not approve scholarly, edition, rights or juristic conclusions.
+    """
+    if (type(refs) is not list or not refs or len(refs) > 32
+            or any(type(r) is not str for r in refs)
+            or len(refs) != len(set(refs))
+            or question != QUESTION):
+        raise EvaluationError("EVALUATION_SCOPE_INVALID")
+    for ref in refs:
+        try:
+            _reference(ref)
+        except ValueError as exc:
+            raise EvaluationError("EVALUATION_REFERENCE_INVALID") from exc
+    if Path(snapshot_corpus_db).resolve() != adapters.corpus_db.resolve():
+        raise EvaluationError("EVALUATION_CORPUS_PATH_MISMATCH")
+    before_head = adapters.evidence_head()
+    args = dict(ledger=Path(ledger), qualification_anchor_dir=Path(anchor_dir),
+                qualification_key=Path(key_file), vault=Path(vault))
+    result = research_slice(adapters, refs[0], question, **args)
+    corpus_ids, side_ids, physical_corpus, physical_sidecar, oracle = _oracle_snapshot(
+        adapters.corpus_db, adapters.sidecar_db, refs)
+    sources = result["quran_retrieval"]["sources"]
+    coords = []
+    for ref in refs:
+        report = (result["quran_retrieval"] if ref == refs[0]
+                  else operator_lookup(adapters, ref, **args))
+        for src in report["sources"]:
+            sid = src["source_id"]
+            coords.append(_check(
+                f"coordinate_{ref}_{sid}",
+                src.get("coordinate_present") is oracle.get((ref, sid)),
+                f"family={src.get('adapter')} expected={oracle.get((ref,sid))} "
+                f"reported={src.get('coordinate_present')}",
+                "critical"))
+    groups = [
+        _group("coordinate_accuracy", coords),
+        _complete_sources(sources, corpus_ids, side_ids, physical_corpus, physical_sidecar),
+        _qualification(sources, ledger=Path(ledger), anchor_dir=Path(anchor_dir),
+                       key_file=Path(key_file), vault=Path(vault),
+                       evidence_head=result["quran_retrieval"]["evidence_head_sha256"]),
+        _gaps(result),
+        _abstention(result),
+        _authority(result),
+        _determinism(adapters, refs[0], question, args, result),
+        _provenance(sources, corpus_ids, side_ids),
+    ]
+    if adapters.evidence_head() != before_head:
+        raise EvaluationError("EVALUATION_EVIDENCE_HEAD_CHANGED")
+    checks = [c for group in groups for c in group["checks"]]
+    failed = [c for c in checks if not c["passed"]]
+    return {
+        "contract": CONTRACT, "version": VERSION, "references_examined": list(refs),
+        "groups": groups, "total": len(checks),
+        "passed": len(checks)-len(failed), "failed": len(failed),
+        "critical_failures": sum(c["severity"] == "critical" for c in failed),
+        "all_passed": bool(checks) and not failed
+                      and all(g["passed"] for g in groups),
+        "cannot_automate": list(_NON_AUTOMATABLE),
+        "scholarly_verified": False, "source_authenticated": False,
+        "rights_status": "legal_review_pending", "rights_verified": False,
+        "publication_allowed": False, "p1_admitted": False,
+        "juristic_inference_allowed": False,
+        "public_fatwa_authorized": False, "text_included": False,
+    }
