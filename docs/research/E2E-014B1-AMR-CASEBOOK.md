@@ -45,7 +45,11 @@ together in one split:
 2. **CONSTRUCTED_NEGATIVE (8):** the word is *deliberately attributed to
    the wrong verse reference*. The contradiction is between the claimed
    word reference and the linked witness, so the expected outcome is
-   `REFUTED_REFERENCE_CONFLICT`. This is a **provenance counterexample**,
+   `REFUTED_REFERENCE_CONFLICT`. Every claimed wrong verse locator is a
+   **valid Qur'an coordinate** drawn from the fixed eight-verse cohort;
+   malformed/null/out-of-range asserted references or silent mutations of
+   the preselected wrong-reference pairing fail the casebook validator,
+   rather than earning a false-positive refutation. This is a **provenance counterexample**,
    NOT an independently established negative juristic interpretation.
 3. **UNRESOLVED_CONTEXT (8):** no word is asserted, no diverting
    indicators have been independently examined, and the expected result
