@@ -4,17 +4,20 @@ on:
     paths:
       - "engines/e2e/**"
       - "core/tests/test_e2e_research_slice.py"
+      - "core/tests/test_semantic_linkage.py"
       - "engines/quran/research/operator_view.py"
       - "engines/quran/research/unified.py"
       - "engines/quran/research/qualification.py"
       - "engines/usul/pilots/amr_default.py"
       - ".github/workflows/mubin-e2e-research.yml"
       - "docs/research/E2E-01-RESEARCH-SLICE.md"
+      - "docs/research/E2E-012-SEMANTIC-LINKAGE.md"
   push:
     branches: [main]
     paths:
       - "engines/e2e/**"
       - "core/tests/test_e2e_research_slice.py"
+      - "core/tests/test_semantic_linkage.py"
       - ".github/workflows/mubin-e2e-research.yml"
   workflow_dispatch:
 permissions:
@@ -35,6 +38,6 @@ jobs:
       - name: Install P0 validation dependencies
         run: python -m pip install -r core/requirements-test.txt
       - name: E2E synthetic SQLite + signed qualification + Usul pilot
-        run: python -m unittest core.tests.test_e2e_research_slice -v
+        run: python -m unittest core.tests.test_e2e_research_slice core.tests.test_semantic_linkage -v
       - name: Compile entrypoints
         run: python -m compileall -q engines/e2e
