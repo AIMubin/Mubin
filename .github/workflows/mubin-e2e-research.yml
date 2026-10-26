@@ -24,6 +24,7 @@ on:
       - "docs/research/E2E-014B1-AMR-CASEBOOK.md"
       - "docs/research/E2E-014B2-WITNESS-TRIAL.md"
       - "docs/research/E2E-014B3-LOCAL-TRIAL.md"
+      - "docs/research/E2E-014B4-PINNED-PREFLIGHT.md"
       - "engines/quran/research/workspace.py"
   push:
     branches: [main]
