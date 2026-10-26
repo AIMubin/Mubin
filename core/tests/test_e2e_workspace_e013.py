@@ -6,6 +6,7 @@ operator_lookup, qualification signatures and the al-Waraqat pilot.
 """
 from __future__ import annotations
 
+import gc
 import json
 from pathlib import Path
 import sqlite3
@@ -28,6 +29,10 @@ class ResearchWorkspaceTests(unittest.TestCase):
 
     def setUp(self):
         e2e_fixtures.E2EResearchSliceTests.setUp(self)
+        # On Windows SQLite URI=immutable read handles referenced by exception
+        # traceback cycles from intentionally refused HTTP requests may survive
+        # until GC. Collect AFTER all server cleanups and BEFORE tmp cleanup.
+        self.addCleanup(gc.collect)
         # The baseline E2E fixture already shuts down its unused HTTP server.
         with sqlite3.connect(self.corpus) as db:
             db.execute("""INSERT INTO corpus_entries
