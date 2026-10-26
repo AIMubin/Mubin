@@ -24,6 +24,7 @@ from engines.quran.research.operator_view import (
 from engines.quran.research.unified import UnifiedRetrievalError
 from engines.quran.research import qualification as qual
 from engines.usul.pilots.amr_default import run_pilot
+from engines.e2e.semantic_linkage import build_linkage, LinkageError
 
 CONTRACT = "mubin-e2e-research-v0.1"
 VERSION = "e2e-research-slice/0.1.1"
@@ -74,6 +75,7 @@ def research_slice(
     qualification_anchor_dir: Path,
     qualification_key: Path,
     vault: Path,
+    linkage_observation: dict | None = None,
 ) -> dict[str, Any]:
     """One auditable, research-only aggregate of existing component outputs.
 
@@ -118,6 +120,40 @@ def research_slice(
     if adapters.evidence_head() != qualified["evidence_head_sha256"]:
         raise ResearchSliceError("E2E_EVIDENCE_HEAD_CHANGED")
 
+    research_linkage = {
+        "status": "UNASSESSED",
+        "quran_coordinate_role": "INDEPENDENT_LOOKUP_NOT_RULE_EVIDENCE",
+        "verse_is_evidence_for_usul_rule": False,
+        "synthetic_scenarios_are_real_case_evidence": False,
+    }
+    if linkage_observation is not None:
+        # Accept a metadata-only OPERATOR proposal only when it is bound to
+        # this already authenticated E2E-01.1 evidence head and coordinate.
+        # A true digest/word correspondence or semantic scholarly relation
+        # is NOT established by this matching.
+        if type(linkage_observation) is not dict:
+            raise ResearchSliceError("E2E_LINKAGE_INPUT_INVALID")
+        try:
+            proposal = build_linkage(**linkage_observation)
+        except (TypeError, LinkageError) as exc:
+            raise ResearchSliceError("E2E_LINKAGE_INPUT_INVALID") from exc
+        if proposal["verse"]["reference"] != reference:
+            raise ResearchSliceError("E2E_LINKAGE_REFERENCE_MISMATCH")
+        if proposal["evidence_head_sha256"] != qualified["evidence_head_sha256"]:
+            raise ResearchSliceError("E2E_LINKAGE_EVIDENCE_HEAD_MISMATCH")
+        if not any(row["coordinate_present"] is True
+                   for row in qualified["sources"]):
+            raise ResearchSliceError("E2E_LINKAGE_COORDINATE_NOT_RETRIEVED")
+        research_linkage = {
+            "status": "PROPOSED_NOT_CERTIFIED",
+            "quran_coordinate_role": "OPERATOR_RECORDED_RESEARCH_CANDIDATE",
+            "verse_is_evidence_for_usul_rule": False,
+            "synthetic_scenarios_are_real_case_evidence": False,
+            "proposal": proposal,
+            "evidence_head_bound_to_qualified_retrieval": True,
+            "verse_text_byte_match_independently_verified": False,
+        }
+
     sources = qualified["sources"]
     states = {s["source_id"]: {
         "scholarly": s["scholarly_decision_state"],
@@ -144,12 +180,7 @@ def research_slice(
             "cases": usul["cases"],
             "semantic_equivalence_verified": False,
         },
-        "research_linkage": {
-            "status": "UNASSESSED",
-            "quran_coordinate_role": "INDEPENDENT_LOOKUP_NOT_RULE_EVIDENCE",
-            "verse_is_evidence_for_usul_rule": False,
-            "synthetic_scenarios_are_real_case_evidence": False,
-        },
+        "research_linkage": research_linkage,
         "qualification_states": states,
         "gaps": _qualified_gaps(sources),
         "undetermined": [
