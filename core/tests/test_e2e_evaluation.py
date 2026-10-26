@@ -88,6 +88,36 @@ class EvaluationTests(unittest.TestCase):
         failed = [x["check"] for x in coordinate["checks"] if not x["passed"]]
         self.assertEqual(failed, ["coordinate_2:1_tafsir_tabary"])
 
+    def test_false_positive_in_sidecar_is_detected(self):
+        real_lookup = self.adapters.lookup
+        def invented_positive(reference, source_id, **kwargs):
+            if reference == "2:43" and source_id == "tafsir_tabary":
+                return {"coordinate_present": True}
+            return real_lookup(reference, source_id, **kwargs)
+        with patch.object(self.adapters, "lookup", side_effect=invented_positive):
+            report = self.run_eval(["2:43"])
+        self.assertFalse(report["all_passed"])
+        self.assertGreaterEqual(report["critical_failures"], 1)
+        coordinate = next(g for g in report["groups"]
+                          if g["group"] == "coordinate_accuracy")
+        self.assertEqual(
+            [c["check"] for c in coordinate["checks"] if not c["passed"]],
+            ["coordinate_2:43_tafsir_tabary"])
+
+    def test_missing_required_authority_flag_is_not_silently_skipped(self):
+        original = eva.research_slice
+        def missing_flag(*args, **kwargs):
+            result = original(*args, **kwargs)
+            del result["limits"]["scholarly_verified"]
+            return result
+        with patch.object(eva, "research_slice", side_effect=missing_flag):
+            report = self.run_eval(["2:1"])
+        self.assertFalse(report["all_passed"])
+        self.assertTrue(any(
+            c["check"] == "authority_limits_scholarly_verified"
+            and not c["passed"]
+            for group in report["groups"] for c in group["checks"]))
+
     def test_missing_reported_corpus_source_is_not_green(self):
         real_sources = self.adapters.corpus_sources
         with patch.object(self.adapters, "corpus_sources",
