@@ -90,7 +90,14 @@ class MentionTests(unittest.TestCase):
                   "قال مجاهد: رواية أخرى في نفس السياق الاصطناعي.")
         m=detect_mentions(p)
         self.assertEqual(2,len(m))
+        self.assertEqual(["MARFU","MAQTU"],[x["mention_type"] for x in m])
         self.assertNotEqual(m[0]["mention_id"],m[1]["mention_id"])
+
+    def test_ibn_abbas_companion_cue_not_maqtuu(self):
+        p=passage("قال ابن عباس: هذا مثال اصطناعي مطوّل لا يحمل معنى حقيقيًا.")
+        m=detect_mentions(p)
+        self.assertEqual("MAWQUF",m[0]["mention_type"])
+        self.assertEqual("IMPLIED_BY_MARKER",m[0]["attribution_status"])
 
 
 class WitnessAndMatchTests(unittest.TestCase):
