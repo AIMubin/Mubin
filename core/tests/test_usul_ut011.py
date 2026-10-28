@@ -211,6 +211,10 @@ class UT011Tests(unittest.TestCase):
         self.assertEqual(set(rule["if_concepts"] + rule["unless_concepts"] +
                              [rule["then_concept"]]), source_ids)
         self.assertEqual(receipt["catalog_sha256"], reference["catalog_sha256"])
+        unsigned = {k: v for k, v in receipt.items()
+                    if k != "u02_real_replay_report_sha256"}
+        self.assertEqual(receipt["u02_real_replay_report_sha256"],
+                         hashlib.sha256(canonical(unsigned)).hexdigest())
         self.assertEqual(receipt["u02_real_replay_report_sha256"],
                          reference["bridge_report_sha256"])
         self.assertEqual(receipt["stage08_graph_sha256"],
