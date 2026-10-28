@@ -96,6 +96,16 @@ Q0.3 and Hadith sources (replace the private cache placeholder):
     python -m engines.hadith.hsearch.replay 2:43 --database corpus-data/linked/quran_tafsir.db --hadith-cache <PRIVATE_SOURCE_CACHE>
     python -m engines.hadith.hsearch.replay 2:185 --database corpus-data/linked/quran_tafsir.db --hadith-cache <PRIVATE_SOURCE_CACHE>
 
+To freeze each successful *local metadata receipt* without overwriting a
+previous audit, add --receipt-path pointing to a new file in a private
+directory (example: --receipt-path evidence/hsearch-2-185-raw-v1.json).
+The CLI creates the receipt once, refuses existing files, stores no
+source passages and includes evidence_payload_sha256 computed from its
+canonical metadata JSON before adding the checksum field. That hash
+can be recomputed by omitting the checksum field and serializing with
+sorted keys, compact separators and UTF-8. Verify linked raw source
+spans and both literal phrase digests separately before relying on it.
+
 Run 1:7 separately if the operator's previously discovered ten-word
 lead requires an independent check. The tool never logs private paths
 or source passages, and refuses errors with a bounded code. Preserve
