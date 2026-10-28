@@ -1,0 +1,16 @@
+{
+  "contract": "mubin-hsearch01-case-b-assessment-v1",
+  "reviewed_reference": "evaluation/evidence/hsearch01_case_b_reference.json",
+  "assessment_scope": "engineering consistency; not a local live source replay",
+  "reference_verse": "2:185",
+  "reported_shared_seed_chars": 13,
+  "proposed_operator_link": "CANDIDATE_MATCH",
+  "automatic_matcher_contract": "shared_10word_phrase_within_pinned_witness_block",
+  "automated_case_status_on_13_char_evidence_alone": "NO_MATCH",
+  "source_witness_identity_established": false,
+  "interpretation": "The reported 13-character lexical overlap is preserved as an unverified lead. It does not qualify as an automatic narration-identity match under the current minimum 10-word phrase contract, and never as TEXTUALLY_SUPPORTED.",
+  "real_positive_replay": "PENDING_PRIVATE_OPERATOR_REPLAY",
+  "scholarly_verified": false,
+  "holdout_read": false,
+  "text_included": false
+}
