@@ -15,7 +15,7 @@ from engines.quran.q01b.tanzil import load_raw
 from engines.quran.q01c.reader import build_http_server
 from engines.tafsir.t03 import unified_research_query
 
-RAW = ('1|1|سَلَامٌ مختبر\n1|2|نَصٌّ تجريبي\n2|1|بَحْثٌ اصطناعي\n').encode('utf-8')
+RAW = ('1|1|سَلَامٌ مختبر\n1|2|نَصٌّ تجريبي\n2|1|بَحْثٌ اصطناعي\n2|43|آية اصطناعية للاختبار فقط\n').encode('utf-8')
 MANIFEST = {'contract': 'mubin-quran-q01b-verbatim-source-v1',
             'source_kind': 'synthetic_fixture', 'source_id': 'synthetic:q01b',
             'source_url': None, 'source_commit': None,
@@ -97,6 +97,20 @@ class T03Tests(unittest.TestCase):
         self.assertTrue(c["passage_id"].startswith("interp:"))
         self.assertTrue(c["source_record_id"].startswith("tafsir:"))
         self.assertEqual(c["quran_reference"], "2:43")
+        work = r["tafsirs"][0]
+        passage = next(p for p in work["passages_redacted"]
+                       if p["passage_id"] == c["passage_id"])
+        self.assertEqual(passage["source_record_id"], c["source_record_id"])
+        self.assertEqual(passage["raw_source_span"][0] + c["statement_start"],
+                         c["raw_source_span"][0])
+        self.assertEqual(passage["raw_source_span"][0] + c["statement_end"],
+                         c["raw_source_span"][1])
+        self.assertIs(c["text_included"], False)
+        self.assertNotIn("interpretation_statement", passage)
+
+    def test_contract_refuses_fake_private_text_included_flag(self):
+        with self.assertRaisesRegex(ValueError, "T03_PRIVATE_TEXT_NOT_SUPPORTED"):
+            unified_research_query(self.db, "2:43", include_private_text=True)
 
     def test_undetermined_relation_not_agreement(self):
         r = unified_research_query(self.db, "2:43")
@@ -149,6 +163,27 @@ class T03Tests(unittest.TestCase):
         raw = json.dumps(data, ensure_ascii=False)
         self.assertNotIn("دلت الآية", raw)
         self.assertNotIn(PASSAGE_TEXT[:20], raw)
+
+    def test_tafsir_row_does_not_bypass_missing_quran_anchor(self):
+        r, body = self._get("/api/research?ref=2%3A44")
+        self.assertEqual(r.status, 404)
+        data = json.loads(body)
+        self.assertEqual(data["error"], "verse_not_in_loaded_quran_source")
+
+    def test_duplicate_or_malformed_query_refused_without_source_text(self):
+        for target in ("/api/research?ref=2%3A43&ref=2%3A43",
+                       "/api/research?ref=2%3A0"):
+            with self.subTest(target=target):
+                r, body = self._get(target)
+                self.assertEqual(r.status, 400)
+                self.assertNotIn("دلت الآية", body.decode("utf-8"))
+
+    def test_reader_sanitizes_unexpected_local_source_errors(self):
+        with patch("engines.tafsir.t03.unified_research_query",
+                   side_effect=RuntimeError("SENSITIVE PRIVATE SOURCE TEXT")):
+            r, body = self._get("/api/research?ref=2%3A43")
+        self.assertEqual(r.status, 422)
+        self.assertNotIn("SENSITIVE PRIVATE SOURCE TEXT",body.decode("utf-8"))
 
     def test_cross_origin_still_rejected(self):
         r, _ = self._get("/api/research?ref=2%3A43",
