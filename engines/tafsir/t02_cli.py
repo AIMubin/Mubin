@@ -19,12 +19,11 @@ from engines.tafsir.t02 import (
 )
 
 
-def extract_local_verse(db_path: Path, lookup: dict) -> list[dict]:
-    """Read the exact raw rows from the same pinned local SQLite snapshot.
+def verified_raw_verse_rows(db_path: Path, lookup: dict) -> dict[str, str]:
+    """Return raw original source rows for the verse only, after full pin checks.
 
-    Used only after T0.1 has already authenticated the Q0.3 file SHA.
-    Each imported record's raw-text SHA is independently checked against
-    the source citation before constructing source offsets.
+    Used by the ordinary T0.2 extractor AND the private diagnostic. Returned
+    text must never enter public HTTP, logs or committed evidence.
     """
     ref = lookup["quran_reference"]
     sura, ayah = (int(x) for x in ref.split(":"))
@@ -39,25 +38,33 @@ def extract_local_verse(db_path: Path, lookup: dict) -> list[dict]:
             (sura, ayah)).fetchall()
     _assert_no_sqlite_sidecars(db_path)
     _need(_digest(db_path) == expected, "T02_DATABASE_CHANGED_DURING_READ")
-    raw_by_key = {}
     expected_keys = {r["dataset_source_key"] for r in lookup["tafsirs"]}
+    raw_by_key: dict[str, str] = {}
     for key, raw in rows:
         if key not in expected_keys:
             continue
         _need(key not in raw_by_key, "T02_DUPLICATE_RAW_SOURCE")
+        _need(type(raw) is str, "T02_RAW_SOURCE_INVALID")
         raw_by_key[key] = raw
-    all_records = []
     for metadata in lookup["tafsirs"]:
         key = metadata["dataset_source_key"]
         _need(key in raw_by_key, "T02_T01_RAW_SOURCE_MISSING")
-        raw = raw_by_key[key]
-        _need(type(raw) is str, "T02_RAW_SOURCE_INVALID")
-        _need(_sha(raw.encode("utf-8")) == metadata["imported_record_sha256"],
+        _need(_sha(raw_by_key[key].encode("utf-8"))
+              == metadata["imported_record_sha256"],
               "T02_SOURCE_BYTES_MISMATCH")
-        if metadata["text"] is None:  # Keep T0.1 editorial hold.
+    return raw_by_key
+
+
+def extract_local_verse(db_path: Path, lookup: dict) -> list[dict]:
+    """Use the same pinned original raw rows that diagnostics can audit."""
+    raw_by_key = verified_raw_verse_rows(db_path, lookup)
+    all_records = []
+    for metadata in lookup["tafsirs"]:
+        raw = raw_by_key[metadata["dataset_source_key"]]
+        if metadata["text"] is None:  # preserve T0.1 editorial hold.
             continue
-        source_record = dict(metadata, raw_original_text=raw)
-        all_records.extend(extract_from_t01_record(source_record))
+        all_records.extend(extract_from_t01_record(
+            dict(metadata, raw_original_text=raw)))
     return all_records
 
 
