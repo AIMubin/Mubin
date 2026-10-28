@@ -197,8 +197,8 @@ class PipelineTests(unittest.TestCase):
             for sid in sorted(hs_sources.AUTHORIZED):
                 text=(PHRASE+"\n") if sid=="openiti:0279Tirmidhi.Sunan" else (
                     SECOND+"\n")
-                (root/hs_sources.cache_filename(sid)).write_text(
-                    text,encoding="utf-8")
+                (root/hs_sources.cache_filename(sid)).write_bytes(
+                    text.encode("utf-8"))
                 registry[sid]={
                     "source_id":sid, "work_id":sid.split(":")[1],
                     "version_id":"synthetic:1",
