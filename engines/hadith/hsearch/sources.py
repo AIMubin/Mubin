@@ -65,20 +65,30 @@ def raw_url(source: dict) -> str:
 def acquire(cache_dir: Path, *, allow_network: bool = False) -> dict[str, dict]:
     """Acquire (or reuse) and verify the authorized sources. Returns
     {source_id: {path, verified, blob_sha, size}}."""
-    _need(cache_dir is not None and not cache_dir.is_symlink(),
+    _need(isinstance(cache_dir, Path) and not cache_dir.is_symlink(),
           "HS_CACHE_DIR_INVALID")
     cache_dir.mkdir(parents=True, exist_ok=True)
     out = {}
     for sid, src in authorized_sources().items():
         path = cache_dir / cache_filename(sid)
+        if path.is_symlink():
+            raise ValueError("HS_CACHE_SYMLINK_FORBIDDEN")
         if path.is_file():
+            _need(path.stat().st_size <= 100_000_000,
+                  "HS_SOURCE_SIZE_LIMIT")
             data = path.read_bytes()
         elif allow_network:
             req = urllib.request.Request(raw_url(src),
                                          headers={"User-Agent": "mubin-hsearch01"})
             with urllib.request.urlopen(req, timeout=120) as resp:
-                data = resp.read()
-            path.write_bytes(data)
+                data = resp.read(100_000_001)
+            _need(len(data) <= 100_000_000, "HS_SOURCE_SIZE_LIMIT")
+            _need(git_blob_sha(data) == src.get("source_blob_sha"),
+                  "HS_SOURCE_BLOB_MISMATCH")
+            tmp = path.with_name(path.name + ".partial")
+            _need(not tmp.is_symlink(), "HS_CACHE_SYMLINK_FORBIDDEN")
+            tmp.write_bytes(data)
+            tmp.replace(path)
         else:
             out[sid] = {"path": str(path), "verified": False,
                         "SOURCE_UNAVAILABLE": True}
@@ -97,6 +107,9 @@ _HEADING = re.compile(r"^#{1,6} ", re.M)
 
 
 def load_text(meta: dict, path: Path) -> str:
+    _need(not path.is_symlink() and path.is_file() and
+          path.stat().st_size <= 100_000_000,
+          "HS_SOURCE_FILE_UNSAFE")
     data = path.read_bytes()
     _need(git_blob_sha(data) == meta.get("source_blob_sha"),
           "HS_SOURCE_BLOB_MISMATCH")
