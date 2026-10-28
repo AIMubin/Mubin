@@ -99,6 +99,20 @@ class TafsirT01Tests(unittest.TestCase):
             _lookup(alias,"2:43",expected_sha256=self.pin,
                     upstream_declared_sha256="a"*64)
 
+    def test_unpinned_sqlite_wal_sidecar_refused(self):
+        sidecar = self.db.with_name(self.db.name + "-wal")
+        sidecar.write_bytes(b"synthetic WAL fixture")
+        with self.assertRaisesRegex(TafsirError,"T01_UNPINNED_SQLITE_SIDECAR"):
+            self.read()
+        sidecar.unlink()
+
+    def test_no_tafsir_records_is_not_a_successful_linkage(self):
+        with sqlite3.connect(self.db) as con:
+            con.execute("DELETE FROM tafsirs WHERE sura=2 AND aya=43")
+        self.pin = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(TafsirError,"T01_NO_INDEXED_TAFSIR_RECORDS"):
+            self.read()
+
     def test_duplicate_source_rows_refused(self):
         with sqlite3.connect(self.db) as con:
             con.execute("INSERT INTO tafsirs VALUES ('katheer',2,43,'مكرر')")
