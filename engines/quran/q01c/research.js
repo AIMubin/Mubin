@@ -62,32 +62,56 @@ async function search() {
     c.appendChild(el("span", null, "متحدث غير محدد: " + t.unidentified_speaker_candidates));
     box.appendChild(c);
     box.appendChild(boolSpan("الطبعة موثقة", t.edition_authenticated));
+    box.appendChild(boolSpan("المصدر موثق", t.source_authenticated));
+    box.appendChild(boolSpan("الحقوق موثقة", t.rights_verified));
+    box.appendChild(boolSpan("التحقق العلمي", t.scholarly_verified));
     box.appendChild(field("حالة العرض", t.display_status));
     box.appendChild(field("بصمة السجل", t.imported_record_sha256));
     box.appendChild(field("معرف الشاهد", t.evidence_id));
-    // candidates drilldown (metadata only)
-    const list = el("details");
-    list.appendChild(el("summary", null, "استعراض المرشحات (" + t.candidate_count + ")"));
-    for (const cd of (t.candidates_redacted || [])) {
-      const item = el("div", "work");
-      item.appendChild(field("معرف المرشح", cd.candidate_id));
-      item.appendChild(field("النوع", cd.interpretation_type));
-      item.appendChild(field("المتحدث", cd.speaker_name === null
-        ? "غير محدد" : cd.speaker_name));
-      item.appendChild(field("حالة الهوية", cd.speaker_identity_status));
-      item.appendChild(field("نوع النسبة", cd.attribution_type));
-      item.appendChild(field("ترشيح المؤلف", cd.author_endorsement));
-      item.appendChild(field("ثقة النسبة", cd.attribution_confidence));
-      item.appendChild(field("حالة التحقق", cd.verification_status));
-      item.appendChild(field("إزاحات النص الخام",
-        cd.statement_start + ".." + cd.statement_end));
-      item.appendChild(field("بصمة المقطع", cd.evidence_sha256));
-      list.appendChild(item);
+    // Passage → candidate → source drilldown is entirely metadata-only.
+    // Raw source offsets are Unicode codepoint indices, not byte indices.
+    const passageList = el("details");
+    passageList.appendChild(el("summary", null,
+      "استعراض المقاطع والمرشحات (" + t.passage_count + " مقطع)"));
+    for (const p of (t.passages_redacted || [])) {
+      const pbox = el("section", "passage");
+      pbox.appendChild(field("معرف المقطع", p.passage_id));
+      pbox.appendChild(field("معرف المصدر الأصلي", p.source_record_id));
+      pbox.appendChild(field("إزاحات المقطع في النص الخام (محارف)",
+        p.raw_source_span.join("..")));
+      pbox.appendChild(field("بصمة المقطع", p.evidence_sha256));
+      pbox.appendChild(field("حالة المقطع", p.verification_status));
+      const matching = (t.candidates_redacted || [])
+        .filter(cd => cd.passage_id === p.passage_id);
+      const clist = el("details");
+      clist.appendChild(el("summary", null,
+        "المرشحات المرتبطة (" + matching.length + ")"));
+      for (const cd of matching) {
+        const item = el("div", "candidate");
+        item.appendChild(field("معرف المرشح", cd.candidate_id));
+        item.appendChild(field("النوع", cd.interpretation_type));
+        item.appendChild(field("المتحدث", cd.speaker_name === null
+          ? "غير محدد" : cd.speaker_name));
+        item.appendChild(field("حالة الهوية", cd.speaker_identity_status));
+        item.appendChild(field("نوع النسبة", cd.attribution_type));
+        item.appendChild(field("ترشيح المؤلف", cd.author_endorsement));
+        item.appendChild(field("ثقة النسبة", cd.attribution_confidence));
+        item.appendChild(field("حالة التحقق", cd.verification_status));
+        item.appendChild(field("إزاحات المرشح في النص الخام (محارف)",
+          cd.raw_source_span.join("..")));
+        item.appendChild(field("إزاحات المرشح داخل المقطع (محارف)",
+          cd.statement_start + ".." + cd.statement_end));
+        item.appendChild(field("بصمة شاهد المرشح", cd.evidence_sha256));
+        clist.appendChild(item);
+      }
+      if (!matching.length) clist.appendChild(el("p", "empty", "لا مرشحات"));
+      pbox.appendChild(clist);
+      passageList.appendChild(pbox);
     }
-    if (!(t.candidates_redacted || []).length) {
-      list.appendChild(el("p", "empty", "لا مرشحات"));
+    if (!(t.passages_redacted || []).length) {
+      passageList.appendChild(el("p", "empty", "لا مقاطع متاحة"));
     }
-    box.appendChild(list);
+    box.appendChild(passageList);
     $("tafsirs").appendChild(box);
   }
   const rel = el("section", "work");
