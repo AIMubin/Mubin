@@ -147,8 +147,9 @@ def verify_usul_side(catalog: dict, graph: dict, *,
           and research_pointer_id in pointers,
           "UT012_RESEARCH_POINTER_INVALID")
     anchor = pointers[research_pointer_id]
-    _need(rule["research_anchor"] == anchor
-          and anchor["stage08_reference_id"] == rule_candidate_id,
+    # The research pointer's reference_id can be the historical research
+    # question (pilot:rule-amr-default), not the U0.2 candidate rule ID.
+    _need(rule["research_anchor"] == anchor,
           "UT012_RULE_POINTER_REFERENCE_MISMATCH")
     _need(type(occurrence_ids) in (list, type(None)),
           "UT012_OCCURRENCE_ARRAY_INVALID")
