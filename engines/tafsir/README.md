@@ -69,3 +69,41 @@ No scholarly/source/rights gates are promoted and Mubin stays
 0.1.0-alpha. Next product work: meaningful interpretation boundaries,
 context and scholar-attributed disagreement **from actual source
 passages**, not model comparisons.
+
+## T0.2.3: bounded identification and unresolved relations
+
+The T0.2.3 local pipeline uses only the Q0.3 database pinned via T0.1
+and **raw-byte-verified** T0.2 passage records. It identifies lexical
+candidates with named-report, anonymous report, narration, or first-person
+preference cues, retaining relative passage offsets AND absolute raw-text
+codepoint offsets with SHA-256 evidence digests. It does not create
+standalone authenticated exegetical opinions, prove a named speaker was
+correctly identified, or determine what an author ultimately endorsed.
+
+The author-endorsement cue is strictly a **candidate** and may be wrong
+when the passage itself quotes someone else's speech. A specific
+statement-to-statement semantic agreement, contradiction, objection or
+preference **is not asserted** by these surface cues: all relation pairs
+within one passage are recorded as UNDETERMINED. Across different
+passages or works, no relation is inferred.
+
+Summary output is text-free by default:
+
+    python -m engines.tafsir.t023_cli 2:43 --database corpus-data/linked/quran_tafsir.db
+
+Protected candidate excerpts can be printed deliberately for allowed
+private research with --include-text. Do not log or send those excerpts
+to GitHub, CI or cloud services without separate use clearance.
+
+The prior operator's original 2:43 count (61 passages, 65 candidates,
+5 undetermined pairs) is a **historical unverified report from the
+earlier implementation**. Because the revised logic validates the T0.2
+record contract and restricts some broad lexical markers, rerun the
+local pinned-vault CLI to establish the new counts; the current CI only
+runs synthetic cases.
+
+    python -m unittest core.tests.test_tafsir_t01 core.tests.test_tafsir_t02 core.tests.test_tafsir_t023 corpus.tests.test_query core.tests.test_quran_tafsir_metadata -v
+
+This milestone advances the source-oriented Tafsir engine without
+training, comparing, or tuning AI models. Mubin system version remains
+0.1.0-alpha, and edition/source/rights/fiqh authority remains unverified.
