@@ -1,140 +1,215 @@
-"""T0.2.3 acceptance tests: identification, attribution, relationships."""
+"""Tafsir T0.2.3 regression: synthetic passage provenance and abstention."""
 from __future__ import annotations
-import json
-import unittest
 
+from contextlib import closing, redirect_stdout
+import hashlib
+import io
+import json
+from pathlib import Path
+import sqlite3
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from engines.tafsir.t01 import _lookup
+from engines.tafsir.t02 import make_record, TafsirT02Error
 from engines.tafsir.t023 import (
     build_relationships, identify_candidates, summarize_analysis,
-    ATTRIB_NAMED_REPORT, ATTRIB_AUTHOR_OWN, ATTRIB_UNKNOWN,
-    IDENTITY_UNKNOWN, ENDORSE_EXPLICIT,
+    ATTRIB_NAMED_REPORT, ATTRIB_AUTHOR_OWN,
+    ENDORSE_EXPLICIT, IDENTITY_UNKNOWN,
 )
+from engines.tafsir.t023_cli import main as cli_main
 
-PASSAGE_REPORTED = ("وقال مجاهد: «أقيموا الصلاة أي أدها»، "
-                    "وقيل: المراد أداء الصلاة في وقتها، "
-                    "والصواب عندنا أنها واجبة في وقتها بلا خلاف فيه هنا.")
-PASSAGE_PLAIN = ("دلت الآية على وجوب أداء الصلاة، ومعنى القول في تفسير "
-                 "اللفظ ظاهر في سياق الكلام.")
+REPORTED = ("وقال مجاهد: معنى اصطناعي للاختبار وليس تفسيرًا حقيقيًا. "
+            "وقيل: هذا قول تجريبي آخر للاختبار. "
+            "والصواب عندنا قول اصطناعي ثالث للتدقيق.")
+PLAIN = ("دلت هذه العبارة الاصطناعية على معنى مستعمل في الاختبار فقط. "
+         "وليس ذلك رأيًا موثقًا لأحد من المفسرين.")
+HTML = ("<b>وقال مجاهد:</b> مثال اصطناعي لا يمثل نص تفسير حقيقي. "
+        "والصواب عندنا بيان اصطناعي آخر للاختبار.")
 
-def passage(text: str, pid_suffix: str = "a" * 40) -> dict:
-    return {
-        "interpretation_id": "interp:" + pid_suffix,
-        "quran_reference": "2:43",
-        "work_id": "tafsir_tabari",
-        "source_record_id": "tafsir:tafsir_tabari:2:43:" + "a" * 64,
-        "source_sha256": "a" * 64,
-        "evidence_span": [0, len(text)],
-        "interpretation_statement": text,
-    }
+
+def passage(text=REPORTED, work="tafsir_tabari", ref="2:43", pad=""):
+    raw = pad + text
+    original_sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    sid = f"tafsir:{work}:{ref}:{original_sha}"
+    return make_record(
+        quran_reference=ref,
+        work_id=work,
+        author_id=None,
+        source_record_id=sid,
+        source_sha256=original_sha,
+        original_text=raw,
+        span=(len(pad),len(raw)),
+    )
 
 
 class T023Tests(unittest.TestCase):
-    def test_1_explicit_statement_identified(self):
-        cands = identify_candidates(passage(PASSAGE_PLAIN))
-        self.assertTrue(len(cands) >= 1)
-        for c in cands:
-            self.assertIn(c["interpretation_type"], (
-                "VERSE_MEANING", "LEXICAL_EXPLANATION", "LEGAL_INTERPRETATION",
-                "UNCLASSIFIED"))
+    def test_named_report_is_a_candidate_not_an_author_opinion(self):
+        c = identify_candidates(passage())
+        report = [x for x in c if x["speaker_name"] == "مجاهد"]
+        self.assertTrue(report)
+        self.assertEqual(ATTRIB_NAMED_REPORT, report[0]["attribution_type"])
+        self.assertFalse(report[0]["scholarly_verified"])
+        self.assertNotEqual(ENDORSE_EXPLICIT, report[0]["author_endorsement"])
 
-    def test_2_multiple_candidates_from_one_passage(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        self.assertTrue(len(cands) >= 3)
-        ids = {c["candidate_id"] for c in cands}
-        self.assertEqual(len(ids), len(cands))
+    def test_multiple_candidates_with_distinct_identifiers(self):
+        c = identify_candidates(passage())
+        self.assertGreaterEqual(len(c),3)
+        self.assertEqual(len(c),len({x["candidate_id"] for x in c}))
+        self.assertTrue(all(x["verification_status"] == "UNVERIFIED" for x in c))
 
-    def test_3_named_speaker_identified(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        named = [c for c in cands if c["speaker_name"] == "مجاهد"]
-        self.assertTrue(named)
-        self.assertEqual(named[0]["attribution_type"], ATTRIB_NAMED_REPORT)
-
-    def test_4_reported_view_not_attributed_to_author(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        mujahid = [c for c in cands if c["speaker_name"] == "مجاهد"][0]
-        self.assertNotEqual(mujahid["author_endorsement"], ENDORSE_EXPLICIT)
-        self.assertFalse(mujahid["scholarly_verified"])
-
-    def test_5_author_choice_extracted_with_witness(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        own = [c for c in cands if c["attribution_type"] == ATTRIB_AUTHOR_OWN]
+    def test_explicit_first_person_cue_remains_unverified(self):
+        own = [x for x in identify_candidates(passage())
+               if x["attribution_type"] == ATTRIB_AUTHOR_OWN]
         self.assertTrue(own)
-        self.assertEqual(own[0]["author_endorsement"], ENDORSE_EXPLICIT)
-        # the supporting phrase (والصواب) is inside the candidate text
-        self.assertIn("الصواب", own[0]["interpretation_statement"])
+        self.assertIn("والصواب عندنا",own[0]["interpretation_statement"])
+        self.assertEqual(ENDORSE_EXPLICIT,own[0]["author_endorsement"])
+        self.assertEqual("UNVERIFIED",own[0]["verification_status"])
 
-    def test_6_no_agreement_from_word_similarity(self):
-        cands_a = identify_candidates(passage(PASSAGE_REPORTED))
-        cands_b = identify_candidates(passage(
-            "وقال قتادة: «أقيموا الصلاة أي أدها».", pid_suffix="b" * 40))
-        rels = build_relationships(cands_a + cands_b)
-        # candidates from different passages never yield AGREEMENT
-        cross = [r for r in rels if r["from_candidate_id"] in
-                 {c["candidate_id"] for c in cands_b}]
-        for r in cross:
-            self.assertNotEqual(r["relation_type"], "AGREEMENT_CANDIDATE")
+    def test_unqualified_no_cue_text_is_unclassified(self):
+        c = identify_candidates(passage("البيان الاصطناعي هذا فقط من أجل تجربة التقطيع."))
+        self.assertEqual("UNCLASSIFIED",c[0]["interpretation_type"])
+        self.assertEqual("UNKNOWN",c[0]["attribution_type"])
 
-    def test_7_no_disagreement_from_different_wording(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        rels = build_relationships(cands)
-        named = [c for c in cands if c["attribution_type"] == ATTRIB_NAMED_REPORT]
-        if len(named) >= 2:
-            for r in rels:
-                self.assertNotEqual(r["relation_type"], "DISAGREEMENT_CANDIDATE")
+    def test_untrusted_t02_passage_rejected(self):
+        p=passage()
+        p["source_sha256"]="f"*64
+        with self.assertRaisesRegex(TafsirT02Error,"T023_SOURCE_RECORD_MISMATCH"):
+            identify_candidates(p)
+        p=passage()
+        p["evidence_sha256"]="f"*64
+        with self.assertRaisesRegex(TafsirT02Error,"T023_PASSAGE_EVIDENCE_MISMATCH"):
+            identify_candidates(p)
 
-    def test_8_relation_to_missing_record_refused(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        with self.assertRaises(Exception):
-            build_relationships([cands[0], {"candidate_id": "ghost",
-                "passage_id": "interp:" + "f" * 40}])
+    def test_forged_work_and_wrong_reference_refused(self):
+        p=passage()
+        p["work_id"]="tafsir_baghawi"
+        with self.assertRaisesRegex(TafsirT02Error,"T023_SOURCE_RECORD_MISMATCH"):
+            identify_candidates(p)
+        p=passage()
+        p["quran_reference"]="115:1"
+        with self.assertRaisesRegex(TafsirT02Error,"T023_INVALID_REFERENCE"):
+            identify_candidates(p)
 
-    def test_9_unsupported_relation_is_undetermined(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        rels = build_relationships(cands)
-        supported = {"PREFERENCE", "OBJECTION", "ALTERNATIVE_INTERPRETATION"}
-        for r in rels:
-            if r["relation_type"] not in supported:
-                self.assertEqual(r["relation_type"], "UNDETERMINED")
+    def test_literal_raw_source_offsets_account_for_html_and_padding(self):
+        p=passage(HTML,pad="بداية ثابتة | ")
+        c = identify_candidates(p)
+        self.assertTrue(c)
+        source = "بداية ثابتة | "+HTML
+        for item in c:
+            span=item["raw_source_span"]
+            self.assertEqual(source[span[0]:span[1]],
+                             item["interpretation_statement"])
+            self.assertEqual(hashlib.sha256(
+                item["interpretation_statement"].encode("utf-8")).hexdigest(),
+                item["evidence_sha256"])
 
-    def test_10_source_sha_and_spans_preserved(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        for c in cands:
-            self.assertEqual(c["source_sha256"], "a" * 64)
-            self.assertEqual(
-                PASSAGE_REPORTED[c["statement_start"]:c["statement_end"]],
-                c["interpretation_statement"])
+    def test_passing_data_not_grounded_is_not_accepted(self):
+        p=passage()
+        p["interpretation_statement"]=PLAIN
+        with self.assertRaisesRegex(TafsirT02Error,"T023_INVALID_PASSAGE_SPAN"):
+            identify_candidates(p)
 
-    def test_11_undetermined_preserved(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        rels = build_relationships(cands)
-        has_und = any(r["relation_type"] == "UNDETERMINED" for r in rels)
-        self.assertTrue(has_und or len(rels) == 0)
+    def test_quote_does_not_promote_author_preference(self):
+        s="وقال مجاهد: «والصواب عندنا هذا القول الاصطناعي المنقول». "
+        c=identify_candidates(passage(s))
+        self.assertFalse(any(x["attribution_type"]==ATTRIB_AUTHOR_OWN for x in c))
 
-    def test_12_summary_never_leaks_text(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        rels = build_relationships(cands)
-        raw = json.dumps(summarize_analysis([1], cands, rels), ensure_ascii=False)
-        self.assertNotIn("مجاهد", raw)
-        self.assertNotIn("الصلاة", raw)
+    def test_relations_do_not_infer_agreement_disagreement_or_preference(self):
+        c=identify_candidates(passage())
+        r=build_relationships(c)
+        self.assertTrue(r)
+        self.assertTrue(all(x["relation_type"]=="UNDETERMINED" for x in r))
+        self.assertTrue(all(not x["consensus_claimed"]
+                            and not x["preference_by_system"] for x in r))
 
-    def test_13_authority_flags_stay_false(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        rels = build_relationships(cands)
-        for c in cands:
-            for flag in ("scholarly_verified", "text_included",
-                         "publication_allowed", "juristic_inference_allowed",
-                         "public_fatwa_authorized", "p1_admitted"):
-                self.assertFalse(c[flag], flag)
-        for r in rels:
-            self.assertFalse(r["scholarly_verified"])
-            self.assertFalse(r["consensus_claimed"])
-            self.assertFalse(r["preference_by_system"])
+    def test_ghost_candidate_is_refused_even_with_a_fake_id(self):
+        c=identify_candidates(passage())
+        with self.assertRaisesRegex(TafsirT02Error,"T023_CANDIDATE_INVALID"):
+            build_relationships(c+[{"candidate_id":"ghost",
+                                    "passage_id":c[0]["passage_id"]}])
 
-    def test_14_confidence_never_upgrades_verification(self):
-        cands = identify_candidates(passage(PASSAGE_REPORTED))
-        for c in cands:
-            self.assertEqual(c["verification_status"], "UNVERIFIED")
-            self.assertIn(c["attribution_confidence"], ("LOW", "MEDIUM"))
+    def test_cross_source_relations_do_not_mix(self):
+        a=identify_candidates(passage())
+        b=identify_candidates(passage(work="tafsir_baghawi"))
+        relations=build_relationships(a+b)
+        self.assertFalse(any(x["from_candidate_id"] in {y["candidate_id"] for y in a}
+                             and x["to_candidate_id"] in {y["candidate_id"] for y in b}
+                             for x in relations))
 
+    def test_tampered_candidate_raises_not_partial_relation(self):
+        c=identify_candidates(passage())
+        c[0]["work_id"]="tafsir_baghawi"
+        with self.assertRaisesRegex(TafsirT02Error,"T023_CANDIDATE_SOURCE_INVALID"):
+            build_relationships(c)
+
+    def test_relation_refuses_overlapping_candidates(self):
+        c=identify_candidates(passage())
+        c[1]["statement_start"]=c[0]["statement_start"]
+        with self.assertRaises(TafsirT02Error):
+            build_relationships(c)
+
+    def test_redacted_summary_is_explicitly_non_authoritative(self):
+        p=passage()
+        c=identify_candidates(p)
+        r=build_relationships(c)
+        summary=summarize_analysis([p],c,r)
+        serialized=json.dumps(summary,ensure_ascii=False)
+        self.assertNotIn("مجاهد",serialized)
+        self.assertNotIn("الصواب",serialized)
+        self.assertIn("NOT_EXEGETICAL_OPINIONS",summary["count_semantics"])
+        self.assertEqual(len(c),summary["candidates_total"])
+        self.assertEqual(len(r),summary["relations_undetermined"])
+        self.assertFalse(summary["publication_allowed"])
+
+    def test_unverified_flags_always_false(self):
+        c=identify_candidates(passage())
+        for item in c:
+            for name in ("scholarly_verified","text_included","publication_allowed",
+                         "juristic_inference_allowed","public_fatwa_authorized",
+                         "p1_admitted"):
+                self.assertIs(item[name],False,name)
+
+    def test_duplicate_candidates_rejected(self):
+        c=identify_candidates(passage())
+        with self.assertRaisesRegex(TafsirT02Error,"T023_DUPLICATE_CANDIDATE_ID"):
+            build_relationships(c+[c[0]])
+
+
+class T023CLITests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.db=Path(self.tmp.name)/"fixture.db"
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("CREATE TABLE verses(sura INTEGER,aya INTEGER,text TEXT)")
+            conn.execute("CREATE TABLE tafsirs(source TEXT,sura INTEGER,aya INTEGER,text TEXT)")
+            conn.execute("INSERT INTO verses VALUES (2,43,'NOT QURAN')")
+            conn.execute("INSERT INTO tafsirs VALUES ('tabary',2,43,?)",(HTML,))
+        h=hashlib.sha256(self.db.read_bytes()).hexdigest()
+        self.data=_lookup(self.db,"2:43",expected_sha256=h,
+                          upstream_declared_sha256="a"*64,
+                          include_private_text=True)
+
+    def test_default_cli_does_not_print_sources(self):
+        stream=io.StringIO()
+        with patch("engines.tafsir.t023_cli.lookup_verse",return_value=self.data):
+            with redirect_stdout(stream):
+                code=cli_main(["2:43","--database",str(self.db)])
+        self.assertEqual(0,code)
+        data=json.loads(stream.getvalue())
+        self.assertEqual("OK",data["status"])
+        self.assertFalse(data["text_included"])
+        self.assertNotIn("اصطناعي",stream.getvalue())
+
+    def test_default_cli_reports_failure_without_private_paths(self):
+        stream=io.StringIO()
+        with redirect_stdout(stream):
+            code=cli_main(["2:43","--database",str(self.db)])
+        self.assertEqual(2,code)  # synthetic DB is not production-pinned
+        self.assertNotIn(str(self.db),stream.getvalue())
+        self.assertNotIn("اصطناعي",stream.getvalue())
 
 if __name__ == "__main__":
     unittest.main()
