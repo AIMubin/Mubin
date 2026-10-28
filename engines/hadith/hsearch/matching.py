@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import re
 
-from engines.hadith.hsearch.alignment import align_shared_tokens, fold_with_raw_map
+from engines.hadith.hsearch.alignment import align_shared_tokens
 from engines.hadith.hsearch.contracts import make_link
 
 
@@ -23,7 +23,11 @@ _SHA40 = re.compile(r"[0-9a-f]{40}")
 
 
 def _fold(text: str) -> str:
-    return fold_with_raw_map(text)[0]
+    """Memory-light normalization for large files; offset maps stay local."""
+    text = re.sub(r"[\u064B-\u065F\u0670\u0640]", "", text)
+    text = re.sub(r"[\u0623\u0625\u0622]", "\u0627", text)
+    text = text.replace("\u0649", "\u064a").replace("\u0629", "\u0647")
+    return re.sub(r"\s+", " ", text)
 
 
 def _probes(text: str) -> list[str]:
@@ -75,7 +79,7 @@ def match_mentions(mentions: list[dict], witnesses: list[dict],
         snippet = raw[span[0]:span[1]]
         _need(hashlib.sha256(snippet.encode("utf-8")).hexdigest()
               == w.get("evidence_sha256"), "HS_WITNESS_EVIDENCE_INVALID")
-        indexed.setdefault(sid, []).append(w)
+        indexed.setdefault(sid, []).append((w, _fold(snippet)))
     # File-wide search is a prefilter ONLY. A result must subsequently be
     # relocated *inside* the cited witness and pass folded→raw round-trip.
     folded_sources = {sid: _fold(raw_sources[sid])
@@ -99,11 +103,11 @@ def match_mentions(mentions: list[dict], witnesses: list[dict],
             if not available:
                 continue
             raw = raw_sources[sid]
-            for w in indexed[sid]:
+            for w, folded_block in indexed[sid]:
+                if not any(p in folded_block for p in available):
+                    continue
                 wa, wb = w["raw_source_span"]
                 witness_text = raw[wa:wb]
-                if not any(p in _fold(witness_text) for p in available):
-                    continue
                 candidate = align_shared_tokens(
                     mention_text, witness_text, min_words=_MIN_WORDS)
                 if candidate is not None:
