@@ -18,16 +18,20 @@ def main(argv=None)->int:
     p.add_argument("--port",type=int,default=8765,help="localhost port, default 8765")
     p.add_argument("--tafsir-db",type=str,default=None,
         help="optional pinned Q0.3 tafsir database enabling /api/research")
+    p.add_argument("--hadith-cache",type=str,default=None,
+        help="optional local hadith source cache enabling hadith section")
     args=p.parse_args(argv)
     try:
         manifest=read_regular_file(args.manifest,MAX_MANIFEST_BYTES)
         raw=read_regular_file(args.source,MAX_RAW_BYTES)
         idx=load_raw(manifest,raw)
         tafsir_db=Path(args.tafsir_db) if args.tafsir_db else None
+        hadith_cache=Path(args.hadith_cache) if args.hadith_cache else None
         if tafsir_db is not None and (tafsir_db.is_symlink() or not tafsir_db.is_file()):
             print("Reader startup rejected: tafsir_db_unavailable",file=sys.stderr)
             return 2
-        server=build_http_server(idx,raw,port=args.port,tafsir_db_path=tafsir_db)
+        server=build_http_server(idx,raw,port=args.port,tafsir_db_path=tafsir_db,
+            hadith_cache_dir=hadith_cache)
     except (RawSourceError,ValueError,TypeError,OSError,OverflowError) as exc:
         print("Reader startup rejected: "+str(exc)[:150],file=sys.stderr)
         return 2

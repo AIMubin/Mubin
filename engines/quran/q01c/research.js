@@ -114,6 +114,41 @@ async function search() {
     box.appendChild(passageList);
     $("tafsirs").appendChild(box);
   }
+  if (data.hadith) {
+    const h = data.hadith;
+    const hb = el("section", "work");
+    hb.appendChild(el("h3", null, "الروايات والأحاديث المرتبطة بالتفسير"));
+    if (h.status !== "OK") {
+      hb.appendChild(el("p", "empty", "تعذر التشغيل: " + (h.code || h.status)));
+    } else {
+      const hc = el("div", "counts");
+      hc.appendChild(el("span", null, "مواضع ذكر: " + h.mentions_total));
+      hc.appendChild(el("span", null, "شواهد مرشحة: " + h.witnesses_total));
+      hc.appendChild(el("span", null, "روابط: " + h.links_total));
+      for (const [st, n] of Object.entries(h.links_by_status || {})) {
+        hc.appendChild(el("span", null, st + ": " + n));
+      }
+      hb.appendChild(hc);
+      hb.appendChild(field("المصادر المستخدمة", (h.sources_used || []).join(", ") || "—"));
+      hb.appendChild(field("حالة القراءة", h.sources_unavailable && h.sources_unavailable.length ? "بعض المصادر غير متاحة محلياً (SOURCE_UNAVAILABLE)" : "جميع المصادر المصرح بها متاحة وموثقة"));
+      const jd = el("details");
+      jd.appendChild(el("summary", null, "أحكام منقولة (" + ((h.commentary || {}).records_total || 0) + ")"));
+      hb.appendChild(jd);
+      const ml = el("details");
+      ml.appendChild(el("summary", null, "مواضع الذكر (" + h.mentions_total + ") — بيانات وصفية فقط"));
+      for (const mn of (h.mentions || []).slice(0, 50)) {
+        const mi = el("div", "work");
+        mi.appendChild(field("معرف الذكر", mn.mention_id));
+        mi.appendChild(field("النوع", mn.mention_type));
+        mi.appendChild(field("حالة النسبة", mn.attribution_status));
+        mi.appendChild(field("حالة التحقق", mn.verification_status));
+        mi.appendChild(field("بصمة الموضع", mn.evidence_sha256));
+        ml.appendChild(mi);
+      }
+      hb.appendChild(ml);
+    }
+    $("relations").appendChild(hb);
+  }
   const rel = el("section", "work");
   rel.appendChild(el("h3", null, "العلاقات المرشحة"));
   rel.appendChild(boolSpan("موثقة علمياً", false));
