@@ -2,8 +2,8 @@
 
 Single query over the existing pinned pipeline (T0.1 lookup -> T0.2
 byte-verified raw passages -> T0.2.3 candidates and relations).
-Metadata-only by default: statement text is redacted unless the operator
-explicitly requests the local research view. No new retrieval engine, no
+Metadata-only always: statement text is never returned, even if a caller
+requests the unsupported private-text mode. No new retrieval engine, no
 second database, no scholarly claims, no consensus or preference inference.
 """
 from __future__ import annotations
@@ -28,8 +28,8 @@ def unified_research_query(db_path: Path, reference: str, *,
                            include_private_text: bool = False) -> dict:
     """One auditable research result for a verse reference.
 
-    Metadata-only unless include_private_text=True (LOCAL operator view;
-    never pipe to CI or logs). Reuses T0.1/T0.2/T0.2.3 without duplication.
+    Metadata-only always; include_private_text=True is refused, not silently
+    accepted. Reuses T0.1/T0.2/T0.2.3 without duplicate retrieval.
     """
     # T0.3 is strictly metadata-only, even on localhost. Private text is
     # exclusively available via the explicit T0.2/T0.2.3 operator CLIs.
