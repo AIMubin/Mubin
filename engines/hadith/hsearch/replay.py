@@ -10,7 +10,9 @@ No source text, local paths or arbitrary exceptions are printed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 from pathlib import Path
 
 from engines.tafsir.t01 import lookup_verse
@@ -30,9 +32,26 @@ def replay(reference: str, db_path: Path, cache_dir: Path) -> dict:
             "text_included": False, "holdout_read": False,
         }
     links = report["links"]
-    aligned = [link for link in links
-               if link.get("textually_grounded_lexical_overlap") is True]
-    return {
+    # Explicit allowlist prevents accidental forwarding of private text
+    # if the upstream link schema gains private fields in the future.
+    public_link_keys = frozenset((
+        "contract", "link_id", "mention_id", "witness_id",
+        "witness_source_id", "witness_locator", "match_status",
+        "match_method", "verification_status", "scholarly_verified",
+        "folded_phrase_sha256", "folded_word_count",
+        "tafsir_shared_raw_span", "hadith_shared_raw_span",
+        "tafsir_shared_raw_sha256", "hadith_shared_raw_sha256",
+        "tafsir_source_record_id", "hadith_source_blob_sha",
+        "hadith_source_version_id", "shared_span_unit",
+        "textually_grounded_lexical_overlap",
+        "identity_of_narration_confirmed",
+    ))
+    aligned = [
+        {k: v for k, v in link.items() if k in public_link_keys}
+        for link in links
+        if link.get("textually_grounded_lexical_overlap") is True
+    ]
+    receipt = {
         "contract": "mubin-hsearch01-raw-alignment-replay-v1",
         "status": "OK", "reference": reference,
         "passages_processed": report["passages_processed"],
@@ -52,6 +71,10 @@ def replay(reference: str, db_path: Path, cache_dir: Path) -> dict:
         "scholarly_verified": False,
         "rights_verified": False,
     }
+    frozen_bytes = json.dumps(receipt, ensure_ascii=False,
+                              sort_keys=True, separators=(",", ":")).encode("utf-8")
+    receipt["evidence_payload_sha256"] = hashlib.sha256(frozen_bytes).hexdigest()
+    return receipt
 
 
 def main(argv=None) -> int:
@@ -60,9 +83,22 @@ def main(argv=None) -> int:
     p.add_argument("reference", help="sura:ayah")
     p.add_argument("--database", type=Path, required=True)
     p.add_argument("--hadith-cache", type=Path, required=True)
+    p.add_argument("--receipt-path", type=Path,
+                   help="Optional local immutable JSON receipt; refuses overwrite")
     args = p.parse_args(argv)
     try:
         result = replay(args.reference, args.database, args.hadith_cache)
+        if args.receipt_path is not None and result["status"] == "OK":
+            dest = args.receipt_path
+            if not dest.parent.is_dir() or dest.parent.is_symlink():
+                raise ValueError("HS_RECEIPT_DIR_INVALID")
+            output = (json.dumps(result, ensure_ascii=False, indent=2)
+                      + "\n").encode("utf-8")
+            fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(output)
+                stream.flush()
+                os.fsync(stream.fileno())
     except Exception:
         # Never expose private paths, text or exceptions through the CLI.
         result = {"status": "REFUSED", "code": "HS_PRIVATE_REPLAY_FAILED",
