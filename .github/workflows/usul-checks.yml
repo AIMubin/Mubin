@@ -6,6 +6,8 @@ on:
     paths:
       - 'engines/usul/**'
       - 'core/tests/test_usul_ut011.py'
+      - 'core/tests/test_usul_ut012.py'
+      - 'evaluation/evidence/ut012_case_a_real_link.json'
       - 'evaluation/evidence/ut011_bab_amr_bridge_report.json'
       - 'corpus/reviews/u02-waraqat-private-source-acceptance-PASS.json'
       - '.gitattributes'
@@ -14,6 +16,8 @@ on:
     paths:
       - 'engines/usul/**'
       - 'core/tests/test_usul_ut011.py'
+      - 'core/tests/test_usul_ut012.py'
+      - 'evaluation/evidence/ut012_case_a_real_link.json'
       - 'evaluation/evidence/ut011_bab_amr_bridge_report.json'
       - 'corpus/reviews/u02-waraqat-private-source-acceptance-PASS.json'
       - '.gitattributes'
@@ -37,3 +41,5 @@ jobs:
         run: python -m unittest discover -s engines/usul/tests -v
       - name: UT-01.1 source-catalog contract and frozen receipt integrity
         run: python -m unittest core.tests.test_usul_ut011 -v
+      - name: UT-01.2 source-pinned cross-engine link contract
+        run: python -m unittest core.tests.test_usul_ut012 -v
