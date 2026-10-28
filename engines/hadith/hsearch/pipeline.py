@@ -27,9 +27,6 @@ def run_hsearch(passages: list[dict], cache_dir: Path, *,
     """
     _need(type(passages) is list, "HS_PASSAGES_INVALID")
     mentions = detect_all(passages)
-    # attach non-emitted text handles for the matcher (in-process only)
-    for m, p in zip(mentions, [None] * len(mentions)):
-        pass
     try:
         acquired = hs_sources.acquire(cache_dir, allow_network=allow_network)
     except Exception as exc:
@@ -80,7 +77,8 @@ def run_hsearch(passages: list[dict], cache_dir: Path, *,
                 break
     for w in witnesses:
         w["_text"] = witness_texts.get(w["witness_id"], "")
-    links = match_mentions(mentions, witnesses)
+    links = match_mentions(mentions, witnesses,
+                           source_texts=witness_texts)
     # commentary scan: only for linked witnesses with a locator
     for l in links:
         if l["witness_id"] and l["witness_locator"]:

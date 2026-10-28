@@ -45,51 +45,61 @@ def _longest_shared(a: str, b: str) -> int:
 
 
 def match_mentions(mentions: list[dict], witnesses: list[dict],
-                   *, texts: dict | None = None) -> list[dict]:
+                   *, source_texts: dict | None = None) -> list[dict]:
     """Match mentions against witness candidates.
 
-    texts: optional {witness_id: full_raw_text} for TEXTUALLY_SUPPORTED
-    verification (substring must exist in the witness source raw text at the
-    recorded span, and digest must recompute).
+    Memory-light: each source raw text is folded once and scanned linearly
+    with mention 10-grams (no full-corpus n-gram sets). CANDIDATE_MATCH
+    requires a shared >=10-word substring; TEXTUALLY_SUPPORTED additionally
+    requires the witness block digest to recompute over its pinned span.
+    source_texts: {source_id: raw_text} provided by the pipeline.
     """
     _need(type(mentions) is list and type(witnesses) is list,
           "HS_MATCH_INPUT_INVALID")
     if not witnesses:
-        return [make_link(mention=m, witness=None, match_status="SOURCE_UNAVAILABLE",
+        return [make_link(mention=m, witness=None,
+                          match_status="SOURCE_UNAVAILABLE",
                           match_method="no_authorized_source_available")
                 for m in mentions]
-    wit_ngrams = [(w, _ngrams(w.get("_text", "") or "")) for w in witnesses]
+    folded_sources = {}
+    for w in witnesses:
+        sid = w.get("source_id")
+        if sid not in folded_sources:
+            raw = (source_texts or {}).get(sid, w.get("_text", "") or "")
+            folded_sources[sid] = _fold(raw) if raw else ""
     links = []
     for m in mentions:
+        mt = m.get("_mention_text") or ""
+        fmt = _fold(mt) if mt else ""
+        words = fmt.split(" ")
         best = None
-        for w, ng in wit_ngrams:
-            mg = _ngrams(m.get("_mention_text", "") or "")
-            shared = len(mg & ng)
-            if shared >= 1 and (best is None or shared > best[1]):
-                best = (w, shared)
+        if len(words) >= 10:
+            for i in range(len(words) - 9):
+                probe = " ".join(words[i:i + 10])
+                for sid, ftext in folded_sources.items():
+                    if ftext and probe in ftext:
+                        if best is None or len(probe) > len(best[2]):
+                            best = (sid, w := next(
+                                w for w in witnesses
+                                if w.get("source_id") == sid), probe)
+                        break
         if best is None:
             links.append(make_link(mention=m, witness=None,
                                    match_status="NO_MATCH",
-                                   match_method="distinctive_ngram_overlap"))
+                                   match_method="distinctive_substring_scan"))
             continue
-        w, shared = best
+        sid, w, probe = best
         status = "CANDIDATE_MATCH"
-        method = "distinctive_ngram_overlap"
-        # upgrade requires verified long shared substring on both raw texts
-        mt = (m.get("_mention_text") or "")
-        wt = (w.get("_text") or "")
-        if mt and wt:
-            shared_len = _longest_shared(mt, wt)
-            if shared_len >= _SHARED_SUBSTR_MIN:
-                span = w.get("raw_source_span")
-                snippet = wt[span[0]:span[1]] if span and len(wt) >= span[1] else ""
-                import hashlib as _h
-                digest_ok = (snippet and _h.sha256(
-                    snippet.encode("utf-8")).hexdigest()
-                    == w.get("evidence_sha256"))
-                if digest_ok:
-                    status = "TEXTUALLY_SUPPORTED"
-                    method = f"verified_shared_substring>={_SHARED_SUBSTR_MIN}"
+        method = "shared_10word_substring"
+        if len(probe) >= _SHARED_SUBSTR_MIN:
+            span = w.get("raw_source_span")
+            wt = (source_texts or {}).get(sid, w.get("_text", "") or "")
+            snippet = wt[span[0]:span[1]] if span and len(wt) >= span[1] else ""
+            import hashlib as _h
+            if snippet and _h.sha256(snippet.encode("utf-8")).hexdigest() \
+                    == w.get("evidence_sha256"):
+                status = "TEXTUALLY_SUPPORTED"
+                method = "verified_shared_substring"
         links.append(make_link(mention=m, witness=w, match_status=status,
                                match_method=method))
     return links

@@ -1,0 +1,17 @@
+{
+  "contract": "mubin-hsearch01-case-b-reference-v1",
+  "case": "B",
+  "verse_reference": "2:185",
+  "tafsir_work_id": "tafsir_ibn_kathir",
+  "hadith_source_id": "openiti:0458Bayhaqi.SunanKubra",
+  "hadith_version_id": "0458Bayhaqi.SunanKubra.JK000484-ara1",
+  "hadith_source_blob_sha": "8082c36960466b37e778bc3edb02285bae092554",
+  "hadith_shared_offset": 3851131,
+  "shared_seed_chars": 13,
+  "tafsir_side_digest": "f34b6ee53c7e1d50b688bb6ebcec413df2792752cacc07aedd76af3de913e5a2",
+  "hadith_side_digest": "f34b6ee53c7e1d50b688bb6ebcec413df2792752cacc07aedd76af3de913e5a2",
+  "expected_match_status": "CANDIDATE_MATCH",
+  "non_upgrade_reason": "wording diverges after the 13-char seed (abbreviation/meaning narration); automatic TEXTUALLY_SUPPORTED upgrade refused by design",
+  "scholarly_verified": false,
+  "note": "offsets and digests only; protected text stays local"
+}
