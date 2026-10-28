@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from engines.tafsir.t01 import _lookup, TafsirError
+from engines.quran.tafsir.catalog import load_catalog
 from engines.tafsir.t02 import (
     TafsirT02Error, extract_from_t01_record, make_record,
     segment_statements, summarize, validate_record, CONTRACT,
@@ -35,7 +36,9 @@ def source_record(text=TEXT, work="tafsir_tabari", ref="2:43",
     digest = sha(text)
     return {
         "evidence_id": f"tafsir:{work}:{ref}:{digest}",
-        "work_id": work, "author_ar": "مؤلف اختباري",
+        "work_id": work, "author_ar": next(
+            item["author_ar"] for item in load_catalog()["sources"]
+            if item["id"] == work),
         "imported_record_sha256": digest,
         "verse_locator": ref,
         "text": text if display is None else display,
@@ -104,6 +107,10 @@ class T02GroundingTests(unittest.TestCase):
         bad = record()
         bad["work_id"] = "tafsir_baghawi"
         with self.assertRaisesRegex(TafsirT02Error,"T02_SOURCE_IDENTITY_MISMATCH"):
+            validate_record(bad, original_text=TEXT)
+        bad = record()
+        bad["author_id"] = "نسبة خاطئة إلى مؤلف آخر"
+        with self.assertRaisesRegex(TafsirT02Error,"T02_AUTHOR_MISMATCH"):
             validate_record(bad, original_text=TEXT)
         bad = record()
         bad["publication_allowed"] = True
