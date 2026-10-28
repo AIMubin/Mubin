@@ -1,4 +1,4 @@
-"""Local-only H-Search-01 alignment replay and metadata-only evidence receipt.
+r"""Local-only H-Search-01 alignment replay and metadata-only evidence receipt.
 
 Example:
  python -m engines.hadith.hsearch.replay 2:185 \
