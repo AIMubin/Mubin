@@ -1,4 +1,8 @@
-"""UT-01.1 acceptance tests (synthetic CI data only)."""
+"""UT-01.1 synthetic contract tests + frozen real-source receipt checks.
+
+The graph() fixture is synthetic. The real historical digital-source replay
+is represented only by pinned metadata receipts; CI does not access W1 HTML.
+"""
 from __future__ import annotations
 
 import copy
@@ -30,7 +34,7 @@ def canonical(value):
 
 
 def graph():
-    """Minimal valid Stage08-shaped graph with one real-shaped pointer."""
+    """Minimal SYNTHETIC Stage08-shaped graph; no real W1 replay here."""
     return {
         "engine": "usul-evidence-context-graph/0.1.0",
         "status": "EVIDENCE_CONTEXT_GRAPH_PASS",
@@ -52,7 +56,7 @@ def graph():
              "source_text_included": False},
             {"id": "pointer:pilot-amr", "kind": "RULE_RESEARCH_POINTER",
              "pointer_id": "pilot:amr-rule-research-pointer",
-             "reference_id": "candidate:command", "review_status": "UNASSESSED",
+             "reference_id": "candidate:amr-structural-hypothesis", "review_status": "UNASSESSED",
              "rule_application_verified": False,
              "objection_presence_verified": False},
         ],
@@ -88,13 +92,13 @@ def manifest(pointer_id="pilot:amr-rule-research-pointer"):
         "concepts": [
             {"id": "concept:amr-term", "concept_kind": "TERM",
              "review_status": "UNASSESSED"},
-            {"id": "concept:qarinah-candidate", "concept_kind": "CONDITION",
+            {"id": "concept:qarinah-candidate", "concept_kind": "EXCEPTION",
              "review_status": "UNASSESSED"},
             {"id": "concept:wujub-candidate", "concept_kind": "OUTCOME",
              "review_status": "UNASSESSED"},
         ],
         "rule_candidates": [
-            {"id": "candidate:command", "pointer_id": pointer_id,
+            {"id": "candidate:amr-structural-hypothesis", "pointer_id": pointer_id,
              "if_concepts": ["concept:amr-term"],
              "unless_concepts": ["concept:qarinah-candidate"],
              "then_concept": "concept:wujub-candidate",
@@ -113,7 +117,7 @@ def trusted(graph_obj):
 
 
 class UT011Tests(unittest.TestCase):
-    def test_catalog_builds_with_real_pointer_chain(self):
+    def test_catalog_builds_with_synthetic_pointer_chain(self):
         g = graph()
         out = build_catalog(g, trusted(g), manifest())
         self.assertEqual(out["status"], "U02_CANDIDATE_CATALOG_PASS")
@@ -186,6 +190,44 @@ class UT011Tests(unittest.TestCase):
             self.assertFalse(rep[flag], flag)
         self.assertEqual(rep["catalog_concept_count"], 3)
         self.assertEqual(rep["catalog_rule_candidates"], 1)
+
+    def test_archived_private_receipt_crosschecks_historical_acceptance(self):
+        reference = json.loads((REPO / "corpus" / "reviews" /
+            "u02-waraqat-private-source-acceptance-PASS.json").read_text(
+                encoding="utf-8"))
+        receipt = json.loads((REPO / "evaluation" / "evidence" /
+            "ut011_bab_amr_bridge_report.json").read_text(encoding="utf-8"))
+        from engines.usul.pilots.waraqat_u02_real_bridge import (
+            REPO_DATA, EXPECTED_NODES, EXPECTED_EDGES,
+        )
+        historical_manifest = json.loads((REPO_DATA /
+            "waraqat-u02-catalog-candidates.json").read_text(encoding="utf-8"))
+        source_ids = {row["id"] for row in historical_manifest["concepts"]}
+        rule = historical_manifest["rule_candidates"][0]
+        self.assertEqual(rule["id"], "candidate:amr-structural-hypothesis")
+        self.assertEqual(rule["pointer_id"], "pilot:amr-rule-research-pointer")
+        self.assertEqual(historical_manifest["concepts"][1]["concept_kind"],
+                         "EXCEPTION")
+        self.assertEqual(set(rule["if_concepts"] + rule["unless_concepts"] +
+                             [rule["then_concept"]]), source_ids)
+        self.assertEqual(receipt["catalog_sha256"], reference["catalog_sha256"])
+        self.assertEqual(receipt["u02_real_replay_report_sha256"],
+                         reference["bridge_report_sha256"])
+        self.assertEqual(receipt["stage08_graph_sha256"],
+                         reference["stage08_graph_sha256"])
+        self.assertEqual(receipt["stage08_node_count"], EXPECTED_NODES)
+        self.assertEqual(receipt["stage08_edge_count"], EXPECTED_EDGES)
+        self.assertEqual(receipt["lexical_binding_count"], len(source_ids))
+        self.assertEqual({
+            row["concept_id"]: row["unique_occurrence_count"]
+            for row in receipt["lexical_bindings"]
+        }, {"concept:amr-term": 6, "concept:qarinah-candidate": 1,
+            "concept:wujub-candidate": 1})
+        self.assertEqual(len({id for row in receipt["lexical_bindings"]
+                              for id in row["occurrence_ids"]}), 8)
+        self.assertTrue(reference["full_private_inputs_matched_frozen_sha256"])
+        self.assertTrue(reference["identical_two_source_replays"])
+        self.assertFalse(receipt["source_support_attested"])
 
     def test_real_receipt_text_leak_scan(self):
         p = REPO / "evaluation" / "evidence" / "ut011_bab_amr_bridge_report.json"
