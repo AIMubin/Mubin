@@ -1,0 +1,110 @@
+"use strict";
+// T0.3 research UI. Metadata-only: the API never returns protected text.
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function field(k, v) {
+  const row = el("div", "meta");
+  row.appendChild(el("span", null, k + ": "));
+  row.appendChild(el("code", null, String(v)));
+  return row;
+}
+function boolSpan(label, value) {
+  const s = el("span", value ? "status-true" : "status-false",
+    label + ": " + (value ? "نعم" : "لا"));
+  return s;
+}
+async function search() {
+  const ref = $("ref").value.trim();
+  $("error").hidden = true;
+  $("result").hidden = true;
+  $("tafsirs").textContent = "";
+  $("relations").textContent = "";
+  if (!/^[1-9][0-9]{0,2}:[1-9][0-9]{0,2}$/.test(ref)) {
+    $("error").textContent = "مرجع غير صالح — الصيغة سورة:آية مثل 2:43";
+    $("error").hidden = false;
+    return;
+  }
+  let data;
+  try {
+    const res = await fetch("/api/research?ref=" + encodeURIComponent(ref),
+                            {credentials: "omit"});
+    data = await res.json();
+    if (!res.ok) {
+      $("error").textContent = "رفض الاستعلام: " + (data.error || res.status);
+      $("error").hidden = false;
+      return;
+    }
+  } catch (e) {
+    $("error").textContent = "فشل الاتصال";
+    $("error").hidden = false;
+    return;
+  }
+  $("ref-title").textContent = "الآية " + ref +
+    " — " + data.tafsir_count + " مصادر تفسيرية";
+  $("quran-state").textContent =
+    "نص القرآن: " + data.quran_text.state +
+    " — لا يُعرض نص مشتق بوصفه مصحفاً معتمداً";
+  const counts = data.counts || {};
+  for (const t of data.tafsirs) {
+    const box = el("section", "work");
+    box.appendChild(el("h3", null,
+      (t.work_title_ar || t.work_id) + " — " + (t.author_ar || "مؤلف غير محدد")));
+    const c = el("div", "counts");
+    c.appendChild(el("span", null, "مقاطع: " + t.passage_count));
+    c.appendChild(el("span", null, "مرشحات: " + t.candidate_count));
+    c.appendChild(el("span", null, "مؤشرات نسبة مسمّاة: " + t.attribution_cues_named));
+    c.appendChild(el("span", null, "مؤشرات اختيار المؤلف: " + t.author_preference_cues));
+    c.appendChild(el("span", null, "متحدث غير محدد: " + t.unidentified_speaker_candidates));
+    box.appendChild(c);
+    box.appendChild(boolSpan("الطبعة موثقة", t.edition_authenticated));
+    box.appendChild(field("حالة العرض", t.display_status));
+    box.appendChild(field("بصمة السجل", t.imported_record_sha256));
+    box.appendChild(field("معرف الشاهد", t.evidence_id));
+    // candidates drilldown (metadata only)
+    const list = el("details");
+    list.appendChild(el("summary", null, "استعراض المرشحات (" + t.candidate_count + ")"));
+    for (const cd of (t.candidates_redacted || [])) {
+      const item = el("div", "work");
+      item.appendChild(field("معرف المرشح", cd.candidate_id));
+      item.appendChild(field("النوع", cd.interpretation_type));
+      item.appendChild(field("المتحدث", cd.speaker_name === null
+        ? "غير محدد" : cd.speaker_name));
+      item.appendChild(field("حالة الهوية", cd.speaker_identity_status));
+      item.appendChild(field("نوع النسبة", cd.attribution_type));
+      item.appendChild(field("ترشيح المؤلف", cd.author_endorsement));
+      item.appendChild(field("ثقة النسبة", cd.attribution_confidence));
+      item.appendChild(field("حالة التحقق", cd.verification_status));
+      item.appendChild(field("إزاحات النص الخام",
+        cd.statement_start + ".." + cd.statement_end));
+      item.appendChild(field("بصمة المقطع", cd.evidence_sha256));
+      list.appendChild(item);
+    }
+    if (!(t.candidates_redacted || []).length) {
+      list.appendChild(el("p", "empty", "لا مرشحات"));
+    }
+    box.appendChild(list);
+    $("tafsirs").appendChild(box);
+  }
+  const rel = el("section", "work");
+  rel.appendChild(el("h3", null, "العلاقات المرشحة"));
+  rel.appendChild(boolSpan("موثقة علمياً", false));
+  const rs = data.relations || [];
+  if (!rs.length) rel.appendChild(el("p", "empty", "لا علاقات"));
+  for (const r of rs) {
+    const type = r.relation_type === "UNDETERMINED"
+      ? "غير محسومة (ليست اتفاقاً ولا خلافاً)" : r.relation_type;
+    const row = el("p", "relation");
+    row.appendChild(el("span", null, type + " — "));
+    row.appendChild(el("code", null, r.relation_id));
+    rel.appendChild(row);
+  }
+  $("relations").appendChild(rel);
+  $("result").hidden = false;
+}
+$("go").addEventListener("click", search);
+$("ref").addEventListener("keydown", (e) => { if (e.key === "Enter") search(); });

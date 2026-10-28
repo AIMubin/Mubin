@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مُبين — البحث التفسيري الموحد</title>
+<link rel="stylesheet" href="/research.css">
+</head>
+<body>
+<header>
+  <h1>مُبين — واجهة البحث التفسيري الموحدة</h1>
+  <p class="disclaimer">مرشحات آلية غير متحقق منها — ليست أقوالاً علمية معتمدة</p>
+</header>
+<section id="query">
+  <label for="ref">مرجع الآية (مثال: 2:43)</label>
+  <input id="ref" dir="ltr" placeholder="2:43" autocomplete="off">
+  <button id="go">بحث</button>
+</section>
+<section id="result" hidden>
+  <h2 id="ref-title"></h2>
+  <p id="quran-state" class="notice"></p>
+  <section id="tafsirs"></section>
+  <section id="relations"></section>
+</section>
+<p id="error" class="error" hidden></p>
+<footer>
+  <p>حالة التحقق العلمي: غير موثق — حالة الحقوق: قيد المراجعة القانونية — جميع المؤشرات لغوية آلية</p>
+</footer>
+<script src="/research.js"></script>
+</body>
+</html>

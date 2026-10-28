@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from engines.quran.q01b.tanzil import (
     MAX_RAW_BYTES, MAX_MANIFEST_BYTES, load_raw, read_regular_file, RawSourceError
@@ -15,12 +16,18 @@ def main(argv=None)->int:
     p.add_argument("--manifest",required=True,help="Q0.1b pinned manifest on disk")
     p.add_argument("--source",required=True,help="already obtained original, unmodified raw text file")
     p.add_argument("--port",type=int,default=8765,help="localhost port, default 8765")
+    p.add_argument("--tafsir-db",type=str,default=None,
+        help="optional pinned Q0.3 tafsir database enabling /api/research")
     args=p.parse_args(argv)
     try:
         manifest=read_regular_file(args.manifest,MAX_MANIFEST_BYTES)
         raw=read_regular_file(args.source,MAX_RAW_BYTES)
         idx=load_raw(manifest,raw)
-        server=build_http_server(idx,raw,port=args.port)
+        tafsir_db=Path(args.tafsir_db) if args.tafsir_db else None
+        if tafsir_db is not None and (tafsir_db.is_symlink() or not tafsir_db.is_file()):
+            print("Reader startup rejected: tafsir_db_unavailable",file=sys.stderr)
+            return 2
+        server=build_http_server(idx,raw,port=args.port,tafsir_db_path=tafsir_db)
     except (RawSourceError,ValueError,TypeError,OSError,OverflowError) as exc:
         print("Reader startup rejected: "+str(exc)[:150],file=sys.stderr)
         return 2
