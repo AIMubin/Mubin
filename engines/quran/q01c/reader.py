@@ -62,7 +62,7 @@ def _decode_query(raw_query:str, allowed:frozenset[str],
         raise ValueError("invalid_query") from exc
 
 def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
-                      tafsir_db_path=None)->LoopbackServer:
+                      tafsir_db_path=None,hadith_cache_dir=None)->LoopbackServer:
     if type(index) is not SourceIndex or type(raw) is not bytes:
         raise RawSourceError("unverified_or_missing_source_index")
     if hashlib.sha256(raw).hexdigest()!=index.raw_sha256:
@@ -156,6 +156,20 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
                         report=unified_research_query(
                             Path(tafsir_db_path),params["ref"],
                             include_private_text=False)
+                        if hadith_cache_dir is not None:
+                            from engines.tafsir.t02_cli import (
+                                extract_local_verse)
+                            from engines.tafsir.t01 import (
+                                lookup_verse as _lv)
+                            from engines.hadith.hsearch.pipeline import (
+                                run_hsearch)
+                            lk=_lv(Path(tafsir_db_path),params["ref"],
+                                include_private_text=True)
+                            passages=extract_local_verse(
+                                Path(tafsir_db_path),lk)
+                            report["hadith"]=run_hsearch(passages,
+                                Path(hadith_cache_dir),
+                                allow_network=False)
                         return self._json(200,report)
                     except ValueError:
                         return self._deny(400,"invalid_research_reference")

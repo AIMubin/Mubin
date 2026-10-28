@@ -202,5 +202,40 @@ class T03Tests(unittest.TestCase):
         self.assertEqual(r.status, 200)
 
 
+    def test_hadith_api_explicit_opt_in_redacts_and_sanitizes(self):
+        idx=load_raw(json.dumps(MANIFEST).encode(),RAW)
+        server=build_http_server(idx,RAW,port=0,tafsir_db_path=self.db,
+                                 hadith_cache_dir=self.root/"synthetic-cache")
+        port=server.server_address[1]
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        self.addCleanup(server.shutdown)
+        def fetch():
+            conn=HTTPConnection("127.0.0.1",port,timeout=15)
+            conn.request("GET","/api/research?ref=2%3A43",
+                         headers={"Host":f"127.0.0.1:{port}"})
+            res=conn.getresponse()
+            status=res.status
+            data=json.loads(res.read())
+            conn.close()
+            return status,data
+        synthetic={"status":"OK","text_included":False,"mentions_total":1,
+                   "witnesses_total":0,"links_total":1,"links_by_status":{
+                       "SOURCE_UNAVAILABLE":1},"holdout_read":False}
+        with patch("engines.tafsir.t01.lookup_verse",return_value=self.lookup), \
+             patch("engines.hadith.hsearch.pipeline.run_hsearch",
+                   return_value=synthetic):
+            status,data=fetch()
+        self.assertEqual(200,status)
+        self.assertEqual(synthetic,data["hadith"])
+        self.assertFalse(data["text_included"])
+        self.assertNotIn(PASSAGE_TEXT,json.dumps(data,ensure_ascii=False))
+        with patch("engines.tafsir.t01.lookup_verse",return_value=self.lookup), \
+             patch("engines.hadith.hsearch.pipeline.run_hsearch",
+                   side_effect=RuntimeError("SENSITIVE_PRIVATE_HADITH_TEXT")):
+            status,data=fetch()
+        self.assertEqual(422,status)
+        self.assertNotIn("SENSITIVE_PRIVATE_HADITH_TEXT",json.dumps(data))
+
+
 if __name__ == "__main__":
     unittest.main()
