@@ -1,0 +1,77 @@
+{
+  "catalog_concept_count": 3,
+  "catalog_rule_candidates": 1,
+  "catalog_sha256": "ab77f297b0b6e4518bd7c8f0b00e13cf38df4c6372d642d76d494a7df1b75ca5",
+  "engine": "waraqat-u02-pinned-lexical-catalog/0.2.2",
+  "formalization_verified": false,
+  "juristic_inference_allowed": false,
+  "lexical_binding_count": 3,
+  "lexical_bindings": [
+    {
+      "classification": "EXACT_LITERAL_ONLY",
+      "concept_id": "concept:amr-term",
+      "lexical_presence_only": true,
+      "occurrence_ids": [
+        "occurrence:06562152be691ee970f6065ed4415396",
+        "occurrence:5272a4dd72f47696be2bd01d2991cd92",
+        "occurrence:655f263dd8cb2c4aae0daf91d1f899c8",
+        "occurrence:69ea27af1a5889868b9d540257f8badd",
+        "occurrence:6e189994f675627f4f1417fbe82dec55",
+        "occurrence:b4717a7e99d5470ca03d4752fcfccec6"
+      ],
+      "query_id": "pilot:amr-term",
+      "scholarly_verified": false,
+      "section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+      "semantic_equivalence_verified": false,
+      "source_id": "pilot:waraqat-primary",
+      "source_support_attested": false,
+      "unique_occurrence_count": 6
+    },
+    {
+      "classification": "EXACT_LITERAL_ONLY",
+      "concept_id": "concept:qarinah-candidate",
+      "lexical_presence_only": true,
+      "occurrence_ids": [
+        "occurrence:46dfecc8af9c50bf72f05b9ee523a23a"
+      ],
+      "query_id": "pilot:qarinah-term",
+      "scholarly_verified": false,
+      "section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+      "semantic_equivalence_verified": false,
+      "source_id": "pilot:waraqat-primary",
+      "source_support_attested": false,
+      "unique_occurrence_count": 1
+    },
+    {
+      "classification": "EXACT_LITERAL_ONLY",
+      "concept_id": "concept:wujub-candidate",
+      "lexical_presence_only": true,
+      "occurrence_ids": [
+        "occurrence:65b369dd791694d6daca44282193d61f"
+      ],
+      "query_id": "pilot:wujub-term",
+      "scholarly_verified": false,
+      "section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+      "semantic_equivalence_verified": false,
+      "source_id": "pilot:waraqat-primary",
+      "source_support_attested": false,
+      "unique_occurrence_count": 1
+    }
+  ],
+  "public_fatwa_authorized": false,
+  "redistribution_approved": false,
+  "rule_execution_performed": false,
+  "scholarly_verified": false,
+  "semantic_equivalence_verified": false,
+  "source_edition_authenticated": false,
+  "source_replay_executed_here": true,
+  "source_support_attested": false,
+  "source_text_included": false,
+  "stage08_edge_count": 87,
+  "stage08_graph_sha256": "72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2",
+  "stage08_node_count": 53,
+  "stage08_source_replay_status": "STAGE07_DUAL_WITNESS_ARABIC_RETRIEVAL_PASS",
+  "status": "U02_WARAQAT_PINNED_CATALOG_PASS",
+  "textual_match_does_not_imply_rule_support": true,
+  "u02_real_replay_report_sha256": "c7004429ab41d37812fa1f494f97fb93be6fc2aa4ea2ccf3a0c5f3b8ec38f2b0"
+}
