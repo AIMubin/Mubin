@@ -6,13 +6,19 @@ Unicode codepoint offsets into literal source text, never normalized text.
 from __future__ import annotations
 
 import hashlib
+import io
+import json
+from contextlib import redirect_stdout
+from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from engines.hadith.hsearch.alignment import (
     fold_with_raw_map, align_shared_tokens)
 from engines.hadith.hsearch.contracts import make_witness
 from engines.hadith.hsearch.matching import match_mentions
 from engines.hadith.hsearch.sources import git_blob_sha
+from engines.hadith.hsearch.replay import replay, main as replay_main
 
 WORDS = "قال حدثنا رجل عن قوم في مجلس علم قديم قبل عصر الناس"
 # Ten tokens: قال/حدثنا/رجل/عن/قوم/في/مجلس/علم/قديم/قبل
@@ -168,6 +174,57 @@ class EndToEndMatchTests(unittest.TestCase):
         self.assertEqual("CANDIDATE_MATCH",r[0]["match_status"])
         self.assertTrue(r[0]["textually_grounded_lexical_overlap"])
         self.assertFalse(r[0]["identity_of_narration_confirmed"])
+
+
+
+class PrivateOperatorReplayTests(unittest.TestCase):
+    def test_redacted_receipt_reports_only_lexical_candidate(self):
+        dummy_link = {
+            "link_id": "hl:test", "match_status": "CANDIDATE_MATCH",
+            "textually_grounded_lexical_overlap": True,
+            "identity_of_narration_confirmed": False,
+            "folded_word_count": 10,
+            "tafsir_shared_raw_span": [44, 92],
+            "hadith_shared_raw_span": [100, 148],
+            "tafsir_shared_raw_sha256": "a"*64,
+            "hadith_shared_raw_sha256": "b"*64,
+            "text_included": False,
+        }
+        fake = {
+            "status": "OK", "passages_processed": 1,
+            "mentions_total": 1, "witnesses_total": 2,
+            "links_total": 1, "links_by_status": {"CANDIDATE_MATCH": 1},
+            "sources_unavailable": [], "links": [dummy_link],
+        }
+        with patch("engines.hadith.hsearch.replay.lookup_verse",
+                   return_value={"quran_reference": "2:185"}), \
+             patch("engines.hadith.hsearch.replay.extract_local_verse",
+                   return_value=[{"not":"private source bytes"}]), \
+             patch("engines.hadith.hsearch.replay.run_hsearch",
+                   return_value=fake):
+            result = replay("2:185", Path("private.db"), Path("private_cache"))
+        self.assertEqual("OK",result["status"])
+        self.assertEqual(1,result["aligned_candidate_count"])
+        self.assertFalse(result["narration_identity_established"])
+        self.assertFalse(result["scientific_gate_passed"])
+        self.assertFalse(result["text_included"])
+        self.assertNotIn("private source bytes",
+                         json.dumps(result,ensure_ascii=False))
+
+    def test_replay_fails_without_leaking_private_error(self):
+        stream = io.StringIO()
+        with patch("engines.hadith.hsearch.replay.replay",
+                   side_effect=RuntimeError("private source content")):
+            with redirect_stdout(stream):
+                code=replay_main([
+                    "2:185", "--database", "private.db",
+                    "--hadith-cache", "private_cache",
+                ])
+        self.assertEqual(2,code)
+        result=json.loads(stream.getvalue())
+        self.assertEqual("REFUSED",result["status"])
+        self.assertFalse(result["text_included"])
+        self.assertNotIn("private source content",stream.getvalue())
 
 
 if __name__ == "__main__":
