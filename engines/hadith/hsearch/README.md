@@ -119,3 +119,57 @@ The corrected 2:43 operator baseline (61 Tafsir passages, seven
 narration-cue windows, 54,599 source candidate blocks, seven NO_MATCH)
 must be remeasured on this version. The 2:185 13-character lead alone
 still fails the ten-word automatic match requirement.
+
+## H-Search-01 coverage gap diagnostic (engineering follow-up)
+
+The local operator reported **0 aligned hits** for 2:185 (491 T0.2
+passages, 65 narration windows) and 1:7 (630 passages, 53 windows) while
+an earlier full-corpus exploratory search suggested a ten-word match in
+1:7. This is **not a verified contradiction** until the precise raw
+source witnesses and their spans have been compared using one
+normalization contract.
+
+The private diagnosis scans the **complete original verse source rows**
+from the pinned Q0.3 SQLite and the four Git-blob-verified, non-holdout
+Hadith source files. It then identifies the first pipeline boundary
+that excludes each ten-whole-token lexical overlap:
+
+- OUTSIDE_T02_PASSAGE: original tafsir overlap not wholly inside any
+  emitted T0.2 passage, possibly due to segmentation/size/hold
+- OUTSIDE_NARRATION_WINDOW: passage exists, but not within an explicit
+  narration-cue window; this cannot be promoted into a hadith link
+- CROSSES_OR_OUTSIDE_SOURCE_BLOCK: original Hadith overlap crosses
+  or falls outside independently cited witness-candidate blocks
+- NORMALIZER_OR_TOKENIZATION_MISMATCH: full-file scan seed fails strict
+  folded-to-raw alignment; no proof of a source-span citation
+- INSIDE_ALL_PIPELINE_WINDOWS: overlap survives all three boundaries,
+  but still does **not** prove that the two narrations are identical
+
+Run locally from the repo root (PowerShell), using the actual private
+files. Each receipt name must be new: existing receipts are NEVER
+overwritten.
+
+    python -m engines.hadith.hsearch.diagnostics 1:7 --database "corpus-data/linked/quran_tafsir.db" --hadith-cache "D:\MubinSources\hadith-sources" --receipt-path "D:\MubinSources\hadith-sources\diag-1-7-v1.json"
+    python -m engines.hadith.hsearch.diagnostics 2:185 --database "corpus-data/linked/quran_tafsir.db" --hadith-cache "D:\MubinSources\hadith-sources" --receipt-path "D:\MubinSources\hadith-sources\diag-2-185-v1.json"
+
+Only stage counts and evidence receipt SHA are printed. The locally
+frozen JSON stores hashed phrases, raw codepoint spans, source IDs and
+classification; **never** private text, hadith grading or an inferred
+scholarly identity. The recorded SHA-256 identifies the canonical
+metadata JSON excluding that checksum field, not the original sources.
+
+The probe indexing is deliberately bounded to twelve distinct source
+occurrences per identical ten-token gram. If
+truncated_tafsir_gram_occurrences is nonzero,
+stage_coverage_exhaustive=false; do not use missing categories as proof
+of absence. The scanner only tests current H-Search text folding
+(hamza/ya/ta marbuta, harakat, whitespace). An earlier exploratory
+normalizer that strips punctuation or otherwise transforms Arabic
+differently may produce a match absent under this contract. Such a
+difference is evidence to *inspect*, not authority to weaken matching.
+
+Diagnosis alone is not authorization to widen passage or witness
+boundaries: each boundary change requires separately pinned original
+spans, negative cross-boundary tests, and scholarly scope review.
+Real positive hadith-identity proof remains OPEN. Mubin stays
+0.1.0-alpha.
