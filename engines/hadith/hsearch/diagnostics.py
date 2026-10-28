@@ -248,6 +248,9 @@ def diagnose_local(reference: str, database: Path, cache_dir: Path) -> dict:
     report["quran_reference"] = reference
     report["passages_processed"] = len(passages)
     report["sources_checked"] = sorted(texts)
+    report["pinned_source_git_blobs"] = {
+        sid: metadata[sid]["source_blob_sha"] for sid in sorted(texts)
+    }
     report["tafsir_source_rows_checked"] = len(rows)
     # Receipt hash must describe the final, complete report.
     report.pop("evidence_payload_sha256")
