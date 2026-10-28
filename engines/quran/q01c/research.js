@@ -122,8 +122,8 @@ async function search() {
       hb.appendChild(el("p", "empty", "تعذر التشغيل: " + (h.code || h.status)));
     } else {
       const hc = el("div", "counts");
-      hc.appendChild(el("span", null, "مواضع ذكر: " + h.mentions_total));
-      hc.appendChild(el("span", null, "شواهد مرشحة: " + h.witnesses_total));
+      hc.appendChild(el("span", null, "نوافذ إشارات روائية غير متحقق منها: " + h.mentions_total));
+      hc.appendChild(el("span", null, "مقاطع مصادر مفهرسة (ليست أحاديث مستقلة): " + h.witnesses_total));
       hc.appendChild(el("span", null, "روابط: " + h.links_total));
       for (const [st, n] of Object.entries(h.links_by_status || {})) {
         hc.appendChild(el("span", null, st + ": " + n));
@@ -132,10 +132,10 @@ async function search() {
       hb.appendChild(field("المصادر المستخدمة", (h.sources_used || []).join(", ") || "—"));
       hb.appendChild(field("حالة القراءة", h.sources_unavailable && h.sources_unavailable.length ? "بعض المصادر غير متاحة محلياً (SOURCE_UNAVAILABLE)" : "جميع المصادر المصرح بها متاحة وموثقة"));
       const jd = el("details");
-      jd.appendChild(el("summary", null, "أحكام منقولة (" + ((h.commentary || {}).records_total || 0) + ")"));
+      jd.appendChild(el("summary", null, "مؤشرات نقدية لغوية غير محققة (" + ((h.commentary || {}).records_total || 0) + ")"));
       hb.appendChild(jd);
       const ml = el("details");
-      ml.appendChild(el("summary", null, "مواضع الذكر (" + h.mentions_total + ") — بيانات وصفية فقط"));
+      ml.appendChild(el("summary", null, "نوافذ الذكر المرشحة (" + h.mentions_total + ") — بيانات وصفية فقط"));
       for (const mn of (h.mentions || []).slice(0, 50)) {
         const mi = el("div", "work");
         mi.appendChild(field("معرف الذكر", mn.mention_id));
