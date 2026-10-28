@@ -10,6 +10,7 @@ import io
 import json
 from contextlib import redirect_stdout
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -225,6 +226,26 @@ class PrivateOperatorReplayTests(unittest.TestCase):
         self.assertEqual("REFUSED",result["status"])
         self.assertFalse(result["text_included"])
         self.assertNotIn("private source content",stream.getvalue())
+
+    def test_local_receipt_written_once_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt_path=Path(directory)/"frozen_receipt.json"
+            with patch("engines.hadith.hsearch.replay.replay",
+                       return_value={"status":"OK","text_included":False,
+                                     "evidence_payload_sha256":"a"*64}):
+                output=io.StringIO()
+                args=["2:185","--database","private.db",
+                      "--hadith-cache","private_cache",
+                      "--receipt-path",str(receipt_path)]
+                with redirect_stdout(output):
+                    code=replay_main(args)
+                self.assertEqual(0,code)
+                self.assertTrue(receipt_path.is_file())
+                original=receipt_path.read_bytes()
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(2,replay_main(args))
+                self.assertEqual(original,receipt_path.read_bytes())
+                self.assertNotIn(b"private.db",original)
 
 
 if __name__ == "__main__":
