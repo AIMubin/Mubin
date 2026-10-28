@@ -16,6 +16,9 @@ from urllib.parse import urlsplit, parse_qs
 from engines.quran.q01b.tanzil import SourceIndex, RawSourceError, load_raw
 
 _HERE=Path(__file__).resolve().parent
+_RESEARCH_FILES={"/research":("research.html","text/html; charset=utf-8"),
+                 "/research.css":("research.css","text/css; charset=utf-8"),
+                 "/research.js":("research.js","text/javascript; charset=utf-8")}
 _FILES={"/":("reader.html","text/html; charset=utf-8"),
         "/reader.js":("reader.js","application/javascript; charset=utf-8"),
         "/reader.css":("reader.css","text/css; charset=utf-8")}
@@ -58,7 +61,8 @@ def _decode_query(raw_query:str, allowed:frozenset[str],
     except (ValueError,UnicodeError,OverflowError) as exc:
         raise ValueError("invalid_query") from exc
 
-def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackServer:
+def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
+                      tafsir_db_path=None)->LoopbackServer:
     if type(index) is not SourceIndex or type(raw) is not bytes:
         raise RawSourceError("unverified_or_missing_source_index")
     if hashlib.sha256(raw).hexdigest()!=index.raw_sha256:
@@ -122,13 +126,43 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765)->LoopbackSer
             try:
                 p=urlsplit(self.path)
                 if p.scheme or p.netloc or p.fragment or p.path not in {*_FILES,
+                    *_RESEARCH_FILES,
                     "/api/status","/api/get","/api/find","/api/notice",
-                    "/api/tafsir-catalog"}:
+                    "/api/tafsir-catalog","/api/research"}:
                     return self._deny(404,"route_not_found")
                 if p.path in _FILES:
                     _decode_query(p.query,frozenset(),frozenset())
                     file_name,mime=_FILES[p.path]
                     return self._send(200,(_HERE/file_name).read_bytes(),mime)
+                if p.path in _RESEARCH_FILES:
+                    _decode_query(p.query,frozenset(),frozenset())
+                    file_name,mime=_RESEARCH_FILES[p.path]
+                    return self._send(200,(_HERE/file_name).read_bytes(),mime)
+                if p.path=="/api/research":
+                    if tafsir_db_path is None:
+                        return self._deny(403,"tafsir_research_disabled")
+                    from engines.tafsir.t03 import unified_research_query
+                    from engines.tafsir.t01 import TafsirError
+                    from engines.tafsir.t02 import TafsirT02Error
+                    try:
+                        params=_decode_query(p.query,frozenset({"ref"}),
+                                             frozenset({"ref"}))
+                        # A Quran→Tafsir result must be anchored in this
+                        # reader's independently pinned Quran snapshot, not
+                        # merely a verse-like key present in the Tafsir DB.
+                        verse=index.get(params["ref"])
+                        if not verse["found"]:
+                            return self._deny(404,"verse_not_in_loaded_quran_source")
+                        report=unified_research_query(
+                            Path(tafsir_db_path),params["ref"],
+                            include_private_text=False)
+                        return self._json(200,report)
+                    except ValueError:
+                        return self._deny(400,"invalid_research_reference")
+                    except Exception:
+                        # Privacy: exception messages may contain source text,
+                        # private file names or internal SQLite details.
+                        return self._deny(422,"research_source_unavailable_or_invalid")
                 if p.path=="/api/status":
                     _decode_query(p.query,frozenset(),frozenset())
                     rep=index.report()

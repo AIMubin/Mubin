@@ -4,11 +4,15 @@ on:
   pull_request:
     paths:
       - "engines/tafsir/**"
+      - "README.md"
       - "corpus/query.py"
       - "corpus/locks/quran-tafsir-q03.json"
       - "core/tests/test_tafsir_t01.py"
       - "core/tests/test_tafsir_t02.py"
       - "core/tests/test_tafsir_t023.py"
+      - "core/tests/test_tafsir_t03.py"
+      - "engines/quran/q01c/**"
+      - "core/tests/test_quran_q01c.py"
       - "corpus/tests/test_query.py"
       - "core/tests/test_quran_tafsir_metadata.py"
       - ".github/workflows/mubin-tafsir-t01.yml"
@@ -16,11 +20,15 @@ on:
     branches: [main]
     paths:
       - "engines/tafsir/**"
+      - "README.md"
       - "corpus/query.py"
       - "corpus/locks/quran-tafsir-q03.json"
       - "core/tests/test_tafsir_t01.py"
       - "core/tests/test_tafsir_t02.py"
       - "core/tests/test_tafsir_t023.py"
+      - "core/tests/test_tafsir_t03.py"
+      - "engines/quran/q01c/**"
+      - "core/tests/test_quran_q01c.py"
       - "corpus/tests/test_query.py"
       - "core/tests/test_quran_tafsir_metadata.py"
       - ".github/workflows/mubin-tafsir-t01.yml"
@@ -44,5 +52,5 @@ jobs:
           cache: pip
           cache-dependency-path: core/requirements-test.txt
       - run: python -m pip install -r core/requirements-test.txt
-      - run: python -m compileall -q engines/tafsir core/tests/test_tafsir_t01.py core/tests/test_tafsir_t02.py core/tests/test_tafsir_t023.py
-      - run: python -m unittest core.tests.test_tafsir_t01 core.tests.test_tafsir_t02 core.tests.test_tafsir_t023 corpus.tests.test_query core.tests.test_quran_tafsir_metadata -v
+      - run: python -m compileall -q engines/tafsir core/tests/test_tafsir_t01.py core/tests/test_tafsir_t02.py core/tests/test_tafsir_t023.py core/tests/test_tafsir_t03.py
+      - run: python -m unittest core.tests.test_tafsir_t01 core.tests.test_tafsir_t02 core.tests.test_tafsir_t023 core.tests.test_tafsir_t03 core.tests.test_quran_q01c corpus.tests.test_query core.tests.test_quran_tafsir_metadata -v

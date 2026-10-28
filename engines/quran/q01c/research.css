@@ -1,0 +1,21 @@
+body{font-family:"Segoe UI",Tahoma,sans-serif;max-width:960px;margin:0 auto;
+padding:1rem;background:#fafaf7;color:#1a1a1a}
+header h1{font-size:1.4rem;margin:.2rem 0}
+.disclaimer{color:#8a6d00;background:#fff8dc;border:1px solid #e0cf8a;
+padding:.4rem .6rem;border-radius:6px;font-size:.9rem}
+#query{margin:1rem 0;display:flex;gap:.5rem;align-items:center}
+#ref{width:8rem;padding:.4rem;border:1px solid #bbb;border-radius:6px}
+button{padding:.4rem 1.2rem;border:0;border-radius:6px;background:#1f6f43;
+color:#fff;cursor:pointer}
+.work{border:1px solid #ddd;border-radius:8px;margin:.8rem 0;padding:.8rem;
+background:#fff}
+.work h3{margin:.1rem 0 .4rem;font-size:1.05rem}
+.meta{font-size:.8rem;color:#555;word-break:break-all}
+.counts{display:flex;gap:1rem;flex-wrap:wrap;margin:.4rem 0}
+.counts span{background:#eef4ee;border-radius:6px;padding:.2rem .6rem;
+font-size:.85rem}
+.status-false{color:#8a1f1f;font-weight:600}
+.relation{font-size:.85rem;color:#444;margin:.15rem 0}
+.notice,.error{font-size:.85rem}
+.error{color:#8a1f1f}
+.empty{color:#777;font-size:.9rem}
