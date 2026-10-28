@@ -107,3 +107,39 @@ runs synthetic cases.
 This milestone advances the source-oriented Tafsir engine without
 training, comparing, or tuning AI models. Mubin system version remains
 0.1.0-alpha, and edition/source/rights/fiqh authority remains unverified.
+
+## T0.3: Local Quran–Tafsir unified research interface
+
+T0.3 reuses the **existing** Q0.1c Quran reader and Q0.3→T0.1→T0.2→T0.2.3
+pipeline. It adds no database, source ingestion, text generation or model
+experiments. The reader must load its own pinned Quran source snapshot
+and, **only when enabled explicitly with --tafsir-db**, offers:
+
+- Browser page: http://127.0.0.1:<port>/research (Arabic RTL).
+- API: /api/research?ref=2%3A43 (strictly redacted metadata).
+- Quran reference must exist in the currently loaded Quran snapshot
+  independently of any verse key in the Tafsir database.
+- Source → passage → candidate metadata navigation with exact **raw imported
+  source Unicode-codepoint offsets** and SHA-256 digests, work attribution
+  as unverified bibliographic data, and clear UNVERIFIED/UNDETERMINED labels.
+- Rights, source authenticity, scholarly status, publication and fatwa flags
+  remain false. No Quran text or Tafsir source passages appear in the research
+  endpoint or public preview.
+
+Operator invocation (replace brackets with actual pinned local file paths):
+
+    python -m engines.quran.q01c --manifest <PINNED_QURAN_MANIFEST> --source <PINNED_QURAN_SOURCE> --tafsir-db corpus-data/linked/quran_tafsir.db --port 8765
+
+Omit --tafsir-db to disable the research API. The page may load, but the
+research endpoint refuses access. Keep localhost private and do not forward
+the port through an external tunnel or reverse proxy. T0.3 is metadata-only
+even for local users; private excerpt inspection remains in T0.2/T0.2.3
+operator CLI workflows with separate permission review.
+
+The operator previously reported for 2:43: 61 raw passages, 65 unverified
+lexical candidates, zero named attribution cues, zero author-preference
+cues and five UNDETERMINED relations. These numbers are **operator-reported
+run observations**, not scholarly counts or guaranteed fixtures.
+
+The cross-platform regression suite includes T0.3 + original Quran reader
+tests. Mubin overall release remains 0.1.0-alpha.
