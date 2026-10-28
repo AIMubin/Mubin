@@ -31,7 +31,10 @@ def unified_research_query(db_path: Path, reference: str, *,
     Metadata-only unless include_private_text=True (LOCAL operator view;
     never pipe to CI or logs). Reuses T0.1/T0.2/T0.2.3 without duplication.
     """
-    from engines.tafsir.t02 import CONTRACT as T02_CONTRACT
+    # T0.3 is strictly metadata-only, even on localhost. Private text is
+    # exclusively available via the explicit T0.2/T0.2.3 operator CLIs.
+    if include_private_text is not False:
+        raise ValueError("T03_PRIVATE_TEXT_NOT_SUPPORTED")
     # Text is fetched in-process for the editorial-hold check and raw-byte
     # verification only; the returned payload is redacted regardless.
     lookup = lookup_verse(db_path, reference, include_private_text=True)
@@ -46,6 +49,7 @@ def unified_research_query(db_path: Path, reference: str, *,
     for t in lookup.get("tafsirs", []):
         work_id = t.get("work_id", "")
         work_candidates = [c for c in candidates if c["work_id"] == work_id]
+        work_passages = [p for p in passages if p["work_id"] == work_id]
         per_work.append({
             "work_id": work_id,
             "work_title_ar": t.get("work_title_ar"),
@@ -58,6 +62,19 @@ def unified_research_query(db_path: Path, reference: str, *,
             "passage_count": sum(1 for p in passages
                                  if p["work_id"] == work_id),
             "candidate_count": len(work_candidates),
+            "passages_redacted": [
+                {
+                    "passage_id": p["interpretation_id"],
+                    "source_record_id": p["source_record_id"],
+                    "work_id": p["work_id"],
+                    "raw_source_span": list(p["evidence_span"]),
+                    "evidence_sha256": p["evidence_sha256"],
+                    "verification_status": p["verification_status"],
+                    "text_included": False,
+                } for p in work_passages],
+            "rights_verified": False,
+            "source_authenticated": False,
+            "scholarly_verified": False,
             "attribution_cues_named": sum(
                 1 for c in work_candidates
                 if c["attribution_type"] == "NAMED_REPORT"),
@@ -87,7 +104,7 @@ def unified_research_query(db_path: Path, reference: str, *,
         "levels_of_evidence": list(_LEVELS),
         "count_semantics": counts.get(
             "count_semantics", "UNVERIFIED_LEXICAL_CANDIDATES"),
-        "text_included": bool(include_private_text),
+        "text_included": False,
         "scholarly_verified": False,
         "source_authenticated": False,
         "rights_verified": False,
@@ -111,6 +128,8 @@ def _redacted_candidate(c: dict) -> dict:
         "passage_span": c["passage_span"],
         "statement_start": c["statement_start"],
         "statement_end": c["statement_end"],
+        "raw_source_span": list(c["raw_source_span"]),
+        "attribution_evidence_span": c.get("attribution_evidence_span"),
         "evidence_sha256": c["evidence_sha256"],
         "source_sha256": c["source_sha256"],
         "interpretation_type": c["interpretation_type"],
