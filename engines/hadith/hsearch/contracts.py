@@ -69,11 +69,17 @@ def make_mention(*, meta: dict, raw_text: str, span: tuple[int, int],
     _need(mention_type in MENTION_TYPES, "HS_MENTION_TYPE_INVALID")
     _need(attribution_status in ATTRIBUTION, "HS_ATTRIBUTION_INVALID")
     snippet = raw_text[span[0]:span[1]]
+    base = meta.get("passage_char_start", 0)
+    _need(type(base) is int and base >= 0, "HS_PASSAGE_BASE_INVALID")
+    absolute = (base + span[0], base + span[1])
     m = _common(meta)
-    mention_id = "hm:" + _sid(meta["tafsir_source_record_id"], span, snippet)[:40]
+    mention_id = "hm:" + _sid(meta["tafsir_source_record_id"],
+                                absolute, _sha(snippet.encode("utf-8")))[:40]
     return {**m,
             "mention_id": mention_id,
-            "raw_source_span": [span[0], span[1]],
+            "passage_id": meta.get("passage_id"),
+            "raw_source_span": [absolute[0], absolute[1]],
+            "passage_relative_span": [span[0], span[1]],
             "evidence_sha256": _sha(snippet.encode("utf-8")),
             "mention_type": mention_type,
             "attribution_status": attribution_status,
