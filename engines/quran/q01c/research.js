@@ -125,6 +125,9 @@ async function search() {
     const row = el("p", "relation");
     row.appendChild(el("span", null, type + " — "));
     row.appendChild(el("code", null, r.relation_id));
+    row.appendChild(field("من المرشح", r.from_candidate_id));
+    row.appendChild(field("إلى المرشح", r.to_candidate_id));
+    row.appendChild(field("حالة التحقق", r.verification_status));
     rel.appendChild(row);
   }
   $("relations").appendChild(rel);
