@@ -16,7 +16,7 @@ The default produces a metadata-only report; it emits no Quran text and no tafsi
 
 Private-text mode prints unverified tafsir body text only for non-held, displayable records. Use it only when that local research use is permitted. Never pipe it into CI, public logs or cloud services. Existing Baghawi review holds and markup-only suppression remain in force; the flag cannot override them.
 
-The CLI requires the exact linked SQLite SHA-256 tracked in corpus/locks/quran-tafsir-q03.json. It hashes the whole file before and after retrieval; there is extra disk I/O, and it does not attest external source custody. The internal _lookup helper permits alternate *synthetic test fixture* pins only, never a production CLI pin bypass.
+The CLI requires the exact linked SQLite SHA-256 tracked in corpus/locks/quran-tafsir-q03.json. It hashes the whole file before and after retrieval and refuses SQLite WAL/journal sidecars whose contents are not part of the pinned database digest; there is extra disk I/O, and it does not attest external source custody. The internal _lookup helper permits alternate *synthetic test fixture* pins only, never a production CLI pin bypass.
 
 Unknown edition/volume/page remain null. Work attribution comes from the unreviewed bibliography and must not be mistaken for authenticated printed editions. The upstream SQLite SHA is historical metadata from the Q0.3 record, not independently checked on each lookup.
 
