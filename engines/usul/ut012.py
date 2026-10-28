@@ -1,40 +1,46 @@
-"""UT-01.2: UsulTafsirLink — evidence-gated cross-engine contract.
+"""UT-01.2 — conservative, pinned Usul–Tafsir *metadata* evidence links.
 
-Binds one T0.2.3 tafsir candidate to one U0.2 rule candidate ONLY when both
-source-evidence chains verify independently. The two engines use different
-offset systems (Unicode chars vs UTF-8 bytes); spans are recorded with their
-own basis and are never compared or converted here. The link never asserts
-meaning, rule application, or any scholarly/legal conclusion: authority
-flags are structural constants (False), and attempts to raise them fail.
+This module verifies two independent source chains. No similarity detection,
+semantic interpretation, rule application, or religious judgment occurs here.
+The only production Usul source pins are the independently accepted Waraqat
+U0.2 receipts. Synthetic CI may override those pins by explicit test patching.
 """
 from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+import re
 
-from engines.tafsir.t023 import TafsirT02Error
+from engines.tafsir.t02 import validate_record
+from engines.tafsir.t023 import (
+    _validate_candidate, identify_candidates, _validate_passage,
+)
 from engines.usul.concept_rule_catalog import (
-    CatalogError, canonical, index_research_pointers, sha as _sha_of_canonical,
+    build_catalog, canonical, index_research_pointers,
 )
 
 CONTRACT = "mubin-usul-tafsir-link-v1"
-VERSION = "usul-tafsir-link/0.1.0"
-
+VERSION = "usul-tafsir-link/0.1.1"
 LINK_CANDIDATE = "CANDIDATE_RELATED"
 LINK_UNDETERMINED = "UNDETERMINED"
 LINK_REJECTED = "REJECTED"
-LINK_STATUSES = frozenset((LINK_CANDIDATE, LINK_UNDETERMINED, LINK_REJECTED))
-
-# deliberately absent by design: SUPPORTED_RULE / APPLICABLE_RULE /
-# OBLIGATION_DERIVED imply a juridical conclusion the contract cannot make.
-
-# T0.2 uses codepoint offsets into imported raw text; Usul Stage07/08 uses
-# UTF-8 byte offsets into original source files. Never compare or convert.
 OFFSET_UNICODE_CHARS = "UNICODE_CODEPOINT_OFFSETS_IN_IMPORTED_RAW_TEXT"
 OFFSET_UTF8_BYTES = "UTF8_BYTES"
 
-_TAFSIR_STATUS_REQUIRED = "UNVERIFIED"
+# Historical, independently operator-accepted real-source U0.2 pins.
+TRUSTED_GRAPH_SHA256 = (
+    "72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2"
+)
+TRUSTED_CATALOG_SHA256 = (
+    "ab77f297b0b6e4518bd7c8f0b00e13cf38df4c6372d642d76d494a7df1b75ca5"
+)
+_SHA = re.compile(r"^[a-f0-9]{64}$")
+_AUTHORITY_FALSE = (
+    "cross_source_semantic_equivalence_verified",
+    "rule_application_verified", "scholarly_verified",
+    "juristic_inference_allowed", "public_fatwa_authorized",
+    "text_included", "p1_admitted",
+)
 
 
 class UsulTafsirLinkError(ValueError):
@@ -48,238 +54,244 @@ def _need(ok, code):
         raise UsulTafsirLinkError(code)
 
 
-def _sha_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+def _hash(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
-def verify_tafsir_side(candidate: dict, passage: dict) -> dict:
-    """Recompute the tafsir candidate's evidence chain inside its passage.
+def _link_id(payload: dict) -> str:
+    return "utl:" + _hash(canonical(payload))[:40]
 
-    Returns binding metadata. Raises on any forgery or mismatch.
-    """
-    _need(type(candidate) is dict and type(passage) is dict,
-          "UT012_TAFSIR_INPUT_INVALID")
-    _need(candidate.get("passage_id") == passage.get("interpretation_id"),
-          "UT012_PASSAGE_ID_MISMATCH")
-    _need(candidate.get("source_record_id") == passage.get("source_record_id"),
-          "UT012_SOURCE_RECORD_MISMATCH")
-    _need(candidate.get("source_sha256") == passage.get("source_sha256"),
-          "UT012_SOURCE_SHA_MISMATCH")
-    _need(candidate.get("quran_reference") == passage.get("quran_reference"),
-          "UT012_REFERENCE_MISMATCH")
-    statement = passage.get("interpretation_statement")
-    _need(type(statement) is str and statement, "UT012_PASSAGE_TEXT_EMPTY")
-    s0, s1 = candidate.get("statement_start"), candidate.get("statement_end")
-    _need(type(s0) is int and type(s1) is int and 0 <= s0 < s1 <= len(statement),
-          "UT012_SPAN_OUT_OF_BOUNDS")
-    snippet = statement[s0:s1]
-    _need(_sha_text(snippet) == candidate.get("evidence_sha256"),
-          "UT012_EVIDENCE_DIGEST_MISMATCH")
-    _need(candidate.get("interpretation_statement") == snippet,
-          "UT012_STATEMENT_NOT_EXACT_SLICE")
-    _need(candidate.get("verification_status") == _TAFSIR_STATUS_REQUIRED,
-          "UT012_CANDIDATE_NOT_UNVERIFIED")
-    passage_span = passage.get("evidence_span")
-    _need(type(passage_span) is list and len(passage_span) == 2
-          and 0 <= passage_span[0] < passage_span[1],
-          "UT012_PASSAGE_SPAN_INVALID")
-    _need(passage.get("evidence_span_unit") in (None, OFFSET_UNICODE_CHARS),
-          "UT012_PASSAGE_OFFSET_UNIT_INVALID")
+
+def verify_tafsir_side(candidate: dict, passage: dict, *,
+                       original_raw_text: str) -> dict:
+    """Check the *original imported source bytes*, T0.2 and T0.2.3 contracts."""
+    _need(type(original_raw_text) is str and bool(original_raw_text),
+          "UT012_ORIGINAL_TAFSIR_TEXT_REQUIRED")
+    try:
+        validate_record(passage, original_text=original_raw_text)
+        _validate_passage(passage)
+        _validate_candidate(candidate)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise UsulTafsirLinkError("UT012_TAFSIR_SOURCE_CONTRACT_INVALID") from exc
+    _need(candidate.get("passage_id") == passage["interpretation_id"]
+          and candidate.get("work_id") == passage["work_id"]
+          and candidate.get("quran_reference") == passage["quran_reference"]
+          and candidate.get("source_record_id") == passage["source_record_id"]
+          and candidate.get("source_sha256") == passage["source_sha256"]
+          and candidate.get("passage_span") == passage["evidence_span"],
+          "UT012_TAFSIR_PARENT_MISMATCH")
+    a, b = candidate["statement_start"], candidate["statement_end"]
+    _need(candidate["interpretation_statement"]
+          == passage["interpretation_statement"][a:b],
+          "UT012_TAFSIR_CANDIDATE_NOT_SOURCE_SLICE")
+    expected_raw = [passage["evidence_span"][0] + a,
+                    passage["evidence_span"][0] + b]
+    _need(candidate["raw_source_span"] == expected_raw
+          and original_raw_text[expected_raw[0]:expected_raw[1]]
+          == candidate["interpretation_statement"],
+          "UT012_TAFSIR_RAW_SOURCE_SPAN_MISMATCH")
+    # Self-consistency is not enough: ensure this was emitted by T0.2.3,
+    # not an invented classification of a valid source paragraph.
+    _need(any(c == candidate for c in identify_candidates(passage)),
+          "UT012_TAFSIR_CANDIDATE_NOT_EMITTED")
     return {
         "tafsir_candidate_id": candidate["candidate_id"],
         "tafsir_passage_id": passage["interpretation_id"],
         "tafsir_work_id": passage["work_id"],
         "tafsir_source_record_id": passage["source_record_id"],
         "tafsir_source_sha256": passage["source_sha256"],
-        "tafsir_raw_source_span": [s0, s1],
+        "tafsir_raw_source_span": list(expected_raw),
         "tafsir_evidence_sha256": candidate["evidence_sha256"],
         "tafsir_raw_source_span_unit": OFFSET_UNICODE_CHARS,
         "tafsir_source_binding_verified": True,
     }
 
 
-def _graph_self_digest(graph: dict) -> str:
-    from engines.usul.concept_rule_catalog import GRAPH_FIELDS
-    _need(type(graph) is dict and all(k in graph for k in GRAPH_FIELDS),
-          "UT012_GRAPH_CONTRACT_INVALID")
-    payload = {k: graph[k] for k in GRAPH_FIELDS}
-    payload["status"] = "EVIDENCE_CONTEXT_GRAPH_PASS"
-    return hashlib.sha256(canonical(payload)).hexdigest()
-
-
 def verify_usul_side(catalog: dict, graph: dict, *,
                      rule_candidate_id: str, research_pointer_id: str,
-                     occurrence_ids=None,
-                     expected_catalog_sha256: str | None = None,
-                     expected_graph_sha256: str | None = None) -> dict:
-    """Verify the usul side: catalog/graph digests, rule candidate, pointer
-    navigation chain, and pinned section. Raises on any failure."""
+                     occurrence_ids=None) -> dict:
+    """Require an independently accepted graph and canonical catalog bytes."""
     _need(type(catalog) is dict and type(graph) is dict,
           "UT012_USUL_INPUT_INVALID")
-    graph_digest = graph.get("graph_sha256")
-    recomputed = _graph_self_digest(graph)
-    _need(graph_digest == recomputed,
-          "UT012_GRAPH_SELF_DIGEST_MISMATCH")
-    if expected_graph_sha256 is not None:
-        _need(graph_digest == expected_graph_sha256,
-              "UT012_GRAPH_DIGEST_NOT_THE_ACCEPTED_ONE")
-    if expected_catalog_sha256 is not None:
-        # The catalog builder stamps its own digest; re-deriving it here would
-        # duplicate builder logic. We require the builder's stamp to match the
-        # accepted reference AND the stamp's graph binding to match the graph.
-        cat_digest = catalog.get("catalog_sha256")
-        _need(type(cat_digest) is str, "UT012_CATALOG_DIGEST_MISSING")
-        _need(cat_digest == expected_catalog_sha256,
-              "UT012_CATALOG_DIGEST_NOT_THE_ACCEPTED_ONE")
-    _need(catalog.get("stage08_graph_sha256") == graph_digest,
-          "UT012_CATALOG_GRAPH_BINDING_MISMATCH")
-    rules = catalog.get("rule_candidates") or []
-    rule = next((r for r in rules if r.get("id") == rule_candidate_id), None)
-    _need(rule is not None, "UT012_RULE_CANDIDATE_NOT_IN_CATALOG")
-    _need(rule.get("review_status") == "UNASSESSED",
-          "UT012_RULE_CANDIDATE_NOT_UNASSESSED")
-    _need(research_pointer_id == rule.get("pointer_id"),
-          "UT012_RESEARCH_POINTER_MISMATCH")
-    pointers = index_research_pointers(graph, graph_digest)
-    _need(rule.get("pointer_id") in pointers,
-          "UT012_RESEARCH_POINTER_NOT_IN_GRAPH")
-    ptr = pointers[rule["pointer_id"]]
-    _need(ptr.get("query_id") and ptr.get("source_id")
-          and ptr.get("section_sha256"),
-          "UT012_POINTER_CHAIN_INCOMPLETE")
-    if occurrence_ids:
-        nodes = graph.get("nodes")
-        _need(type(nodes) is list, "UT012_GRAPH_NODES_INVALID")
-        by_id = {n.get("id"): n for n in nodes}
-        for oid in occurrence_ids:
-            node = by_id.get(oid)
-            _need(node is not None
-                  and node.get("kind") == "TEXT_OCCURRENCE",
-                  "UT012_OCCURRENCE_ID_INVALID")
+    _need(graph.get("graph_sha256") == TRUSTED_GRAPH_SHA256,
+          "UT012_GRAPH_EXTERNAL_PIN_MISMATCH")
+    _need(catalog.get("catalog_sha256") == TRUSTED_CATALOG_SHA256,
+          "UT012_CATALOG_EXTERNAL_PIN_MISMATCH")
+    _need(catalog.get("stage08_graph_sha256") == TRUSTED_GRAPH_SHA256,
+          "UT012_CATALOG_GRAPH_PIN_MISMATCH")
+    try:
+        pointers = index_research_pointers(graph, TRUSTED_GRAPH_SHA256)
+        # Rebuild from the *actual* source-bound graph and all catalog
+        # concepts/rules/relations; a self-chosen hash is not sufficient.
+        manifest = {
+            "schema_version": "u0.2.0",
+            "concepts": catalog["concepts"],
+            "rule_candidates": [
+                {k: rule[k] for k in (
+                    "id", "pointer_id", "if_concepts", "unless_concepts",
+                    "then_concept", "review_status")}
+                for rule in catalog["rule_candidates"]
+            ],
+            "relations": catalog["relations"],
+        }
+        rebuilt = build_catalog(graph, TRUSTED_GRAPH_SHA256, manifest)
+    except (ValueError, KeyError, TypeError, RecursionError) as exc:
+        raise UsulTafsirLinkError("UT012_USUL_CATALOG_OR_GRAPH_INVALID") from exc
+    _need(catalog == rebuilt, "UT012_CATALOG_CANONICAL_DIGEST_INVALID")
+    matches = [r for r in rebuilt["rule_candidates"]
+               if r["id"] == rule_candidate_id]
+    _need(len(matches) == 1, "UT012_RULE_CANDIDATE_NOT_IN_CATALOG")
+    rule = matches[0]
+    _need(rule.get("review_status") == "UNASSESSED"
+          and research_pointer_id == rule["pointer_id"]
+          and research_pointer_id in pointers,
+          "UT012_RESEARCH_POINTER_INVALID")
+    anchor = pointers[research_pointer_id]
+    _need(rule["research_anchor"] == anchor
+          and anchor["stage08_reference_id"] == rule_candidate_id,
+          "UT012_RULE_POINTER_REFERENCE_MISMATCH")
+    _need(type(occurrence_ids) in (list, type(None)),
+          "UT012_OCCURRENCE_ARRAY_INVALID")
+    occurrence_ids = [] if occurrence_ids is None else occurrence_ids
+    _need(len(occurrence_ids) <= 16
+          and len(occurrence_ids) == len(set(
+              x for x in occurrence_ids if type(x) is str))
+          and all(type(x) is str for x in occurrence_ids),
+          "UT012_OCCURRENCE_IDS_INVALID")
+    query_nodes = [n for n in graph["nodes"]
+                   if n.get("kind") == "SEARCH_QUERY"
+                   and n.get("query_id") == anchor["query_id"]
+                   and n.get("witness_id") == anchor["source_id"]]
+    _need(len(query_nodes) == 1, "UT012_QUERY_BINDING_INVALID")
+    query = query_nodes[0]
+    section_nodes = [n for n in graph["nodes"]
+                     if n.get("kind") == "PINNED_SECTION"
+                     and n.get("source_id") == anchor["source_id"]
+                     and n.get("section_sha256") == anchor["section_sha256"]]
+    _need(len(section_nodes) == 1, "UT012_SECTION_BINDING_INVALID")
+    section = section_nodes[0]
+    _need(section.get("offset_basis") in ("utf8_export", "extracted_section")
+          and type(section.get("byte_length")) is int,
+          "UT012_SECTION_BYTE_COORDINATES_INVALID")
+    _need(any(e.get("kind") == "QUERY_SCOPED_TO_SECTION"
+              and e.get("from") == query["id"]
+              and e.get("to") == section["id"] for e in graph["edges"]),
+          "UT012_QUERY_SECTION_EDGE_MISSING")
+    nodes = {n["id"]: n for n in graph["nodes"]}
+    for oid in occurrence_ids:
+        node = nodes.get(oid)
+        _need(node is not None and node.get("kind") == "TEXT_OCCURRENCE"
+              and node.get("section_id") == section["id"]
+              and node.get("source_coordinate_basis") == section["offset_basis"]
+              and type(node.get("section_byte_start")) is int
+              and type(node.get("section_byte_end_exclusive")) is int
+              and 0 <= node["section_byte_start"] <
+                  node["section_byte_end_exclusive"] <= section["byte_length"]
+              and type(node.get("original_span_sha256")) is str
+              and _SHA.fullmatch(node["original_span_sha256"]) is not None
+              and node.get("text_included") is False
+              and node.get("semantic_classification") == "NOT_EVALUATED",
+              "UT012_OCCURRENCE_SECTION_OR_SPAN_INVALID")
+        _need(any(e.get("kind") == "QUERY_LOCATES_OCCURRENCE"
+                  and e.get("from") == query["id"] and e.get("to") == oid
+                  and e.get("classification") == "EXACT_LITERAL_ONLY"
+                  and e.get("semantic_equivalence_verified") is False
+                  for e in graph["edges"]),
+              "UT012_OCCURRENCE_NOT_FROM_RULE_QUERY")
     return {
         "usul_rule_candidate_id": rule_candidate_id,
-        "usul_catalog_sha256": expected_catalog_sha256
-        or "self-consistent-not-pinned",
-        "usul_stage08_graph_sha256": graph_digest,
-        "usul_research_pointer_id": rule["pointer_id"],
-        "usul_source_id": ptr["source_id"],
-        "usul_section_sha256": ptr["section_sha256"],
-        "usul_occurrence_ids": list(occurrence_ids or []),
+        "usul_catalog_sha256": TRUSTED_CATALOG_SHA256,
+        "usul_stage08_graph_sha256": TRUSTED_GRAPH_SHA256,
+        "usul_research_pointer_id": research_pointer_id,
+        "usul_source_id": anchor["source_id"],
+        "usul_section_sha256": anchor["section_sha256"],
+        "usul_occurrence_ids": sorted(occurrence_ids),
         "usul_occurrence_span_unit": OFFSET_UTF8_BYTES,
         "usul_source_binding_verified": True,
     }
 
 
-def build_link(*, quran_reference: str,
-               tafsir_candidate: dict, tafsir_passage: dict,
-               usul_catalog: dict, usul_graph: dict,
-               rule_candidate_id: str, research_pointer_id: str,
-               occurrence_ids=None,
-               expected_catalog_sha256: str | None = None,
-               expected_graph_sha256: str | None = None,
+def build_link(*, quran_reference: str, tafsir_candidate: dict,
+               tafsir_passage: dict, tafsir_original_raw_text: str,
+               usul_catalog: dict, usul_graph: dict, rule_candidate_id: str,
+               research_pointer_id: str, occurrence_ids=None,
                candidacy_reason: str | None = None,
                candidacy_scope: str | None = None) -> dict:
-    """Build one UsulTafsirLink. Fail-closed on any forged side.
-
-    CANDIDATE_RELATED requires an explicit operator-supplied candidacy_reason
-    (recorded verbatim; the contract never infers one from text).
-    Otherwise the link is UNDETERMINED when both chains verify.
-    """
-    _need(type(quran_reference) is str and ":" in quran_reference,
-          "UT012_REFERENCE_INVALID")
-    _need(tafsir_candidate.get("quran_reference") == quran_reference,
+    """Produce a candidate or UNDETERMINED link, never a legal rule."""
+    _need(type(quran_reference) is str
+          and quran_reference == tafsir_candidate.get("quran_reference")
+          and quran_reference == tafsir_passage.get("quran_reference"),
           "UT012_QURAN_REFERENCE_MISMATCH")
-    _need(tafsir_passage.get("quran_reference") == quran_reference,
-          "UT012_QURAN_REFERENCE_MISMATCH")
-    t_side = verify_tafsir_side(tafsir_candidate, tafsir_passage)
-    u_side = verify_usul_side(usul_catalog, usul_graph,
-                              rule_candidate_id=rule_candidate_id,
-                              research_pointer_id=research_pointer_id,
-                              occurrence_ids=occurrence_ids,
-                              expected_catalog_sha256=expected_catalog_sha256,
-                              expected_graph_sha256=expected_graph_sha256)
-    _need(t_side["tafsir_work_id"] and u_side["usul_source_id"],
-          "UT012_SIDE_METADATA_INCOMPLETE")
-    if candidacy_reason is not None:
-        _need(type(candidacy_reason) is str
-              and 0 < len(candidacy_reason) <= 512,
-              "UT012_CANDIDACY_REASON_INVALID")
-        link_status = LINK_CANDIDATE
-    else:
-        link_status = LINK_UNDETERMINED
-    link_id = "utl:" + _sha_text("|".join((
-        t_side["tafsir_candidate_id"], u_side["usul_rule_candidate_id"],
-        u_side["usul_stage08_graph_sha256"],
-        t_side["tafsir_evidence_sha256"],
-        u_side["usul_section_sha256"], link_status)))[:40]
-    return {
-        "contract": CONTRACT, "version": VERSION,
-        "link_id": link_id,
-        "quran_reference": quran_reference,
-        "link_status": link_status,
-        "link_method": "EVIDENCE_CHAIN_VERIFICATION_ONLY",
+    t = verify_tafsir_side(tafsir_candidate, tafsir_passage,
+                           original_raw_text=tafsir_original_raw_text)
+    u = verify_usul_side(usul_catalog, usul_graph,
+                         rule_candidate_id=rule_candidate_id,
+                         research_pointer_id=research_pointer_id,
+                         occurrence_ids=occurrence_ids)
+    _need((candidacy_reason is None and candidacy_scope is None)
+          or (type(candidacy_reason) is str
+              and 1 <= len(candidacy_reason.strip()) <= 512
+              and type(candidacy_scope) is str
+              and 1 <= len(candidacy_scope.strip()) <= 128),
+          "UT012_CANDIDACY_REASON_AND_SCOPE_REQUIRED")
+    status = LINK_CANDIDATE if candidacy_reason is not None else LINK_UNDETERMINED
+    content = {
+        "contract": CONTRACT, "version": VERSION, "quran_reference": quran_reference,
+        "link_status": status, "link_method": "EVIDENCE_CHAIN_VERIFICATION_ONLY",
         "verification_status": "UNVERIFIED",
-        "candidacy_reason": candidacy_reason,
-        "candidacy_scope": candidacy_scope,
-        **t_side, **u_side,
-        "offset_units_independent": (
-            t_side["tafsir_raw_source_span_unit"],
-            u_side["usul_occurrence_span_unit"]),
-        "cross_source_semantic_equivalence_verified": False,
-        "rule_application_verified": False,
-        "scholarly_verified": False,
-        "juristic_inference_allowed": False,
-        "public_fatwa_authorized": False,
-        "text_included": False,
-        "p1_admitted": False,
+        "candidacy_reason": candidacy_reason, "candidacy_scope": candidacy_scope,
+        **t, **u,
+        "offset_units_independent": [OFFSET_UNICODE_CHARS, OFFSET_UTF8_BYTES],
+        **{flag: False for flag in _AUTHORITY_FALSE},
         "rights_status": "legal_review_pending",
     }
+    return {**content, "link_id": _link_id(content)}
 
 
 def reject_link(*, quran_reference: str, rejection_reason: str) -> dict:
-    """Record a deterministic rejection with its reason (no side data)."""
-    _need(type(rejection_reason) is str and 0 < len(rejection_reason) <= 512,
-          "UT012_REJECTION_REASON_INVALID")
-    return {
+    """Record a rejection, never an evidence-bound candidate."""
+    _need(type(quran_reference) is str and bool(quran_reference)
+          and type(rejection_reason) is str
+          and 1 <= len(rejection_reason.strip()) <= 512,
+          "UT012_REJECTION_INPUT_INVALID")
+    fields = {
         "contract": CONTRACT, "version": VERSION,
-        "link_id": "utl-rejected:" + _sha_text(
-            quran_reference + "|" + rejection_reason)[:40],
-        "quran_reference": quran_reference,
-        "link_status": LINK_REJECTED,
-        "rejection_reason": rejection_reason,
-        "verification_status": "UNVERIFIED",
-        "cross_source_semantic_equivalence_verified": False,
-        "rule_application_verified": False,
-        "scholarly_verified": False,
-        "juristic_inference_allowed": False,
-        "public_fatwa_authorized": False,
-        "text_included": False,
-        "p1_admitted": False,
+        "quran_reference": quran_reference, "link_status": LINK_REJECTED,
+        "rejection_reason": rejection_reason, "verification_status": "UNVERIFIED",
+        **{flag: False for flag in _AUTHORITY_FALSE},
         "rights_status": "legal_review_pending",
     }
+    return {**fields, "link_id": "utl-rejected:" + _hash(canonical(fields))[:40]}
 
 
-def validate_link(record: dict, *, tafsir_candidate: dict,
-                  tafsir_passage: dict, usul_catalog: dict,
-                  usul_graph: dict) -> None:
-    """Re-verify a stored link against its sources; forgery raises."""
-    _need(type(record) is dict and record.get("contract") == CONTRACT,
-          "UT012_RECORD_CONTRACT_INVALID")
-    _need(record.get("link_status") in LINK_STATUSES,
-          "UT012_LINK_STATUS_INVALID")
-    for flag in ("cross_source_semantic_equivalence_verified",
-                 "rule_application_verified", "scholarly_verified",
-                 "juristic_inference_allowed", "public_fatwa_authorized",
-                 "text_included"):
-        _need(record.get(flag) is False,
-              f"UT012_FORBIDDEN_FLAG_TRUE_{flag}")
-    t_side = verify_tafsir_side(tafsir_candidate, tafsir_passage)
-    u_side = verify_usul_side(usul_catalog, usul_graph,
-                              rule_candidate_id=record["usul_rule_candidate_id"],
-                              research_pointer_id=record["usul_research_pointer_id"],
-                              occurrence_ids=record.get("usul_occurrence_ids") or None)
-    _need(record.get("link_id") == "utl:" + _sha_text("|".join((
-        t_side["tafsir_candidate_id"], u_side["usul_rule_candidate_id"],
-        u_side["usul_stage08_graph_sha256"], t_side["tafsir_evidence_sha256"],
-        u_side["usul_section_sha256"], record["link_status"])))[:40],
-        "UT012_LINK_ID_MISMATCH")
+def validate_link(record: dict, *, tafsir_candidate: dict | None = None,
+                  tafsir_passage: dict | None = None,
+                  tafsir_original_raw_text: str | None = None,
+                  usul_catalog: dict | None = None,
+                  usul_graph: dict | None = None) -> None:
+    """Rebuild from *independent* sources and compare ALL fields exactly."""
+    _need(type(record) is dict and record.get("contract") == CONTRACT
+          and record.get("version") == VERSION,
+          "UT012_LINK_CONTRACT_INVALID")
+    _need(all(record.get(flag) is False for flag in _AUTHORITY_FALSE),
+          "UT012_UNAUTHORIZED_STATUS_PROMOTION")
+    if record.get("link_status") == LINK_REJECTED:
+        rebuilt = reject_link(quran_reference=record.get("quran_reference"),
+                              rejection_reason=record.get("rejection_reason"))
+    else:
+        _need(record.get("link_status") in
+              (LINK_CANDIDATE, LINK_UNDETERMINED),
+              "UT012_LINK_STATUS_INVALID")
+        rebuilt = build_link(
+            quran_reference=record.get("quran_reference"),
+            tafsir_candidate=tafsir_candidate,
+            tafsir_passage=tafsir_passage,
+            tafsir_original_raw_text=tafsir_original_raw_text,
+            usul_catalog=usul_catalog, usul_graph=usul_graph,
+            rule_candidate_id=record.get("usul_rule_candidate_id"),
+            research_pointer_id=record.get("usul_research_pointer_id"),
+            occurrence_ids=record.get("usul_occurrence_ids"),
+            candidacy_reason=record.get("candidacy_reason"),
+            candidacy_scope=record.get("candidacy_scope"),
+        )
+    _need(record == rebuilt, "UT012_STORED_LINK_CHANGED")
