@@ -12,7 +12,8 @@ import hashlib
 import re
 from typing import Any
 
-from engines.quran.tafsir.catalog import _reference, CatalogError
+from functools import lru_cache
+from engines.quran.tafsir.catalog import _reference, load_catalog, CatalogError
 
 CONTRACT = "mubin-tafsir-t02-interpretation-record-v1"
 VERSION = "tafsir-t02/0.1.0"
@@ -58,6 +59,15 @@ def _id(source_id: str, span: tuple[int, int], evidence_sha: str) -> str:
     return "interp:" + _sha(raw)[:40]
 
 
+@lru_cache(maxsize=1)
+def _catalog_authors() -> dict[str, str | None]:
+    """Candidate bibliographic names only; not edition/authorship attestation."""
+    try:
+        return {item["id"]: item["author_ar"] for item in load_catalog()["sources"]}
+    except CatalogError as exc:
+        raise TafsirT02Error("T02_CATALOG_UNAVAILABLE") from exc
+
+
 def validate_record(record: dict, *, original_text: str) -> None:
     """Validate the *whole* record against the exact imported raw string.
 
@@ -75,7 +85,7 @@ def validate_record(record: dict, *, original_text: str) -> None:
         raise TafsirT02Error("T02_REFERENCE_INVALID") from exc
     work = record["work_id"]
     source_sha = record["source_sha256"]
-    _need(type(work) is str and re.fullmatch(r"tafsir_[a-z_]+", work) is not None,
+    _need(type(work) is str and work in _catalog_authors(),
           "T02_WORK_INVALID")
     _need(type(source_sha) is str and _SHA256.fullmatch(source_sha) is not None,
           "T02_SOURCE_SHA_INVALID")
@@ -83,9 +93,8 @@ def validate_record(record: dict, *, original_text: str) -> None:
           "T02_SOURCE_BYTES_MISMATCH")
     _need(record["source_record_id"] == f"tafsir:{work}:{reference}:{source_sha}",
           "T02_SOURCE_IDENTITY_MISMATCH")
-    _need(record["author_id"] is None or
-          (type(record["author_id"]) is str and 1 <= len(record["author_id"]) <= 200),
-          "T02_AUTHOR_INVALID")
+    _need(record["author_id"] == _catalog_authors()[work],
+          "T02_AUTHOR_MISMATCH")
     span = record["evidence_span"]
     _need(type(span) is list and len(span) == 2
           and all(type(n) is int for n in span)
