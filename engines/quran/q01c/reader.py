@@ -147,15 +147,22 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
                     try:
                         params=_decode_query(p.query,frozenset({"ref"}),
                                              frozenset({"ref"}))
+                        # A Quran→Tafsir result must be anchored in this
+                        # reader's independently pinned Quran snapshot, not
+                        # merely a verse-like key present in the Tafsir DB.
+                        verse=index.get(params["ref"])
+                        if not verse["found"]:
+                            return self._deny(404,"verse_not_in_loaded_quran_source")
                         report=unified_research_query(
                             Path(tafsir_db_path),params["ref"],
                             include_private_text=False)
                         return self._json(200,report)
-                    except (TafsirError,TafsirT02Error,ValueError) as exc:
-                        return self._json(404,{
-                            "error":getattr(exc,"code","research_query_failed"),
-                            "source_authenticated":False,
-                            "text_included":False})
+                    except ValueError:
+                        return self._deny(400,"invalid_research_reference")
+                    except Exception:
+                        # Privacy: exception messages may contain source text,
+                        # private file names or internal SQLite details.
+                        return self._deny(422,"research_source_unavailable_or_invalid")
                 if p.path=="/api/status":
                     _decode_query(p.query,frozenset(),frozenset())
                     rep=index.report()
