@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "engines/tafsir/**"
+      - "README.md"
       - "corpus/query.py"
       - "corpus/locks/quran-tafsir-q03.json"
       - "core/tests/test_tafsir_t01.py"
@@ -19,6 +20,7 @@ on:
     branches: [main]
     paths:
       - "engines/tafsir/**"
+      - "README.md"
       - "corpus/query.py"
       - "corpus/locks/quran-tafsir-q03.json"
       - "core/tests/test_tafsir_t01.py"
