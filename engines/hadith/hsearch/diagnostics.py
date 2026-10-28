@@ -120,7 +120,7 @@ def diagnose_coverage(*, rows: list[dict], passages: list[dict],
         block_index[source_id] = (spans, [x[0] for x in spans])
 
     counts = defaultdict(int)
-    samples = []
+    sample_groups = defaultdict(list)
     matched = 0
     seen = set()
     for source_id in sorted(sources):
@@ -149,6 +149,7 @@ def diagnose_coverage(*, rows: list[dict], passages: list[dict],
                 verse_fragment = target[verse_start:verse_end]
                 aligned = align_shared_tokens(verse_fragment, source_fragment,
                                               min_words=NGRAM)
+                passage, mention = None, None
                 if aligned is None:
                     stage = "NORMALIZER_OR_TOKENIZATION_MISMATCH"
                 else:
@@ -166,17 +167,24 @@ def diagnose_coverage(*, rows: list[dict], passages: list[dict],
                         stage = "INSIDE_ALL_PIPELINE_WINDOWS"
                 counts[stage] += 1
                 matched += 1
-                if len(samples) < _MAX_SAMPLES:
-                    samples.append({
+                if len(sample_groups[stage]) < 8:
+                    sample_groups[stage].append({
                         "classification": stage,
                         "tafsir_work_id": work_id,
                         "tafsir_source_record_id": source_record_id,
                         "tafsir_raw_span": [verse_start, verse_end],
                         "tafsir_raw_sha256": _sha(verse_fragment),
+                        "tafsir_original_source_sha256": next(
+                            row["source_sha256"] for row in rows
+                            if row["source_record_id"] == source_record_id),
+                        "tafsir_passage_id": passage[2] if passage else None,
+                        "mention_id": mention[2] if mention else None,
                         "hadith_source_id": source_id,
                         "hadith_raw_span": [source_start, source_end],
                         "hadith_raw_sha256": _sha(source_fragment),
                         "hadith_witness_locator": block[2] if block else None,
+                        "hadith_witness_raw_span": (
+                            [block[0], block[1]] if block else None),
                         "folded_phrase_sha256": _sha(" ".join(gram)),
                         "folded_word_count": NGRAM,
                         "is_narration_identity_proven": False,
@@ -190,8 +198,9 @@ def diagnose_coverage(*, rows: list[dict], passages: list[dict],
         "tafsir_index_grams": len(lookup),
         "truncated_tafsir_gram_occurrences": dropped,
         "stage_coverage_exhaustive": dropped == 0,
-        "sample_limit": _MAX_SAMPLES,
-        "samples": samples,
+        "sample_limit_per_stage": 8,
+        "samples": [entry for stage in sorted(sample_groups)
+                    for entry in sample_groups[stage]],
         "text_included": False,
         "holdout_read": False,
         "scholarly_verified": False,
