@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from engines.tafsir.t01 import _lookup
+from engines.tafsir.t01 import _lookup, TafsirError
 from engines.tafsir.t02 import (
     TafsirT02Error, extract_from_t01_record, make_record,
     segment_statements, summarize, validate_record, CONTRACT,
@@ -227,5 +227,5 @@ class T02LocalSQLiteTests(unittest.TestCase):
     def test_sqlite_wal_sidecar_refused(self):
         wal=self.path.with_name(self.path.name+"-wal")
         wal.write_bytes(b"synthetic sidecar")
-        with self.assertRaisesRegex(TafsirT02Error,"T01_UNPINNED_SQLITE_SIDECAR"):
+        with self.assertRaisesRegex(TafsirError,"T01_UNPINNED_SQLITE_SIDECAR"):
             extract_local_verse(self.path,self.lookup)
