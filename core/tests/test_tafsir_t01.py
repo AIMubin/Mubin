@@ -5,7 +5,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, closing
 from pathlib import Path
 
 from engines.tafsir.t01 import _lookup, lookup_verse, main, TafsirError
@@ -16,7 +16,7 @@ class TafsirT01Tests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.db = Path(self.tmp.name) / "synthetic.db"
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute("CREATE TABLE verses(sura INTEGER,aya INTEGER,text TEXT)")
             con.execute("CREATE TABLE tafsirs(source TEXT,sura INTEGER,aya INTEGER,text TEXT)")
             con.execute("INSERT INTO verses VALUES (2,43,'FABRICATED FIXTURE NOT QURAN')")
@@ -74,7 +74,7 @@ class TafsirT01Tests(unittest.TestCase):
     def test_pin_rejects_tampering(self):
         with self.assertRaisesRegex(TafsirError,"T01_DATABASE_PIN_MISMATCH"):
             self.read(pin="0"*64)
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute("UPDATE tafsirs SET text='تبديل' WHERE source='saadi'")
         with self.assertRaisesRegex(TafsirError,"T01_DATABASE_PIN_MISMATCH"):
             self.read()
@@ -107,14 +107,14 @@ class TafsirT01Tests(unittest.TestCase):
         sidecar.unlink()
 
     def test_no_tafsir_records_is_not_a_successful_linkage(self):
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute("DELETE FROM tafsirs WHERE sura=2 AND aya=43")
         self.pin = hashlib.sha256(self.db.read_bytes()).hexdigest()
         with self.assertRaisesRegex(TafsirError,"T01_NO_INDEXED_TAFSIR_RECORDS"):
             self.read()
 
     def test_duplicate_source_rows_refused(self):
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute("INSERT INTO tafsirs VALUES ('katheer',2,43,'مكرر')")
         self.pin = hashlib.sha256(self.db.read_bytes()).hexdigest()
         with self.assertRaisesRegex(TafsirError,"T01_AMBIGUOUS_SOURCE_RECORDS"):
