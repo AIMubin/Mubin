@@ -26,6 +26,8 @@ def _base(passages, mentions) -> dict:
         "contract": CONTRACT, "version": VERSION,
         "passages_processed": len(passages),
         "mentions_total": len(mentions),
+        "mention_count_semantics": "LEXICAL_CUE_WINDOWS_NOT_DISTINCT_NARRATIONS",
+        "witness_count_semantics": "UNCLASSIFIED_PINNED_SOURCE_BLOCKS_NOT_HADITHS",
         "holdout_read": False, "text_included": False,
         "scholarly_verified": False, "rights_verified": False,
         "publication_allowed": False, "juristic_inference_allowed": False,
