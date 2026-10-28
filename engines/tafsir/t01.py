@@ -63,7 +63,7 @@ def _lookup(db_path: Path, reference: str, *, expected_sha256: str,
         sura, ayah = _reference(reference)
     except CatalogError as exc:
         raise TafsirError("T01_INVALID_REFERENCE") from exc
-    if type(db_path) is not Path or db_path.is_symlink() or not db_path.is_file():
+    if not isinstance(db_path, Path) or db_path.is_symlink() or not db_path.is_file():
         raise TafsirError("T01_LOCAL_VAULT_UNAVAILABLE")
     if (type(expected_sha256) is not str or _SHA256.fullmatch(expected_sha256) is None
             or type(upstream_declared_sha256) is not str
