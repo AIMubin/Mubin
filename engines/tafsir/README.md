@@ -27,3 +27,45 @@ All authority and redistribution flags stay false: source_authenticated, scholar
     python -m unittest core.tests.test_tafsir_t01 corpus.tests.test_query core.tests.test_quran_tafsir_metadata -v
 
 CI exercises synthetic and adversarial paths on Ubuntu and Windows. Actual private-corpus replay occurs on the operator's local vault, outside Git and CI. Future source-work should add independently grounded edition/page locators, structured interpretations and their contexts, then typed connections to Usul and Fiqh.
+
+## T0.2.1–T0.2.2: raw-source candidate segmentation
+
+T0.2 exposes **candidate raw-text segments**, not 61 verified or distinct
+exegetical opinions. Its deterministic punctuation splitter does NOT infer
+meaning, identify views, distinguish agreement/disagreement, or guarantee
+exhaustive segmentation. Metadata remains RULE_EXTRACTED_UNVERIFIED,
+interpretation_type=null, and candidate_kind=UNCLASSIFIED_TEXT_SEGMENT.
+
+The T0.1 text field is HTML-stripped display content: its offsets are **not**
+offsets into the original imported source row. To avoid falsely grounded
+evidence, T0.2's private CLI reads the raw SQLite row from the *same pinned
+Q0.3 database*, verifies the database digest before and after reading,
+checks raw-text SHA-256 against the T0.1 imported-record digest, and
+creates evidence spans in **Unicode codepoint indices of raw imported
+text**. Exact UTF-8 SHA-256 fingerprints are retained per span. HTML
+markup may be present inside these source-bound spans; no semantic
+normalization is claimed. Text-on-hold remains withheld.
+
+By default only safe counts, status and hashed identifiers leave the CLI:
+
+    python -m engines.tafsir.t02_cli 2:43 --database corpus-data/linked/quran_tafsir.db
+
+For permitted **local-only** inspection, explicitly opt in to raw
+passages (this prints protected source text and must not be forwarded
+to logs, CI or cloud endpoints):
+
+    python -m engines.tafsir.t02_cli 2:43 --database corpus-data/linked/quran_tafsir.db --include-text
+
+A real-world T0.2 candidate count **must be remeasured** after this
+raw-text integrity fix; earlier 61 T0.1-display-based segments are a
+historical preliminary count, not a validated output of the corrected
+T0.2 logic. The local operator should run the default command above
+against the actual immutable Q0.3 vault and preserve the metadata-only
+receipt outside public source code.
+
+    python -m unittest core.tests.test_tafsir_t01 core.tests.test_tafsir_t02 corpus.tests.test_query core.tests.test_quran_tafsir_metadata -v
+
+No scholarly/source/rights gates are promoted and Mubin stays
+0.1.0-alpha. Next product work: meaningful interpretation boundaries,
+context and scholar-attributed disagreement **from actual source
+passages**, not model comparisons.
