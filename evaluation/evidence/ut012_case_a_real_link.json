@@ -1,0 +1,21 @@
+{
+  "contract": "mubin-usul-tafsir-link-v1",
+  "case": "A",
+  "verse": "2:43",
+  "tafsir_candidate_id": "cand:c99bb98d49f280f311b8d33c7600edf44827a425",
+  "tafsir_work": "tafsir_baghawi",
+  "tafsir_source_record": "tafsir:tafsir_baghawi:2:43:5b50436a77659275628c8afc8fe655cb50d12d5207820877e243e374233668c6",
+  "usul_rule_candidate": "candidate:amr-structural-hypothesis",
+  "usul_pointer": "pilot:amr-rule-research-pointer",
+  "usul_section_sha256": "20879bade7a4a831a0020e1bae51806ca015d7803be42fdb44e580a9055581ab",
+  "catalog_sha256": "ab77f297b0b6e4518bd7c8f0b00e13cf38df4c6372d642d76d494a7df1b75ca5",
+  "stage08_graph_sha256": "72ca6bd80c4e70378dd9d2f1cfc75841024b292d2335479d167add1a8ca6fdb2",
+  "link_id": "utl:ef9cc3ad8bf5c02eb61c1da3c0863f60170a3400",
+  "link_status": "UNDETERMINED",
+  "offset_units": [
+    "UNICODE_CODEPOINT_OFFSETS_IN_IMPORTED_RAW_TEXT",
+    "UTF8_BYTES"
+  ],
+  "scholarly_verified": false,
+  "note": "real pinned sources both sides; no semantic claim; offsets never merged"
+}
