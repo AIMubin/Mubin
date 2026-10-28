@@ -152,6 +152,7 @@ class WitnessAndMatchTests(unittest.TestCase):
         w=synthetic_witness(tiny+" هذا كلام مختلف في بقية العبارة",0,
             len(tiny+" هذا كلام مختلف في بقية العبارة"))
         m=dict(self.m,_mention_text=tiny)
+        m["raw_source_span"]=[0,len(tiny)]
         m["evidence_sha256"]=_sha(tiny)
         result=match_mentions([m],[w],source_texts={
             "openiti:0279Tirmidhi.Sunan":tiny+" هذا كلام مختلف في بقية العبارة"})

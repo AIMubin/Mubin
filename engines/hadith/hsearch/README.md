@@ -68,3 +68,54 @@ Run synthetic tests:
 Mubin overall system version stays 0.1.0-alpha. Source authentication
 here means only expected **digital file bytes** match pinned Git blobs,
 not an authenticated print edition or established hadith authenticity.
+
+## H-Search-01 raw-offset alignment
+
+Source-bound matching now uses reversible Unicode-codepoint offsets, even
+when Arabic harakat, alef shapes, ta marbuta/ha or whitespace differ.
+For an eligible ten-whole-token overlap the link stores:
+
+- tafsir_shared_raw_span and hadith_shared_raw_span: [start,end) in each
+  independent original raw imported text, **not** normalized text.
+- tafsir_shared_raw_sha256 and hadith_shared_raw_sha256: SHA-256 of
+  each exact original literal phrase, which may have different bytes.
+- folded_phrase_sha256 and folded_word_count: normalized fingerprint and
+  ten-token count.
+- Pinned tafsir source record ID, Hadith version and Git blob SHA, and
+  witness ID/locator. No source text is returned.
+
+A successful raw-offset round-trip is evidence of bounded **lexical
+overlap**, not proof that the narrations are identical or that the
+compiler endorsed the text. CANDIDATE_MATCH is preserved;
+TEXTUALLY_SUPPORTED, grade, scholarly and rights gates are not promoted.
+Even a ten-token overlap may be a shared Quran quotation.
+
+Local-operator commands to generate metadata-only receipts from private
+Q0.3 and Hadith sources (replace the private cache placeholder):
+
+    python -m engines.hadith.hsearch.replay 2:43 --database corpus-data/linked/quran_tafsir.db --hadith-cache <PRIVATE_SOURCE_CACHE>
+    python -m engines.hadith.hsearch.replay 2:185 --database corpus-data/linked/quran_tafsir.db --hadith-cache <PRIVATE_SOURCE_CACHE>
+
+To freeze each successful *local metadata receipt* without overwriting a
+previous audit, add --receipt-path pointing to a new file in a private
+directory (example: --receipt-path evidence/hsearch-2-185-raw-v1.json).
+The CLI creates the receipt once, refuses existing files, stores no
+source passages and includes evidence_payload_sha256 computed from its
+canonical metadata JSON before adding the checksum field. That hash
+can be recomputed by omitting the checksum field and serializing with
+sorted keys, compact separators and UTF-8. Verify linked raw source
+spans and both literal phrase digests separately before relying on it.
+
+Run 1:7 separately if the operator's previously discovered ten-word
+lead requires an independent check. The tool never logs private paths
+or source passages, and refuses errors with a bounded code. Preserve
+the redacted receipt in the controlled local evidence workspace.
+
+Only report a real positive *lexical alignment* after checking both
+independently pinned raw source versions, spans and SHA-256 digests.
+It does not close the separate scholarly Hadith identity gate.
+
+The corrected 2:43 operator baseline (61 Tafsir passages, seven
+narration-cue windows, 54,599 source candidate blocks, seven NO_MATCH)
+must be remeasured on this version. The 2:185 13-character lead alone
+still fails the ten-word automatic match requirement.
