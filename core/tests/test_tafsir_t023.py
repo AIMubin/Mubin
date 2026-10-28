@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from engines.tafsir.t01 import _lookup
-from engines.tafsir.t02 import make_record, TafsirT02Error
+from engines.tafsir.t02 import make_record, TafsirT02Error, _catalog_authors
 from engines.tafsir.t023 import (
     build_relationships, identify_candidates, summarize_analysis,
     ATTRIB_NAMED_REPORT, ATTRIB_AUTHOR_OWN,
@@ -36,7 +36,7 @@ def passage(text=REPORTED, work="tafsir_tabari", ref="2:43", pad=""):
     return make_record(
         quran_reference=ref,
         work_id=work,
-        author_id=None,
+        author_id=_catalog_authors()[work],
         source_record_id=sid,
         source_sha256=original_sha,
         original_text=raw,
