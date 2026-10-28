@@ -8,7 +8,7 @@ Mubin is a system composed of independently maturing knowledge and reasoning eng
 
 - **Mubin system:** `0.1.0-alpha` — foundation stage
 - **Quran Engine:** `Q0.3` — engineering-qualified for pinned import/read-path scope; public content clearance not granted
-- **Tafsir Engine:** `T0.2.3` — source-grounded, unverified interpretation cues and unresolved relations; no verified exegetical opinions, editions or rights
+- **Tafsir Engine:** `T0.3` — local Quran–Tafsir metadata research with grounded passages and unverified cues; no scholarly, source or rights clearance
 - **Hadith Engine:** `H3.9.2` — qualification stage
 - **Usul Engine:** `U0.1` — experimental, one-step simulator (not qualified)
 - **Fiqh Engine:** `F0.0` — planned
