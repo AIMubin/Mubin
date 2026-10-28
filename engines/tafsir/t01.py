@@ -35,6 +35,13 @@ def _digest(path: Path) -> str:
     return h.hexdigest()
 
 
+def _assert_no_sqlite_sidecars(path: Path) -> None:
+    """SQLite WAL/journal can change visible rows without changing main DB SHA."""
+    if any(path.with_name(path.name + suffix).exists()
+           for suffix in ("-wal", "-shm", "-journal")):
+        raise TafsirError("T01_UNPINNED_SQLITE_SIDECAR")
+
+
 def _pinned_lock() -> dict:
     try:
         lock = json.loads(_LOCK.read_text(encoding="utf-8"))
@@ -64,9 +71,11 @@ def _lookup(db_path: Path, reference: str, *, expected_sha256: str,
             or type(include_private_text) is not bool):
         raise TafsirError("T01_INVALID_PARAMETERS")
     try:
+        _assert_no_sqlite_sidecars(db_path)
         if _digest(db_path) != expected_sha256:
             raise TafsirError("T01_DATABASE_PIN_MISMATCH")
         source = get_ayah(db_path, sura, ayah)
+        _assert_no_sqlite_sidecars(db_path)
         if _digest(db_path) != expected_sha256:
             raise TafsirError("T01_DATABASE_CHANGED_DURING_READ")
         works = {item["id"]: item for item in load_catalog()["sources"]}
@@ -110,6 +119,8 @@ def _lookup(db_path: Path, reference: str, *, expected_sha256: str,
                 "scholarly_verified": False,
                 "p1_admitted": False,
             })
+        if not records:
+            raise TafsirError("T01_NO_INDEXED_TAFSIR_RECORDS")
         return {
             "contract": CONTRACT, "milestone": "T0.1",
             "quran_reference": reference,
