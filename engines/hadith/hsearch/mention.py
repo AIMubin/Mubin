@@ -13,10 +13,14 @@ from engines.tafsir.t023 import _validate_passage
 
 _RE_MARFU = re.compile(
     r"(?:عن\s+رسول\s+الله|قال\s+رسول\s+الله|قال\s+النبي|قال\s*ﷺ)")
-_RE_MAWQUF = re.compile(
-    r"(?:قال\s+ابن\s+عباس|عن\s+ابن\s+عباس|عن\s+مجاهد|قال\s+مجاهد|"
-    r"عن\s+قتادة|قال\s+قتادة|عن\s+السدي|قال\s+السدي|"
-    r"عن\s+الحسن|عن\s+سعيد\s+بن\s+جبير)")
+_RE_MAWQUF = re.compile(r"(?:قال\s+ابن\s+عباس|عن\s+ابن\s+عباس)")
+# Linguistic markers for known Successors: not companion-stopped reports.
+# Historical identity is still not independently established here.
+_RE_MAQTU = re.compile(
+    r"(?:عن\s+مجاهد|قال\s+مجاهد|عن\s+قتادة|قال\s+قتادة|"
+    r"عن\s+الحسن|قال\s+الحسن|عن\s+سعيد\s+بن\s+جبير|"
+    r"قال\s+سعيد\s+بن\s+جبير)")
+_RE_UNDETERMINED = re.compile(r"(?:عن\s+السدي|قال\s+السدي)")
 _RE_NARRATED = re.compile(r"(?:روى|أخرج|حدثنا|أخبرنا|أنبأنا)\b")
 _MIN_LENGTH = 12
 _MAX_MENTION_CHARS = 1000
@@ -38,6 +42,7 @@ def detect_mentions(passage: dict, *, min_len: int = _MIN_LENGTH) -> list[dict]:
     markers = []
     for pattern, kind in (
         (_RE_MARFU, "MARFU"), (_RE_MAWQUF, "MAWQUF"),
+        (_RE_MAQTU, "MAQTU"), (_RE_UNDETERMINED, "UNDETERMINED"),
         (_RE_NARRATED, "UNDETERMINED"),
     ):
         for match in pattern.finditer(text):
