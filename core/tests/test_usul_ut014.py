@@ -124,6 +124,13 @@ class UsulPresentationTests(unittest.TestCase):
                     "usul_research_pointer_id":"pilot:amr-rule-research-pointer",
                     "verification_status":"UNVERIFIED",
                     "link_method":"EVIDENCE_CHAIN_VERIFICATION_ONLY",
+                    "scholarly_verified":False,
+                    "rule_application_verified":False,
+                    "cross_source_semantic_equivalence_verified":False,
+                    "juristic_inference_allowed":False,
+                    "public_fatwa_authorized":False,
+                    "p1_admitted":False,
+                    "text_included":False,
                 },
                 "matching":{
                     "tie_level":"NONE",
