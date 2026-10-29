@@ -1,5 +1,7 @@
 # MUBIN-SYS-A01 — AI-native integration kernel (Wave A)
 
+Architecture baseline: [Mubin System Architecture v1.0](MUBIN_SYSTEM_ARCHITECTURE_V1.0.md).
+
 Scope: shared contract v1, bounded DAG execution, per-case concurrency, explicit partial
 failures, per-case in-memory receipt, synthetic adapters for ALL FIVE engines, and typed
 research-only Fiqh models. This is an **engineering skeleton**, NOT a working MVE and NOT
