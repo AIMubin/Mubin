@@ -1,0 +1,36 @@
+name: Mubin Integration Kernel
+on:
+  pull_request:
+    paths:
+      - 'core/contracts/**'
+      - 'core/orchestration/**'
+      - 'engines/fiqh/**'
+      - 'schemas/engine-*-v1.schema.json'
+      - 'evaluation/integration/**'
+      - '.github/workflows/integration-kernel.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'core/contracts/**'
+      - 'core/orchestration/**'
+      - 'engines/fiqh/**'
+      - 'schemas/engine-*-v1.schema.json'
+      - 'evaluation/integration/**'
+      - '.github/workflows/integration-kernel.yml'
+  workflow_dispatch:
+jobs:
+  integration-contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install schema tests
+        run: python -m pip install -r core/requirements-test.txt
+      - name: Test bounded kernel, contracts and Fiqh scaffold
+        run: python -m unittest discover -s evaluation/integration -v
