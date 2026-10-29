@@ -159,11 +159,10 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
                             include_private_text=False)
                         if usul_evidence_path is not None:
                             from engines.tafsir.t02_cli import (
-                                extract_local_verse)
+                                extract_local_verse, verified_raw_verse_rows)
                             from engines.tafsir.t01 import (
                                 lookup_verse as _lv)
-                            from engines.tafsir.t023 import (
-                                identify_candidates)
+                            from engines.tafsir.t023 import identify_candidates
                             from engines.usul.ut014 import (
                                 usul_research_section,
                                 UsulPresentationError)
@@ -172,37 +171,27 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
                                     include_private_text=True)
                                 passages=extract_local_verse(
                                     Path(tafsir_db_path),lk)
-                                raw_by_record={}
-                                cands_by_record={}
-                                import sqlite3 as _sq
-                                from contextlib import closing as _cl
-                                with _cl(_sq.connect(Path(tafsir_db_path)
-                                    .resolve().as_uri()+"?mode=ro",
-                                    uri=True)) as _c:
-                                    _c.execute("PRAGMA query_only=ON")
-                                    for _src,_txt in _c.execute(
-                                        "SELECT source,text FROM tafsirs"
-                                        " WHERE sura=? AND aya=?",
-                                        (int(params["ref"].split(":")[0]),
-                                         int(params["ref"].split(":")[1]))).fetchall():
-                                        raw_by_record["tafsir:"+str(_src)+
-                                            ":"+params["ref"]]=_txt
-                                dg_map={}
-                                for _rid,_txt in raw_by_record.items():
-                                    dg_map[hashlib.sha256(
-                                        _txt.encode("utf-8")).hexdigest()]=_txt
-                                for p in passages:
-                                    raw=dg_map.get(p["source_sha256"])
-                                    if raw is not None:
-                                        raw_by_record[p["source_record_id"]]=raw
-                                        cands_by_record[p["source_record_id"]]=(
-                                            identify_candidates(p))
-                                        cands_by_record[p["source_record_id"]+"::passage"]=p
+                                raw_sources=verified_raw_verse_rows(
+                                    Path(tafsir_db_path),lk)
+                                source_by_record={
+                                    meta["evidence_id"]:meta["dataset_source_key"]
+                                    for meta in lk["tafsirs"]
+                                    if meta["text"] is not None
+                                }
+                                tafsir_items=[]
+                                for passage in passages:
+                                    rid=passage["source_record_id"]
+                                    raw=raw_sources[source_by_record[rid]]
+                                    for candidate in identify_candidates(passage):
+                                        tafsir_items.append({
+                                            "candidate":candidate,
+                                            "passage":passage,
+                                            "original_raw_text":raw,
+                                        })
                                 report["usul"]=usul_research_section(
                                     Path(usul_evidence_path),
-                                    Path(tafsir_db_path),params["ref"],
-                                    tafsir_raw_by_record=raw_by_record,
-                                    tafsir_candidates_by_record=cands_by_record)
+                                    tafsir_items=tafsir_items)
+
                             except UsulPresentationError as exc:
                                 report["usul"]={"status":"REFUSED",
                                     "code":exc.code,
