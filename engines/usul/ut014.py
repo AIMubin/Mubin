@@ -1,42 +1,46 @@
-"""UT-01.4: unified research presentation of Usul-Tafsir links.
+"""UT-01.4: optional, loopback-only redacted Usul–Tafsir research view.
 
-Loads an operator-supplied, digest-pinned usul evidence bundle (metadata
-only), reruns the conservative UT-01.3 matching per request against the
-pinned tafsir database, and emits a metadata-only presentation section.
-Lexical usul links sit at AUTOMATED_CANDIDATE level and can never rise to
-TEXTUALLY_ATTRIBUTED or SCHOLARLY_VERIFIED through this layer.
+An independently pinned W1/W2 private source replay is required; no raw
+Tafsir or Usul text and no private filesystem paths are returned over HTTP.
+UT-01.3 metadata envelopes keep their UT-01.2 links intact.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 from pathlib import Path
+import re
 
-from engines.usul.ut013 import (
-    match_candidate, summarize as match_summary, OFFSET_UTF8_BYTES,
+from engines.tafsir.t03 import _LEVELS as T03_EVIDENCE_LEVELS
+from engines.usul.concept_rule_catalog import build_catalog
+from engines.usul.ut012 import (
+    TRUSTED_CATALOG_SHA256, TRUSTED_GRAPH_SHA256, UsulTafsirLinkError,
 )
-from engines.tafsir.t01 import lookup_verse
-from engines.tafsir.t02_cli import extract_local_verse
-from engines.tafsir.t023 import identify_candidates
+from engines.usul.ut013 import match_candidate, summarize as match_summary
 
 CONTRACT = "mubin-usul-tafsir-presentation-v1"
-VERSION = "usul-presentation/0.1.0"
-EVIDENCE_LEVELS = (
-    "RETRIEVED_SOURCE_MATERIAL", "GROUNDED_PASSAGE", "AUTOMATED_CANDIDATE",
-    "TEXTUALLY_ATTRIBUTED", "SCHOLARLY_VERIFIED")
+VERSION = "usul-presentation/0.1.1"
+EVIDENCE_LEVELS = tuple(T03_EVIDENCE_LEVELS)
 USUL_LINK_MAX_LEVEL = "AUTOMATED_CANDIDATE"
-_BUNDLE_REQUIRED = (
+
+_BUNDLE_REQUIRED = frozenset((
     "usul_rule_candidate_id", "usul_research_pointer_id",
     "catalog_sha256", "graph_sha256", "usul_source_id",
     "usul_section_path", "usul_section_sha256", "query_terms",
     "waraqat_primary_html", "waraqat_primary_export",
     "waraqat_primary_manifest", "waraqat_primary_section",
     "waraqat_secondary_html", "waraqat_secondary_section",
-    "usul_work_id")
-_FORBIDDEN_BUNDLE_FIELDS = (
-    "text", "passage_text", "statement", "matn", "html",
-    "scholarly_verified", "juristic_inference_allowed",
-    "public_fatwa_authorized", "source_support_attested")
+    "usul_work_id",
+))
+_SOURCE_FIELDS = (
+    "usul_section_path", "waraqat_primary_html", "waraqat_primary_export",
+    "waraqat_primary_manifest", "waraqat_primary_section",
+    "waraqat_secondary_html", "waraqat_secondary_section",
+)
+_DIGEST = re.compile(r"^[a-f0-9]{64}$")
+_ID = re.compile(r"^[a-z][a-z0-9_.:-]{2,127}$")
+_MAX_LINKS = 4096
+_DATA = Path(__file__).resolve().parent / "pilots" / "data"
 
 
 class UsulPresentationError(ValueError):
@@ -50,123 +54,161 @@ def _need(ok, code):
         raise UsulPresentationError(code)
 
 
+def _read_json(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _no_duplicates(items):
+    result = {}
+    for key, value in items:
+        if key in result:
+            raise UsulPresentationError("US014_DUPLICATE_BUNDLE_FIELD")
+        result[key] = value
+    return result
+
+
 def load_usul_evidence(path: Path) -> dict:
-    """Load and validate the operator's usul evidence bundle (metadata-only)."""
-    _need(path.is_file() and not path.is_symlink(), "US014_BUNDLE_UNAVAILABLE")
-    raw = path.read_bytes()
-    _need(0 < len(raw) <= 65536, "US014_BUNDLE_TOO_LARGE")
-    bundle = json.loads(raw.decode("utf-8", "strict"))
-    _need(type(bundle) is dict, "US014_BUNDLE_NOT_DICT")
-    for field in _BUNDLE_REQUIRED:
-        _need(field in bundle, f"US014_BUNDLE_FIELD_MISSING_{field}")
-    for bad in _FORBIDDEN_BUNDLE_FIELDS:
-        _need(bad not in bundle, f"US014_BUNDLE_FIELD_FORBIDDEN_{bad}")
-    _need(bundle["usul_section_path"] and
-          not Path(bundle["usul_section_path"]).is_symlink(),
-          "US014_SECTION_PATH_INVALID")
-    _need(type(bundle["query_terms"]) is list and bundle["query_terms"],
+    """Fail closed on any unrecognized field or unsafe local source path."""
+    _need(type(path) is Path and path.is_file() and not path.is_symlink(),
+          "US014_BUNDLE_UNAVAILABLE")
+    _need(0 < path.stat().st_size <= 65536,
+          "US014_BUNDLE_TOO_LARGE")
+    bundle = json.loads(path.read_bytes().decode("utf-8", "strict"),
+                        object_pairs_hook=_no_duplicates)
+    _need(type(bundle) is dict and set(bundle) == _BUNDLE_REQUIRED,
+          "US014_BUNDLE_FIELDS_INVALID")
+    _need(all(type(bundle[field]) is str
+              and 0 < len(bundle[field]) <= 1024
+              for field in _BUNDLE_REQUIRED - {"query_terms"}),
+          "US014_BUNDLE_STRING_INVALID")
+    _need(bundle["graph_sha256"] == TRUSTED_GRAPH_SHA256
+          and bundle["catalog_sha256"] == TRUSTED_CATALOG_SHA256
+          and _DIGEST.fullmatch(bundle["usul_section_sha256"]) is not None,
+          "US014_EXTERNAL_SOURCE_PINS_INVALID")
+    _need(all(_ID.fullmatch(bundle[k]) is not None for k in (
+        "usul_rule_candidate_id", "usul_research_pointer_id",
+        "usul_source_id", "usul_work_id")),
+        "US014_SOURCE_IDENTIFIERS_INVALID")
+    terms = bundle["query_terms"]
+    _need(type(terms) is list and len(terms) == 1
+          and type(terms[0]) is str
+          and 1 <= len(terms[0]) <= 128 and bool(terms[0].strip()),
           "US014_QUERY_TERMS_INVALID")
+    for key in _SOURCE_FIELDS:
+        p = Path(bundle[key])
+        _need(p.is_file() and not p.is_symlink()
+              and 0 < p.stat().st_size <= 10_000_000,
+              "US014_PRIVATE_SOURCE_UNAVAILABLE")
     return bundle
 
 
-def usul_research_section(bundle_path: Path, tafsir_db: Path,
-                          reference: str, *,
-                          tafsir_raw_by_record: dict | None = None,
-                          tafsir_candidates_by_record: dict | None = None,
-                          ) -> dict:
-    """Recompute conservative matching and return the presentation section.
+def usul_research_section(bundle_path: Path, *,
+                          tafsir_items: list[dict]) -> dict:
+    """Recheck pinned sources and display *every* original Tafsir candidate.
 
-    The caller supplies digest-verified raw rows and candidates recomputed by
-    the same pinned T0.1->T0.2->T0.2.3 pipeline (private CLI pattern). This
-    function rebuilds the accepted Bab al-Amr catalog/graph from the pinned
-    W1 files on every call. Metadata-only output.
+    Items contain the original raw Tafsir row, an independently verified
+    T0.2 passage and its T0.2.3 candidate; never send these over HTTP.
+    The underlying Stage08 W1/W2 replay is deliberately rerun on each
+    invocation, with no network acquisition.
     """
     bundle = load_usul_evidence(bundle_path)
-    _need(tafsir_raw_by_record and tafsir_candidates_by_record,
-          "US014_TAFSIR_CHAIN_INPUTS_REQUIRED")
-    import engines.usul.pilots.waraqat_stage08 as s08
+    _need(type(tafsir_items) is list and len(tafsir_items) <= _MAX_LINKS,
+          "US014_CANDIDATE_BOUNDS_INVALID")
+    from engines.usul.pilots import waraqat_stage08 as s08
     graph = s08.replay_and_graph(
-        Path(bundle["waraqat_primary_html"]),
-        Path(bundle["waraqat_primary_export"]),
-        Path(bundle["waraqat_primary_manifest"]),
-        Path(bundle["waraqat_primary_section"]),
-        Path(bundle["waraqat_secondary_html"]),
-        Path(bundle["waraqat_secondary_section"]),
-        json.loads(Path(__file__).resolve().parents[2].joinpath(
-            "usul/pilots/data/waraqat-stage07-queries.json").read_text(encoding="utf-8")) if False else
-        json.loads(Path("engines/usul/pilots/data/waraqat-stage07-queries.json").read_text(encoding="utf-8")),
-        json.loads(Path("engines/usul/pilots/data/waraqat-stage08-research-pointers.json").read_text(encoding="utf-8")))
-    _need(graph["graph_sha256"] == bundle["graph_sha256"],
-          "US014_GRAPH_DIGEST_NOT_THE_ACCEPTED_ONE")
-    from engines.usul.concept_rule_catalog import build_catalog
-    catalog = build_catalog(graph, graph["graph_sha256"],
-        json.loads(Path("engines/usul/pilots/data/waraqat-u02-catalog-candidates.json").read_text(encoding="utf-8")))
-    _need(catalog["catalog_sha256"] == bundle["catalog_sha256"],
-          "US014_CATALOG_DIGEST_NOT_THE_ACCEPTED_ONE")
-    usul_raw = Path(bundle["usul_section_path"]).read_bytes()
-    _need(hashlib.sha256(usul_raw).hexdigest() == bundle["usul_section_sha256"],
-          "US014_SECTION_DIGEST_MISMATCH")
+        *(Path(bundle[key]) for key in (
+            "waraqat_primary_html", "waraqat_primary_export",
+            "waraqat_primary_manifest", "waraqat_primary_section",
+            "waraqat_secondary_html", "waraqat_secondary_section")),
+        _read_json(_DATA / "waraqat-stage07-queries.json"),
+        _read_json(_DATA / "waraqat-stage08-research-pointers.json"))
+    _need(graph.get("graph_sha256") == TRUSTED_GRAPH_SHA256
+          and graph.get("graph_sha256") == bundle["graph_sha256"],
+          "US014_GRAPH_PIN_MISMATCH")
+    catalog = build_catalog(
+        graph, TRUSTED_GRAPH_SHA256,
+        _read_json(_DATA / "waraqat-u02-catalog-candidates.json"))
+    _need(catalog["catalog_sha256"] == TRUSTED_CATALOG_SHA256
+          and catalog["catalog_sha256"] == bundle["catalog_sha256"],
+          "US014_CATALOG_PIN_MISMATCH")
+    raw = Path(bundle["usul_section_path"]).read_bytes()
+    _need(hashlib.sha256(raw).hexdigest() == bundle["usul_section_sha256"],
+          "US014_USUL_SECTION_BYTES_CHANGED")
+    sections = [n for n in graph["nodes"]
+                if n.get("kind") == "PINNED_SECTION"
+                and n.get("source_id") == bundle["usul_source_id"]
+                and n.get("section_sha256") == bundle["usul_section_sha256"]]
+    _need(len(sections) == 1 and sections[0].get("byte_length") == len(raw),
+          "US014_SECTION_NOT_IN_REPLAY_GRAPH")
     links = []
-    refused = {}
-    for record_id, raw in tafsir_raw_by_record.items():
-        for c in tafsir_candidates_by_record.get(record_id, []):
-            try:
-                passage = tafsir_candidates_by_record.get(
-                    record_id + "::passage")
-                links.append(match_candidate(
-                    candidate=c, passage=passage, tafsir_raw_text=raw,
-                    usul_catalog=catalog, usul_graph=graph,
-                    usul_raw_text=usul_raw,
-                    rule_candidate_id=bundle["usul_rule_candidate_id"],
-                    research_pointer_id=bundle["usul_research_pointer_id"],
-                    rule_query_terms=bundle["query_terms"],
-                    candidacy_reason=bundle.get("candidacy_reason"),
-                    candidacy_scope=bundle.get("candidacy_scope")))
-            except Exception as exc:
-                code = getattr(exc, "code", type(exc).__name__)
-                refused[code] = refused.get(code, 0) + 1
-    counts = match_summary(links)
-    import hashlib as _h
-    redacted_links = []
-    for l in links:
-        redacted_links.append({
-            "link_id": l.get("link_id"),
-            "link_status": l.get("link_status"),
-            "match_method": l.get("match_method", "N/A_IN_UT012_RECORD"),
-            "tafsir_candidate_id": l.get("tafsir_candidate_id"),
-            "usul_rule_candidate_id": l.get("usul_rule_candidate_id"),
-            "usul_section_sha256": l.get("usul_section_sha256"),
-            "verification_status": l.get("verification_status"),
+    for item in tafsir_items:
+        _need(type(item) is dict and set(item) == {
+            "candidate", "passage", "original_raw_text"},
+            "US014_TAFSIR_ITEM_INVALID")
+        # Any failure of a source chain rejects the *entire* section;
+        # never display a partial result as if all candidates were audited.
+        link = match_candidate(
+            candidate=item["candidate"], passage=item["passage"],
+            tafsir_raw_text=item["original_raw_text"],
+            usul_catalog=catalog, usul_graph=graph, usul_raw_text=raw,
+            rule_candidate_id=bundle["usul_rule_candidate_id"],
+            research_pointer_id=bundle["usul_research_pointer_id"],
+            rule_query_terms=bundle["query_terms"],
+            candidacy_reason=None, candidacy_scope=None)
+        links.append(link)
+    summary = match_summary(links)
+    redacted = []
+    for envelope in links:
+        stored = envelope["link"]
+        evidence = envelope["matching"]
+        redacted.append({
+            "link_id": stored["link_id"],
+            "link_status": stored["link_status"],
+            "tafsir_candidate_id": stored["tafsir_candidate_id"],
+            "tafsir_passage_id": stored["tafsir_passage_id"],
+            "tafsir_work_id": stored["tafsir_work_id"],
+            "usul_rule_candidate_id": stored["usul_rule_candidate_id"],
+            "usul_research_pointer_id": stored["usul_research_pointer_id"],
+            "verification_status": stored["verification_status"],
+            "link_method": stored["link_method"],
+            "tie_level": evidence["tie_level"],
+            "tafsir_tie_span": evidence["tafsir_raw_source_span"],
+            "tafsir_tie_sha256": evidence["tafsir_tie"]["digest"],
+            "usul_tie_span": evidence["usul_section_relative_byte_span"],
+            "usul_tie_sha256": evidence["usul_tie_utf8"]["digest"],
+            "tafsir_span_unit": evidence["tafsir_span_unit"],
+            "usul_span_unit": evidence["usul_span_unit"],
+            "qarinah_status": envelope["qarinah"]["status"],
+            "evidence_level": USUL_LINK_MAX_LEVEL,
             "scholarly_verified": False,
+            "rule_application_verified": False,
+            "text_included": False,
         })
     return {
         "contract": CONTRACT, "version": VERSION,
         "section_title_ar": "القواعد الأصولية المرتبطة بالتفسير",
         "usul_rule_candidate_id": bundle["usul_rule_candidate_id"],
         "usul_research_pointer_id": bundle["usul_research_pointer_id"],
-        "usul_work_id": bundle.get("usul_work_id", ""),
+        "usul_work_id": bundle["usul_work_id"],
         "usul_source_id": bundle["usul_source_id"],
         "usul_section_sha256": bundle["usul_section_sha256"],
-        "catalog_sha256": bundle["catalog_sha256"],
-        "graph_sha256": bundle["graph_sha256"],
-        "counts": counts,
-        "links_redacted": redacted_links,
-        "refusals": refused,
+        "catalog_sha256": catalog["catalog_sha256"],
+        "graph_sha256": graph["graph_sha256"],
+        "counts": summary, "links_redacted": redacted,
         "evidence_levels": list(EVIDENCE_LEVELS),
         "usul_link_level_cap": USUL_LINK_MAX_LEVEL,
-        "level_note": ("lexical usul links are AUTOMATED_CANDIDATE level; "
-                       "they never rise to TEXTUALLY_ATTRIBUTED or "
-                       "SCHOLARLY_VERIFIED through this layer"),
         "tie_levels_explained": {
-            "EXACT": "literal match at original offsets, digest-pinned",
-            "FOLDED_CANDIDATE": "match after removing Arabic marks only; "
-                                "no letter-equivalence or semantic claims"},
-        "link_status_note": ("UNDETERMINED means insufficient lexical "
-                            "evidence; it is not agreement, preference, "
-                            "or rule application"),
+            "EXACT": "literal lexical observation; not a rule application",
+            "FOLDED_CANDIDATE": "Stage07 mark-only folding; not semantic equivalence",
+            "NONE": "no source-linked lexical tie in bounded scope",
+        },
+        "link_status_note": (
+            "UNDETERMINED is not evidence for agreement, disagreement, "
+            "rule applicability or absence of a qarinah"),
         "scholarly_verified": False,
         "source_support_attested": False,
         "rule_application_verified": False,
+        "cross_source_semantic_equivalence_verified": False,
         "juristic_inference_allowed": False,
         "public_fatwa_authorized": False,
         "text_included": False,
