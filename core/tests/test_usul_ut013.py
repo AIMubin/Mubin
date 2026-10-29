@@ -13,7 +13,7 @@ from engines.usul import ut012
 from engines.usul.ut013 import (
     TIE_EXACT, TIE_FOLDED, TIE_NONE,
     locate_term, locate_term_utf8_bytes, match_candidate,
-    summarize, validate_match,
+    summarize, validate_match, REASON_PINNED_EXACT,
 )
 from engines.usul.concept_rule_catalog import (
     GRAPH_FIELDS, build_catalog, canonical,
@@ -158,7 +158,7 @@ class MatchingTests(unittest.TestCase):
         return match_candidate(**params),params
 
     def test_exact_tie_with_pinned_occurrence_and_reason(self):
-        result,params=self.build(reason="shared literal query marker",
+        result,params=self.build(reason=REASON_PINNED_EXACT,
                                  scope="LEXICAL_NAVIGATION_ONLY")
         self.assertEqual("CANDIDATE_RELATED",result["link_status"])
         self.assertEqual(TIE_EXACT,result["matching"]["tie_level"])
@@ -192,10 +192,10 @@ class MatchingTests(unittest.TestCase):
 
     def test_reason_without_both_pinned_exact_ties_refused(self):
         with self.assertRaises(ut012.UsulTafsirLinkError):
-            self.build(text=TAFSIR_FOLDED,reason="unfounded",
+            self.build(text=TAFSIR_FOLDED,reason=REASON_PINNED_EXACT,
                        scope="LEXICAL_NAVIGATION_ONLY")
         with self.assertRaises(ut012.UsulTafsirLinkError):
-            self.build(text=TAFSIR_NONE,reason="unfounded",
+            self.build(text=TAFSIR_NONE,reason=REASON_PINNED_EXACT,
                        scope="LEXICAL_NAVIGATION_ONLY")
 
     def test_no_tie_does_not_assert_relation(self):
@@ -209,6 +209,21 @@ class MatchingTests(unittest.TestCase):
             self.build(changes_me="unused") if False else self.build(
                 rule_query_terms=["هذا"])
 
+
+    def test_free_text_candidacy_reason_refused_to_protect_private_text(self):
+        with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
+                                    "UT013_REASON_SCOPE_INVALID"):
+            self.build(reason="قال أهل التفسير: النص الخاص الكامل",
+                       scope="SOURCE_LOCAL_LEXICAL_NAVIGATION")
+
+    def test_summarize_rejects_post_validation_status_promotion(self):
+        result,_=self.build(reason=REASON_PINNED_EXACT,scope="BOUNDED")
+        tampered=copy.deepcopy(result)
+        tampered["link"]["scholarly_verified"]=True
+        with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
+                                    "UT013_MATCH_RECORD_INVALID"):
+            summarize([tampered])
+
     def test_local_source_bytes_must_match_accepted_section_sha(self):
         with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
                                     "UT013_WARAQAT_SECTION_RAW_SHA_MISMATCH"):
@@ -221,7 +236,7 @@ class MatchingTests(unittest.TestCase):
                             and e.get("to")==self.occ)]
         # Outside the already accepted pin, even graph rewrites are rejected.
         with self.assertRaises(ut012.UsulTafsirLinkError):
-            self.build(usul_graph=g,reason="wrong",scope="LEXICAL_ONLY")
+            self.build(usul_graph=g,reason=REASON_PINNED_EXACT,scope="LEXICAL_ONLY")
 
     def test_no_mention_of_qarinah_cannot_be_evidence_of_absence(self):
         result,_=self.build()
@@ -234,7 +249,7 @@ class MatchingTests(unittest.TestCase):
         self.assertFalse(result["rule_application_verified"])
 
     def test_envelope_rejects_mutation_and_does_not_pollute_ut012(self):
-        result,inputs=self.build(reason="lexical",scope="BOUNDED")
+        result,inputs=self.build(reason=REASON_PINNED_EXACT,scope="BOUNDED")
         modified=copy.deepcopy(result)
         modified["matching"]["tafsir_tie"]["digest"]="0"*64
         with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
@@ -244,7 +259,7 @@ class MatchingTests(unittest.TestCase):
         self.assertNotIn("qarinah",result["link"])
 
     def test_no_text_or_authority_promotion_in_receipt(self):
-        result,_=self.build(reason="search navigation",scope="RESEARCH_ONLY")
+        result,_=self.build(reason=REASON_PINNED_EXACT,scope="RESEARCH_ONLY")
         serialized=json.dumps(result,ensure_ascii=False)
         self.assertNotIn(TAFSIR,serialized)
         self.assertNotIn(USUL,serialized)
@@ -257,8 +272,8 @@ class MatchingTests(unittest.TestCase):
         self.assertFalse(summary["juristic_inference_allowed"])
 
     def test_determinism(self):
-        a,_=self.build(reason="lexical",scope="BOUNDED")
-        b,_=self.build(reason="lexical",scope="BOUNDED")
+        a,_=self.build(reason=REASON_PINNED_EXACT,scope="BOUNDED")
+        b,_=self.build(reason=REASON_PINNED_EXACT,scope="BOUNDED")
         self.assertEqual(a,b)
 
 
