@@ -130,7 +130,7 @@ async function search() {
       }
       for (const [tl, n] of Object.entries(counts.ties_by_level || {})) {
         uc.appendChild(el("span", null,
-          (tl === "EXACT" ? "حرفي" : "مرشح مطوَّع") + ": " + n));
+          (tl === "EXACT" ? "حرفي EXACT" : tl === "FOLDED_CANDIDATE" ? "مرشح مطوَّع FOLDED_CANDIDATE" : "بلا تطابق NONE") + ": " + n));
       }
       ub.appendChild(uc);
       ub.appendChild(field("مرشح القاعدة", u.usul_rule_candidate_id));
@@ -159,7 +159,16 @@ async function search() {
             ? " (غير محسومة — ليست اتفاقاً ولا خلافاً)" : "")));
         li.appendChild(field("المرشح التفسيري", l.tafsir_candidate_id));
         li.appendChild(field("مرشح القاعدة", l.usul_rule_candidate_id));
-        li.appendChild(field("طريقة المطابقة", l.match_method));
+        li.appendChild(field("طريقة الربط", l.link_method));
+        li.appendChild(field("مستوى التشابه اللفظي", l.tie_level));
+        li.appendChild(field("سقف الدليل", l.evidence_level));
+        li.appendChild(field("إزاحات التفسير الخام (محارف)",
+          l.tafsir_tie_span ? l.tafsir_tie_span.join("..") : "غير مرصودة"));
+        li.appendChild(field("بصمة شاهد التفسير", l.tafsir_tie_sha256 || "غير مرصودة"));
+        li.appendChild(field("إزاحات الأصول داخل القسم (بايتات UTF-8)",
+          l.usul_tie_span ? l.usul_tie_span.join("..") : "غير مرصودة"));
+        li.appendChild(field("بصمة شاهد الأصول", l.usul_tie_sha256 || "غير مرصودة"));
+        li.appendChild(field("حالة مؤشر القرينة", l.qarinah_status));
         li.appendChild(field("حالة التحقق", l.verification_status));
         ul.appendChild(li);
       }
