@@ -305,7 +305,9 @@ def match_candidate(*, candidate: dict, passage: dict, tafsir_raw_text: str,
             "tie_level": (
                 TIE_EXACT if can_propose else
                 TIE_FOLDED if (t_loc["tie"] != TIE_NONE
-                              and u_loc["tie"] != TIE_NONE) else TIE_NONE
+                              and u_loc["tie"] != TIE_NONE
+                              and TIE_FOLDED in (t_loc["tie"], u_loc["tie"]))
+                else TIE_NONE
             ),
             "tafsir_tie": t_loc,
             "usul_tie_utf8": u_loc,
