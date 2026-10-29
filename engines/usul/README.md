@@ -262,3 +262,46 @@ and the unresolved W2 and independent-anchoring limitations. No protected
 source bytes are supplied to GitHub and historical source receipts are not
 modified or promoted.
 
+
+## UT-01.3 — conservative Tafsir–Usul lexical navigation
+
+[UT-01.3](ut013.py) is an internal, source-grounded *lexical candidate*
+adapter, not a semantic matcher or a juristic rule executor. It consumes a
+real T0.2.3 candidate, its verified T0.2 passage and full original imported
+Tafsir text; the frozen U0.2 rule catalog and Stage08 graph; and the **exact
+original UTF-8 bytes** of the pinned Waraqat *section* identified by the
+rule's research pointer.
+
+Only the single Stage07 literal whose UTF-8 SHA-256 equals the already
+frozen Stage08 SEARCH_QUERY may be searched. Raw bytes must independently
+hash to the Stage08 pinned section digest. EXACT is literal and preserves
+codepoint/UTF-8 byte ranges and SHA-256. FOLDED_CANDIDATE uses Stage07's
+**reversible mark-only profile**, never unverified Alef/Hamza replacements,
+with separate raw source spans and digests. Word-inside-word and
+unrelated query strings are rejected. A word's presence is NOT a
+legal command-form diagnosis; lack of the 'qarinah' marker in the
+bounded candidate is NOT proof of no qarinah.
+
+The returned UT-01.3 **envelope** keeps an untouched UT-01.2 contract link
+in `envelope["link"]`, with `matching` and `qarinah` as explicitly
+non-normative metadata. UT-01.2's `validate_link` must be called on
+the nested link, **never** on the whole envelope. UT-01.3's
+`validate_match` reruns the source matcher and compares the entire
+envelope. `CANDIDATE_RELATED` requires EXACT literal hits on both sides,
+a matching **pinned Stage07 EXACT source occurrence**, and the explicit
+safe rationale code `SOURCE_BOUND_STAGE07_EXACT_LEXICAL_OVERLAP` with an
+uppercase bounded scope token; a free-text rationale is forbidden to
+prevent private-source excerpt leakage. Otherwise the relationship remains
+`UNDETERMINED`. No semantic/rule/rights/scholarly promotion is possible.
+
+Private operator report at verse 2:43 cited 65 T0.2.3 lexical candidates
+and 65 UNDETERMINED links on earlier branch code. **GitHub CI cannot
+replay private W1/Q0.3 files**, and the stricter source-bound UT-01.3
+contract requires a fresh local replay before updating its real counts
+or freezing a new acceptance receipt. Synthetic CI verifies the
+engineering scope only, on Ubuntu and Windows. The old link/receipt
+must not be presented as a replay of this corrected API.
+
+UT-01.4 can present only redacted source IDs, raw span units, digests,
+link states and non-normative evidence levels; it cannot label any
+candidate as rule applicability. Mubin remains `0.1.0-alpha`.

@@ -7,6 +7,7 @@ on:
       - 'engines/usul/**'
       - 'core/tests/test_usul_ut011.py'
       - 'core/tests/test_usul_ut012.py'
+      - 'core/tests/test_usul_ut013.py'
       - 'evaluation/evidence/ut012_case_a_real_link.json'
       - 'evaluation/evidence/ut011_bab_amr_bridge_report.json'
       - 'corpus/reviews/u02-waraqat-private-source-acceptance-PASS.json'
@@ -17,6 +18,7 @@ on:
       - 'engines/usul/**'
       - 'core/tests/test_usul_ut011.py'
       - 'core/tests/test_usul_ut012.py'
+      - 'core/tests/test_usul_ut013.py'
       - 'evaluation/evidence/ut012_case_a_real_link.json'
       - 'evaluation/evidence/ut011_bab_amr_bridge_report.json'
       - 'corpus/reviews/u02-waraqat-private-source-acceptance-PASS.json'
@@ -43,3 +45,5 @@ jobs:
         run: python -m unittest core.tests.test_usul_ut011 -v
       - name: UT-01.2 source-pinned cross-engine link contract
         run: python -m unittest core.tests.test_usul_ut012 -v
+      - name: UT-01.3 conservative Stage07 provenance and adversarial matching
+        run: python -m unittest core.tests.test_usul_ut013 -v
