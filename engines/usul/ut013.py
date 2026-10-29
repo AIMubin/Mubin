@@ -1,186 +1,356 @@
-"""UT-01.3: conservative Usul-Tafsir candidate matching over pinned sources.
+"""UT-01.3: conservative, reversible Stage07 lexical research navigation.
 
-Separates literal EXACT ties from folded FOLDED_CANDIDATE ties, records
-original offsets (Unicode codepoints for tafsir, UTF-8 bytes for usul) and
-digests per side, and never treats a lexical marker as proof of a sharia
-command form, nor an unobserved marker as proof of absence. Every accepted
-candidate link passes through UT-01.2 build_link AND validate_link; the
-contract is never bypassed.
+This is NOT semantic matching, hadith or tafsir validation, juristic inference,
+or evidence of rule applicability. Only the source-independent UT-01.2
+contract verifies the two sides. We return that link *unaltered* in a
+separate UT-01.3 envelope: downstream can validate_link(envelope["link"]).
 """
 from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any
 
+from engines.tafsir.t02 import SPAN_UNIT as TAFSIR_SPAN_UNIT
+from engines.usul.arabic_evidence_retrieval import (
+    FOLD_MARKS, _fold_with_map,
+)
 from engines.usul.ut012 import (
     LINK_CANDIDATE, LINK_UNDETERMINED, OFFSET_UTF8_BYTES,
     UsulTafsirLinkError, build_link, validate_link,
 )
-from engines.tafsir.t02 import SPAN_UNIT as TAFSIR_SPAN_UNIT
 
 CONTRACT = "mubin-usul-tafsir-matching-v1"
-VERSION = "usul-tafsir-matching/0.1.0"
+VERSION = "usul-tafsir-matching/0.1.1"
 TIE_EXACT = "EXACT"
 TIE_FOLDED = "FOLDED_CANDIDATE"
 TIE_NONE = "NONE"
 QARINAH_PRESENT = "PRESENT_AS_TEXT"
 QARINAH_NOT_OBSERVED = "NOT_OBSERVED_IN_SCOPE"
-QARINAH_NOTE = ("absence of the marker in the searched span is not evidence "
-                "that no qarinah exists in the source")
-_AR_MARKS = re.compile(r"[\u064B-\u065F\u0670\u0640]")
+QARINAH_NOTE = (
+    "A marker not observed in this bounded phrase is not evidence that "
+    "no qarinah exists in the source, or that a condition is absent."
+)
+_FLAGS = (
+    "scholarly_verified", "rule_application_verified",
+    "cross_source_semantic_equivalence_verified",
+    "juristic_inference_allowed", "public_fatwa_authorized",
+    "text_included", "p1_admitted",
+)
+_MAX_TEXT = 200_000
+_MAX_TERM = 128
 
 
-def _need(ok, code):
-    if not ok:
+def _need(condition, code):
+    if not condition:
         raise UsulTafsirLinkError(code)
 
 
-def _fold(text: str) -> str:
-    text = _AR_MARKS.sub("", text)
-    text = re.sub(r"[\u0623\u0625\u0622]", "\u0627", text)
-    text = text.replace("\u0649", "\u064a")
-    return text
-
-
-def _digest_text(text) -> str:
-    data = text if isinstance(text, bytes) else text.encode("utf-8")
+def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _term_valid(term):
+    return (type(term) is str and 1 <= len(term) <= _MAX_TERM
+            and bool(term.strip())
+            and not any(ord(ch) < 32 for ch in term))
+
+
+def _boundary(text: str, a: int, b: int) -> bool:
+    """Avoid matching a word *inside* another Arabic/Unicode word."""
+    return ((a == 0 or not (text[a - 1].isalnum() or text[a - 1] == "_"))
+            and (b == len(text) or not (text[b].isalnum() or text[b] == "_")))
+
+
+def _locations(text: str, term: str) -> list[dict]:
+    _need(type(text) is str and len(text) <= _MAX_TEXT
+          and _term_valid(term), "UT013_LOCATE_INPUT_INVALID")
+    # Exact/byte-identical query takes precedence. No lossy normalization.
+    out = []
+    pos = 0
+    while len(out) < 2048:
+        start = text.find(term, pos)
+        if start < 0:
+            break
+        end = start + len(term)
+        if _boundary(text, start, end):
+            out.append({
+                "tie": TIE_EXACT, "span": [start, end],
+                "digest": _digest(text[start:end].encode("utf-8")),
+                "profile": "literal_exact_v1",
+            })
+        pos = start + 1
+    if out:
+        return out
+    # Stage07 reversible, conservative mark-only folding: DOES NOT alter
+    # Alef/Hamza, collapse spaces, strip word order or normalize meaning.
+    folded, mapped = _fold_with_map(text, FOLD_MARKS)
+    target, _ = _fold_with_map(term, FOLD_MARKS)
+    if not target or len(target) < 3:
+        return []
+    pos = 0
+    while len(out) < 2048:
+        start = folded.find(target, pos)
+        if start < 0:
+            break
+        finish = start + len(target)
+        a, b = mapped[start], mapped[finish - 1] + 1
+        if _boundary(text, a, b):
+            piece = text[a:b]
+            re_folded, _ = _fold_with_map(piece, FOLD_MARKS)
+            if re_folded == target:
+                out.append({
+                    "tie": TIE_FOLDED, "span": [a, b],
+                    "digest": _digest(piece.encode("utf-8")),
+                    "profile": FOLD_MARKS,
+                })
+        pos = start + 1
+    return out
+
+
 def locate_term(text: str, term: str) -> dict:
-    """EXACT vs FOLDED_CANDIDATE location of term inside text (codepoints)."""
-    _need(type(text) is str and type(term) is str, "UT013_LOCATE_INPUT_INVALID")
-    exact = text.find(term)
-    if exact >= 0:
-        return {"tie": TIE_EXACT, "span": [exact, exact + len(term)],
-                "digest": _digest_text(text[exact:exact + len(term)])}
-    ftext, fterm = _fold(text), _fold(term)
-    fpos = ftext.find(fterm)
-    if fpos >= 0 and len(fterm) >= 3:
-        return {"tie": TIE_FOLDED, "span": None,
-                "folded_offset": fpos,
-                "digest": _digest_text((str(fpos) + "|" + fterm).encode("utf-8"))}
-    return {"tie": TIE_NONE, "span": None}
+    """Return verified source-codepoint span + literal digest, even folded."""
+    matches = _locations(text, term)
+    return matches[0] if matches else {"tie": TIE_NONE, "span": None,
+                                     "digest": None, "profile": None}
 
 
 def locate_term_utf8_bytes(raw_bytes: bytes, term: str) -> dict:
-    """Locate term in a UTF-8 byte source; spans are BYTE offsets."""
-    _need(type(raw_bytes) is bytes, "UT013_BYTES_REQUIRED")
-    text = raw_bytes.decode("utf-8", "strict")
-    res = locate_term(text, term)
-    if res["tie"] == TIE_EXACT:
-        byte_start = len(text[:res["span"][0]].encode("utf-8"))
-        byte_end = len(text[:res["span"][1]].encode("utf-8"))
-        res["span"] = [byte_start, byte_end]
-    return res
-
-
-def _qarinah_status(candidate_text: str) -> dict:
-    present = _fold(candidate_text).find(_fold("القرينة")) >= 0
-    if present:
-        return {"status": QARINAH_PRESENT,
-                "note": "marker present as text; its juristic role is NOT assessed"}
-    return {"status": QARINAH_NOT_OBSERVED, "note": QARINAH_NOTE}
-
-
-def match_candidate(
-    *, candidate: dict, passage: dict, tafsir_raw_text: str,
-    usul_catalog: dict, usul_graph: dict, usul_raw_text: bytes,
-    rule_candidate_id: str, research_pointer_id: str,
-    rule_query_terms: list[str],
-    candidacy_reason: str | None = None,
-    candidacy_scope: str | None = None,
-) -> dict:
-    """Match one tafsir candidate against one usul rule candidate.
-
-    Matching = lexical tie evidence on BOTH pinned sides (EXACT or folded),
-    recorded with original offsets and digests. A tie is lexical navigation
-    only: never proof of command form, never proof of qarinah absence.
-    CANDIDATE_RELATED requires EXACT ties on both sides PLUS an explicit
-    operator-supplied candidacy_reason; everything else is UNDETERMINED.
-    The produced link always goes through ut012 build_link + validate_link.
-    """
-    _need(type(rule_query_terms) is list and rule_query_terms,
-          "UT013_QUERY_TERMS_REQUIRED")
-    _need(candidacy_reason is None
-          or (type(candidacy_scope) is str
-              and 1 <= len(candidacy_scope.strip()) <= 128),
-          "UT013_CANDIDACY_SCOPE_REQUIRED_WITH_REASON")
-    text = candidate["interpretation_statement"]
-    _need(_digest_text(text) == candidate.get("evidence_sha256"),
-          "UT013_CANDIDATE_DIGEST_MISMATCH")
-
-    ties_tafsir = [locate_term(text, t) for t in rule_query_terms]
-    t_exact = any(t["tie"] == TIE_EXACT for t in ties_tafsir)
-    t_folded = any(t["tie"] == TIE_FOLDED for t in ties_tafsir)
+    """The *same* exact raw match, expressed in original UTF-8 byte offsets."""
+    _need(type(raw_bytes) is bytes and len(raw_bytes) <= 500_000,
+          "UT013_SECTION_BYTES_INVALID")
     try:
-        u_ties = [locate_term_utf8_bytes(usul_raw_text, t)
-                  for t in rule_query_terms]
-    except (UnicodeError, ValueError) as exc:
-        raise UsulTafsirLinkError("UT013_USUL_SOURCE_UNREADABLE") from exc
-    u_exact = any(t["tie"] == TIE_EXACT for t in u_ties)
-    u_folded = any(t["tie"] == TIE_FOLDED for t in u_ties)
+        text = raw_bytes.decode("utf-8", "strict")
+    except UnicodeError as exc:
+        raise UsulTafsirLinkError("UT013_SOURCE_NOT_UTF8") from exc
+    loc = locate_term(text, term)
+    if loc["span"] is None:
+        return loc
+    a, b = loc["span"]
+    start = len(text[:a].encode("utf-8"))
+    end = len(text[:b].encode("utf-8"))
+    _need(raw_bytes[start:end].decode("utf-8") == text[a:b]
+          and _digest(raw_bytes[start:end]) == loc["digest"],
+          "UT013_BYTE_SPAN_ROUNDTRIP_FAILED")
+    return {**loc, "span": [start, end]}
 
-    if t_exact and u_exact and candidacy_reason:
-        tie_level, link_status = TIE_EXACT, LINK_CANDIDATE
-    else:
-        tie_level = (TIE_FOLDED if (t_folded or t_exact or u_folded or u_exact)
-                     else TIE_NONE)
-        link_status = LINK_UNDETERMINED
 
-    link = build_link(
-        quran_reference=candidate["quran_reference"],
-        tafsir_candidate=candidate,
-        tafsir_passage=passage,
+def _source_binding(usul_graph, rule_query_id, source_id, section_sha, raw):
+    """Validate *whole section bytes* and retrieve pinned exact occurrences."""
+    _need(type(raw) is bytes and len(raw) <= 500_000,
+          "UT013_RAW_USUL_BYTES_REQUIRED")
+    _need(_digest(raw) == section_sha,
+          "UT013_WARAQAT_SECTION_RAW_SHA_MISMATCH")
+    sections = [n for n in usul_graph["nodes"]
+                if n.get("kind") == "PINNED_SECTION"
+                and n.get("source_id") == source_id
+                and n.get("section_sha256") == section_sha]
+    _need(len(sections) == 1
+          and sections[0].get("byte_length") == len(raw),
+          "UT013_SECTION_LENGTH_OR_PIN_MISMATCH")
+    sec = sections[0]
+    queries = [n for n in usul_graph["nodes"]
+               if n.get("kind") == "SEARCH_QUERY"
+               and n.get("query_id") == rule_query_id
+               and n.get("witness_id") == source_id]
+    _need(len(queries) == 1, "UT013_PINNED_RULE_QUERY_NOT_FOUND")
+    query = queries[0]
+    _need(any(e.get("kind") == "QUERY_SCOPED_TO_SECTION"
+              and e.get("from") == query["id"] and e.get("to") == sec["id"]
+              for e in usul_graph["edges"]),
+          "UT013_QUERY_SECTION_NOT_BOUND")
+    edges = usul_graph["edges"]
+    nodes = {n["id"]: n for n in usul_graph["nodes"]}
+    occurrences = {}
+    for e in edges:
+        if (e.get("kind") != "QUERY_LOCATES_OCCURRENCE"
+                or e.get("from") != query["id"]
+                or e.get("classification") != "EXACT_LITERAL_ONLY"
+                or e.get("semantic_equivalence_verified") is not False):
+            continue
+        node = nodes.get(e.get("to"))
+        if node is None or node.get("section_id") != sec["id"]:
+            continue
+        a, b = node.get("section_byte_start"), node.get(
+            "section_byte_end_exclusive")
+        if (type(a) is int and type(b) is int
+                and 0 <= a < b <= len(raw)
+                and _digest(raw[a:b]) == node.get("original_span_sha256")):
+            occurrences.setdefault((a, b), []).append(node["id"])
+    return query, occurrences
+
+
+def _qarinah_status(text: str) -> dict:
+    # A textual mention can be in a quotation or a negated clause. Neither
+    # presence nor lack of marker determines the existence/role of a qarinah.
+    found = locate_term(text, "القرينة")["tie"] != TIE_NONE
+    return {
+        "status": QARINAH_PRESENT if found else QARINAH_NOT_OBSERVED,
+        "note": ("Qarinah marker observed as text only; no role assessed"
+                 if found else QARINAH_NOTE),
+    }
+
+
+def match_candidate(*, candidate: dict, passage: dict, tafsir_raw_text: str,
+                    usul_catalog: dict, usul_graph: dict,
+                    usul_raw_text: bytes, rule_candidate_id: str,
+                    research_pointer_id: str, rule_query_terms: list[str],
+                    candidacy_reason: str | None = None,
+                    candidacy_scope: str | None = None) -> dict:
+    """Produce source-attested lexical evidence, not an applied Usul rule.
+
+    The one query term must exactly match the *research pointer's pinned
+    Stage07 query literal SHA-256*. Candidate promotion requires a
+    separately pinned Stage08 EXACT source occurrence and an exact literal
+    Tafsir cue. An independent operator-supplied scoped reason is also
+    mandatory; otherwise status stays UNDETERMINED.
+    """
+    _need(type(candidate) is dict and type(passage) is dict
+          and type(usul_catalog) is dict and type(usul_graph) is dict,
+          "UT013_INPUT_INVALID")
+    _need(type(rule_query_terms) is list and len(rule_query_terms) == 1
+          and _term_valid(rule_query_terms[0]),
+          "UT013_ONE_PINNED_STAGE07_QUERY_REQUIRED")
+    # Validate both independently pinned chains BEFORE trusting source
+    # metadata in the matcher or operator supplied terms.
+    undecided = build_link(
+        quran_reference=candidate.get("quran_reference"),
+        tafsir_candidate=candidate, tafsir_passage=passage,
         tafsir_original_raw_text=tafsir_raw_text,
         usul_catalog=usul_catalog, usul_graph=usul_graph,
         rule_candidate_id=rule_candidate_id,
         research_pointer_id=research_pointer_id,
-        candidacy_reason=(candidacy_reason if link_status == LINK_CANDIDATE
-                          else None),
-        candidacy_scope=(candidacy_scope if link_status == LINK_CANDIDATE
-                         else None),
     )
-    # the contract is never bypassed: re-verify the built link
-    validate_link(link, tafsir_candidate=candidate, tafsir_passage=passage,
-                  tafsir_original_raw_text=tafsir_raw_text,
-                  usul_catalog=usul_catalog, usul_graph=usul_graph)
-    _need(link["link_status"] == link_status,
-          "UT013_MATCHER_CONTRACT_STATUS_MISMATCH")
-    if link_status == LINK_UNDETERMINED:
-        _need(candidacy_reason is None,
-              "UT013_UNDETERMINED_WITH_REASON_FORBIDDEN")
-
-    link["matching"] = {
-        "tie_level": tie_level,
-        "tafsir_ties": ties_tafsir,
-        "usul_ties_utf8": u_ties,
-        "tafsir_span_unit": TAFSIR_SPAN_UNIT,
-        "usul_span_unit": OFFSET_UTF8_BYTES,
-        "exact_requires_both_sides_and_explicit_reason": True,
-        "lexical_marker_is_not_rule_form_evidence": True,
+    validate_link(
+        undecided, tafsir_candidate=candidate, tafsir_passage=passage,
+        tafsir_original_raw_text=tafsir_raw_text,
+        usul_catalog=usul_catalog, usul_graph=usul_graph,
+    )
+    rule = next(r for r in usul_catalog["rule_candidates"]
+                if r["id"] == rule_candidate_id)
+    anchor = rule["research_anchor"]
+    term = rule_query_terms[0]
+    query, allowed_occurrences = _source_binding(
+        usul_graph, anchor["query_id"], anchor["source_id"],
+        anchor["section_sha256"], usul_raw_text)
+    _need(query.get("query_utf8_sha256") ==
+          _digest(term.encode("utf-8")),
+          "UT013_UNPINNED_STAGE07_QUERY_LITERAL")
+    tafsir_text = candidate["interpretation_statement"]
+    t_locations = _locations(tafsir_text, term)
+    t_loc = (t_locations[0] if t_locations else
+             {"tie": TIE_NONE, "span": None, "digest": None,
+              "profile": None})
+    try:
+        u_text = usul_raw_text.decode("utf-8", "strict")
+    except UnicodeError as exc:
+        raise UsulTafsirLinkError("UT013_SOURCE_NOT_UTF8") from exc
+    u_locs = []
+    for hit in _locations(u_text, term):
+        a, b = hit["span"]
+        start = len(u_text[:a].encode("utf-8"))
+        end = len(u_text[:b].encode("utf-8"))
+        _need(_digest(usul_raw_text[start:end]) == hit["digest"],
+              "UT013_SOURCE_MATCH_DIGEST_FAILED")
+        u_locs.append({**hit, "span": [start, end]})
+    # Prefer a literal occurrence attested by Stage07; a substring in the
+    # section alone does not establish a legitimate rule-query observation.
+    bound = next((hit for hit in u_locs
+                  if hit["tie"] == TIE_EXACT
+                  and tuple(hit["span"]) in allowed_occurrences), None)
+    u_loc = bound if bound is not None else (
+        u_locs[0] if u_locs else {"tie": TIE_NONE, "span": None,
+                                "digest": None, "profile": None})
+    can_propose = (t_loc["tie"] == TIE_EXACT
+                   and bound is not None)
+    if candidacy_reason is not None:
+        _need(can_propose, "UT013_REASON_WITHOUT_PINNED_EXACT_TIE")
+        _need(type(candidacy_reason) is str
+              and 1 <= len(candidacy_reason.strip()) <= 512
+              and type(candidacy_scope) is str
+              and 1 <= len(candidacy_scope.strip()) <= 128,
+              "UT013_REASON_SCOPE_INVALID")
+    if candidacy_scope is not None and candidacy_reason is None:
+        raise UsulTafsirLinkError("UT013_SCOPE_WITHOUT_REASON")
+    occurrence = (sorted(allowed_occurrences[tuple(bound["span"])])[0]
+                  if bound is not None and candidacy_reason else None)
+    linked = (
+        build_link(
+            quran_reference=candidate["quran_reference"],
+            tafsir_candidate=candidate, tafsir_passage=passage,
+            tafsir_original_raw_text=tafsir_raw_text,
+            usul_catalog=usul_catalog, usul_graph=usul_graph,
+            rule_candidate_id=rule_candidate_id,
+            research_pointer_id=research_pointer_id,
+            occurrence_ids=[occurrence] if occurrence else [],
+            candidacy_reason=candidacy_reason,
+            candidacy_scope=candidacy_scope,
+        ) if candidacy_reason else undecided
+    )
+    validate_link(
+        linked, tafsir_candidate=candidate, tafsir_passage=passage,
+        tafsir_original_raw_text=tafsir_raw_text,
+        usul_catalog=usul_catalog, usul_graph=usul_graph,
+    )
+    _need(linked["link_status"] ==
+          (LINK_CANDIDATE if candidacy_reason else LINK_UNDETERMINED),
+          "UT013_LINK_STATUS_INVALID")
+    return {
+        "contract": CONTRACT, "version": VERSION,
+        "link_id": linked["link_id"], "link_status": linked["link_status"],
+        "link": linked,  # Unmodified, UT-01.2-valid reference!
+        "matching": {
+            "tie_level": (
+                TIE_EXACT if can_propose else
+                TIE_FOLDED if (t_loc["tie"] != TIE_NONE
+                              and u_loc["tie"] != TIE_NONE) else TIE_NONE
+            ),
+            "tafsir_tie": t_loc,
+            "usul_tie_utf8": u_loc,
+            "tafsir_raw_source_span": (
+                [candidate["raw_source_span"][0] + t_loc["span"][0],
+                 candidate["raw_source_span"][0] + t_loc["span"][1]]
+                if t_loc["span"] else None
+            ),
+            "usul_section_relative_byte_span": u_loc["span"],
+            "usul_exact_stage07_occurrence_id": occurrence,
+            "usul_source_section_sha256": anchor["section_sha256"],
+            "tafsir_span_unit": TAFSIR_SPAN_UNIT,
+            "usul_span_unit": OFFSET_UTF8_BYTES,
+            "evidence_is_lexical_only": True,
+            "rule_form_not_derived": True,
+        },
+        "qarinah": _qarinah_status(tafsir_text),
+        **{flag: False for flag in _FLAGS},
     }
-    link["qarinah"] = _qarinah_status(text)
-    return link
+
+
+def validate_match(record: dict, **inputs) -> None:
+    """Re-run all pinned source checks, then compare whole envelope exactly."""
+    _need(type(record) is dict, "UT013_RECORD_INVALID")
+    rebuilt = match_candidate(**inputs)
+    _need(record == rebuilt, "UT013_ENVELOPE_TAMPERED")
 
 
 def summarize(matches: list[dict]) -> dict:
-    _need(type(matches) is list, "UT013_MATCHES_NOT_LIST")
-    by_status = {}
-    by_tie = {}
+    _need(type(matches) is list and len(matches) <= 4096
+          and all(type(m) is dict and m.get("contract") == CONTRACT
+                  for m in matches), "UT013_MATCHES_INVALID")
+    status, levels = {}, {}
     for m in matches:
-        by_status[m["link_status"]] = by_status.get(m["link_status"], 0) + 1
-        tie = m.get("matching", {}).get("tie_level", TIE_NONE)
-        by_tie[tie] = by_tie.get(tie, 0) + 1
+        st = m["link"]["link_status"]
+        _need(m["link_status"] == st
+              and all(m.get(flag) is False for flag in _FLAGS),
+              "UT013_MATCH_RECORD_INVALID")
+        level = m["matching"]["tie_level"]
+        _need(level in (TIE_EXACT, TIE_FOLDED, TIE_NONE),
+              "UT013_TIE_LEVEL_INVALID")
+        status[st] = status.get(st, 0) + 1
+        levels[level] = levels.get(level, 0) + 1
     return {
         "contract": CONTRACT, "version": VERSION,
         "matches_total": len(matches),
-        "links_by_status": by_status, "ties_by_level": by_tie,
-        "scholarly_verified": False, "rule_application_verified": False,
-        "cross_source_semantic_equivalence_verified": False,
-        "juristic_inference_allowed": False,
-        "public_fatwa_authorized": False, "text_included": False,
-        "p1_admitted": False, "consensus_claimed": False,
+        "links_by_status": status, "ties_by_level": levels,
+        **{flag: False for flag in _FLAGS},
+        "consensus_claimed": False,
         "preference_by_system": False,
     }
