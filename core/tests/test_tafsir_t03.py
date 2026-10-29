@@ -237,5 +237,66 @@ class T03Tests(unittest.TestCase):
         self.assertNotIn("SENSITIVE_PRIVATE_HADITH_TEXT",json.dumps(data))
 
 
+    def test_usul_opt_in_http_uses_all_candidates_and_redacts(self):
+        from engines.tafsir.t02_cli import extract_local_verse
+        from engines.tafsir.t023 import identify_candidates
+        passages=extract_local_verse(self.db,self.lookup)
+        self.assertTrue(passages)
+        first=next(p for p in passages if identify_candidates(p))
+        index=load_raw(json.dumps(MANIFEST).encode(),RAW)
+        server=build_http_server(index,RAW,port=0,tafsir_db_path=self.db,
+                                 usul_evidence_path=self.root/"usul_private.json")
+        port=server.server_port
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        self.addCleanup(server.shutdown)
+        observed=[]
+        synthetic={
+            "contract":"mubin-usul-tafsir-presentation-v1",
+            "counts":{"matches_total":2,
+                      "links_by_status":{"UNDETERMINED":2},
+                      "ties_by_level":{"NONE":2}},
+            "links_redacted":[{"link_status":"UNDETERMINED"},
+                              {"link_status":"UNDETERMINED"}],
+            "evidence_levels":["RETRIEVED_SOURCE_MATERIAL",
+                               "GROUNDED_PASSAGE","AUTOMATED_CANDIDATE",
+                               "TEXTUALLY_ATTRIBUTED","SCHOLARLY_VERIFIED"],
+            "usul_link_level_cap":"AUTOMATED_CANDIDATE",
+            "text_included":False,"scholarly_verified":False,
+        }
+        def fake_section(bundle_path, *, tafsir_items):
+            self.assertEqual(self.root/"usul_private.json",bundle_path)
+            observed.extend(tafsir_items)
+            return synthetic
+        def fetch():
+            c=HTTPConnection("127.0.0.1",port,timeout=15)
+            c.request("GET","/api/research?ref=2%3A43",
+                      headers={"Host":f"127.0.0.1:{port}"})
+            r=c.getresponse()
+            status=r.status
+            data=json.loads(r.read())
+            c.close()
+            return status,data
+        with patch("engines.tafsir.t01.lookup_verse",return_value=self.lookup), \
+             patch("engines.tafsir.t02_cli.extract_local_verse",
+                   return_value=[first,first]), \
+             patch("engines.usul.ut014.usul_research_section",
+                   side_effect=fake_section):
+            status,result=fetch()
+        self.assertEqual(200,status)
+        self.assertEqual(synthetic,result["usul"])
+        self.assertEqual(2,len(observed))
+        self.assertEqual(observed[0]["candidate"]["candidate_id"],
+                         observed[1]["candidate"]["candidate_id"])
+        self.assertNotIn(PASSAGE_TEXT,json.dumps(result,ensure_ascii=False))
+        self.assertFalse(result["usul"]["scholarly_verified"])
+        with patch("engines.tafsir.t01.lookup_verse",return_value=self.lookup), \
+             patch("engines.usul.ut014.usul_research_section",
+                   side_effect=RuntimeError("PRIVATE_WARAQAT_CONTENT")):
+            status,result=fetch()
+        self.assertEqual(422,status)
+        self.assertNotIn("PRIVATE_WARAQAT_CONTENT",json.dumps(result))
+        self.assertNotIn(str(self.root),json.dumps(result))
+
+
 if __name__ == "__main__":
     unittest.main()
