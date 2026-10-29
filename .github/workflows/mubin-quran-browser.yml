@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "qa/quran_browser_smoke.py"
+      - "qa/ut014_chrome_smoke.py"
       - "qa/quran_official_chrome_smoke.py"
       - "engines/quran/q01c/**"
       - "engines/quran/q01e/**"
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - "qa/quran_browser_smoke.py"
+      - "qa/ut014_chrome_smoke.py"
       - "qa/quran_official_chrome_smoke.py"
       - "engines/quran/q01c/**"
       - "engines/quran/q01e/**"
@@ -45,6 +47,8 @@ jobs:
         run: python -m qa.quran_browser_smoke
       - name: Mandatory Chrome full synthetic 6236-row direct-reader and KSU metadata UI
         run: python -m qa.quran_official_chrome_smoke --fixture
+      - name: Mandatory Chrome synthetic Usul–Tafsir unified research panel
+        run: python -m qa.ut014_chrome_smoke
 
   chrome-live-domain-advisory:
     runs-on: ubuntu-24.04

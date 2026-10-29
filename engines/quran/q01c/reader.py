@@ -62,7 +62,8 @@ def _decode_query(raw_query:str, allowed:frozenset[str],
         raise ValueError("invalid_query") from exc
 
 def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
-                      tafsir_db_path=None,hadith_cache_dir=None)->LoopbackServer:
+                      tafsir_db_path=None,hadith_cache_dir=None,
+                      usul_evidence_path=None)->LoopbackServer:
     if type(index) is not SourceIndex or type(raw) is not bytes:
         raise RawSourceError("unverified_or_missing_source_index")
     if hashlib.sha256(raw).hexdigest()!=index.raw_sha256:
@@ -156,6 +157,49 @@ def build_http_server(index:SourceIndex, raw:bytes,*,port:int=8765,
                         report=unified_research_query(
                             Path(tafsir_db_path),params["ref"],
                             include_private_text=False)
+                        if usul_evidence_path is not None:
+                            from engines.tafsir.t02_cli import (
+                                extract_local_verse, verified_raw_verse_rows)
+                            from engines.tafsir.t01 import (
+                                lookup_verse as _lv)
+                            from engines.tafsir.t023 import identify_candidates
+                            from engines.usul.ut014 import (
+                                usul_research_section,
+                                UsulPresentationError)
+                            try:
+                                lk=_lv(Path(tafsir_db_path),params["ref"],
+                                    include_private_text=True)
+                                passages=extract_local_verse(
+                                    Path(tafsir_db_path),lk)
+                                raw_sources=verified_raw_verse_rows(
+                                    Path(tafsir_db_path),lk)
+                                source_by_record={
+                                    meta["evidence_id"]:meta["dataset_source_key"]
+                                    for meta in lk["tafsirs"]
+                                    if meta["text"] is not None
+                                }
+                                tafsir_items=[]
+                                for passage in passages:
+                                    rid=passage["source_record_id"]
+                                    raw=raw_sources[source_by_record[rid]]
+                                    for candidate in identify_candidates(passage):
+                                        tafsir_items.append({
+                                            "candidate":candidate,
+                                            "passage":passage,
+                                            "original_raw_text":raw,
+                                        })
+                                report["usul"]=usul_research_section(
+                                    Path(usul_evidence_path),
+                                    tafsir_items=tafsir_items)
+
+                            except UsulPresentationError as exc:
+                                report["usul"]={"status":"REFUSED",
+                                    "code":exc.code,
+                                    "text_included":False}
+                            except (TafsirError,TafsirT02Error):
+                                report["usul"]={"status":"REFUSED",
+                                    "code":"usul_sources_unavailable",
+                                    "text_included":False}
                         if hadith_cache_dir is not None:
                             from engines.tafsir.t02_cli import (
                                 extract_local_verse)
