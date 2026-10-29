@@ -70,7 +70,7 @@ def _no_duplicates(items):
 
 def load_usul_evidence(path: Path) -> dict:
     """Fail closed on any unrecognized field or unsafe local source path."""
-    _need(type(path) is Path and path.is_file() and not path.is_symlink(),
+    _need(isinstance(path, Path) and path.is_file() and not path.is_symlink(),
           "US014_BUNDLE_UNAVAILABLE")
     _need(0 < path.stat().st_size <= 65536,
           "US014_BUNDLE_TOO_LARGE")
