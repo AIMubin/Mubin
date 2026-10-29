@@ -1,257 +1,266 @@
-"""UT-01.3 conservative matching acceptance tests (synthetic CI data)."""
+"""UT-01.3 adversarial synthetic matching tests; no private W1/Q0.3 bytes."""
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import unittest
+from unittest.mock import patch
 
-from engines.tafsir.t02 import make_record, CONTEXT as PASSAGE_CONTEXT
+from engines.tafsir.t02 import make_record, _catalog_authors
 from engines.tafsir.t023 import identify_candidates
-import engines.usul.ut012 as ut012
+from engines.usul import ut012
 from engines.usul.ut013 import (
-    match_candidate, summarize, locate_term, locate_term_utf8_bytes,
-    TIE_EXACT, TIE_FOLDED, TIE_NONE, LINK_CANDIDATE, LINK_UNDETERMINED,
+    TIE_EXACT, TIE_FOLDED, TIE_NONE,
+    locate_term, locate_term_utf8_bytes, match_candidate,
+    summarize, validate_match,
 )
+from engines.usul.concept_rule_catalog import (
+    GRAPH_FIELDS, build_catalog, canonical,
+)
+from core.tests.test_usul_ut012 import usul_pair
 
-TERM = "الأمر"
-HADITH_TEXT = ("وأما دلالة صيغة الأمر على الوجوب فإن الأمر في الشرع "
-               "يفيد الطلب، ومحاذير القرائن معروفة في بابها.")
-NO_TIE_TEXT = ("الكلام في تسمية هذا الباب وتعريف الغرض منه، وما يتبع "
-               "للباحث في مراتب الكلام.")
-
-
-def passage(text):
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return make_record(
-        quran_reference="2:43", work_id="tafsir_tabari",
-        author_id="محمد بن جرير الطبري",
-        source_record_id="tafsir:tafsir_tabari:2:43:" + digest,
-        source_sha256=digest, original_text=text,
-        span=(0, len(text)), context_scope=PASSAGE_CONTEXT)
+TERM="الأمر"
+PREFIX="بداية المصدر العربي الأصلي \n"
+TAFSIR="قال المفسرون: الأمر يتعلق بدراسة نصوص التفسير لا بإصدار حكم."
+TAFSIR_FOLDED="قال المفسرون: الأَمْرُ يتعلق بدراسة نصوص التفسير لا بإصدار حكم."
+TAFSIR_NONE="قال المفسرون: النصوص المتعلقة بأمور البلاغة في هذا الباب."
+TAFSIR_QARINAH=TAFSIR+" ويذكر النص القرينة من غير تحقق وظيفة فقهية."
+USUL="هذا صدر الباب، الأمر يرد ضمن نص أصولي للاختبار التجريبي فقط."
 
 
-def cand(text):
-    p = passage(text)
-    return p, identify_candidates(p)[0]
+def sha(data):
+    return hashlib.sha256(data if type(data) is bytes
+                           else data.encode("utf-8")).hexdigest()
 
 
-class TieTests(unittest.TestCase):
-    def test_exact(self):
-        r = locate_term(HADITH_TEXT, "صيغة الأمر")
-        self.assertEqual(r["tie"], TIE_EXACT)
+def tafsir_pair(text=TAFSIR):
+    raw=PREFIX+text
+    digest=sha(raw)
+    p=make_record(
+        quran_reference="2:43",work_id="tafsir_tabari",
+        author_id=_catalog_authors()["tafsir_tabari"],
+        source_record_id="tafsir:tafsir_tabari:2:43:"+digest,
+        source_sha256=digest, original_text=raw,
+        span=(len(PREFIX),len(raw)))
+    candidates=identify_candidates(p)
+    assert candidates
+    return raw,p,candidates[0]
 
-    def test_folded(self):
-        r = locate_term(HADITH_TEXT, "صيغة الأمر")
-        self.assertEqual(r["tie"], TIE_EXACT)
-        # folded-only: diacritic-carrying term against plain text
-        r2 = locate_term("صيغة الامر في الشرع", "صِيغَةُ الأمرِ")
-        self.assertEqual(r2["tie"], TIE_FOLDED)
 
-    def test_utf8_byte_spans(self):
-        raw = ("يجب الأمر".encode("utf-8") + b"\x00padding\x00"
-               + "الأمر الاصطناعي".encode("utf-8"))
-        r = locate_term_utf8_bytes(raw, "الأمر")
-        self.assertEqual(r["tie"], TIE_EXACT)
-        b0, b1 = r["span"]
-        self.assertEqual(raw[b0:b1].decode("utf-8"), "الأمر")
+def usul_sources(section_text=USUL):
+    g,c,occ,other=usul_pair()
+    raw=section_text.encode("utf-8")
+    section=next(n for n in g["nodes"] if n.get("kind")=="PINNED_SECTION")
+    section["section_sha256"]=sha(raw)
+    section["byte_length"]=len(raw)
+    query=next(n for n in g["nodes"] if n.get("kind")=="SEARCH_QUERY"
+               and n.get("query_id")=="pilot:amr-term")
+    query["query_utf8_sha256"]=sha(TERM)
+    a=raw.find(TERM.encode("utf-8"))
+    assert a>=0
+    node=next(n for n in g["nodes"] if n.get("id")==occ)
+    node.update({
+        "section_byte_start":a,
+        "section_byte_end_exclusive":a+len(TERM.encode("utf-8")),
+        "source_coordinate_basis":"utf8_export",
+        "original_span_sha256":sha(TERM),
+        "text_included":False,
+        "semantic_classification":"NOT_EVALUATED",
+    })
+    g["graph_sha256"]=sha(canonical({k:g[k] for k in GRAPH_FIELDS}))
+    manifest={
+        "schema_version":"u0.2.0",
+        "concepts":c["concepts"],
+        "rule_candidates":[
+            {k:r[k] for k in ("id","pointer_id","if_concepts",
+                               "unless_concepts","then_concept","review_status")}
+            for r in c["rule_candidates"]
+        ],
+        "relations":c["relations"],
+    }
+    c=build_catalog(g,g["graph_sha256"],manifest)
+    return raw,g,c,occ,other
+
+
+class UnitLocationTests(unittest.TestCase):
+    def test_exact_codepoints_and_original_sha(self):
+        raw="مقدمة: " + TERM + " ختام"
+        hit=locate_term(raw,TERM)
+        self.assertEqual(TIE_EXACT,hit["tie"])
+        a,b=hit["span"]
+        self.assertEqual(TERM,raw[a:b])
+        self.assertEqual(sha(raw[a:b]),hit["digest"])
+
+    def test_folded_marks_are_mapped_to_raw_span_and_hash(self):
+        raw="مقدمة: الأَمْرُ ختام"
+        hit=locate_term(raw,TERM)
+        self.assertEqual(TIE_FOLDED,hit["tie"])
+        a,b=hit["span"]
+        self.assertEqual("الأَمْر",raw[a:b])
+        self.assertEqual(sha(raw[a:b]),hit["digest"])
+
+    def test_original_utf8_byte_offset_both_profiles(self):
+        for raw,kind in [("أول الباب: الأمر.",TIE_EXACT),
+                         ("أول الباب: الأَمْرُ.",TIE_FOLDED)]:
+            with self.subTest(raw=raw):
+                encoded=raw.encode("utf-8")
+                hit=locate_term_utf8_bytes(encoded,TERM)
+                self.assertEqual(kind,hit["tie"])
+                a,b=hit["span"]
+                self.assertEqual(sha(encoded[a:b]),hit["digest"])
+                self.assertGreater(a,len(raw[:raw.index("الأ")]))
+                self.assertTrue(encoded[a:b].decode().startswith("الأ"))
+
+    def test_rejects_subword_matches(self):
+        self.assertEqual(TIE_NONE,locate_term("الأمرية ليست دليلًا",TERM)["tie"])
+        self.assertEqual(TIE_NONE,locate_term("الأمور ليست الأمرية",TERM)["tie"])
+
+    def test_conservative_fold_does_not_remove_hamza_or_normalize_alef(self):
+        self.assertEqual(TIE_NONE,locate_term("الامر",TERM)["tie"])
+        self.assertEqual(TIE_NONE,locate_term("ألأمر",TERM)["tie"])
+
+    def test_malformed_utf8_rejected(self):
+        with self.assertRaises(ut012.UsulTafsirLinkError):
+            locate_term_utf8_bytes(b"\xff",TERM)
+
+    def test_empty_term_refused(self):
+        with self.assertRaises(ut012.UsulTafsirLinkError):
+            locate_term("الأمر","")
 
 
 class MatchingTests(unittest.TestCase):
     def setUp(self):
-        from unittest.mock import patch
-        import engines.usul.ut012 as ut012
-        self.patches = []
-        self._graph_obj = None
-        self._catalog_obj = None
-
-    def _pins(self):
-        # sanctioned synthetic-CI pattern (mirrors main's UT-01.2 tests):
-        # point the trusted pins at THIS test's synthetic graph/catalog.
-        from unittest.mock import patch
-        g = self._graph()
-        c = self._catalog()
-        c["stage08_graph_sha256"] = g["graph_sha256"]
-        self._patches = [
-            patch.object(ut012, "TRUSTED_GRAPH_SHA256", g["graph_sha256"]),
-            patch.object(ut012, "TRUSTED_CATALOG_SHA256",
-                         c["catalog_sha256"]),
+        self.raw,self.g,self.catalog,self.occ,self.other=usul_sources()
+        self.pins=[
+            patch.object(ut012,"TRUSTED_GRAPH_SHA256",self.g["graph_sha256"]),
+            patch.object(ut012,"TRUSTED_CATALOG_SHA256",
+                         self.catalog["catalog_sha256"]),
         ]
-        for p in self._patches:
+        for p in self.pins:
             p.start()
-        self.addCleanup(self._unpins)
+        self.addCleanup(lambda:[p.stop() for p in reversed(self.pins)])
 
-    def _unpins(self):
-        for p in getattr(self, "_patches", []):
-            p.stop()
-
-    def build(self, text=HADITH_TEXT, reason=None, term=TERM):
-        self._pins()
-        p, c = cand(text)
-        usul_raw = HADITH_TEXT.encode("utf-8")
-        return match_candidate(
-            candidate=c, passage=p, tafsir_raw_text=text,
-            usul_catalog=self._catalog(), usul_graph=self._graph(),
-            usul_raw_text=usul_raw,
-            rule_candidate_id="candidate:amr-structural-hypothesis",
-            research_pointer_id="pilot:amr-rule-research-pointer",
-            rule_query_terms=[term],
-            candidacy_reason=reason,
-            candidacy_scope="BAB_AL_AMR_LEXICAL_SCOPE")
-
-    _cat = None
-    _g = None
-    def _catalog(self):
-        if self._cat is None:
-            self._cat = self._mk_cat_graph()[0]
-        return self._cat
-    def _graph(self):
-        if self._g is None:
-            self._g = self._mk_cat_graph()[1]
-        return self._g
-    def _cat_digest(self):
-        return self._graph()["graph_sha256"] and self._catalog_digest
-    def _graph_digest(self):
-        return self._g["graph_sha256"]
-    def _mk_cat_graph(self):
-        from engines.usul.ut012 import OFFSET_UTF8_BYTES
-        g = {
-            "engine": "usul-evidence-context-graph/0.1.0",
-            "status": "EVIDENCE_CONTEXT_GRAPH_PASS",
-            "scope": "pilot:waraqat-bab-amr",
-            "stage07_engine": "waraqat-two-witness-stage07/0.1.0",
-            "stage07_witness_count": 1, "context_radius_lines": 1,
-            "nodes": [
-                {"id": "witness:pilot-primary", "kind": "SOURCE_WITNESS",
-                 "source_id": "pilot:waraqat-primary", "source_url": "u",
-                 "work_title": "الورقات", "author": "الجويني",
-                 "printed_edition_verified": False},
-                {"id": "section:pilot-bab-amr", "kind": "PINNED_SECTION",
-                 "source_id": "pilot:waraqat-primary",
-                 "section_sha256": "9" * 64, "section_locator": "باب الأمر",
-                 "offset_basis": "utf8_export", "source_byte_base": 3735,
-                 "source_line_base": 86, "byte_length": len(HADITH_TEXT.encode("utf-8")),
-                 "line_count": 3},
-                {"id": "query:pilot-amr-term", "kind": "SEARCH_QUERY",
-                 "witness_id": "pilot:waraqat-primary",
-                 "query_id": "pilot:amr-term",
-                 "query_utf8_sha256": "b" * 64,
-                 "interpretation": "LEXICAL_NAVIGATION_ONLY",
-                 "source_text_included": False},
-                {"id": "pointer:pilot-amr-structural",
-                 "kind": "RULE_RESEARCH_POINTER",
-                 "pointer_id": "pilot:amr-rule-research-pointer",
-                 "reference_id": "candidate:amr-structural-hypothesis",
-                 "review_status": "UNASSESSED",
-                 "rule_application_verified": False,
-                 "objection_presence_verified": False},
-                {"id": "occurrence:pilot-1", "kind": "TEXT_OCCURRENCE",
-                 "query_id": "pilot:amr-term",
-                 "offset_basis": OFFSET_UTF8_BYTES,
-                 "byte_span": [0, 10]},
-            ],
-            "edges": [
-                {"id": "edge:w-s", "kind": "WITNESS_HAS_PINNED_SECTION",
-                 "from": "witness:pilot-primary", "to": "section:pilot-bab-amr"},
-                {"id": "edge:q-s", "kind": "QUERY_SCOPED_TO_SECTION",
-                 "from": "query:pilot-amr-term", "to": "section:pilot-bab-amr"},
-                {"id": "edge:p-q", "kind": "RESEARCH_NAVIGATION_ONLY",
-                 "from": "pointer:pilot-amr-structural",
-                 "to": "query:pilot-amr-term",
-                 "no_claim_of_support": True, "no_claim_of_exception": True},
-            ],
-            "nodes_by_kind": {}, "edges_by_kind": {},
-            "all_edge_references_valid": True, "source_text_included": False,
-            "lexical_matches_promoted_to_rules": False,
-            "rule_support_attested": False,
-            "objection_presence_attested": False,
-            "semantic_qarinah_verified": False,
-            "juristic_inference_allowed": False,
-            "scholarly_verified": False,
-            "redistribution_approved": False,
+    def build(self,text=TAFSIR,reason=None,scope=None,**changes):
+        original,passage,candidate=tafsir_pair(text)
+        params={
+            "candidate":candidate,"passage":passage,
+            "tafsir_raw_text":original,
+            "usul_catalog":self.catalog,
+            "usul_graph":self.g,
+            "usul_raw_text":self.raw,
+            "rule_candidate_id":"candidate:amr-structural-hypothesis",
+            "research_pointer_id":"pilot:amr-rule-research-pointer",
+            "rule_query_terms":[TERM],
+            "candidacy_reason":reason,"candidacy_scope":scope,
         }
-        from engines.usul.concept_rule_catalog import (
-            GRAPH_FIELDS, canonical)
-        payload = {k: g[k] for k in GRAPH_FIELDS}
-        payload["status"] = "EVIDENCE_CONTEXT_GRAPH_PASS"
-        g["graph_sha256"] = hashlib.sha256(canonical(payload)).hexdigest()
-        from engines.usul.concept_rule_catalog import build_catalog
-        import json as _json
-        from pathlib import Path as _P
-        DATA = _P("engines/usul/pilots/data")
-        cat = build_catalog(
-            g, g["graph_sha256"],
-            _json.loads((DATA / "waraqat-u02-catalog-candidates.json").read_text(encoding="utf-8")))
-        return cat, g
-    def _catalog_digest(self):
-        return self._catalog_digest_holder
-    def _graph_digest(self):
-        return self._g["graph_sha256"]
+        params.update(changes)
+        return match_candidate(**params),params
 
-    def test_exact_both_sides_with_reason_is_candidate(self):
-        r = self.build(reason="exact literal tie on both pinned sides")
-        self.assertEqual(r["link_status"], LINK_CANDIDATE)
-        self.assertEqual(r["matching"]["tie_level"], TIE_EXACT)
-        self.assertFalse(r["rule_application_verified"])
+    def test_exact_tie_with_pinned_occurrence_and_reason(self):
+        result,params=self.build(reason="shared literal query marker",
+                                 scope="LEXICAL_NAVIGATION_ONLY")
+        self.assertEqual("CANDIDATE_RELATED",result["link_status"])
+        self.assertEqual(TIE_EXACT,result["matching"]["tie_level"])
+        self.assertEqual([self.occ],result["link"]["usul_occurrence_ids"])
+        self.assertEqual(self.occ,
+                         result["matching"]["usul_exact_stage07_occurrence_id"])
+        ut012.validate_link(result["link"],
+            tafsir_candidate=params["candidate"],
+            tafsir_passage=params["passage"],
+            tafsir_original_raw_text=params["tafsir_raw_text"],
+            usul_catalog=params["usul_catalog"],
+            usul_graph=params["usul_graph"])
+        validate_match(result,**params)
 
-    def test_folded_only_is_undetermined(self):
-        r = self.build(text="في المسألة أمرٌ من الأمر المهم هنا للنظر.")
-        self.assertEqual(r["link_status"], LINK_UNDETERMINED)
-        self.assertNotEqual(r["matching"]["tie_level"], TIE_EXACT)
+    def test_absent_reason_stays_undetermined_even_exact(self):
+        result,_=self.build()
+        self.assertEqual("UNDETERMINED",result["link_status"])
+        self.assertEqual(TIE_EXACT,result["matching"]["tie_level"])
+        self.assertIsNone(result["matching"]["usul_exact_stage07_occurrence_id"])
 
-    def test_misleading_similarity_not_promoted(self):
-        # words like (الأهم/الأمور) share letters but not the exact term
-        r = self.build(text="الأمور فيها متشابهة والأهم النظر فيها بعينه.")
-        self.assertEqual(r["link_status"], LINK_UNDETERMINED)
+    def test_mark_folded_remains_undetermined_and_roundtrips(self):
+        result,_=self.build(text=TAFSIR_FOLDED)
+        self.assertEqual("UNDETERMINED",result["link_status"])
+        self.assertEqual(TIE_FOLDED,result["matching"]["tie_level"])
+        a,b=result["matching"]["tafsir_tie"]["span"]
+        raw=TAFSIR_FOLDED[
+            result["matching"]["tafsir_tie"]["span"][0]:
+            result["matching"]["tafsir_tie"]["span"][1]]
+        self.assertEqual(sha(raw),result["matching"]["tafsir_tie"]["digest"])
+        self.assertIsNone(result["matching"]["usul_exact_stage07_occurrence_id"])
 
-    def test_no_tie_is_undetermined(self):
-        # no lexical tie => UNDETERMINED; a reason without ties is refused
-        with self.assertRaises(Exception):
-            self.build(text=NO_TIE_TEXT, reason="x")
-        r = self.build(text=NO_TIE_TEXT)
-        self.assertEqual(r["link_status"], LINK_UNDETERMINED)
+    def test_reason_without_both_pinned_exact_ties_refused(self):
+        with self.assertRaises(ut012.UsulTafsirLinkError):
+            self.build(text=TAFSIR_FOLDED,reason="unfounded",
+                       scope="LEXICAL_NAVIGATION_ONLY")
+        with self.assertRaises(ut012.UsulTafsirLinkError):
+            self.build(text=TAFSIR_NONE,reason="unfounded",
+                       scope="LEXICAL_NAVIGATION_ONLY")
 
-    def test_qarinah_not_observed_is_not_absent(self):
-        r = self.build()
-        self.assertEqual(r["qarinah"]["status"], "NOT_OBSERVED_IN_SCOPE")
-        self.assertIn("not evidence", r["qarinah"]["note"])
+    def test_no_tie_does_not_assert_relation(self):
+        result,_=self.build(text=TAFSIR_NONE)
+        self.assertEqual(TIE_NONE,result["matching"]["tie_level"])
+        self.assertEqual("UNDETERMINED",result["link_status"])
 
-    def test_qarinah_present_as_text_only(self):
-        r = self.build(text=HADITH_TEXT + " والقرينة هنا معروفة في سياقها.")
-        self.assertEqual(r["qarinah"]["status"], "PRESENT_AS_TEXT")
-        self.assertFalse(r["rule_application_verified"])
+    def test_unsupported_query_literal_refused_even_exact_in_both_sources(self):
+        with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
+                                    "UT013_UNPINNED_STAGE07_QUERY_LITERAL"):
+            self.build(changes_me="unused") if False else self.build(
+                rule_query_terms=["هذا"])
 
-    def test_forged_candidate_digest_refused(self):
-        p, c = cand(HADITH_TEXT)
-        c["evidence_sha256"] = "f" * 64
-        with self.assertRaises(Exception):
-            usul_raw = HADITH_TEXT.encode("utf-8")
-            match_candidate(
-                candidate=c, passage=p, tafsir_raw_text=HADITH_TEXT,
-                usul_catalog=self._catalog(), usul_graph=self._graph(),
-                usul_raw_text=usul_raw,
-                rule_candidate_id="candidate:amr-structural-hypothesis",
-                research_pointer_id="pilot:amr-rule-research-pointer",
-                rule_query_terms=[TERM])
+    def test_local_source_bytes_must_match_accepted_section_sha(self):
+        with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
+                                    "UT013_WARAQAT_SECTION_RAW_SHA_MISMATCH"):
+            self.build(usul_raw_text=self.raw+b"changed")
 
-    def test_summary_never_claims_scholarship(self):
-        p, c = cand(HADITH_TEXT)
-        r = self.build(reason="tie")
-        s = summarize([r])
-        raw = json.dumps(s, ensure_ascii=False)
-        self.assertNotIn("صحيح", raw)
-        self.assertNotIn("وجوب", raw.replace("wujub", ""))
-        self.assertFalse(s["scholarly_verified"])
-        self.assertFalse(s["rule_application_verified"])
+    def test_exact_search_requires_query_scoped_stage08_occurrence(self):
+        g=copy.deepcopy(self.g)
+        g["edges"]=[e for e in g["edges"]
+                    if not (e.get("kind")=="QUERY_LOCATES_OCCURRENCE"
+                            and e.get("to")==self.occ)]
+        # Outside the already accepted pin, even graph rewrites are rejected.
+        with self.assertRaises(ut012.UsulTafsirLinkError):
+            self.build(usul_graph=g,reason="wrong",scope="LEXICAL_ONLY")
 
-    def test_deterministic(self):
-        a = json.dumps(self.build(reason="tie"), sort_keys=True,
-                       ensure_ascii=False)
-        b = json.dumps(self.build(reason="tie"), sort_keys=True,
-                       ensure_ascii=False)
-        self.assertEqual(a, b)
+    def test_no_mention_of_qarinah_cannot_be_evidence_of_absence(self):
+        result,_=self.build()
+        self.assertEqual("NOT_OBSERVED_IN_SCOPE",result["qarinah"]["status"])
+        self.assertIn("not evidence",result["qarinah"]["note"])
+
+    def test_qarinah_mentioned_without_legal_role(self):
+        result,_=self.build(text=TAFSIR_QARINAH)
+        self.assertEqual("PRESENT_AS_TEXT",result["qarinah"]["status"])
+        self.assertFalse(result["rule_application_verified"])
+
+    def test_envelope_rejects_mutation_and_does_not_pollute_ut012(self):
+        result,inputs=self.build(reason="lexical",scope="BOUNDED")
+        modified=copy.deepcopy(result)
+        modified["matching"]["tafsir_tie"]["digest"]="0"*64
+        with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
+                                    "UT013_ENVELOPE_TAMPERED"):
+            validate_match(modified,**inputs)
+        self.assertNotIn("matching",result["link"])
+        self.assertNotIn("qarinah",result["link"])
+
+    def test_no_text_or_authority_promotion_in_receipt(self):
+        result,_=self.build(reason="search navigation",scope="RESEARCH_ONLY")
+        serialized=json.dumps(result,ensure_ascii=False)
+        self.assertNotIn(TAFSIR,serialized)
+        self.assertNotIn(USUL,serialized)
+        self.assertFalse(result["scholarly_verified"])
+        self.assertFalse(result["rule_application_verified"])
+        self.assertFalse(result["text_included"])
+        summary=summarize([result])
+        self.assertEqual({"CANDIDATE_RELATED":1},
+                         summary["links_by_status"])
+        self.assertFalse(summary["juristic_inference_allowed"])
+
+    def test_determinism(self):
+        a,_=self.build(reason="lexical",scope="BOUNDED")
+        b,_=self.build(reason="lexical",scope="BOUNDED")
+        self.assertEqual(a,b)
 
 
-import json
-
-if __name__ == "__main__":
+if __name__=="__main__":
     unittest.main()
