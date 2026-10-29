@@ -1,6 +1,7 @@
 """Bounded DAG plans. A semantic model may PROPOSE a plan, but this validator accepts it."""
 from __future__ import annotations
 from dataclasses import dataclass
+import json
 from core.contracts.types import ContractError, ENGINE_NAMES, identifier
 
 
@@ -36,7 +37,14 @@ class CasePlan:
             if (not identifier(node["id"]) or node["id"] in nodes
                     or node["engine"] not in ENGINE_NAMES or not identifier(node["operation"])):
                 raise PlanError("PLAN_NODE_IDENTITY_INVALID")
-            if (type(node["inputs"]) is not dict or len(str(node["inputs"])) > 65536
+            if type(node["inputs"]) is not dict:
+                raise PlanError("PLAN_NODE_LIMITS_INVALID")
+            try:
+                canonical_inputs = json.dumps(node["inputs"], sort_keys=True, allow_nan=False,
+                                             ensure_ascii=False, separators=(",", ":"))
+            except (TypeError, ValueError, RecursionError) as exc:
+                raise PlanError("PLAN_INPUT_NOT_JSON") from exc
+            if (len(canonical_inputs.encode("utf-8")) > 65536
                     or type(node["timeout_ms"]) is not int or not 1 <= node["timeout_ms"] <= 120000
                     or type(node["max_results"]) is not int or not 1 <= node["max_results"] <= 1000):
                 raise PlanError("PLAN_NODE_LIMITS_INVALID")
@@ -44,7 +52,7 @@ class CasePlan:
             if (type(deps) is not list or len(deps) > 64 or len(set(deps)) != len(deps)
                     or not all(identifier(d) for d in deps)):
                 raise PlanError("PLAN_DEPENDENCIES_INVALID")
-            key = (node["engine"], node["operation"], str(node["inputs"]))
+            key = (node["engine"], node["operation"], canonical_inputs)
             if key in keys:
                 raise PlanError("PLAN_DUPLICATE_OPERATION")
             keys.add(key)

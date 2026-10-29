@@ -56,6 +56,15 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             validate_request(req)
 
+    def test_input_normalization_rejects_duplicates(self):
+        with self.assertRaises(PlanError):
+            plan(node("req.001", "quran", inputs={"a": 1, "b": 2}),
+                 node("req.002", "quran", inputs={"b": 2, "a": 1})).ordered()
+
+    def test_non_json_inputs_refused(self):
+        with self.assertRaises(PlanError):
+            plan(node("req.001", "quran", inputs={"bad": object()})).ordered()
+
     def test_cycles_and_missing_dependencies(self):
         with self.assertRaises(PlanError):
             plan(node("req.001", "quran", ["req.002"]),
@@ -121,6 +130,34 @@ class ExecutionTests(unittest.IsolatedAsyncioTestCase):
         r = synthetic_registry(statuses={"quran": "NO_MATCH", "hadith": "UNAVAILABLE"})
         receipt = await run_case(plan(node("req.001", "quran"), node("req.002", "hadith")), r)
         self.assertEqual([x["result"]["status"] for x in receipt["nodes"]], ["NO_MATCH", "UNAVAILABLE"])
+
+    async def test_queue_waiting_counts_against_deadline(self):
+        r = synthetic_registry(delay_ms=40)
+        receipt = await run_case(plan(node("req.001", "quran", timeout=100),
+                                      node("req.002", "tafsir", timeout=5), parallel=1), r)
+        byid = {x["node_id"]: x["result"]["status"] for x in receipt["nodes"]}
+        self.assertEqual(byid, {"req.001": "OK", "req.002": "UNAVAILABLE"})
+
+    async def test_all_unavailable_not_false_partial(self):
+        r = synthetic_registry(statuses={"quran": "UNAVAILABLE"})
+        receipt = await run_case(plan(node("req.001", "quran")), r)
+        self.assertEqual(receipt["status"], "UNAVAILABLE")
+
+    async def test_unsupported_operation_not_absent_engine(self):
+        registry = synthetic_registry()
+        n = node("req.001", "quran")
+        n["operation"] = "unsupported"
+        receipt = await run_case(plan(n), registry)
+        self.assertEqual(receipt["nodes"][0]["result"]["status"], "REJECTED")
+
+    async def test_exception_does_not_expose_text(self):
+        reg = EngineRegistry()
+        async def broken(req):
+            raise RuntimeError("PRIVATE_SOURCE_CONTENT_SHOULD_NEVER_LEAK")
+        reg.register("quran", ["test_lookup"], broken)
+        receipt = await run_case(plan(node("req.001", "quran")), reg)
+        self.assertEqual(receipt["status"], "ERROR")
+        self.assertNotIn("PRIVATE_SOURCE_CONTENT", str(receipt))
 
     async def test_store_defensive_copy(self):
         store = InMemoryCaseStore()

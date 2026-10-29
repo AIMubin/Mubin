@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import json
 
 CONTRACT_VERSION = "engine-contract/1.0"
 ENGINE_NAMES = frozenset({"quran", "tafsir", "hadith", "usul", "fiqh"})
@@ -34,7 +35,13 @@ def validate_request(request):
         raise ContractError("REQUEST_IDENTIFIER_INVALID")
     if request["engine"] not in ENGINE_NAMES:
         raise ContractError("ENGINE_UNKNOWN")
-    if type(request["inputs"]) is not dict or len(str(request["inputs"])) > 65536:
+    if type(request["inputs"]) is not dict:
+        raise ContractError("REQUEST_INPUT_INVALID")
+    try:
+        encoded = json.dumps(request["inputs"], sort_keys=True, allow_nan=False, ensure_ascii=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise ContractError("REQUEST_INPUT_INVALID") from exc
+    if len(encoded.encode("utf-8")) > 65536:
         raise ContractError("REQUEST_INPUT_INVALID")
     if not _ids(request["source_snapshot_ids"]):
         raise ContractError("SOURCE_SNAPSHOTS_INVALID")

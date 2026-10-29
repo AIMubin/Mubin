@@ -43,25 +43,28 @@ async def run_case(plan, registry, store=None):
         else:
             try:
                 handler = registry.resolve(node["engine"], node["operation"])
-                async with sem:
-                    async def dispatch():
+                async def dispatch():
+                    async with sem:
                         if inspect.iscoroutinefunction(handler):
                             return await handler(request)
                         output = await asyncio.to_thread(handler, request)
                         if inspect.isawaitable(output):
                             return await output
                         return output
-                    try:
-                        result = await asyncio.wait_for(dispatch(), node["timeout_ms"] / 1000)
-                        validate_result(request, result)
-                    except asyncio.TimeoutError:
-                        result = _result(request, "UNAVAILABLE", "ENGINE_TIMEOUT")
-                    except ContractError:
-                        result = _result(request, "REJECTED", "ENGINE_CONTRACT_REJECTED")
-                    except Exception:
-                        result = _result(request, "ERROR", "ENGINE_EXECUTION_FAILED")
-            except ContractError:
-                result = _result(request, "UNAVAILABLE", "ENGINE_NOT_REGISTERED")
+                try:
+                    # Deadline includes admission to the per-case concurrency budget.
+                    result = await asyncio.wait_for(dispatch(), node["timeout_ms"] / 1000)
+                    validate_result(request, result)
+                except asyncio.TimeoutError:
+                    result = _result(request, "UNAVAILABLE", "ENGINE_TIMEOUT")
+                except ContractError:
+                    result = _result(request, "REJECTED", "ENGINE_CONTRACT_REJECTED")
+                except Exception:
+                    result = _result(request, "ERROR", "ENGINE_EXECUTION_FAILED")
+            except ContractError as exc:
+                is_invalid_operation = str(exc) == "OPERATION_UNSUPPORTED"
+                result = _result(request, "REJECTED" if is_invalid_operation else "UNAVAILABLE",
+                                 "OPERATION_UNSUPPORTED" if is_invalid_operation else "ENGINE_NOT_REGISTERED")
         return {"node_id": node["id"], "result": result,
                 "duration_ms": round((time.perf_counter() - began) * 1000, 3)}
 
@@ -76,7 +79,12 @@ async def run_case(plan, registry, store=None):
         raise
     statuses = {x["result"]["status"] for x in entries}
     # PARTIAL is not an OK, and unavailable must never be misreported as NO_MATCH.
-    status = "OK" if statuses == {"OK"} else "PARTIAL"
+    if len(statuses) == 1 and next(iter(statuses)) in {"OK", "NO_MATCH", "UNAVAILABLE", "REJECTED", "ERROR"}:
+        status = next(iter(statuses))
+    elif "OK" in statuses or "PARTIAL" in statuses:
+        status = "PARTIAL"
+    else:
+        status = "UNDETERMINED"
     receipt = {"case_id": plan.case_id, "contract_version": CONTRACT_VERSION,
                "methodology_profile_id": plan.methodology_profile_id,
                "source_snapshot_ids": list(plan.source_snapshot_ids),

@@ -1,6 +1,5 @@
 """Per-instance adapter capability registry. Never dispatch operations that are not declared."""
 from __future__ import annotations
-import inspect
 from .types import ContractError, ENGINE_NAMES, identifier
 
 

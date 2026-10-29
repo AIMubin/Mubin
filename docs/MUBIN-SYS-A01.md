@@ -24,12 +24,13 @@ explicitly allowlisted; unknown operations and unavailable engines are not guess
 `core/orchestration/plan.py` rejects missing dependencies, cycles, duplicate nodes,
 invalid limits, non-versioned state and malformed IDs. `runner.py` uses a bounded
 **per-case semaphore**, not a global lock. Dependency failures yield `UNDETERMINED`.
-Timeouts yield `UNAVAILABLE` and are distinct from the engine's `NO_MATCH`.
+Timeouts, including time waiting for the per-case semaphore, yield `UNAVAILABLE` and are distinct from the engine's `NO_MATCH`. All-unavailable runs do not incorrectly claim `PARTIAL`.
 Source snapshot IDs are verified exactly on each response.
 
 The `InMemoryCaseStore` is for Wave-A tests only; it does **not** provide crash-safe
-or restart-safe persistence. It does not store private source text; any future
-durable store must separately establish redaction, integrity and concurrency behavior.
+or restart-safe persistence. Synthetic test adapters contain no private source text.
+Future real adapters may return source-bearing findings; storage policy must separately
+establish redaction, integrity and concurrency behavior before storing those outputs.
 No cross-node evidence propagation or real source-backed adapters are claimed.
 
 ### Fiqh boundary
