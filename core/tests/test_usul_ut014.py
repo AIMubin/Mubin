@@ -137,6 +137,10 @@ class UsulPresentationTests(unittest.TestCase):
                 "qarinah":{"status":"NOT_OBSERVED_IN_SCOPE"},
                 "scholarly_verified":False,
                 "rule_application_verified":False,
+                "cross_source_semantic_equivalence_verified":False,
+                "juristic_inference_allowed":False,
+                "public_fatwa_authorized":False,
+                "p1_admitted":False,
                 "text_included":False,
             }
         items=[{"candidate":{"candidate_id":f"cand:{i}"},
