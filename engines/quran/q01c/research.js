@@ -114,6 +114,59 @@ async function search() {
     box.appendChild(passageList);
     $("tafsirs").appendChild(box);
   }
+  if (data.usul) {
+    const u = data.usul;
+    const ub = el("section", "work");
+    ub.appendChild(el("h3", null,
+      u.section_title_ar || "القواعد الأصولية المرتبطة بالتفسير"));
+    if (u.status === "REFUSED") {
+      ub.appendChild(el("p", "empty", "تعذر التشغيل: " + (u.code || u.status)));
+    } else {
+      const counts = u.counts || {};
+      const uc = el("div", "counts");
+      uc.appendChild(el("span", null, "روابط: " + (counts.matches_total || 0)));
+      for (const [st, n] of Object.entries(counts.links_by_status || {})) {
+        uc.appendChild(el("span", null, st + ": " + n));
+      }
+      for (const [tl, n] of Object.entries(counts.ties_by_level || {})) {
+        uc.appendChild(el("span", null,
+          (tl === "EXACT" ? "حرفي" : "مرشح مطوَّع") + ": " + n));
+      }
+      ub.appendChild(uc);
+      ub.appendChild(field("مرشح القاعدة", u.usul_rule_candidate_id));
+      ub.appendChild(field("مؤشر البحث", u.usul_research_pointer_id));
+      ub.appendChild(field("بصمة قسم الأصول", u.usul_section_sha256));
+      ub.appendChild(field("بصمة الكتالوج", u.catalog_sha256));
+      ub.appendChild(field("بصمة الرسم", u.graph_sha256));
+      ub.appendChild(el("p", "notice",
+        "مستوى الرابط الأصولي المعجمي: " + u.usul_link_level_cap +
+        " — لا يرتفع إلى TEXTUALLY_ATTRIBUTED أو SCHOLARLY_VERIFIED"));
+      const lvl = el("details");
+      lvl.appendChild(el("summary", null, "سلّم مستويات الأدلة (خمسة)"));
+      for (const L of (u.evidence_levels || [])) {
+        lvl.appendChild(el("p", "relation", L +
+          (L === u.usul_link_level_cap ? "  ← سقف الروابط الأصولية المعجمية" : "")));
+      }
+      ub.appendChild(lvl);
+      const ul = el("details");
+      ul.appendChild(el("summary", null,
+        "الروابط (" + (u.links_redacted || []).length + ") — بيانات وصفية"));
+      for (const l of (u.links_redacted || []).slice(0, 50)) {
+        const li = el("div", "work");
+        li.appendChild(field("معرف الرابط", l.link_id));
+        li.appendChild(field("الحالة", l.link_status +
+          (l.link_status === "UNDETERMINED"
+            ? " (غير محسومة — ليست اتفاقاً ولا خلافاً)" : "")));
+        li.appendChild(field("المرشح التفسيري", l.tafsir_candidate_id));
+        li.appendChild(field("مرشح القاعدة", l.usul_rule_candidate_id));
+        li.appendChild(field("طريقة المطابقة", l.match_method));
+        li.appendChild(field("حالة التحقق", l.verification_status));
+        ul.appendChild(li);
+      }
+      ub.appendChild(ul);
+    }
+    $("relations").appendChild(ub);
+  }
   if (data.hadith) {
     const h = data.hadith;
     const hb = el("section", "work");
