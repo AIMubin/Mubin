@@ -39,6 +39,7 @@ _SOURCE_FIELDS = (
 )
 _DIGEST = re.compile(r"^[a-f0-9]{64}$")
 _ID = re.compile(r"^[a-z][a-z0-9_.:-]{2,127}$")
+_WORK = re.compile(r"^[A-Za-z0-9_.:-]{3,128}$")
 _MAX_LINKS = 4096
 _DATA = Path(__file__).resolve().parent / "pilots" / "data"
 
@@ -87,7 +88,8 @@ def load_usul_evidence(path: Path) -> dict:
           "US014_EXTERNAL_SOURCE_PINS_INVALID")
     _need(all(_ID.fullmatch(bundle[k]) is not None for k in (
         "usul_rule_candidate_id", "usul_research_pointer_id",
-        "usul_source_id", "usul_work_id")),
+        "usul_source_id"))
+          and _WORK.fullmatch(bundle["usul_work_id"]) is not None,
         "US014_SOURCE_IDENTIFIERS_INVALID")
     terms = bundle["query_terms"]
     _need(type(terms) is list and len(terms) == 1
