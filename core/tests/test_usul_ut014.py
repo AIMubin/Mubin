@@ -112,6 +112,8 @@ class UsulPresentationTests(unittest.TestCase):
         def fake(candidate, **kwargs):
             identity=candidate["candidate_id"]
             return {
+                "contract":"mubin-usul-tafsir-matching-v1",
+                "version":"usul-tafsir-matching/0.1.1",
                 "link_id":"utl:"+identity,
                 "link_status":"UNDETERMINED",
                 "link":{
