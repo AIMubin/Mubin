@@ -38,6 +38,10 @@ _FLAGS = (
 )
 _MAX_TEXT = 200_000
 _MAX_TERM = 128
+# A fixed technical reason code avoids accidental verbatim private-source
+# quotations in otherwise metadata-only research links.
+REASON_PINNED_EXACT = "SOURCE_BOUND_STAGE07_EXACT_LEXICAL_OVERLAP"
+_SCOPE = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
 
 
 def _need(condition, code):
@@ -264,10 +268,9 @@ def match_candidate(*, candidate: dict, passage: dict, tafsir_raw_text: str,
                    and bound is not None)
     if candidacy_reason is not None:
         _need(can_propose, "UT013_REASON_WITHOUT_PINNED_EXACT_TIE")
-        _need(type(candidacy_reason) is str
-              and 1 <= len(candidacy_reason.strip()) <= 512
+        _need(candidacy_reason == REASON_PINNED_EXACT
               and type(candidacy_scope) is str
-              and 1 <= len(candidacy_scope.strip()) <= 128,
+              and _SCOPE.fullmatch(candidacy_scope) is not None,
               "UT013_REASON_SCOPE_INVALID")
     if candidacy_scope is not None and candidacy_reason is None:
         raise UsulTafsirLinkError("UT013_SCOPE_WITHOUT_REASON")
@@ -338,8 +341,10 @@ def summarize(matches: list[dict]) -> dict:
     status, levels = {}, {}
     for m in matches:
         st = m["link"]["link_status"]
-        _need(m["link_status"] == st
-              and all(m.get(flag) is False for flag in _FLAGS),
+        _need(m.get("link_id") == m["link"].get("link_id")
+              and m["link_status"] == st
+              and all(m.get(flag) is False
+                      and m["link"].get(flag) is False for flag in _FLAGS),
               "UT013_MATCH_RECORD_INVALID")
         level = m["matching"]["tie_level"]
         _need(level in (TIE_EXACT, TIE_FOLDED, TIE_NONE),
