@@ -238,6 +238,44 @@ class MatchingTests(unittest.TestCase):
         with self.assertRaises(ut012.UsulTafsirLinkError):
             self.build(usul_graph=g,reason=REASON_PINNED_EXACT,scope="LEXICAL_ONLY")
 
+
+    def test_exact_unbound_to_stage07_occurrence_is_not_folded_evidence(self):
+        # A synthetically self-consistent but *different* independently
+        # pinned Stage08 graph can have the literal in the raw section and
+        # no query-anchored exact occurrence. Such text is not a rule witness.
+        raw,g,c,occ,other=usul_sources()
+        g["edges"]=[edge for edge in g["edges"]
+                    if not (edge.get("kind")=="QUERY_LOCATES_OCCURRENCE"
+                            and edge.get("to")==occ)]
+        g["graph_sha256"]=sha(canonical({k:g[k] for k in GRAPH_FIELDS}))
+        manifest={
+            "schema_version":"u0.2.0","concepts":c["concepts"],
+            "rule_candidates":[
+                {k:r[k] for k in ("id","pointer_id","if_concepts",
+                                   "unless_concepts","then_concept",
+                                   "review_status")}
+                for r in c["rule_candidates"]],
+            "relations":c["relations"],
+        }
+        cat=build_catalog(g,g["graph_sha256"],manifest)
+        original,p,candidate=tafsir_pair()
+        args=dict(
+            candidate=candidate,passage=p,tafsir_raw_text=original,
+            usul_catalog=cat,usul_graph=g,usul_raw_text=raw,
+            rule_candidate_id="candidate:amr-structural-hypothesis",
+            research_pointer_id="pilot:amr-rule-research-pointer",
+            rule_query_terms=[TERM])
+        with patch.object(ut012,"TRUSTED_GRAPH_SHA256",g["graph_sha256"]), \
+             patch.object(ut012,"TRUSTED_CATALOG_SHA256",cat["catalog_sha256"]):
+            result=match_candidate(**args)
+            self.assertEqual("UNDETERMINED",result["link_status"])
+            self.assertEqual(TIE_NONE,result["matching"]["tie_level"])
+            with self.assertRaisesRegex(ut012.UsulTafsirLinkError,
+                                        "UT013_REASON_WITHOUT_PINNED_EXACT_TIE"):
+                match_candidate(**args,
+                    candidacy_reason=REASON_PINNED_EXACT,
+                    candidacy_scope="SOURCE_LOCAL_RESEARCH_ONLY")
+
     def test_no_mention_of_qarinah_cannot_be_evidence_of_absence(self):
         result,_=self.build()
         self.assertEqual("NOT_OBSERVED_IN_SCOPE",result["qarinah"]["status"])
