@@ -55,6 +55,24 @@ class ProjectionTests(unittest.TestCase):
         view["edges"][0]["from"] = []
         self.assertFalse(verify_redacted_projection(view))
 
+    def test_invalid_unhashable_node_type_does_not_crash(self):
+        view = project_p0_bundle(fixture())
+        view["nodes"][0]["kind"] = []
+        self.assertFalse(verify_redacted_projection(view))
+
+    def test_invalid_unhashable_relation_does_not_crash(self):
+        view = project_p0_bundle(fixture())
+        view["edges"][0]["relation"] = []
+        self.assertFalse(verify_redacted_projection(view))
+
+    def test_invalid_unhashable_binding_engine_does_not_crash(self):
+        link = {"node_id": "req.001", "engine_evidence_ref": "ev.engine.001",
+                "p0_evidence_id": "ev.001"}
+        view = project_p0_bundle(
+            fixture(), case_receipt=self.engine_receipt(), links=[link])
+        view["engine_bindings"][0]["engine"] = []
+        self.assertFalse(verify_redacted_projection(view))
+
     def test_missing_source_ref_rejected_without_echo(self):
         raw = fixture()
         raw["evidence"][0]["source_id"] = "src.secret"

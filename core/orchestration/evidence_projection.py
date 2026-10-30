@@ -93,6 +93,7 @@ def _check_bindings(links, case_receipt, evidence_handles, bundle_hash):
         if (type(result) is not dict
                 or result.get("request_id") != entry["node_id"]
                 or result.get("contract_version") != CONTRACT_VERSION
+                or type(result.get("engine")) is not str
                 or result.get("engine") not in ENGINE_NAMES
                 or result.get("status") not in ("OK", "PARTIAL")
                 or type(result.get("evidence_refs")) is not list
@@ -272,6 +273,7 @@ def verify_redacted_projection(view):
     node_ids = {}
     for item in nodes:
         if (type(item) is not dict or set(item) != {"handle", "kind"}
+                or type(item["kind"]) is not str
                 or item["kind"] not in _COLLECTION_TYPES
                 or type(item["handle"]) is not str or len(item["handle"]) != 64
                 or item["handle"] in node_ids):
@@ -287,6 +289,7 @@ def verify_redacted_projection(view):
         if (type(item) is not dict or set(item) != {"from", "to", "relation"}
                 or type(item["from"]) is not str or type(item["to"]) is not str
                 or item["from"] not in node_ids or item["to"] not in node_ids
+                or type(item["relation"]) is not str
                 or item["relation"] not in _EDGE_TYPES):
             return False
         key = (item["from"], item["to"], item["relation"])
@@ -297,6 +300,7 @@ def verify_redacted_projection(view):
         if (type(item) is not dict or set(item) != {
                 "engine", "receipt_handle", "engine_evidence_handle",
                 "p0_evidence_handle", "scope"}
+                or type(item["engine"]) is not str
                 or item["engine"] not in ENGINE_NAMES
                 or item["scope"] != "MATCHED_SUBMITTED_RECEIPT_ONLY"
                 or item["p0_evidence_handle"] not in node_ids
