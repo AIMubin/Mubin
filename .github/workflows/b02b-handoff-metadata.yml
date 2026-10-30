@@ -8,6 +8,8 @@ on:
       - 'qa/tests/test_b02b_handoff.py'
       - 'qa/check_b02c2_replay.py'
       - 'qa/tests/test_b02c2_replay.py'
+      - 'qa/check_b02c3_chain.py'
+      - 'qa/tests/test_b02c3_chain.py'
       - '.github/workflows/b02b-handoff-metadata.yml'
   push:
     branches: [main]
@@ -17,6 +19,8 @@ on:
       - 'qa/tests/test_b02b_handoff.py'
       - 'qa/check_b02c2_replay.py'
       - 'qa/tests/test_b02c2_replay.py'
+      - 'qa/check_b02c3_chain.py'
+      - 'qa/tests/test_b02c3_chain.py'
       - '.github/workflows/b02b-handoff-metadata.yml'
   workflow_dispatch:
 
@@ -45,6 +49,10 @@ jobs:
         run: python -m unittest qa.tests.test_b02c2_replay -v
       - name: Verify B02-C.2 replay when supplied by checkout
         run: python -m qa.check_b02c2_replay --if-present
+      - name: Test B02-C.3 chain integrity gate
+        run: python -m unittest qa.tests.test_b02c3_chain -v
+      - name: Verify B02-C.3 chain when supplied by checkout
+        run: python -m qa.check_b02c3_chain --if-present
 
 # This CI has no access to the private Waraqat/Tafsir/Hadith sources or model
 # review receipts and never claims to authenticate them.
