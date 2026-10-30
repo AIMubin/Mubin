@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/AIMubin/Mubin/main/schemas/hadith-usul-mediation-v1.schema.json",
+  "title": "Mubin Hadith -> Usul candidate research mediation (never a Hadith grading or fiqh contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "case_id",
+    "verse_reference",
+    "hypothesis",
+    "witness",
+    "usul",
+    "reviews",
+    "open_defeater_ids"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mubin-hadith-usul-mediation/1.0"
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+    },
+    "verse_reference": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,2}:[1-9][0-9]{0,2}$"
+    },
+    "hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "methodology_profile_id",
+        "relation_type"
+      ],
+      "properties": {
+        "methodology_profile_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+        },
+        "relation_type": {
+          "enum": [
+            "LEXICAL_PARALLEL",
+            "RULE_SUPPORT_PROPOSAL",
+            "RULE_CONFLICT_PROPOSAL"
+          ]
+        }
+      }
+    },
+    "witness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "link_id",
+        "classification",
+        "source_span",
+        "hsearch_receipt_sha256",
+        "coverage_state",
+        "narration_identity_verified",
+        "grade_assigned"
+      ],
+      "properties": {
+        "link_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+        },
+        "classification": {
+          "const": "NARRATION_FRAGMENT_CANDIDATE"
+        },
+        "source_span": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_id",
+            "source_sha256",
+            "start_byte",
+            "end_byte",
+            "context_start_byte",
+            "context_end_byte",
+            "span_sha256",
+            "context_sha256"
+          ],
+          "properties": {
+            "source_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+            },
+            "source_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "start_byte": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end_byte": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "context_start_byte": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "context_end_byte": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "span_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "context_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "hsearch_receipt_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "coverage_state": {
+          "enum": [
+            "COMPLETE",
+            "INCOMPLETE"
+          ]
+        },
+        "narration_identity_verified": {
+          "const": false
+        },
+        "grade_assigned": {
+          "const": false
+        }
+      }
+    },
+    "usul": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "source_span"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+        },
+        "source_span": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_id",
+            "source_sha256",
+            "start_byte",
+            "end_byte",
+            "context_start_byte",
+            "context_end_byte",
+            "span_sha256",
+            "context_sha256"
+          ],
+          "properties": {
+            "source_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+            },
+            "source_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "start_byte": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end_byte": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "context_start_byte": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "context_end_byte": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "span_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "context_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "reviews": {
+      "type": "array",
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "run_id",
+          "model_id",
+          "role",
+          "verdict",
+          "receipt_sha256"
+        ],
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+          },
+          "model_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "role": {
+            "enum": [
+              "supporter",
+              "critic"
+            ]
+          },
+          "verdict": {
+            "enum": [
+              "SUPPORTS_HYPOTHESIS",
+              "REFUTES_HYPOTHESIS",
+              "OPEN_DEFEATER",
+              "NO_OPEN_DEFEATER",
+              "UNDETERMINED"
+            ]
+          },
+          "receipt_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "open_defeater_ids": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{2,127}$"
+      }
+    }
+  }
+}
