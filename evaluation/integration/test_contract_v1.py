@@ -65,6 +65,10 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(PlanError):
             plan(node("req.001", "quran", inputs={"bad": object()})).ordered()
 
+    def test_upstream_override_rejected(self):
+        with self.assertRaises(PlanError):
+            plan(node("req.001", "fiqh", inputs={"_upstream": []})).ordered()
+
     def test_cycles_and_missing_dependencies(self):
         with self.assertRaises(PlanError):
             plan(node("req.001", "quran", ["req.002"]),
