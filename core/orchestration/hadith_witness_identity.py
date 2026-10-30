@@ -113,9 +113,9 @@ def _check_witness(witness, registry, read_span):
     return text, whole
 
 
-def _bridge(candidate, fragment, data, *, source_id):
+def _bridge(request, candidate, fragment, data):
     _reject(type(data) is bytes and len(data) <= MAX_BRIDGE and
-            _hash(data) == candidate["hsearch_bridge"]["receipt_sha256"],
+            _hash(data) == request["hsearch_bridge"]["receipt_sha256"],
             "WITNESS_BRIDGE_DIGEST_MISMATCH")
     try:
         evidence = json.loads(data.decode("utf-8", errors="strict"))
@@ -123,9 +123,9 @@ def _bridge(candidate, fragment, data, *, source_id):
         raise WitnessIdentityError("WITNESS_BRIDGE_INVALID") from exc
     _reject(type(evidence) is dict and set(evidence) == BRIDGE_FIELDS
             and evidence["contract"] == BRIDGE_CONTRACT
-            and evidence["link_id"] == candidate["hsearch_bridge"]["link_id"]
+            and evidence["link_id"] == request["hsearch_bridge"]["link_id"]
             and evidence["classification"] == "NARRATION_FRAGMENT_CANDIDATE"
-            and candidate["hsearch_bridge"]["classification"]
+            and request["hsearch_bridge"]["classification"]
                 == evidence["classification"]
             and evidence["witness_source_sha256"] == candidate["source_sha256"]
             and evidence["witness_span_sha256"] == _hash(fragment)
@@ -184,8 +184,7 @@ def assess_hadith_witness_identity(request, *, source_registry,
         bridge_data = read_bridge(request["hsearch_bridge"]["link_id"])
     except Exception as exc:
         raise WitnessIdentityError("WITNESS_BRIDGE_UNAVAILABLE") from exc
-    complete = _bridge(request, fragment, bridge_data,
-                       source_id=primary["source_id"])
+    complete = _bridge(request, primary, fragment, bridge_data)
 
     distinct = {w["work_id"] for w in records if
                 w["segment_type"] == "MATN_CANDIDATE"}
