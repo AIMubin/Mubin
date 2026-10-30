@@ -29,7 +29,7 @@ def _response(req, status, findings=(), evidence=(), uncertainty=(), *, version)
 
 
 def _input(req, names):
-    if type(req["inputs"]) is not dict or set(req["inputs"]) != set(names):
+    if type(req["inputs"]) is not dict or (set(req["inputs"]) - {"_upstream"}) != set(names):
         raise ContractError("OPERATION_INPUT_SHAPE_INVALID")
     return req["inputs"]
 
@@ -155,8 +155,8 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
 
     def fiqh(req):
         gate(req)
-        inputs = _input(req, {"question", "opinions", "_upstream"})
-        upstream = inputs["_upstream"]
+        inputs = _input(req, {"question", "opinions"})
+        upstream = inputs.get("_upstream", [])
         if type(upstream) is not list or any(type(x) is not dict or
            set(x) != {"engine", "status", "evidence_refs", "synthetic"} for x in upstream):
             raise ContractError("FIQH_UPSTREAM_INVALID")
