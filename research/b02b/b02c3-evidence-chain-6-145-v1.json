@@ -142,7 +142,17 @@
     "payload_sha256": "77581adeef7cb3ae5c966c537bd1bbc86c290654f27fde5528a9a887b710aa13",
     "closest_machine_case": "b02b.sl.6-145.tafsir-mediated",
     "closest_machine_status": "MACHINE_SUPPORTED_RESEARCH_ONLY",
-    "limitation": "sl contract roles are quran/tafsir/usul; the hadith->usul hop itself has no assessed anchors in that run"
+    "limitation": "sl contract roles are quran/tafsir/usul; the hadith->usul hop itself has no assessed anchors in that run",
+    "mediation_probe": {
+     "contract": "mubin-hadith-usul-mediation/1.0 (main @ 2adca80)",
+     "receipt": "hadith-usul-mediation-run-v1.json (private workspace)",
+     "outcomes": {
+      "LEXICAL_PARALLEL": "LEXICAL_CANDIDATE_ONLY",
+      "RULE_SUPPORT_PROPOSAL single-model": "UNDETERMINED",
+      "RULE_SUPPORT_PROPOSAL with open defeater": "CONTESTED"
+     },
+     "note": "hop status stays UNASSESSED here per the published-chain contract; the mediation receipt stays private with its review runs and contexts"
+    }
    },
    "status": "SEMANTIC_LINK_UNASSESSED_AT_THIS_HOP",
    "objections": [
@@ -160,14 +170,16 @@
    "link_kind": "STRUCTURAL_OPINION_BINDING",
    "basis": {
     "receipt": "b02c2-kernel-receipt-6-145-v1.json",
-    "payload_sha256": null,
+    "payload_sha256": "ca39672766f0427a25990d8fad0a6cbe78fa323085334c1d8c753cf8259cabab",
     "ev_usul_handles": [
      "ev.usul.3236ede5cdfbe5c6db24559f.142.252.c8af8b382fa3c1451e6290c7",
      "ev.usul.3236ede5cdfbe5c6db24559f.492.637.d185203cebe85f31899cd54e",
      "ev.usul.c4a7c6a288dee71b3c3b295c.98.176.1ae0f2961e829e7416333672",
      "ev.usul.c4a7c6a288dee71b3c3b295c.343.442.c532986a1f63df5d14337ddb"
     ],
-    "diagnostic": "b02c2-diagnostic-run-v1.json"
+    "diagnostic": "b02c2-diagnostic-run-v1.json",
+    "payload_digest_kind": "raw_committed_file_sha256",
+    "payload_digest_note": "kernel run_case receipt has no canonical payload field; the raw committed file digest is used per review requirement"
    },
    "status": "STRUCTURALLY_BOUND_RESEARCH_ONLY",
    "objections": [
@@ -205,5 +217,5 @@
   "completed_inference_claimed": false,
   "text_included": false
  },
- "evidence_payload_sha256": "58516df8aa1b0544dbe7a62c1f7f28c4a3a557cfe92e421ad50df2fded296141"
+ "evidence_payload_sha256": "b2bb4370be55bb8d9c400d1483620c3a9a68e8ed6e39e59793533537a0d4f363"
 }
