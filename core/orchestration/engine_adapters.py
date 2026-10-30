@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 from pathlib import Path
+from collections.abc import Mapping
 
 from core.contracts import CONTRACT_VERSION, ContractError, EngineRegistry
 from core.contracts.types import identifier
@@ -48,7 +49,9 @@ def _reference(value):
 
 
 def build_engine_registry(*, snapshot_ids, quran_index=None,
-                          tafsir_db=None, hadith_cache=None):
+                          tafsir_db=None, hadith_cache=None,
+                          usul_source_blobs=None, usul_source_pins=None,
+                          usul_sources_synthetic=False):
     """Trusted startup configuration. Source IDs are operator pins, not authenticity.
 
     QuranIndex is created with existing Q0.1 load_snapshot (SHA-checked bytes).
@@ -62,6 +65,30 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
     for path in (tafsir_db, hadith_cache):
         if path is not None and not isinstance(path, Path):
             raise ContractError("ADAPTER_PATH_CONFIG_INVALID")
+    # Trusted startup-only source configuration: immutable copied raw bytes.
+    # Never accept paths or textual excerpts from an untrusted case plan.
+    if (usul_source_blobs is None) != (usul_source_pins is None):
+        raise ContractError("USUL_SOURCE_CONFIG_INCOMPLETE")
+    if type(usul_sources_synthetic) is not bool:
+        raise ContractError("USUL_SOURCE_CONFIG_INVALID")
+    usul_blobs = {}
+    if usul_source_blobs is not None:
+        if (not isinstance(usul_source_blobs, Mapping)
+                or not isinstance(usul_source_pins, Mapping)
+                or not 1 <= len(usul_source_blobs) <= 20
+                or set(usul_source_blobs) != set(usul_source_pins)):
+            raise ContractError("USUL_SOURCE_CONFIG_INVALID")
+        total_bytes = 0
+        for source_id, raw in usul_source_blobs.items():
+            if (not identifier(source_id) or type(raw) is not bytes or not raw
+                    or len(raw) > 4 * 1024 * 1024
+                    or type(usul_source_pins[source_id]) is not str
+                    or sha256(raw).hexdigest() != usul_source_pins[source_id]):
+                raise ContractError("USUL_SOURCE_PIN_INVALID")
+            total_bytes += len(raw)
+            if total_bytes > 8 * 1024 * 1024:
+                raise ContractError("USUL_SOURCE_LIMIT_EXCEEDED")
+            usul_blobs[source_id] = bytes(raw)
     registry = EngineRegistry()
 
     def gate(req):
@@ -141,6 +168,57 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
 
     def usul(req):
         gate(req)
+        if req["operation"] == "bind_source_spans":
+            rows = _input(req, {"spans"})["spans"]
+            if not usul_blobs:
+                return _response(req, "UNAVAILABLE",
+                                 uncertainty=["USUL_PINNED_SOURCE_UNAVAILABLE"],
+                                 version="usul-source-bridge/0.1")
+            if type(rows) is not list or not 1 <= len(rows) <= 24:
+                raise ContractError("USUL_SPANS_INVALID")
+            findings, evidence = [], []
+            seen = set()
+            for item in rows:
+                if type(item) is not dict or set(item) != {
+                        "source_id", "source_sha256", "start_byte",
+                        "end_byte", "span_sha256", "rule_id"}:
+                    raise ContractError("USUL_SPAN_SHAPE_INVALID")
+                sid, rule_id = item["source_id"], item["rule_id"]
+                if type(sid) is not str or not identifier(rule_id) or sid not in usul_blobs:
+                    raise ContractError("USUL_SPAN_SOURCE_UNKNOWN")
+                raw = usul_blobs[sid]
+                start, end = item["start_byte"], item["end_byte"]
+                if (type(start) is not int or type(end) is not int
+                        or not 0 <= start < end <= len(raw)
+                        or end - start > 8192):
+                    raise ContractError("USUL_SPAN_BOUNDS_INVALID")
+                full_sha = sha256(raw).hexdigest()
+                span_sha = sha256(raw[start:end]).hexdigest()
+                if (item["source_sha256"] != full_sha
+                        or item["span_sha256"] != span_sha):
+                    raise ContractError("USUL_SPAN_DIGEST_MISMATCH")
+                key = (sid, start, end, rule_id)
+                if key in seen:
+                    raise ContractError("USUL_SPAN_DUPLICATE")
+                seen.add(key)
+                ref = f"ev.usul.{full_sha[:24]}.{start}.{end}.{span_sha[:24]}"
+                evidence.append(ref)
+                findings.append({
+                    "kind": "USUL_RAW_SOURCE_SPAN", "source_id": sid,
+                    "rule_id": rule_id, "source_sha256": full_sha,
+                    "span_sha256": span_sha, "start_byte": start,
+                    "end_byte": end, "source_authenticated": False,
+                    "source_semantics_verified": False,
+                    "opinion_attributed": False,
+                    "synthetic_fixture": usul_sources_synthetic,
+                    "source_text_included": False,
+                })
+            return _response(
+                req, "OK", findings, evidence, uncertainty=[
+                    "SOURCE_BYTE_FIDELITY_ONLY_NO_JURISTIC_ATTRIBUTION"],
+                version="usul-source-bridge/0.1")
+        if req["operation"] != "evaluate_proposition":
+            raise ContractError("USUL_OPERATION_UNKNOWN")
         model = _input(req, {"model"})["model"]
         if type(model) is not dict or model.get("methodology_id") != req["methodology_profile_id"]:
             raise ContractError("USUL_PROFILE_MISMATCH")
@@ -180,8 +258,14 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
             ev for entry in upstream for ev in entry["evidence_refs"]))
         references = {ref for entry in upstream for ref in entry["references"]}
         mismatched_references = len(references) > 1
-        # No user-supplied evidence IDs: upstream refs come from checked engine receipts.
-        scoped = tuple(op for op in opinions if op.source_ref in refs)
+        # A Fiqh opinion reference may only be linked to the verified
+        # byte-bound Usul source adapter, never to a narration cue or a
+        # generic Tafsir/Quran locator. It is STILL not a verified opinion.
+        usul_refs = {
+            ref for entry in upstream if entry["engine"] == "usul"
+            for ref in entry["evidence_refs"] if ref.startswith("ev.usul.")
+        }
+        scoped = tuple(op for op in opinions if op.source_ref in usul_refs)
         finding = prepare_research(case, scoped, refs)
         synthetic = any(x["synthetic"] for x in upstream)
         uncertainties = list(finding.uncertainties) + (
@@ -190,6 +274,8 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
             uncertainties.append("OPINION_SOURCE_NOT_IN_UPSTREAM_EVIDENCE")
         if not upstream:
             uncertainties.append("NO_ENGINE_DEPENDENCIES")
+        if scoped:
+            uncertainties.append("SOURCE_SPAN_MATCH_NOT_OPINION_ATTRIBUTION")
         if mismatched_references:
             uncertainties.append("CROSS_ENGINE_REFERENCE_MISMATCH")
         return _response(req, "PARTIAL" if finding.status == "PARTIAL" and not synthetic
@@ -198,6 +284,7 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
             "case_id": case.case_id, "opinion_refs": list(finding.opinion_refs),
             "linked_evidence_count": len(refs), "authority": "RESEARCH_ONLY",
             "juristic_conclusion": None, "source_claims_verified": False,
+            "opinion_source_attribution_verified": False,
         }] if finding.status == "PARTIAL" and not synthetic else [],
             evidence=refs, uncertainty=uncertainties or ["JURISTIC_RESEARCH_INCOMPLETE"],
             version="fiqh-f01/0.1")
@@ -205,6 +292,6 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
     registry.register("quran", {"lookup_verse"}, quran)
     registry.register("tafsir", {"research_verse"}, tafsir)
     registry.register("hadith", {"detect_tafsir_mentions"}, hadith)
-    registry.register("usul", {"evaluate_proposition"}, usul)
+    registry.register("usul", {"evaluate_proposition", "bind_source_spans"}, usul)
     registry.register("fiqh", {"prepare_case"}, fiqh)
     return registry
