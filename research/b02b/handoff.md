@@ -1,9 +1,10 @@
 # B02-B Handoff — MUBIN-SYS-B02-B
 
 **Batch:** MUBIN-SYS-B02 · **Lane:** B02-B (Local Execution Lead)
-**Case:** `B02B-CASE-6-145` — verse 6:145 + al-Waraqat «الحظر والإباحة»
-**Baseline:** main @ `953ffd7` (untracked local receipts; package files only)
+**Preserved candidate (selection REJECTED under strict gate v3):** `B02B-CASE-6-145` — verse 6:145 + al-Waraqat «الحظر والإباحة»
+**Baseline:** re-based on `main` @ `a68bc20` (A01/B01/B02-A/semantic-link merged); initial work began @ `953ffd7`
 **Date:** 2026-10-30
+**Outcome classification (architect review):** documented research campaign closed with a negative selection result — NOT a successful scientific integration case. Gate execution succeeded; gate passage did not.
 
 > **تحديث STRICT GATE V3 (بعد دمج A01/B01/B02-A — baseline `5306410`):**
 > حسب توجيه المعمار، حُكم على المرشحين الثلاثة بشروط مشددة. النتيجة:

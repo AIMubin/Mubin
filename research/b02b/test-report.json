@@ -12,80 +12,106 @@
    "module": "core.tests.test_hadith_hsearch01",
    "ran": 21,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 20,
+   "skipped": 1
   },
   {
    "module": "core.tests.test_hsearch_alignment",
    "ran": 18,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 18,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_hsearch_diagnostics",
    "ran": 9,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 9,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_tafsir_t01",
    "ran": 10,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 9,
+   "skipped": 1
   },
   {
    "module": "core.tests.test_tafsir_t02",
    "ran": 18,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 18,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_tafsir_t023",
    "ran": 19,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 19,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_tafsir_t03",
    "ran": 15,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 15,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_usul_ut011",
    "ran": 11,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 11,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_usul_ut012",
    "ran": 24,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 24,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_usul_ut013",
    "ran": 23,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 23,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_usul_ut014",
    "ran": 10,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 10,
+   "skipped": 0
   },
   {
    "module": "core.tests.test_inference_foundation",
    "ran": 54,
    "result": "pass",
-   "exit_code": 0
+   "exit_code": 0,
+   "passed": 54,
+   "skipped": 0
   }
  ],
  "totals": {
   "suites": 12,
   "tests_run": 232,
   "failed": 0,
-  "skipped_note": "hsearch01 and t01 suites each report 1 skipped test (private-source-dependent), consistent with synthetic CI scope"
+  "passed": 230,
+  "skipped": 2,
+  "note": "unittest counts skipped tests inside Ran; pass+skipped=ran. skips are private-source-dependent tests in hsearch01 and t01."
  },
  "limits": "suite-level results from python -m unittest per module; per-test names not frozen in this report",
  "passes_gate": true

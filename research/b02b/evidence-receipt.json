@@ -4,7 +4,8 @@
  "case_id": "B02B-CASE-6-145",
  "generated_at": "2026-10-30T12:02:28.224726+03:00",
  "git_head_baseline": "953ffd703e7df285cd062a316753c9e665e33169",
- "selected_case": {
+ "preserved_candidate": {
+  "selected": false,
   "selection_status": "PRESERVED RESEARCH CANDIDATE - selection REJECTED under strict gate v3 (semantic linkage uncertified); see strict_gate_v3",
   "verse": "6:145",
   "usul_rule_topic": "aslu-ashya (hadr vs ibaha) + istishab",
