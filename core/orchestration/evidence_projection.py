@@ -15,6 +15,7 @@ from core.inference.validator import COLLECTIONS, validate_bundle
 
 PROJECTION_CONTRACT = "mubin-b02a-p0-projection/1.0"
 _MAX_LINKS = 128
+_MAX_PROJECTED_EDGES = 70000
 _BASE_FIELDS = {"contract", "status", "p0_contract_version", "p0_structural_passed",
                 "external_source_authenticated", "scholarly_verified",
                 "projection_is_p0_bundle", "source_text_included",
@@ -204,6 +205,8 @@ def project_p0_bundle(bundle, *, case_receipt=None, links=()):
              "HISTORICAL_EVIDENCE")
         for ev in item["basis_evidence_ids"]:
             link("evidence", ev, "historical_availability", item["id"], "HISTORICAL_BASIS")
+    if len(edges) > _MAX_PROJECTED_EDGES:
+        raise ProjectionError("PROJECTION_EDGE_LIMIT_EXCEEDED")
     redacted_edges = [
         {"from": a, "to": b, "relation": relation}
         for a, b, relation in sorted(edges)
@@ -282,6 +285,7 @@ def verify_redacted_projection(view):
     seen_edges = set()
     for item in edges:
         if (type(item) is not dict or set(item) != {"from", "to", "relation"}
+                or type(item["from"]) is not str or type(item["to"]) is not str
                 or item["from"] not in node_ids or item["to"] not in node_ids
                 or item["relation"] not in _EDGE_TYPES):
             return False
@@ -302,3 +306,18 @@ def verify_redacted_projection(view):
             return False
     return (_hash_graph(nodes, edges, bindings) == view["graph_sha256"]
             and view.get("diagnostics") == {"error_count": 0, "code": "STRUCTURE_ONLY"})
+
+
+def verify_private_projection(bundle, public_view, *, case_receipt=None, links=()):
+    """Vault-side replay: compare a redacted receipt against the exact private P0.
+
+    This is meaningful only when the caller already trusts its local input
+    bundle and custody. It is neither scholarly approval nor source authentication.
+    """
+    if not verify_redacted_projection(public_view) or public_view["status"] != "P0_STRUCTURALLY_VALID":
+        return False
+    try:
+        rebuilt = project_p0_bundle(bundle, case_receipt=case_receipt, links=links)
+    except (ProjectionError, TypeError, ValueError, UnicodeError, RecursionError):
+        return False
+    return rebuilt == public_view

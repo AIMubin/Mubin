@@ -7,6 +7,7 @@ import unittest
 from core.tests.test_inference_foundation import fixture
 from core.orchestration.evidence_projection import (
     ProjectionError, project_p0_bundle, verify_redacted_projection,
+    verify_private_projection,
 )
 
 class ProjectionTests(unittest.TestCase):
@@ -39,6 +40,20 @@ class ProjectionTests(unittest.TestCase):
         self.assertTrue(verify_redacted_projection(result))
         self.assertNotIn("CONFIDENTIAL_VALUE", str(result))
         self.assertIsNone(result["private_bundle_sha256"])
+
+    def test_trusted_vault_replay_requires_exact_private_bundle(self):
+        raw = fixture()
+        view = project_p0_bundle(raw)
+        self.assertTrue(verify_private_projection(raw, view))
+        changed = copy.deepcopy(raw)
+        changed["sources"][0]["work_title"] = "Changed private source title"
+        self.assertFalse(verify_private_projection(changed, view))
+        self.assertTrue(verify_redacted_projection(view))  # not a custody proof
+
+    def test_non_string_edge_id_rejected_without_crash(self):
+        view = project_p0_bundle(fixture())
+        view["edges"][0]["from"] = []
+        self.assertFalse(verify_redacted_projection(view))
 
     def test_missing_source_ref_rejected_without_echo(self):
         raw = fixture()

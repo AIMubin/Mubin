@@ -32,6 +32,9 @@ commitments, **not signatures**, custody proofs, source authenticity
 determinations or proof of the existence of a private source. Anyone can
 recompute a forged projection hash. A trusted operator can independently
 replay the full P0 check and compare hashes in the private environment.
+The `verify_private_projection(full_bundle, public_view)` helper performs that
+trusted local replay and exact comparison. Even a successful in-process replay
+does not independently establish source authenticity.
 
 No source text, original work title, path, locator, quote, interpretation,
 scholarly verdict, or raw entity ID is included in this projection.
