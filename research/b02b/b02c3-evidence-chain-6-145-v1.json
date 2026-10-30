@@ -1,0 +1,221 @@
+{
+ "contract": "mubin-b02c3-evidence-chain-v0.1",
+ "case_id": "B02B-CASE-6-145",
+ "generated_at": "2026-10-30T17:34:52.261752+03:00",
+ "purpose": "B02-C.3 local-side materialization: cross-engine evidence chain from existing frozen receipts only",
+ "nodes": [
+  {
+   "node": "n.quran",
+   "engine": "quran",
+   "anchors": {
+    "verse_row_sha256": "ff61ff3b937022a0b6469ff149f49cf8ab1467ab21c4b91599d45515515fe12f",
+    "kernel_evidence_refs": [
+     "ev.quran.6.145.ff61ff3b937022a0b6469ff1"
+    ],
+    "sl_anchor_digest": "in sl-gate-v1 case anchors"
+   }
+  },
+  {
+   "node": "n.tafsir",
+   "engine": "tafsir",
+   "anchors": {
+    "works": 5,
+    "passages_total": 128,
+    "kernel_evidence_refs": [
+     "tafsir:tafsir_baghawi:6:145:b8e69afd67f2638af3f3c5f02e455589929f9b87f4be3ba485be5edef5ebe2c2",
+     "tafsir:tafsir_ibn_kathir:6:145:1cf4340cca116c6c5b212455796de0b15fb23ef1b851f96121fd402cc7e6a7fc",
+     "tafsir:tafsir_muyassar:6:145:1e14ff941eb8e8bde35880ba65114528e132880530c627ab9ed64017fd9fc062",
+     "tafsir:tafsir_saadi:6:145:986392b51867fe89c1766a0c715f7619fcab7ec97b27b537f1ff04a88abe0b9c",
+     "tafsir:tafsir_tabari:6:145:154872b4b7735651a4b3dd2ed2f25683fa4ef033c80dfaa5eb6497a0bba02425"
+    ],
+    "witness_fragment_tafsir_record": "tafsir:tafsir_ibn_kathir:6:145:1cf4340cca116c6c5b212455796de0b15fb23ef1b851f96121fd402cc7e6a7fc",
+    "tafsir_shared_span": [
+     2725,
+     2766
+    ]
+   }
+  },
+  {
+   "node": "n.hadith",
+   "engine": "hadith",
+   "anchors": {
+    "witness_source_id": "openiti:0458Bayhaqi.SunanKubra",
+    "witness_locator": "L144309",
+    "hadith_shared_span": [
+     9739067,
+     9739108
+    ],
+    "folded_word_count": 10,
+    "search_coverage": {
+     "windows": 23,
+     "pinned_blocks": 54599,
+     "sources_unavailable": []
+    }
+   }
+  },
+  {
+   "node": "n.usul",
+   "engine": "usul",
+   "anchors": {
+    "pinned_spans": 4,
+    "ev_usul_handles": [
+     "ev.usul.3236ede5cdfbe5c6db24559f.142.252.c8af8b382fa3c1451e6290c7",
+     "ev.usul.3236ede5cdfbe5c6db24559f.492.637.d185203cebe85f31899cd54e",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.98.176.1ae0f2961e829e7416333672",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.343.442.c532986a1f63df5d14337ddb"
+    ],
+    "p0_bundle_sha256": "146bb2f17f31e1a1ad34116ee0aab9a699e29534fca9b341748d2d1eb956e88f"
+   }
+  },
+  {
+   "node": "n.fiqh",
+   "engine": "fiqh",
+   "anchors": {
+    "kernel_status": "PARTIAL",
+    "bound_opinions": [
+     "usul.b02b.view.hadr-asl",
+     "usul.b02b.view.ibaha-asl"
+    ],
+    "linked_evidence_count": 33,
+    "juristic_conclusion": null
+   }
+  }
+ ],
+ "edges": [
+  {
+   "edge": "e.quran-tafsir",
+   "from": "n.quran",
+   "to": "n.tafsir",
+   "link_kind": "TAFSIR_PASSAGE_BINDING",
+   "basis": {
+    "receipt": "stage-quran-tafsir-6-145-v1.json",
+    "payload_sha256": "26f1e0919c614febd9e9e8f152cbf08d95db56463cf1785ca1f4f646e39e6af2",
+    "kernel_refs": [
+     "tafsir:tafsir_baghawi:6:145:b8e69afd67f2638af3f3c5f02e455589929f9b87f4be3ba485be5edef5ebe2c2",
+     "tafsir:tafsir_ibn_kathir:6:145:1cf4340cca116c6c5b212455796de0b15fb23ef1b851f96121fd402cc7e6a7fc",
+     "tafsir:tafsir_muyassar:6:145:1e14ff941eb8e8bde35880ba65114528e132880530c627ab9ed64017fd9fc062",
+     "tafsir:tafsir_saadi:6:145:986392b51867fe89c1766a0c715f7619fcab7ec97b27b537f1ff04a88abe0b9c",
+     "tafsir:tafsir_tabari:6:145:154872b4b7735651a4b3dd2ed2f25683fa4ef033c80dfaa5eb6497a0bba02425"
+    ]
+   },
+   "status": "ESTABLISHED_BYTE_PINNED",
+   "objections": [
+    {
+     "type": "interpretive_differences_unassessed",
+     "open": true
+    }
+   ],
+   "reason": "T0.1/T0.2 pinned rows and passage digests verified against the same pinned DB; passage binding is coordinate-level, not exegetical endorsement"
+  },
+  {
+   "edge": "e.tafsir-hadith",
+   "from": "n.tafsir",
+   "to": "n.hadith",
+   "link_kind": "LEXICAL_WITNESS_CANDIDATE",
+   "basis": {
+    "receipt": "hsearch-6-145-gate-v2.json",
+    "payload_sha256": "875adf7c6188c28969cb4024e8f2e3541f90036922d626ed1c0a11f7100f826e",
+    "link_id": "hl:30516cb8183d26a4b03f2c499beb49050919ef36",
+    "classification": "NARRATION_FRAGMENT_CANDIDATE"
+   },
+   "status": "CANDIDATE_MATCH_LEXICAL",
+   "objections": [
+    {
+     "type": "narration_identity_not_established",
+     "open": true
+    },
+    {
+     "type": "second_aligned_link_is_verse_quote_artifact",
+     "open": false,
+     "resolved": "classified VERSE_QUOTE_ARTIFACT"
+    }
+   ],
+   "reason": "Ten-word overlap contract satisfied across two independently pinned raw spans; acceptance is candidate-level only, never narration identity or grade"
+  },
+  {
+   "edge": "e.hadith-usul",
+   "from": "n.hadith",
+   "to": "n.usul",
+   "link_kind": "TEXTUAL_PARALLEL_UNASSESSED",
+   "basis": {
+    "receipt": "sl-gate-v1.json",
+    "payload_sha256": "77581adeef7cb3ae5c966c537bd1bbc86c290654f27fde5528a9a887b710aa13",
+    "closest_machine_case": "b02b.sl.6-145.tafsir-mediated",
+    "closest_machine_status": "MACHINE_SUPPORTED_RESEARCH_ONLY",
+    "limitation": "sl contract roles are quran/tafsir/usul; the hadith->usul hop itself has no assessed anchors in that run",
+    "mediation_probe": {
+     "contract": "mubin-hadith-usul-mediation/1.0 (main @ 2adca80)",
+     "receipt": "hadith-usul-mediation-run-v1.json (private workspace)",
+     "outcomes": {
+      "LEXICAL_PARALLEL": "LEXICAL_CANDIDATE_ONLY",
+      "RULE_SUPPORT_PROPOSAL single-model": "UNDETERMINED",
+      "RULE_SUPPORT_PROPOSAL with open defeater": "CONTESTED"
+     },
+     "note": "hop status stays UNASSESSED here per the published-chain contract; the mediation receipt stays private with its review runs and contexts"
+    }
+   },
+   "status": "SEMANTIC_LINK_UNASSESSED_AT_THIS_HOP",
+   "objections": [
+    {
+     "type": "no_implemented_certifier_for_hadith_usul_hop",
+     "open": true
+    }
+   ],
+   "reason": "Fail-closed: no contract assesses this hop; the fragment and the rule statement co-exist as pinned anchors only. Refusal recorded instead of a fabricated link"
+  },
+  {
+   "edge": "e.usul-fiqh",
+   "from": "n.usul",
+   "to": "n.fiqh",
+   "link_kind": "STRUCTURAL_OPINION_BINDING",
+   "basis": {
+    "receipt": "b02c2-kernel-receipt-6-145-v1.json",
+    "payload_sha256": "ca39672766f0427a25990d8fad0a6cbe78fa323085334c1d8c753cf8259cabab",
+    "ev_usul_handles": [
+     "ev.usul.3236ede5cdfbe5c6db24559f.142.252.c8af8b382fa3c1451e6290c7",
+     "ev.usul.3236ede5cdfbe5c6db24559f.492.637.d185203cebe85f31899cd54e",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.98.176.1ae0f2961e829e7416333672",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.343.442.c532986a1f63df5d14337ddb"
+    ],
+    "diagnostic": "b02c2-diagnostic-run-v1.json",
+    "payload_digest_kind": "raw_committed_file_sha256",
+    "payload_digest_note": "kernel run_case receipt has no canonical payload field; the raw committed file digest is used per review requirement"
+   },
+   "status": "STRUCTURALLY_BOUND_RESEARCH_ONLY",
+   "objections": [
+    {
+     "type": "opinion_source_attribution_verified_false",
+     "open": true
+    },
+    {
+     "type": "usul_application_not_executed",
+     "open": true
+    }
+   ],
+   "reason": "Kernel binds opinions to byte-verified usul handles; binding proves byte-consistency and plumbing, not attribution, application validity or any ruling"
+  }
+ ],
+ "chain_summary": {
+  "edges_total": 4,
+  "edges_established_byte_pinned": 1,
+  "edges_candidate_lexical": 1,
+  "edges_structurally_bound": 1,
+  "edges_unassessed_no_certifier": 1,
+  "weakest_hop": "e.hadith-usul",
+  "scientifically_established_chain": false,
+  "overall_status": "PARTIALLY_BOUND_CHAIN_OPEN"
+ },
+ "acceptance_criteria_for_full_chain": [
+  "e.tafsir-hadith promoted beyond candidate requires narration-identity evidence under a separate scholarly gate",
+  "e.hadith-usul requires a certifier contract covering hadith->usul semantic mediation (architect scope)",
+  "e.usul-fiqh requires actual usul application execution (U0.x beyond blocked simulation)",
+  "selection gate for any NEW case stays independent and unchanged"
+ ],
+ "flags": {
+  "scholarly_verified": false,
+  "juristic_inference_allowed": false,
+  "completed_inference_claimed": false,
+  "text_included": false
+ },
+ "evidence_payload_sha256": "b2bb4370be55bb8d9c400d1483620c3a9a68e8ed6e39e59793533537a0d4f363"
+}
