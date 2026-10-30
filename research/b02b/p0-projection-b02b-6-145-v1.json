@@ -1,0 +1,271 @@
+{
+ "contract": "mubin-b02a-p0-projection/1.0",
+ "status": "P0_STRUCTURALLY_VALID",
+ "p0_contract_version": "0.1.0",
+ "p0_structural_passed": true,
+ "external_source_authenticated": false,
+ "scholarly_verified": false,
+ "projection_is_p0_bundle": false,
+ "source_text_included": false,
+ "private_bundle_sha256": "146bb2f17f31e1a1ad34116ee0aab9a699e29534fca9b341748d2d1eb956e88f",
+ "counts": {
+  "sources": 2,
+  "evidence": 4,
+  "methodologies": 1,
+  "claims": 3,
+  "rules": 2,
+  "inferences": 1,
+  "objections": 2,
+  "proofs": 1,
+  "historical_availability": 0
+ },
+ "nodes": [
+  {
+   "handle": "191bb8dd516e3db5d89b17e8dc7852153da342af477d58e2768dbe371fe9ef45",
+   "kind": "claims"
+  },
+  {
+   "handle": "8e76eb73210c32ffd8f134680f4a94a5587061ee013fb65c744d46ed2263990e",
+   "kind": "claims"
+  },
+  {
+   "handle": "9d94530325fd7d7b600018e8e06de017e7cf796df54f016817319d56a230150a",
+   "kind": "claims"
+  },
+  {
+   "handle": "313fa45e96081db9d14f86840128bc527a90dff23cef59b1aa346c813a07cf1d",
+   "kind": "evidence"
+  },
+  {
+   "handle": "46ac96c65a1010a2e08ca8615b957aafaf5943a6e9f2d445617f39a577e0877f",
+   "kind": "evidence"
+  },
+  {
+   "handle": "e44b8556dae4f8dc7ca32c60a11ead9421597c582172d04b009984ed363e6067",
+   "kind": "evidence"
+  },
+  {
+   "handle": "e938f233d5e132f0822d5c344cee3dc1b95e05c1db2c91b2de7419dc94161911",
+   "kind": "evidence"
+  },
+  {
+   "handle": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "kind": "inferences"
+  },
+  {
+   "handle": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "kind": "methodologies"
+  },
+  {
+   "handle": "11f70400696f97e11e7a5fb162fd869a20a8bcd0f48f9c0cb22ec0b6d5b810f8",
+   "kind": "objections"
+  },
+  {
+   "handle": "f6cf8e085879a549e840c43a42466fe2a6f82f3798a9d5034a70d0b65d4fa528",
+   "kind": "objections"
+  },
+  {
+   "handle": "093cceabe747925e2ba71cd1c2f8020c4f77fbcb86b3911479ac2beb146b9e5e",
+   "kind": "proofs"
+  },
+  {
+   "handle": "12c56188a95021726b8eeea0ecee7137fb96972f3eb3c117ddb014a2d8b6d71e",
+   "kind": "rules"
+  },
+  {
+   "handle": "66ef77fa5dac3e66838ae013cabe2cc6579614577cae7672b8ddfc28774e0045",
+   "kind": "rules"
+  },
+  {
+   "handle": "509f1ac50fe24f25b1e7cd09e50ec6d96530052dc6f136b7df53e8f4d59d5909",
+   "kind": "sources"
+  },
+  {
+   "handle": "5c929ec4757cca6301fc93c1d64b6c4a5c9769265c6e17b7563ff71bb504986c",
+   "kind": "sources"
+  }
+ ],
+ "edges": [
+  {
+   "from": "11f70400696f97e11e7a5fb162fd869a20a8bcd0f48f9c0cb22ec0b6d5b810f8",
+   "to": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "relation": "OBJECTION_TO_INFERENCE"
+  },
+  {
+   "from": "12c56188a95021726b8eeea0ecee7137fb96972f3eb3c117ddb014a2d8b6d71e",
+   "to": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "relation": "RULE_INFERENCE"
+  },
+  {
+   "from": "191bb8dd516e3db5d89b17e8dc7852153da342af477d58e2768dbe371fe9ef45",
+   "to": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "relation": "PREMISE_INFERENCE"
+  },
+  {
+   "from": "313fa45e96081db9d14f86840128bc527a90dff23cef59b1aa346c813a07cf1d",
+   "to": "11f70400696f97e11e7a5fb162fd869a20a8bcd0f48f9c0cb22ec0b6d5b810f8",
+   "relation": "SOURCES_OBJECTION"
+  },
+  {
+   "from": "313fa45e96081db9d14f86840128bc527a90dff23cef59b1aa346c813a07cf1d",
+   "to": "12c56188a95021726b8eeea0ecee7137fb96972f3eb3c117ddb014a2d8b6d71e",
+   "relation": "SOURCES_RULE"
+  },
+  {
+   "from": "313fa45e96081db9d14f86840128bc527a90dff23cef59b1aa346c813a07cf1d",
+   "to": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "relation": "SOURCES_METHODOLOGY"
+  },
+  {
+   "from": "313fa45e96081db9d14f86840128bc527a90dff23cef59b1aa346c813a07cf1d",
+   "to": "8e76eb73210c32ffd8f134680f4a94a5587061ee013fb65c744d46ed2263990e",
+   "relation": "SOURCES_CLAIM"
+  },
+  {
+   "from": "313fa45e96081db9d14f86840128bc527a90dff23cef59b1aa346c813a07cf1d",
+   "to": "9d94530325fd7d7b600018e8e06de017e7cf796df54f016817319d56a230150a",
+   "relation": "SOURCES_CLAIM"
+  },
+  {
+   "from": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "to": "093cceabe747925e2ba71cd1c2f8020c4f77fbcb86b3911479ac2beb146b9e5e",
+   "relation": "METHOD_PROOF"
+  },
+  {
+   "from": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "to": "12c56188a95021726b8eeea0ecee7137fb96972f3eb3c117ddb014a2d8b6d71e",
+   "relation": "METHOD_RULE"
+  },
+  {
+   "from": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "to": "66ef77fa5dac3e66838ae013cabe2cc6579614577cae7672b8ddfc28774e0045",
+   "relation": "METHOD_RULE"
+  },
+  {
+   "from": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "to": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "relation": "METHOD_INFERENCE"
+  },
+  {
+   "from": "46ac96c65a1010a2e08ca8615b957aafaf5943a6e9f2d445617f39a577e0877f",
+   "to": "191bb8dd516e3db5d89b17e8dc7852153da342af477d58e2768dbe371fe9ef45",
+   "relation": "SOURCES_CLAIM"
+  },
+  {
+   "from": "46ac96c65a1010a2e08ca8615b957aafaf5943a6e9f2d445617f39a577e0877f",
+   "to": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "relation": "SOURCES_METHODOLOGY"
+  },
+  {
+   "from": "46ac96c65a1010a2e08ca8615b957aafaf5943a6e9f2d445617f39a577e0877f",
+   "to": "66ef77fa5dac3e66838ae013cabe2cc6579614577cae7672b8ddfc28774e0045",
+   "relation": "SOURCES_RULE"
+  },
+  {
+   "from": "46ac96c65a1010a2e08ca8615b957aafaf5943a6e9f2d445617f39a577e0877f",
+   "to": "8e76eb73210c32ffd8f134680f4a94a5587061ee013fb65c744d46ed2263990e",
+   "relation": "SOURCES_CLAIM"
+  },
+  {
+   "from": "46ac96c65a1010a2e08ca8615b957aafaf5943a6e9f2d445617f39a577e0877f",
+   "to": "f6cf8e085879a549e840c43a42466fe2a6f82f3798a9d5034a70d0b65d4fa528",
+   "relation": "SOURCES_OBJECTION"
+  },
+  {
+   "from": "509f1ac50fe24f25b1e7cd09e50ec6d96530052dc6f136b7df53e8f4d59d5909",
+   "to": "313fa45e96081db9d14f86840128bc527a90dff23cef59b1aa346c813a07cf1d",
+   "relation": "SOURCE_WITNESS"
+  },
+  {
+   "from": "509f1ac50fe24f25b1e7cd09e50ec6d96530052dc6f136b7df53e8f4d59d5909",
+   "to": "46ac96c65a1010a2e08ca8615b957aafaf5943a6e9f2d445617f39a577e0877f",
+   "relation": "SOURCE_WITNESS"
+  },
+  {
+   "from": "5c929ec4757cca6301fc93c1d64b6c4a5c9769265c6e17b7563ff71bb504986c",
+   "to": "e44b8556dae4f8dc7ca32c60a11ead9421597c582172d04b009984ed363e6067",
+   "relation": "SOURCE_WITNESS"
+  },
+  {
+   "from": "5c929ec4757cca6301fc93c1d64b6c4a5c9769265c6e17b7563ff71bb504986c",
+   "to": "e938f233d5e132f0822d5c344cee3dc1b95e05c1db2c91b2de7419dc94161911",
+   "relation": "SOURCE_WITNESS"
+  },
+  {
+   "from": "66ef77fa5dac3e66838ae013cabe2cc6579614577cae7672b8ddfc28774e0045",
+   "to": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "relation": "RULE_INFERENCE"
+  },
+  {
+   "from": "8e76eb73210c32ffd8f134680f4a94a5587061ee013fb65c744d46ed2263990e",
+   "to": "093cceabe747925e2ba71cd1c2f8020c4f77fbcb86b3911479ac2beb146b9e5e",
+   "relation": "CONCLUSION_PROOF"
+  },
+  {
+   "from": "9d94530325fd7d7b600018e8e06de017e7cf796df54f016817319d56a230150a",
+   "to": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "relation": "PREMISE_INFERENCE"
+  },
+  {
+   "from": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "to": "093cceabe747925e2ba71cd1c2f8020c4f77fbcb86b3911479ac2beb146b9e5e",
+   "relation": "INFERENCE_PROOF"
+  },
+  {
+   "from": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "to": "8e76eb73210c32ffd8f134680f4a94a5587061ee013fb65c744d46ed2263990e",
+   "relation": "INFERENCE_CONCLUSION"
+  },
+  {
+   "from": "e44b8556dae4f8dc7ca32c60a11ead9421597c582172d04b009984ed363e6067",
+   "to": "191bb8dd516e3db5d89b17e8dc7852153da342af477d58e2768dbe371fe9ef45",
+   "relation": "SOURCES_CLAIM"
+  },
+  {
+   "from": "e44b8556dae4f8dc7ca32c60a11ead9421597c582172d04b009984ed363e6067",
+   "to": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "relation": "SOURCES_METHODOLOGY"
+  },
+  {
+   "from": "e44b8556dae4f8dc7ca32c60a11ead9421597c582172d04b009984ed363e6067",
+   "to": "66ef77fa5dac3e66838ae013cabe2cc6579614577cae7672b8ddfc28774e0045",
+   "relation": "SOURCES_RULE"
+  },
+  {
+   "from": "e44b8556dae4f8dc7ca32c60a11ead9421597c582172d04b009984ed363e6067",
+   "to": "f6cf8e085879a549e840c43a42466fe2a6f82f3798a9d5034a70d0b65d4fa528",
+   "relation": "SOURCES_OBJECTION"
+  },
+  {
+   "from": "e938f233d5e132f0822d5c344cee3dc1b95e05c1db2c91b2de7419dc94161911",
+   "to": "11f70400696f97e11e7a5fb162fd869a20a8bcd0f48f9c0cb22ec0b6d5b810f8",
+   "relation": "SOURCES_OBJECTION"
+  },
+  {
+   "from": "e938f233d5e132f0822d5c344cee3dc1b95e05c1db2c91b2de7419dc94161911",
+   "to": "12c56188a95021726b8eeea0ecee7137fb96972f3eb3c117ddb014a2d8b6d71e",
+   "relation": "SOURCES_RULE"
+  },
+  {
+   "from": "e938f233d5e132f0822d5c344cee3dc1b95e05c1db2c91b2de7419dc94161911",
+   "to": "42e3ff2befd854a845bfdc0bea2905ab9d9a5261d7454d74ffd11ecf42b892ef",
+   "relation": "SOURCES_METHODOLOGY"
+  },
+  {
+   "from": "e938f233d5e132f0822d5c344cee3dc1b95e05c1db2c91b2de7419dc94161911",
+   "to": "9d94530325fd7d7b600018e8e06de017e7cf796df54f016817319d56a230150a",
+   "relation": "SOURCES_CLAIM"
+  },
+  {
+   "from": "f6cf8e085879a549e840c43a42466fe2a6f82f3798a9d5034a70d0b65d4fa528",
+   "to": "e0285ef911ed260d32822a3d7cd86a9d7ef2bbe5b8f6769730ba19dc5073186c",
+   "relation": "OBJECTION_TO_INFERENCE"
+  }
+ ],
+ "engine_bindings": [],
+ "graph_sha256": "81bb4d1e5207fb71e25f0d31037de50b868d523a30833c5947d64b3cf3ab6ec0",
+ "diagnostics": {
+  "error_count": 0,
+  "code": "STRUCTURE_ONLY"
+ }
+}

@@ -3,8 +3,9 @@ contract: mubin-b02b-task-v0.1
 batch: MUBIN-SYS-B02
 lane: B02-B
 owner: local_execution_lead
-status: STAGES_COMPLETE_PACKAGE_DRAFTED
+status: STRICT_GATE_V3_REJECTED_PRESERVED_CANDIDATES
 created: 2026-10-30
+baseline: main @ 5306410 (A01/B01/B02-A merged)
 
 objective: >
   حالة بحثية واحدة حقيقية محدودة النطاق تُشغّل مراحل المحركات الخمسة على
@@ -109,6 +110,28 @@ package_status_2026-10-30:
   package_files: [task.yaml, source-manifest.json, evidence-receipt.json, test-report.json, handoff.md]
   redaction_scan: "clean after sanitization (no private paths, no source text)"
   next: "PR to GitHub after final review"
+
+strict_gate_v3_2026-10-30:
+  instruction_source: "architect directives after B02-A merge (baseline 5306410)"
+  conditions:
+    a_textual_match: "PASS لـ 6:145 و49:6؛ FAIL لـ 16:43 (صفر مرشحات)"
+    b_semantic_linkage_from_sources: >
+      لا آلية اعتماد منفذة خارج تجربة الأمر المقفلة (USUL_RULE_OUT_OF_SCOPE).
+      أفضل دليل متاح: مرسسات مصطلحات مشتركة مثبتة البصمات (clitic-tolerant)
+      في gate-semantic-bridge-v1.json — 6:145 (الاصل 2w + اباحته 1w)،
+      49:6 (الخبر 4w + الصدق 1w)، 16:43 (العلم 2w). معجمي فقط، غير معتمد.
+    c_four_source_completeness: >
+      PASS في إيصالات v2 (source_unavailable=[] و54,599 كتلة = الأربعة؛
+      run_hsearch الفعلي وليس محول B01 للإشارات فقط).
+  verdict: REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR
+  no_bar_lowered: true
+  verdict_receipt: "selection-verdict-v3.json (private workspace)"
+  fiqh_f01_run: "stage-fiqh-f01-run-v1.json — PARTIAL / USUL_APPLICATION_NOT_EXECUTED"
+  reframing: >
+    إطارات 6:145 و49:6 محفوظة كمرشحين بحثيين غير معتمدين؛ إيصالات المراحل
+    تبقى أدلة بحث صالحة. اختيار الحالة رُفض ولا يُدّعى؛ المسار B02-C قد
+    يشغّل تجربة محددة مع حمل حالة الارتباط كفجوة دائمة، أو تُصمم آلية
+    اعتماد دلالي جديدة (نطاق B02-A/B02-C).
 
 handoff_package:
   files: [task.yaml, source-manifest.json, evidence-receipt.json, test-report.json, handoff.md]
