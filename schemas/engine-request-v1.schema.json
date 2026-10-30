@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/AIMubin/Mubin/main/schemas/engine-request-v1.schema.json",
+  "title": "Mubin request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "case_id",
+    "engine",
+    "operation",
+    "inputs",
+    "methodology_profile_id",
+    "source_snapshot_ids",
+    "limits",
+    "idempotency_key"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "engine-contract/1.0"
+    },
+    "request_id": {
+      "$ref": "#/$defs/id"
+    },
+    "case_id": {
+      "$ref": "#/$defs/id"
+    },
+    "engine": {
+      "enum": [
+        "quran",
+        "tafsir",
+        "hadith",
+        "usul",
+        "fiqh"
+      ]
+    },
+    "operation": {
+      "$ref": "#/$defs/id"
+    },
+    "inputs": {
+      "type": "object"
+    },
+    "methodology_profile_id": {
+      "$ref": "#/$defs/id"
+    },
+    "source_snapshot_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true,
+      "maxItems": 128
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeout_ms",
+        "max_results"
+      ],
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120000
+        },
+        "max_results": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      }
+    },
+    "idempotency_key": {
+      "$ref": "#/$defs/id"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+    }
+  }
+}
