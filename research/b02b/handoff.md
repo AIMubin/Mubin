@@ -45,6 +45,8 @@
 >
 > **إضافة B02-C.3 (main @ `74e3cd9` — Cross-Engine Evidence Chain، الجانب المحلي):** مادة السلسلة عبر المحركات مجمّدة من الإيصالات المجمدة حصراً (بلا تشغيلات جديدة): 5 عقد و4 حواف — quran→tafsir `ESTABLISHED_BYTE_PINNED`؛ tafsir→hadith `CANDIDATE_MATCH_LEXICAL` (باعتراضَي عدم ثبوت الهوية واستبعاد رابط artifact)؛ hadith→usul `SEMANTIC_LINK_UNASSESSED_AT_THIS_HOP` (**رفض fail-closed: لا مُقيّم منفذ لهذه الحلقة**)؛ usul→fiqh `STRUCTURALLY_BOUND_RESEARCH_ONLY` (باعتراضَي عدم إسناد وعدم تنفيذ تطبيق). السلسلة ككل: `PARTIALLY_BOUND_CHAIN_OPEN`، `scientifically_established_chain=false`. الإيصال: `b02c3-evidence-chain-6-145-v1.json` (metadata-only، صفر حرف عربي).
 >
+>
+> **إضافة B02-C.5 (main @ `3b02aa469` — Plan-Bound Execution Provenance):** أُعيد تنفيذ الخطة المصدرية نفسها عبر `run_case_plan_bound` بمفتاح تدقيق خاص (48 بايت، خزنة المشغل، لم يغادر البيئة): `PLAN_AND_RESULT_BOUND_OPERATOR_LOCAL_ONLY`، 6 عقد و5 حواف DAG معلنة من الخطة، التزاما HMAC-SHA256 للمدخلات الخاصة والمخرجات (plan/receipt hmac محفوظان في الإيصال العام)، `verify_plan_bound_replay=True`، واختباران سلبيان رفضا تدليك الحالة ومفتاحاً خاطئاً. الخطة الكاملة وإيصال التشغيل في الخزنة الخاصة؛ المنشور التدقيق المنقح فقط: `b02c5-plan-bound-audit-6-145-v1.json` (بلا مدخلات عُقد ولا نصوص). `scientific_chain_established=false` وحكم الاختيار كما هو.
 > **إضافة عقد الربط الدلالي (P2 — main @ `a68bc20`، PR #130):** شُغّل
 > `evaluate_research_link` على مصادر مثبتة بأربع حالات: **6:145 وساطة
 > تفسيرية → `MACHINE_SUPPORTED_RESEARCH_ONLY`** (مرسسة تفسيرية بايتية على
