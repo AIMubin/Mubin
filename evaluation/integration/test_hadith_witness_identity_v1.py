@@ -128,6 +128,25 @@ class WitnessIdentityTests(unittest.TestCase):
         self.assertEqual(run(x, reg, sources, bridge)["status"],
                          "UNDETERMINED")
 
+    def test_byte_identical_mirrored_file_not_independent_witness(self):
+        x, reg, sources, bridge = dataset()
+        sources["source.two"] = sources["source.one"]
+        reg["source.two"]["source_sha256"] = digest(sources["source.one"])
+        x["witnesses"][1]["source_sha256"] = digest(sources["source.one"])
+        for field in ("segment", "context", "isnad"):
+            x["witnesses"][1][field] = copy.deepcopy(x["witnesses"][0][field])
+        self.assertEqual(run(x, reg, sources, bridge)["status"],
+                         "UNDETERMINED")
+
+    def test_quote_label_cannot_point_outside_the_lexical_fragment(self):
+        x, reg, sources, bridge = dataset()
+        witness = x["witnesses"][0]
+        witness["segment_type"] = "QURAN_QUOTE"
+        witness["segment"] = witness.pop("isnad")
+        with self.assertRaisesRegex(WitnessIdentityError,
+                                    "FRAGMENT_OUTSIDE_REPORTED_SEGMENT"):
+            run(x, reg, sources, bridge)
+
     def test_textual_variant_is_not_imagined_exact_match(self):
         x, reg, sources, bridge = dataset(altered=True)
         self.assertEqual(run(x, reg, sources, bridge)["status"],
@@ -252,7 +271,7 @@ class WitnessIdentityTests(unittest.TestCase):
         f["end_byte"] = x["witnesses"][0]["isnad"]["end_byte"]
         f["sha256"] = x["witnesses"][0]["isnad"]["sha256"]
         with self.assertRaisesRegex(WitnessIdentityError,
-                                    "FRAGMENT_OUTSIDE_REPORTED_MATN"):
+                                    "FRAGMENT_OUTSIDE_REPORTED_SEGMENT"):
             run(x, reg, sources, bridge)
 
 
