@@ -1,4 +1,4 @@
-# MUBIN-SYS-B02-B — Local Execution Lead
+﻿# MUBIN-SYS-B02-B — Local Execution Lead
 contract: mubin-b02b-task-v0.1
 batch: MUBIN-SYS-B02
 lane: B02-B
@@ -149,3 +149,12 @@ b02c2_replay_2026-10-30:
   boundaries_intact: [opinion_attribution_false, source_claims_verified_false, juristic_conclusion_null]
   selection_gate_verdict_unchanged: REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR
   receipts: [b02c2-kernel-receipt-6-145-v1.json, b02c2-diagnostic-run-v1.json]
+
+b02c6_witness_identity_prep_2026-10-31:
+  directive: MUBIN-SYS-B02-C.6 local-side steps 1-2
+  witness_block: L144309 (290 chars, isnad cue akhbarana x1, no judgment cues in scope)
+  cross_source_search: fragment witnessed in 1/4 allowlisted sources; per-source NO_MATCH recorded with absence-is-not-proof flag
+  negative_control: verse-quote block L142475 -> QUOTED_QURAN_TEXT_CONFIRMED (operator-reported folded containment; no text in public receipt)
+  identity_decision: NOT_ISSUED_PENDING_LOCAL_IDENTITY_ASSESSMENT (contract available on main @ 3ace886)
+  offset_unit: RAW_UNICODE_CODEPOINTS_NOT_UTF8_BYTES
+  receipts: [b02c6-witness-prep-6-145-v1.json, private witness-identity-prep-6-145-v1.json]

@@ -1,0 +1,120 @@
+{
+  "contract": "mubin-b02c6-witness-prep-metadata-v0.1",
+  "generated_at": "2026-10-31T01:37:16.343393+03:00",
+  "private_receipt": "witness-identity-prep-6-145-v1.json (private workspace)",
+  "witness_candidate_block": {
+    "locator": "L144309",
+    "chars": 290,
+    "block_sha256": "ff64d7556a9d99777ad9d1d328ca83c0ff70424fc24382aa83a01d9901016cc7",
+    "labels_present": [
+      "ISNAD_CUES_OBSERVED",
+      "NO_CRITICAL_JUDGMENT_FOUND_IN_BLOCK"
+    ],
+    "isnad_cue_counts": {
+      "akhbarana": 1
+    },
+    "quoted_quran_refs": [],
+    "matn_candidate": {
+      "span": [
+        9739067,
+        9739108
+      ],
+      "sha256": "64a457afbd5dbf08221f7d43cfed84505f75d25545111efaba7438e6d9c69b7a",
+      "classification": "NARRATION_FRAGMENT_CANDIDATE",
+      "folded_word_count": 10
+    }
+  },
+  "negative_control": {
+    "locator": "L142475",
+    "quoted_quran_refs": [],
+    "shared_span_containment_check": {
+      "shared_span_folded_sha256": "b49e79a67673c6d6ddcf93abd2ed89524df6713b50f7a7bbd9f849926de1f0b8",
+      "shared_span_folded_codepoints": 45,
+      "shared_span_folded_utf8_bytes": 81,
+      "is_substring_of_folded_verse_6_145": true,
+      "verdict_label": "QUOTED_QURAN_TEXT_CONFIRMED",
+      "verdict_scope": "FOLDED_LEXICAL_CONTAINMENT_ONLY_NOT_NARRATION_IDENTITY"
+    },
+    "shows": "quoted-Quran text separated from matn candidates"
+  },
+  "cross_source_variant_search": [
+    {
+      "probe_id": "witness-fragment-full",
+      "sources_with_hits": 1,
+      "per_source": [
+        {
+          "source_id": "openiti:0279Tirmidhi.Sunan",
+          "occurrences": 0,
+          "status": "NO_MATCH_IN_THIS_SOURCE",
+          "absence_is_not_proof_of_absence": true
+        },
+        {
+          "source_id": "openiti:0458Bayhaqi.SunanKubra",
+          "occurrences_within_probe_limit": 1,
+          "first_span": [
+            9739067,
+            9739108
+          ],
+          "note": "occurrence in this source is NOT narration identity"
+        },
+        {
+          "source_id": "openiti:0762IbnYusufZaylaci.NasbRaya",
+          "occurrences": 0,
+          "status": "NO_MATCH_IN_THIS_SOURCE",
+          "absence_is_not_proof_of_absence": true
+        },
+        {
+          "source_id": "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi",
+          "occurrences": 0,
+          "status": "NO_MATCH_IN_THIS_SOURCE",
+          "absence_is_not_proof_of_absence": true
+        }
+      ]
+    },
+    {
+      "probe_id": "reduced-frame",
+      "sources_with_hits": 1,
+      "per_source": [
+        {
+          "source_id": "openiti:0279Tirmidhi.Sunan",
+          "occurrences": 0,
+          "status": "NO_MATCH_IN_THIS_SOURCE",
+          "absence_is_not_proof_of_absence": true
+        },
+        {
+          "source_id": "openiti:0458Bayhaqi.SunanKubra",
+          "occurrences_within_probe_limit": 2,
+          "first_span": [
+            9739079,
+            9739100
+          ],
+          "note": "occurrence in this source is NOT narration identity"
+        },
+        {
+          "source_id": "openiti:0762IbnYusufZaylaci.NasbRaya",
+          "occurrences": 0,
+          "status": "NO_MATCH_IN_THIS_SOURCE",
+          "absence_is_not_proof_of_absence": true
+        },
+        {
+          "source_id": "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi",
+          "occurrences": 0,
+          "status": "NO_MATCH_IN_THIS_SOURCE",
+          "absence_is_not_proof_of_absence": true
+        }
+      ]
+    }
+  ],
+  "identity_decision": "NOT_ISSUED_PENDING_LOCAL_IDENTITY_ASSESSMENT",
+  "flags": {
+    "narration_identity_verified": false,
+    "grade_assigned": false,
+    "scholarly_verified": false,
+    "juristic_inference_allowed": false,
+    "machine_research_labels_only": true
+  },
+  "evidence_payload_sha256": "556f1c02a172adbad1ea37f99a8c836d158375c18b7df2f276939c5284c54f43",
+  "span_coordinate_unit": "RAW_UNICODE_CODEPOINTS_NOT_UTF8_BYTES",
+  "identity_contract_availability": "mubin-hadith-witness-identity/1.0 (main @ 3ace886; local identity assessment not yet run)",
+  "public_metadata_scope": "OPERATOR_REPORTED_NO_PRIVATE_SOURCES_OR_SOURCE_TEXT_VERIFIED_IN_CI"
+}

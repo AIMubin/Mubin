@@ -1,270 +1,308 @@
 {
- "contract": "mubin-b02b-evidence-receipt-v0.1",
- "batch": "MUBIN-SYS-B02-B",
- "case_id": "B02B-CASE-6-145",
- "generated_at": "2026-10-30T12:02:28.224726+03:00",
- "git_head_baseline": "953ffd703e7df285cd062a316753c9e665e33169",
- "preserved_candidate": {
-  "selected": false,
-  "selection_status": "PRESERVED RESEARCH CANDIDATE - selection REJECTED under strict gate v3 (semantic linkage uncertified); see strict_gate_v3",
-  "verse": "6:145",
-  "usul_rule_topic": "aslu-ashya (hadr vs ibaha) + istishab",
-  "tafsir_coverage": "5/5",
-  "witness": {
-   "status": "CANDIDATE_MATCH",
-   "kind": "non_quranic_10_word_matn_fragment",
-   "tafsir_work": "tafsir_ibn_kathir",
-   "hadith_source": "openiti:0458Bayhaqi.SunanKubra",
-   "witness_locator": "L144309",
-   "narration_identity_established": false
-  },
-  "runner_up": {
-   "case_id": "B02B-CASE-49-6",
-   "verse": "49:6",
-   "receipts_frozen": true
-  }
- },
- "stages_executed": [
-  {
-   "stage": "QURAN_TAFSIR",
-   "receipt": "stage-quran-tafsir-6-145-v1.json",
-   "payload_sha256": "26f1e0919c614febd9e9e8f152cbf08d95db56463cf1785ca1f4f646e39e6af2",
-   "summary": {
-    "passages_total": 128,
-    "works": 5
-   }
-  },
-  {
-   "stage": "HADITH_HSEARCH01",
-   "receipt": "hsearch-6-145-gate-v2.json",
-   "payload_sha256": "875adf7c6188c28969cb4024e8f2e3541f90036922d626ed1c0a11f7100f826e",
-   "summary": {
-    "windows": 23,
-    "pinned_blocks": 54599,
-    "links": 23,
-    "links_by_status": {
-     "NO_MATCH": 21,
-     "CANDIDATE_MATCH": 2
+  "contract": "mubin-b02b-evidence-receipt-v0.1",
+  "batch": "MUBIN-SYS-B02-B",
+  "case_id": "B02B-CASE-6-145",
+  "generated_at": "2026-10-30T12:02:28.224726+03:00",
+  "git_head_baseline": "953ffd703e7df285cd062a316753c9e665e33169",
+  "preserved_candidate": {
+    "selected": false,
+    "selection_status": "PRESERVED RESEARCH CANDIDATE - selection REJECTED under strict gate v3 (semantic linkage uncertified); see strict_gate_v3",
+    "verse": "6:145",
+    "usul_rule_topic": "aslu-ashya (hadr vs ibaha) + istishab",
+    "tafsir_coverage": "5/5",
+    "witness": {
+      "status": "CANDIDATE_MATCH",
+      "kind": "non_quranic_10_word_matn_fragment",
+      "tafsir_work": "tafsir_ibn_kathir",
+      "hadith_source": "openiti:0458Bayhaqi.SunanKubra",
+      "witness_locator": "L144309",
+      "narration_identity_established": false
     },
-    "source_unavailable": []
-   }
+    "runner_up": {
+      "case_id": "B02B-CASE-49-6",
+      "verse": "49:6",
+      "receipts_frozen": true
+    }
   },
-  {
-   "stage": "USUL_U01_TRACE",
-   "receipt": "stage-usul-6-145-v1.json",
-   "payload_sha256": "ba68815c33d64fa83adc40372c5973190b8ba4497256621a75f42f4cb7148033",
-   "summary": {
-    "rules_traced": 3,
-    "both_views_blocked_by_open_objections": true,
-    "tarjih_claimed": false,
-    "conclusions": "UNDETERMINED"
-   }
-  },
-  {
-   "stage": "FIQH_F00_GAP",
-   "receipt": "stage-fiqh-6-145-v1.json",
-   "payload_sha256": "bb2b1389719d3ffdfe748101a81dca00a74f3821666cd94a5bdc15f346b9cf0b",
-   "summary": {
-    "gap_declared": true,
-    "fiqh_output": null
-   }
-  }
- ],
- "gate_classification": {
-  "receipt": "gate-classification-v1.json (private workspace)",
-  "verse_6_145": {
-   "aligned": 2,
-   "narration_fragment_candidates": 1,
-   "verse_quote_artifacts": 1
-  }
- },
- "strict_gate_v3": {
-  "baseline": "5306410 (A01/B01/B02-A merged)",
-  "verdict": "REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR",
-  "verdict_receipt": "selection-verdict-v3.json (private workspace)",
-  "semantic_bridge_receipt": "gate-semantic-bridge-v1.json (private workspace)",
-  "semantic_bridge_summary": {
-   "6:145": "OBSERVED_SHARED_TERMS (2 terms) - lexical only, uncertified",
-   "49:6": "OBSERVED_SHARED_TERMS (2 terms) - lexical only, uncertified",
-   "16:43": "OBSERVED_SHARED_TERMS weak (1 term) - lexical only, uncertified",
-   "certifier": "none implemented outside locked amr pilot"
-  },
-  "four_source_completeness": "PASS in v2 receipts (all four sources, 54,599 blocks, real run_hsearch)",
-  "fiqh_f01_run": "stage-fiqh-f01-run-v1.json - PARTIAL / USUL_APPLICATION_NOT_EXECUTED",
-  "no_bar_lowered": true
- },
- "p0_projection_b02a": {
-  "public_view_file": "p0-projection-b02b-6-145-v1.json",
-  "contract": "mubin-b02a-p0-projection/1.0",
-  "status": "P0_STRUCTURALLY_VALID",
-  "private_bundle_sha256": "146bb2f17f31e1a1ad34116ee0aab9a699e29534fca9b341748d2d1eb956e88f",
-  "graph_sha256": "see public view file (recompute via verify_redacted_projection)",
-  "bundle_contents": {
-   "sources": 2,
-   "evidence": 4,
-   "methodologies": 1,
-   "claims": 3,
-   "rules": 2,
-   "inferences": 1,
-   "objections": 2,
-   "proofs": 1
-  },
-  "honesty": "full bundle with excerpts stays in the private vault; both opposing statements encoded; open objections stand; conclusion and proof UNDETERMINED; P0 pass is structural only",
-  "verification": "verify_redacted_projection=True; verify_private_projection=True; tampered-edge and forged-excerpt negatives rejected (private run receipt p0-projection-run-v1.json)"
- },
- "semantic_link_contract_runs": {
-  "contract_under_test": "mubin-semantic-link-research/1.0 (main @ a68bc20, PR #130)",
-  "combined_receipt": "sl-gate-v1.json (private workspace)",
-  "assessment_model": "glm-5.3-flash@dsh-local-agent (self-play; model_independence_established=false in every result)",
-  "runs": [
-   {
-    "case_id": "b02b.sl.6-145.tafsir-mediated",
-    "relation": "TAFSIR_MEDIATED_APPLICATION",
-    "status": "MACHINE_SUPPORTED_RESEARCH_ONLY",
-    "note": "tafsir anchor quotes the non-Quranic normative fragment byte-pinned; 2 supporter + 1 critic-scope clearance; NOT scholarly approval"
-   },
-   {
-    "case_id": "b02b.sl.49-6.tafsir-mediated",
-    "relation": "TAFSIR_MEDIATED_APPLICATION",
-    "status": "CONTESTED",
-    "note": "supporter recorded OPEN_DEFEATER: verse concerns verifying a specific report, not the khabar-class taxonomy"
-   },
-   {
-    "case_id": "b02b.sl.2-8.hadr-fp-control",
-    "relation": "TAFSIR_MEDIATED_APPLICATION",
-    "status": "CONTESTED",
-    "note": "critic REFUTES_LINK: generic rhetorical frame overlap; known false positive refused"
-   },
-   {
-    "case_id": "b02b.sl.6-145.lexical-only",
-    "relation": "LEXICAL_OVERLAP",
-    "status": "LEXICAL_ONLY",
-    "note": "contract-degraded lexical relation"
-   }
+  "stages_executed": [
+    {
+      "stage": "QURAN_TAFSIR",
+      "receipt": "stage-quran-tafsir-6-145-v1.json",
+      "payload_sha256": "26f1e0919c614febd9e9e8f152cbf08d95db56463cf1785ca1f4f646e39e6af2",
+      "summary": {
+        "passages_total": 128,
+        "works": 5
+      }
+    },
+    {
+      "stage": "HADITH_HSEARCH01",
+      "receipt": "hsearch-6-145-gate-v2.json",
+      "payload_sha256": "875adf7c6188c28969cb4024e8f2e3541f90036922d626ed1c0a11f7100f826e",
+      "summary": {
+        "windows": 23,
+        "pinned_blocks": 54599,
+        "links": 23,
+        "links_by_status": {
+          "NO_MATCH": 21,
+          "CANDIDATE_MATCH": 2
+        },
+        "source_unavailable": []
+      }
+    },
+    {
+      "stage": "USUL_U01_TRACE",
+      "receipt": "stage-usul-6-145-v1.json",
+      "payload_sha256": "ba68815c33d64fa83adc40372c5973190b8ba4497256621a75f42f4cb7148033",
+      "summary": {
+        "rules_traced": 3,
+        "both_views_blocked_by_open_objections": true,
+        "tarjih_claimed": false,
+        "conclusions": "UNDETERMINED"
+      }
+    },
+    {
+      "stage": "FIQH_F00_GAP",
+      "receipt": "stage-fiqh-6-145-v1.json",
+      "payload_sha256": "bb2b1389719d3ffdfe748101a81dca00a74f3821666cd94a5bdc15f346b9cf0b",
+      "summary": {
+        "gap_declared": true,
+        "fiqh_output": null
+      }
+    }
   ],
-  "all_statuses_match_expectations": true
- },
- "b02c_diagnostic_run": {
-  "kernel_receipt_file": "b02c-kernel-receipt-6-145-v1.json",
-  "diagnostic_receipt_file": "b02c-diagnostic-run-v1.json",
-  "kernel_status": "PARTIAL",
-  "nodes": {
-   "quran": "OK (1 finding, 1 evidence ref, external_unverified partial snapshot)",
-   "tafsir": "OK (5 works, 5 evidence ids)",
-   "hadith": "OK (23 mention-cue findings; cue windows only, identity/grade not verified)",
-   "usul": "OK (3 trace entries; both views blocked by open objections; 0 evidence refs by contract)",
-   "fiqh": "UNDETERMINED (INSUFFICIENT_EVIDENCE_FOR_REASONED_FINDING; OPINION_SOURCE_NOT_IN_UPSTREAM_EVIDENCE)"
+  "gate_classification": {
+    "receipt": "gate-classification-v1.json (private workspace)",
+    "verse_6_145": {
+      "aligned": 2,
+      "narration_fragment_candidates": 1,
+      "verse_quote_artifacts": 1
+    }
   },
-  "four_states": {
-   "engine_execution": "engineering measure recorded (PARTIAL)",
-   "evidence_chain": "established + missing links counted in diagnostic receipt",
-   "semantic_acceptance": "machine MACHINE_SUPPORTED_RESEARCH_ONLY; scholarly UNDETERMINED",
-   "fiqh_acceptance": "not verified; juristic_conclusion=null"
+  "strict_gate_v3": {
+    "baseline": "5306410 (A01/B01/B02-A merged)",
+    "verdict": "REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR",
+    "verdict_receipt": "selection-verdict-v3.json (private workspace)",
+    "semantic_bridge_receipt": "gate-semantic-bridge-v1.json (private workspace)",
+    "semantic_bridge_summary": {
+      "6:145": "OBSERVED_SHARED_TERMS (2 terms) - lexical only, uncertified",
+      "49:6": "OBSERVED_SHARED_TERMS (2 terms) - lexical only, uncertified",
+      "16:43": "OBSERVED_SHARED_TERMS weak (1 term) - lexical only, uncertified",
+      "certifier": "none implemented outside locked amr pilot"
+    },
+    "four_source_completeness": "PASS in v2 receipts (all four sources, 54,599 blocks, real run_hsearch)",
+    "fiqh_f01_run": "stage-fiqh-f01-run-v1.json - PARTIAL / USUL_APPLICATION_NOT_EXECUTED",
+    "no_bar_lowered": true
   },
-  "carried_gaps": [
-   "no kernel node ingests pinned usul sections",
-   "kernel hadith is mention-cue only (full search = separate H-Search-01 receipt)",
-   "fiqh opinion binding unsupported by kernel contracts",
-   "case selection remains REJECTED under strict gate; diagnostic run only"
+  "p0_projection_b02a": {
+    "public_view_file": "p0-projection-b02b-6-145-v1.json",
+    "contract": "mubin-b02a-p0-projection/1.0",
+    "status": "P0_STRUCTURALLY_VALID",
+    "private_bundle_sha256": "146bb2f17f31e1a1ad34116ee0aab9a699e29534fca9b341748d2d1eb956e88f",
+    "graph_sha256": "see public view file (recompute via verify_redacted_projection)",
+    "bundle_contents": {
+      "sources": 2,
+      "evidence": 4,
+      "methodologies": 1,
+      "claims": 3,
+      "rules": 2,
+      "inferences": 1,
+      "objections": 2,
+      "proofs": 1
+    },
+    "honesty": "full bundle with excerpts stays in the private vault; both opposing statements encoded; open objections stand; conclusion and proof UNDETERMINED; P0 pass is structural only",
+    "verification": "verify_redacted_projection=True; verify_private_projection=True; tampered-edge and forged-excerpt negatives rejected (private run receipt p0-projection-run-v1.json)"
+  },
+  "semantic_link_contract_runs": {
+    "contract_under_test": "mubin-semantic-link-research/1.0 (main @ a68bc20, PR #130)",
+    "combined_receipt": "sl-gate-v1.json (private workspace)",
+    "assessment_model": "glm-5.3-flash@dsh-local-agent (self-play; model_independence_established=false in every result)",
+    "runs": [
+      {
+        "case_id": "b02b.sl.6-145.tafsir-mediated",
+        "relation": "TAFSIR_MEDIATED_APPLICATION",
+        "status": "MACHINE_SUPPORTED_RESEARCH_ONLY",
+        "note": "tafsir anchor quotes the non-Quranic normative fragment byte-pinned; 2 supporter + 1 critic-scope clearance; NOT scholarly approval"
+      },
+      {
+        "case_id": "b02b.sl.49-6.tafsir-mediated",
+        "relation": "TAFSIR_MEDIATED_APPLICATION",
+        "status": "CONTESTED",
+        "note": "supporter recorded OPEN_DEFEATER: verse concerns verifying a specific report, not the khabar-class taxonomy"
+      },
+      {
+        "case_id": "b02b.sl.2-8.hadr-fp-control",
+        "relation": "TAFSIR_MEDIATED_APPLICATION",
+        "status": "CONTESTED",
+        "note": "critic REFUTES_LINK: generic rhetorical frame overlap; known false positive refused"
+      },
+      {
+        "case_id": "b02b.sl.6-145.lexical-only",
+        "relation": "LEXICAL_OVERLAP",
+        "status": "LEXICAL_ONLY",
+        "note": "contract-degraded lexical relation"
+      }
+    ],
+    "all_statuses_match_expectations": true
+  },
+  "b02c_diagnostic_run": {
+    "kernel_receipt_file": "b02c-kernel-receipt-6-145-v1.json",
+    "diagnostic_receipt_file": "b02c-diagnostic-run-v1.json",
+    "kernel_status": "PARTIAL",
+    "nodes": {
+      "quran": "OK (1 finding, 1 evidence ref, external_unverified partial snapshot)",
+      "tafsir": "OK (5 works, 5 evidence ids)",
+      "hadith": "OK (23 mention-cue findings; cue windows only, identity/grade not verified)",
+      "usul": "OK (3 trace entries; both views blocked by open objections; 0 evidence refs by contract)",
+      "fiqh": "UNDETERMINED (INSUFFICIENT_EVIDENCE_FOR_REASONED_FINDING; OPINION_SOURCE_NOT_IN_UPSTREAM_EVIDENCE)"
+    },
+    "four_states": {
+      "engine_execution": "engineering measure recorded (PARTIAL)",
+      "evidence_chain": "established + missing links counted in diagnostic receipt",
+      "semantic_acceptance": "machine MACHINE_SUPPORTED_RESEARCH_ONLY; scholarly UNDETERMINED",
+      "fiqh_acceptance": "not verified; juristic_conclusion=null"
+    },
+    "carried_gaps": [
+      "no kernel node ingests pinned usul sections",
+      "kernel hadith is mention-cue only (full search = separate H-Search-01 receipt)",
+      "fiqh opinion binding unsupported by kernel contracts",
+      "case selection remains REJECTED under strict gate; diagnostic run only"
+    ],
+    "completed_inference_claimed": false
+  },
+  "gaps_declared": [
+    {
+      "type": "fiqh_f00_no_engine",
+      "historical_initial_run": true,
+      "current_state": "F0.1_RESEARCH_SCAFFOLD_EXECUTED_PARTIAL"
+    },
+    {
+      "type": "certified_semantic_linkage_mechanism_missing",
+      "detail": "no implemented verifier for source-grounded semantic linkage outside the locked amr pilot; gate v3 rejected selection rather than lower the bar",
+      "historical_gate_v3": true,
+      "current_state": "MACHINE_SUPPORTED_RESEARCH_ONLY_NO_SCHOLARLY_LINK"
+    },
+    {
+      "type": "usul_ut0123_stage05_08_chain_missing_for_w2_h2_017"
+    },
+    {
+      "type": "e2e_research_slice_question_fixed",
+      "detail": "engines.e2e.research_slice enforces a fixed QUESTION (amr/2:43); arbitrary-verse five-engine composition requires kernel-side extension (B02-A/B02-C)",
+      "legacy_runner_only": true,
+      "current_state": "GENERAL_RUN_CASE_WORKS_DIAGNOSTICALLY"
+    },
+    {
+      "type": "scan_v1_opening_probe_false_positives",
+      "detail": "documented; closing-confirm rule applied in gate"
+    }
   ],
-  "completed_inference_claimed": false
- },
- "gaps_declared": [
-  {
-   "type": "fiqh_f00_no_engine",
-   "historical_initial_run": true,
-   "current_state": "F0.1_RESEARCH_SCAFFOLD_EXECUTED_PARTIAL"
+  "text_included": false,
+  "scholarly_verified": false,
+  "juristic_inference_allowed": false,
+  "b02c2_source_bound_replay": {
+    "directive": "MUBIN-SYS-B02-C.2 Source-Bound Diagnostic Replay (main @ 217de11)",
+    "kernel_receipt_file": "b02c2-kernel-receipt-6-145-v1.json",
+    "diagnostic_receipt_file": "b02c2-diagnostic-run-v1.json",
+    "kernel_status": "PARTIAL",
+    "usul_bind_source_spans": {
+      "status": "OK",
+      "bound_spans": 4,
+      "evidence_handles": "ev.usul.* x4 (full-source sha + span sha + raw byte offsets)",
+      "uncertainty": "SOURCE_BYTE_FIDELITY_ONLY_NO_JURISTIC_ATTRIBUTION"
+    },
+    "fiqh_binding_result": {
+      "status_v1_unbound": "UNDETERMINED",
+      "status_v2_bound": "PARTIAL",
+      "bound_opinions": [
+        "usul.b02b.view.hadr-asl",
+        "usul.b02b.view.ibaha-asl"
+      ],
+      "linked_evidence_count": 33,
+      "source_claims_verified": false,
+      "opinion_source_attribution_verified": false,
+      "juristic_conclusion": null,
+      "uncertainty": "SOURCE_SPAN_MATCH_NOT_OPINION_ATTRIBUTION"
+    },
+    "distinctions_preserved": {
+      "source_matching": "byte-level digest equality only",
+      "semantic_linkage": "separate contract, machine-supported research only",
+      "opinion_attribution": false,
+      "inference_validity": "UNDETERMINED (usul simulation blocked; P0 proof undetermined)"
+    },
+    "unchanged": {
+      "selection_gate_verdict": "REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR",
+      "machine_supported_status_is_scholarly": false,
+      "v1_receipts_untouched": true,
+      "version_yaml_touched": false
+    }
   },
-  {
-   "type": "certified_semantic_linkage_mechanism_missing",
-   "detail": "no implemented verifier for source-grounded semantic linkage outside the locked amr pilot; gate v3 rejected selection rather than lower the bar",
-   "historical_gate_v3": true,
-   "current_state": "MACHINE_SUPPORTED_RESEARCH_ONLY_NO_SCHOLARLY_LINK"
+  "b02c3_evidence_chain": {
+    "chain_receipt_file": "b02c3-evidence-chain-6-145-v1.json",
+    "contract": "mubin-b02c3-evidence-chain-v0.1",
+    "overall_status": "PARTIALLY_BOUND_CHAIN_OPEN",
+    "edges": {
+      "e.quran-tafsir": "ESTABLISHED_BYTE_PINNED",
+      "e.tafsir-hadith": "CANDIDATE_MATCH_LEXICAL",
+      "e.hadith-usul": "SEMANTIC_LINK_UNASSESSED_AT_THIS_HOP",
+      "e.usul-fiqh": "STRUCTURALLY_BOUND_RESEARCH_ONLY"
+    },
+    "weakest_hop": "e.hadith-usul",
+    "scientifically_established_chain": false,
+    "assembled_from": "existing frozen receipts only; no new source runs"
   },
-  {
-   "type": "usul_ut0123_stage05_08_chain_missing_for_w2_h2_017"
+  "b02c5_plan_bound_replay": {
+    "audit_file": "b02c5-plan-bound-audit-6-145-v1.json",
+    "contract": "mubin-plan-bound-execution/1.0",
+    "status": "PLAN_AND_RESULT_BOUND_OPERATOR_LOCAL_ONLY",
+    "node_count": 6,
+    "dependency_edge_count": 5,
+    "plan_hmac_sha256": "420da9c1ddc9984e87f8827c7d50542879e86456905a08a9a45a0563ce6db42f",
+    "receipt_hmac_sha256": "127050ab5e01ceb4f26295c9ef6466fc4443eff89715357c37392ce9f11a4cd1",
+    "verification": "verify_plan_bound_replay=True locally; tampered-audit and wrong-key negatives rejected (private verify receipt b02c5-verify-v1.json)",
+    "full_plan_and_receipt": "private vault only; audit exports no inputs or text",
+    "boundaries": {
+      "scientific_chain_established": false,
+      "scholarly_verified": false,
+      "juristic_inference_allowed": false,
+      "hadith_identity_verified": false,
+      "private_source_authenticated": false
+    }
   },
-  {
-   "type": "e2e_research_slice_question_fixed",
-   "detail": "engines.e2e.research_slice enforces a fixed QUESTION (amr/2:43); arbitrary-verse five-engine composition requires kernel-side extension (B02-A/B02-C)",
-   "legacy_runner_only": true,
-   "current_state": "GENERAL_RUN_CASE_WORKS_DIAGNOSTICALLY"
-  },
-  {
-   "type": "scan_v1_opening_probe_false_positives",
-   "detail": "documented; closing-confirm rule applied in gate"
+  "b02c6_witness_identity_prep": {
+    "directive": "MUBIN-SYS-B02-C.6 local-side steps 1-2; identity assessment not yet executed (contract available on main @ 3ace886)",
+    "public_receipt_file": "b02c6-witness-prep-6-145-v1.json",
+    "private_receipt": "witness-identity-prep-6-145-v1.json (with labeled texts; stays private)",
+    "witness_candidate_block": {
+      "locator": "L144309",
+      "chars": 290,
+      "block_sha256": "ff64d7556a9d99777ad9d1d328ca83c0ff70424fc24382aa83a01d9901016cc7",
+      "labels": [
+        "ISNAD_CUES_OBSERVED (akhbarana x1)",
+        "commentary: NO_CRITICAL_JUDGMENT_FOUND in block scope"
+      ],
+      "matn_candidate_classification": "NARRATION_FRAGMENT_CANDIDATE"
+    },
+    "cross_source_witness_search": {
+      "fragment_found_in_sources": 1,
+      "of_allowlisted_sources": 4,
+      "bayhaqi": "occurrence confirmed (pinned span re-derived)",
+      "tirmidhi_nasbraya_tuhfa": "NO_MATCH_IN_THIS_SOURCE each; absence is not proof of absence",
+      "narration_identity_verified": false
+    },
+    "negative_control": {
+      "locator": "L142475",
+      "result": "QUOTED_QURAN_TEXT_CONFIRMED (operator-reported folded lexical containment in verse 6:145; no text in public receipt)",
+      "scope": "OPERATOR_LOCAL_MATCH_NOT_REPLAYED_AGAINST_PRIVATE_QURAN_SOURCE_IN_CI"
+    },
+    "identity_decision": "NOT_ISSUED_PENDING_LOCAL_IDENTITY_ASSESSMENT",
+    "honest_interim_reading": "single-source witness: within the four allowlisted sources the fragment is witnessed only where it was discovered; multi-source corroboration absent -> identity remains undetermined pending the identity contract",
+    "flags": {
+      "narration_identity_verified": false,
+      "grade_assigned": false,
+      "scholarly_verified": false,
+      "machine_research_labels_only": true,
+      "source_text_included": false
+    },
+    "offset_coordinate_unit": "RAW_UNICODE_CODEPOINTS_NOT_UTF8_BYTES",
+    "public_receipt_sha256": "556f1c02a172adbad1ea37f99a8c836d158375c18b7df2f276939c5284c54f43"
   }
- ],
- "text_included": false,
- "scholarly_verified": false,
- "juristic_inference_allowed": false,
- "b02c2_source_bound_replay": {
-  "directive": "MUBIN-SYS-B02-C.2 Source-Bound Diagnostic Replay (main @ 217de11)",
-  "kernel_receipt_file": "b02c2-kernel-receipt-6-145-v1.json",
-  "diagnostic_receipt_file": "b02c2-diagnostic-run-v1.json",
-  "kernel_status": "PARTIAL",
-  "usul_bind_source_spans": {
-   "status": "OK",
-   "bound_spans": 4,
-   "evidence_handles": "ev.usul.* x4 (full-source sha + span sha + raw byte offsets)",
-   "uncertainty": "SOURCE_BYTE_FIDELITY_ONLY_NO_JURISTIC_ATTRIBUTION"
-  },
-  "fiqh_binding_result": {
-   "status_v1_unbound": "UNDETERMINED",
-   "status_v2_bound": "PARTIAL",
-   "bound_opinions": [
-    "usul.b02b.view.hadr-asl",
-    "usul.b02b.view.ibaha-asl"
-   ],
-   "linked_evidence_count": 33,
-   "source_claims_verified": false,
-   "opinion_source_attribution_verified": false,
-   "juristic_conclusion": null,
-   "uncertainty": "SOURCE_SPAN_MATCH_NOT_OPINION_ATTRIBUTION"
-  },
-  "distinctions_preserved": {
-   "source_matching": "byte-level digest equality only",
-   "semantic_linkage": "separate contract, machine-supported research only",
-   "opinion_attribution": false,
-   "inference_validity": "UNDETERMINED (usul simulation blocked; P0 proof undetermined)"
-  },
-  "unchanged": {
-   "selection_gate_verdict": "REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR",
-   "machine_supported_status_is_scholarly": false,
-   "v1_receipts_untouched": true,
-   "version_yaml_touched": false
-  }
- },
- "b02c3_evidence_chain": {
-  "chain_receipt_file": "b02c3-evidence-chain-6-145-v1.json",
-  "contract": "mubin-b02c3-evidence-chain-v0.1",
-  "overall_status": "PARTIALLY_BOUND_CHAIN_OPEN",
-  "edges": {
-   "e.quran-tafsir": "ESTABLISHED_BYTE_PINNED",
-   "e.tafsir-hadith": "CANDIDATE_MATCH_LEXICAL",
-   "e.hadith-usul": "SEMANTIC_LINK_UNASSESSED_AT_THIS_HOP",
-   "e.usul-fiqh": "STRUCTURALLY_BOUND_RESEARCH_ONLY"
-  },
-  "weakest_hop": "e.hadith-usul",
-  "scientifically_established_chain": false,
-  "assembled_from": "existing frozen receipts only; no new source runs"
- },
- "b02c5_plan_bound_replay": {
-  "audit_file": "b02c5-plan-bound-audit-6-145-v1.json",
-  "contract": "mubin-plan-bound-execution/1.0",
-  "status": "PLAN_AND_RESULT_BOUND_OPERATOR_LOCAL_ONLY",
-  "node_count": 6,
-  "dependency_edge_count": 5,
-  "plan_hmac_sha256": "420da9c1ddc9984e87f8827c7d50542879e86456905a08a9a45a0563ce6db42f",
-  "receipt_hmac_sha256": "127050ab5e01ceb4f26295c9ef6466fc4443eff89715357c37392ce9f11a4cd1",
-  "verification": "verify_plan_bound_replay=True locally; tampered-audit and wrong-key negatives rejected (private verify receipt b02c5-verify-v1.json)",
-  "full_plan_and_receipt": "private vault only; audit exports no inputs or text",
-  "boundaries": {
-   "scientific_chain_established": false,
-   "scholarly_verified": false,
-   "juristic_inference_allowed": false,
-   "hadith_identity_verified": false,
-   "private_source_authenticated": false
-  }
- }
 }
