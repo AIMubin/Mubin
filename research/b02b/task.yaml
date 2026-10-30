@@ -64,7 +64,8 @@ case_selection:
       نفسها مقتبساً داخل الحديث (artifact)، والمادة الجوهرية هي المقتطف
       المتني الفقهي غير القرآني الذي تثبته بصمته في ملف التصنيف الخاص.
 
-selected_case:
+preserved_candidate:
+  selected: false
   id: B02B-CASE-6-145
   verse: "6:145"
   tafsir_coverage: "5/5 (baghawy 4500, katheer 5355, moyassar 524, saadi 3213, tabary 10851 chars)"
@@ -83,7 +84,7 @@ selected_case:
     usul_sections: ["w2-h2-015 (الأخبار)", "waraqat_w1_chapter-014"]
     witness: "مقتطف متني غير قرآني (10 كلمات، أسماء/مضطلع): katheer ↔ Bayhaqi L130506؛ البصمة في ملف التصنيف الخاص"
     reason_kept: "إيصالاته مجمدة جاهزة لحالة ثانية متعددة الحالات في اختبار Evidence Graph"
-  selection_reason: >
+  preservation_reason: >
     6:145 أعلى نوافذ روائية (23 مقابل 12)، وشاهدها مقتطف متني فقهي لا مجرد
     أسماء أسانيد، وقرنتها القاعدة الأصولية «الأصل في الأشياء الإباحة» بالقرن
     المباشر. اختيار 5:87 رُفض لأن مرشحاته الأربع كلها artifacts نص قرآني.
@@ -92,7 +93,7 @@ scope:
   in_scope:
     - "تشغيل المراحل الخمس على المصادر المثبتة محلياً فقط"
     - "إيصالات metadata-only؛ لا نصوص مصادر إلى GitHub"
-    - "إعلان فجوة Fiqh F0.0 صراحة إن لم يُنفذ مرحلة فقهية حقيقية"
+    - "إعلان فجوة Fiqh F0.0 التاريخية ونتيجة F0.1 اللاحقة دون ادعاء استنباط"
   out_of_scope:
     - "تعديل عقود P0 أو VERSION.yaml"
     - "أي مساس بـ H3.9.2 المجمدة أو مجموعات holdout أو 158 قراراً معلقاً"
@@ -106,10 +107,10 @@ success_criteria:
 
 package_status_2026-10-30:
   stages_executed: [QURAN_TAFSIR, HADITH_HSEARCH01, USUL_U01_TRACE, FIQH_F00_GAP]
-  tests: "232 tests pass / 12 suites (core.tests engine-relevant)"
+  tests: "232 total = 230 passed + 2 skipped + 0 failed / 12 suites (original engine suites)"
   package_files: [task.yaml, source-manifest.json, evidence-receipt.json, test-report.json, handoff.md]
   redaction_scan: "clean after sanitization (no private paths, no source text)"
-  next: "PR to GitHub after final review"
+  next: "PR metadata CI + maintainer review at exact final HEAD"
 
 strict_gate_v3_2026-10-30:
   instruction_source: "architect directives after B02-A merge (baseline 5306410)"
