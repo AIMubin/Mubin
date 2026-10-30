@@ -266,5 +266,39 @@
    "hadith_identity_verified": false,
    "private_source_authenticated": false
   }
+ },
+ "b02c6_witness_identity_prep": {
+  "directive": "MUBIN-SYS-B02-C.6 local-side steps 1-2 (identity contract mubin-hadith-witness-identity/1.0 not yet on main)",
+  "public_receipt_file": "b02c6-witness-prep-6-145-v1.json",
+  "private_receipt": "witness-identity-prep-6-145-v1.json (with labeled texts; stays private)",
+  "witness_candidate_block": {
+   "locator": "L144309",
+   "chars": 290,
+   "block_sha256": "ff64d7556a9d99777ad9d1d328ca83c0ff70424fc24382aa83a01d9901016cc7",
+   "labels": [
+    "ISNAD_CUES_OBSERVED (akhbarana x1)",
+    "commentary: NO_CRITICAL_JUDGMENT_FOUND in block scope"
+   ],
+   "matn_candidate_classification": "NARRATION_FRAGMENT_CANDIDATE"
+  },
+  "cross_source_witness_search": {
+   "fragment_found_in_sources": 1,
+   "of_allowlisted_sources": 4,
+   "bayhaqi": "occurrence confirmed (pinned span re-derived)",
+   "tirmidhi_nasbraya_tuhfa": "NO_MATCH_IN_THIS_SOURCE each; absence is not proof of absence",
+   "narration_identity_verified": false
+  },
+  "negative_control": {
+   "locator": "L142475",
+   "result": "QUOTED_QURAN_TEXT_CONFIRMED (shared span is folded substring of verse 6:145) - quoted text separated from matn candidates"
+  },
+  "identity_decision": "NOT_ISSUED_PENDING_IDENTITY_CONTRACT",
+  "honest_interim_reading": "single-source witness: within the four allowlisted sources the fragment is witnessed only where it was discovered; multi-source corroboration absent -> identity remains undetermined pending the identity contract",
+  "flags": {
+   "narration_identity_verified": false,
+   "grade_assigned": false,
+   "scholarly_verified": false,
+   "machine_research_labels_only": true
+  }
  }
 }
