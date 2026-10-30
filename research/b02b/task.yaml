@@ -1,0 +1,141 @@
+# MUBIN-SYS-B02-B — Local Execution Lead
+contract: mubin-b02b-task-v0.1
+batch: MUBIN-SYS-B02
+lane: B02-B
+owner: local_execution_lead
+status: STRICT_GATE_V3_REJECTED_PRESERVED_CANDIDATES
+created: 2026-10-30
+baseline: main @ 5306410 (A01/B01/B02-A merged)
+
+objective: >
+  حالة بحثية واحدة حقيقية محدودة النطاق تُشغّل مراحل المحركات الخمسة على
+  المصادر المحلية المثبتة، مع سجل تشغيل وإيصالات أدلة وبيان فجوات فعلية.
+  لا تُفرض الآية 2:43 ولا مسار «باب الأمر» المستخدم في E2E-01.x.
+
+case_selection:
+  method:
+    scan_tool: "أداة خاصة b02b_case_scan_v1.py في مساحة الإيصالات المحلية (ranking aid only)"
+    scan_report: "تقرير خاص b02b-case-scan-v1.json (بصمات وأعداد فقط)"
+    tafsir_db_sha256: a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0
+  scan_caveats:
+    - >
+      probe «أول 4 كلمات» ينتج إيجابيات زائفة للافتتاحيات العامة، مثال:
+      «ومن الناس من يقول» وصل w2-h2-017 (الحظر والإباحة) بـ 2:8 و29:10 دون
+      relation فعلي. لا يعتمد الترتيب إلا على closing_confirm.
+    - "scan_v2_todos: closing_confirm إلزامي، فحص عكسي آية-أولاً على نوافذ T0.3، probes للوسط"
+  candidates:
+    - id: CAND-A
+      usul_sections: ["w2-h2-015 (الأخبار)", "waraqat_w1_chapter-014 (الأخبار)"]
+      rule_sketch: "المتواتر يوجب العلم، الآحاد يوجب العمل، المرسل/المسند، العنعنة"
+      verse_candidates: ["49:6", "16:43"]
+      rationale: >
+        أقوى ربط Hadith-Usul: آية التثبت/«فاسألوا أهل الذكر» تفتح تفسيراً
+        غنياً بالنصوص الروائية، ومحرك البحث H-Search-01 مبني لهذا النمط.
+    - id: CAND-B
+      usul_sections: ["w2-h2-021 (الاجتهاد)"]
+      rule_sketch: "المجتهد الصواب والخطأ (أجران/أجر واحد)"
+      verse_candidates: ["9:122"]
+      rationale: "آية التفقه في الدين؛ المقطع الأصولي نفسه يتضمن نص الحديث."
+    - id: CAND-C
+      usul_sections: ["w2-h2-017 (الحظر والإباحة)", "waraqat_w1_chapter-016"]
+      rule_sketch: "الأصل في الأشياء الإباحة إلا ما حظره الشرع"
+      verse_candidates: ["5:87", "6:145"]
+      rationale: >
+        أقرب مسألة إلى المرحلة الفقهية، لكن مطابقة scan_v1 الحالية عليها
+        زائفة ويجب إثبات الرابط الآية-القاعدة قبل اختيارها.
+  selection_gate:
+    - "تغطية تفسير 5/5 للآية المختارة في quran_tafsir.db المثبت"
+    - "نوافذ T0.3 narration > 0 على الآية المختارة"
+    - "تشغيل engines.hadith.hsearch.replay بإيصال جديد (refuses-overwrite)"
+    - "لا تُختار الحالة إذا كانت أدلة الحديث كلها NO_MATCH دون diagnostics"
+  gate_run_2026-10-30:
+    receipts_dir: "مساحة إيصالات خاصة (refuses-overwrite)"
+    receipts: "hsearch-{49-6,16-43,9-122,5-87,6-145}-gate-v2.json; payload sha256 متحقق منه"
+    note_v1: "v1 استخدمت مسار كاش خاطئاً → SOURCE_UNAVAILABLE لكل الروابط؛ العقد أرفض الاختلاس وهذا سلوك صحيح"
+    classification: "gate-classification-v1.json في مساحة الإيصالات الخاصة (قاعدة آلية قابلة للتكرار)"
+    results:
+      - {ref: "49:6", windows: 12, aligned: 2, narration_candidates: 1, verse_quote_artifacts: 1}
+      - {ref: "16:43", windows: 6, aligned: 0, narration_candidates: 0}
+      - {ref: "9:122", windows: 22, aligned: 1, narration_candidates: 0, verse_quote_artifacts: 1}
+      - {ref: "5:87", windows: 21, aligned: 4, narration_candidates: 0, verse_quote_artifacts: 4}
+      - {ref: "6:145", windows: 23, aligned: 2, narration_candidates: 1, verse_quote_artifacts: 1}
+    classification_correction: >
+      القاعدة الآلية صحّحت الفرز اليدوي: أحد مقتطفَي 6:145 تبين أنه نص الآية
+      نفسها مقتبساً داخل الحديث (artifact)، والمادة الجوهرية هي المقتطف
+      المتني الفقهي غير القرآني الذي تثبته بصمته في ملف التصنيف الخاص.
+
+selected_case:
+  id: B02B-CASE-6-145
+  verse: "6:145"
+  tafsir_coverage: "5/5 (baghawy 4500, katheer 5355, moyassar 524, saadi 3213, tabary 10851 chars)"
+  usul_sections: ["w2-h2-017 (الحظر والإباحة)", "waraqat_w1_chapter-016"]
+  rule_sketch: "الأصل في الأشياء الإباحة إلا ما حظره الشرع؛ استصحاب الأصل عند عدم الدليل الشرعي"
+  hadith_witness:
+    status: CANDIDATE_MATCH
+    detail: >
+      مقتطف متني غير قرآني (10 كلمات) متطابق: tafsir:tafsir_ibn_kathir:6:145 ↔
+      openiti:0458Bayhaqi.SunanKubra L144309؛ نص المقتطف وبصمته sha256 في
+      ملف التصنيف الخاص فقط.
+    identity_established: false
+  runner_up:
+    id: B02B-CASE-49-6
+    verse: "49:6"
+    usul_sections: ["w2-h2-015 (الأخبار)", "waraqat_w1_chapter-014"]
+    witness: "مقتطف متني غير قرآني (10 كلمات، أسماء/مضطلع): katheer ↔ Bayhaqi L130506؛ البصمة في ملف التصنيف الخاص"
+    reason_kept: "إيصالاته مجمدة جاهزة لحالة ثانية متعددة الحالات في اختبار Evidence Graph"
+  selection_reason: >
+    6:145 أعلى نوافذ روائية (23 مقابل 12)، وشاهدها مقتطف متني فقهي لا مجرد
+    أسماء أسانيد، وقرنتها القاعدة الأصولية «الأصل في الأشياء الإباحة» بالقرن
+    المباشر. اختيار 5:87 رُفض لأن مرشحاته الأربع كلها artifacts نص قرآني.
+
+scope:
+  in_scope:
+    - "تشغيل المراحل الخمس على المصادر المثبتة محلياً فقط"
+    - "إيصالات metadata-only؛ لا نصوص مصادر إلى GitHub"
+    - "إعلان فجوة Fiqh F0.0 صراحة إن لم يُنفذ مرحلة فقهية حقيقية"
+  out_of_scope:
+    - "تعديل عقود P0 أو VERSION.yaml"
+    - "أي مساس بـ H3.9.2 المجمدة أو مجموعات holdout أو 158 قراراً معلقاً"
+    - "ادعاء هوية حديث أو درجة أو حكم فقهي"
+
+success_criteria:
+  - "حالة واحدة مثبتة المصادر ببصمات sha256 لكل مدخل"
+  - "سجل تشغيل قابل للتكرار (أوامر + إيصالات refuses-overwrite)"
+  - "بيان فجوات فعلي: CANDIDATE_MATCH/NO_MATCH + diagnostics، وF0.0 إن لزم"
+  - "حزمة التسليم الخماسية عند إغلاق الـ Slice"
+
+package_status_2026-10-30:
+  stages_executed: [QURAN_TAFSIR, HADITH_HSEARCH01, USUL_U01_TRACE, FIQH_F00_GAP]
+  tests: "232 tests pass / 12 suites (core.tests engine-relevant)"
+  package_files: [task.yaml, source-manifest.json, evidence-receipt.json, test-report.json, handoff.md]
+  redaction_scan: "clean after sanitization (no private paths, no source text)"
+  next: "PR to GitHub after final review"
+
+strict_gate_v3_2026-10-30:
+  instruction_source: "architect directives after B02-A merge (baseline 5306410)"
+  conditions:
+    a_textual_match: "PASS لـ 6:145 و49:6؛ FAIL لـ 16:43 (صفر مرشحات)"
+    b_semantic_linkage_from_sources: >
+      لا آلية اعتماد منفذة خارج تجربة الأمر المقفلة (USUL_RULE_OUT_OF_SCOPE).
+      أفضل دليل متاح: مرسسات مصطلحات مشتركة مثبتة البصمات (clitic-tolerant)
+      في gate-semantic-bridge-v1.json — 6:145 (الاصل 2w + اباحته 1w)،
+      49:6 (الخبر 4w + الصدق 1w)، 16:43 (العلم 2w). معجمي فقط، غير معتمد.
+    c_four_source_completeness: >
+      PASS في إيصالات v2 (source_unavailable=[] و54,599 كتلة = الأربعة؛
+      run_hsearch الفعلي وليس محول B01 للإشارات فقط).
+  verdict: REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR
+  no_bar_lowered: true
+  verdict_receipt: "selection-verdict-v3.json (private workspace)"
+  fiqh_f01_run: "stage-fiqh-f01-run-v1.json — PARTIAL / USUL_APPLICATION_NOT_EXECUTED"
+  reframing: >
+    إطارات 6:145 و49:6 محفوظة كمرشحين بحثيين غير معتمدين؛ إيصالات المراحل
+    تبقى أدلة بحث صالحة. اختيار الحالة رُفض ولا يُدّعى؛ المسار B02-C قد
+    يشغّل تجربة محددة مع حمل حالة الارتباط كفجوة دائمة، أو تُصمم آلية
+    اعتماد دلالي جديدة (نطاق B02-A/B02-C).
+
+handoff_package:
+  files: [task.yaml, source-manifest.json, evidence-receipt.json, test-report.json, handoff.md]
+  note: >
+    مخططات حزمة التسليم غير معرّفة بعد على قناة GitHub (لا task.yaml ولا
+    evidence-receipt في المستودع). سأسلّم وفق أفضل تقدير محلي، ويُعاير
+    عند تثبيت المخطط المشترك في B02-A/C.
