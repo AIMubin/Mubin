@@ -31,6 +31,18 @@
 > الإيصالات: `b02c-kernel-receipt-6-145-v1.json` +
 > `b02c-diagnostic-run-v1.json`.
 >
+> **إضافة B02-C.2 (main @ `217de11` — Source-Bound Diagnostic Replay):**
+> أُعيد التشغيل مع `usul.bind_source_spans`: **4 مقاطع ورقات مثبتة
+> بالبايت** (بصمة الملف الكامل + بصمة المقطع + إزاحات خام) → 4 مقابض
+> `ev.usul.*` داخل نتائج النواة، وfiqh انتقل من UNDETERMINED إلى
+> **PARTIAL** بكلتا القولين مربوطين بالمقابض (33 مرجع دليل) مع بقاء
+> `opinion_source_attribution_verified=false` و
+> `source_claims_verified=false` و`juristic_conclusion=null`
+> و`SOURCE_SPAN_MATCH_NOT_OPINION_ATTRIBUTION`. حكم بوابة الاختيار
+> لم يتغير، وحالة MACHINE_SUPPORTED لم تتحول لاعتماد علمي، وإيصالات v1
+> لم تُمس. الإيصالات: `b02c2-kernel-receipt-6-145-v1.json` +
+> `b02c2-diagnostic-run-v1.json`.
+>
 > **إضافة عقد الربط الدلالي (P2 — main @ `a68bc20`، PR #130):** شُغّل
 > `evaluate_research_link` على مصادر مثبتة بأربع حالات: **6:145 وساطة
 > تفسيرية → `MACHINE_SUPPORTED_RESEARCH_ONLY`** (مرسسة تفسيرية بايتية على

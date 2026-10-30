@@ -1,0 +1,605 @@
+{
+ "case_id": "b02c2.diagnostic.6-145",
+ "contract_version": "engine-contract/1.0",
+ "methodology_profile_id": "mubin.waraqat.b02b.reading",
+ "source_snapshot_ids": [
+  "mubin.local.quran-tafsir-db",
+  "mubin.local.quran-snapshot-partial-6-145",
+  "mubin.local.waraqat-w2-h2-017",
+  "mubin.local.waraqat-w1-ch16",
+  "mubin.local.waraqat-w2-h2-015"
+ ],
+ "status": "PARTIAL",
+ "nodes": [
+  {
+   "node_id": "b02c2.us1",
+   "result": {
+    "contract_version": "engine-contract/1.0",
+    "request_id": "b02c2.us1",
+    "engine": "usul",
+    "engine_version": "usul-source-bridge/0.1",
+    "status": "OK",
+    "findings": [
+     {
+      "kind": "USUL_RAW_SOURCE_SPAN",
+      "source_id": "mubin.local.waraqat-w2-h2-017",
+      "rule_id": "usul.waraqat.aslu-ashya-hadr",
+      "source_sha256": "3236ede5cdfbe5c6db24559f2ff31c6680b8d4ff65f6b58eca11696822a47a30",
+      "span_sha256": "c8af8b382fa3c1451e6290c74b0e2ea3e1614b73384a885013265d3c545b286e",
+      "start_byte": 142,
+      "end_byte": 252,
+      "source_authenticated": false,
+      "source_semantics_verified": false,
+      "opinion_attributed": false,
+      "synthetic_fixture": false,
+      "source_text_included": false
+     },
+     {
+      "kind": "USUL_RAW_SOURCE_SPAN",
+      "source_id": "mubin.local.waraqat-w2-h2-017",
+      "rule_id": "usul.waraqat.aslu-ashya-ibaha",
+      "source_sha256": "3236ede5cdfbe5c6db24559f2ff31c6680b8d4ff65f6b58eca11696822a47a30",
+      "span_sha256": "d185203cebe85f31899cd54e84b2fb6d8929da010166dc7b5bf2d5e2a7b7cf03",
+      "start_byte": 492,
+      "end_byte": 637,
+      "source_authenticated": false,
+      "source_semantics_verified": false,
+      "opinion_attributed": false,
+      "synthetic_fixture": false,
+      "source_text_included": false
+     },
+     {
+      "kind": "USUL_RAW_SOURCE_SPAN",
+      "source_id": "mubin.local.waraqat-w1-ch16",
+      "rule_id": "usul.waraqat.aslu-ashya-hadr",
+      "source_sha256": "c4a7c6a288dee71b3c3b295c698fcb1ff642eb3a4478720dbede7bae7b029aae",
+      "span_sha256": "1ae0f2961e829e7416333672c08c29a9904f0b124c212460cf781d067a8868c3",
+      "start_byte": 98,
+      "end_byte": 176,
+      "source_authenticated": false,
+      "source_semantics_verified": false,
+      "opinion_attributed": false,
+      "synthetic_fixture": false,
+      "source_text_included": false
+     },
+     {
+      "kind": "USUL_RAW_SOURCE_SPAN",
+      "source_id": "mubin.local.waraqat-w1-ch16",
+      "rule_id": "usul.waraqat.aslu-ashya-ibaha",
+      "source_sha256": "c4a7c6a288dee71b3c3b295c698fcb1ff642eb3a4478720dbede7bae7b029aae",
+      "span_sha256": "c532986a1f63df5d14337ddb827cfc89d6cf29f942dcb01f5ed0ab2586962881",
+      "start_byte": 343,
+      "end_byte": 442,
+      "source_authenticated": false,
+      "source_semantics_verified": false,
+      "opinion_attributed": false,
+      "synthetic_fixture": false,
+      "source_text_included": false
+     }
+    ],
+    "evidence_refs": [
+     "ev.usul.3236ede5cdfbe5c6db24559f.142.252.c8af8b382fa3c1451e6290c7",
+     "ev.usul.3236ede5cdfbe5c6db24559f.492.637.d185203cebe85f31899cd54e",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.98.176.1ae0f2961e829e7416333672",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.343.442.c532986a1f63df5d14337ddb"
+    ],
+    "uncertainties": [
+     "SOURCE_BYTE_FIDELITY_ONLY_NO_JURISTIC_ATTRIBUTION"
+    ],
+    "errors": [],
+    "provenance": {
+     "snapshot_ids": [
+      "mubin.local.quran-tafsir-db",
+      "mubin.local.quran-snapshot-partial-6-145",
+      "mubin.local.waraqat-w2-h2-017",
+      "mubin.local.waraqat-w1-ch16",
+      "mubin.local.waraqat-w2-h2-015"
+     ]
+    },
+    "trace_id": "b02c2.us1"
+   },
+   "duration_ms": 4.034
+  },
+  {
+   "node_id": "b02c2.q1",
+   "result": {
+    "contract_version": "engine-contract/1.0",
+    "request_id": "b02c2.q1",
+    "engine": "quran",
+    "engine_version": "q01/0.1",
+    "status": "OK",
+    "findings": [
+     {
+      "reference": "6:145",
+      "source_id": "external:tafsircenter-db-derivative",
+      "text_sha256": "ff61ff3b937022a0b6469ff149f49cf8ab1467ab21c4b91599d45515515fe12f",
+      "raw_snapshot_sha256": "4b0845b26758ad4c13a7e328f954f2756c34caffe01852ff61641b7f3eace087",
+      "source_authenticated": false,
+      "synthetic_fixture": false,
+      "text_included": false,
+      "kind": "QURAN_VERSE_COORDINATE"
+     }
+    ],
+    "evidence_refs": [
+     "ev.quran.6.145.ff61ff3b937022a0b6469ff1"
+    ],
+    "uncertainties": [],
+    "errors": [],
+    "provenance": {
+     "snapshot_ids": [
+      "mubin.local.quran-tafsir-db",
+      "mubin.local.quran-snapshot-partial-6-145",
+      "mubin.local.waraqat-w2-h2-017",
+      "mubin.local.waraqat-w1-ch16",
+      "mubin.local.waraqat-w2-h2-015"
+     ]
+    },
+    "trace_id": "b02c2.q1"
+   },
+   "duration_ms": 0.743
+  },
+  {
+   "node_id": "b02c2.t1",
+   "result": {
+    "contract_version": "engine-contract/1.0",
+    "request_id": "b02c2.t1",
+    "engine": "tafsir",
+    "engine_version": "tafsir-t03/0.1",
+    "status": "OK",
+    "findings": [
+     {
+      "reference": "6:145",
+      "work_id": "tafsir_baghawi",
+      "passage_count": 17,
+      "candidate_count": 17,
+      "display_status": "SOURCE_TEXT_UNVERIFIED_EDITION",
+      "synthetic_fixture": false,
+      "scholarly_verified": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "work_id": "tafsir_ibn_kathir",
+      "passage_count": 24,
+      "candidate_count": 38,
+      "display_status": "SOURCE_TEXT_UNVERIFIED_EDITION",
+      "synthetic_fixture": false,
+      "scholarly_verified": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "work_id": "tafsir_muyassar",
+      "passage_count": 3,
+      "candidate_count": 3,
+      "display_status": "SOURCE_TEXT_UNVERIFIED_EDITION",
+      "synthetic_fixture": false,
+      "scholarly_verified": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "work_id": "tafsir_saadi",
+      "passage_count": 9,
+      "candidate_count": 12,
+      "display_status": "SOURCE_TEXT_UNVERIFIED_EDITION",
+      "synthetic_fixture": false,
+      "scholarly_verified": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "work_id": "tafsir_tabari",
+      "passage_count": 75,
+      "candidate_count": 75,
+      "display_status": "SOURCE_TEXT_UNVERIFIED_EDITION",
+      "synthetic_fixture": false,
+      "scholarly_verified": false,
+      "text_included": false
+     }
+    ],
+    "evidence_refs": [
+     "tafsir:tafsir_baghawi:6:145:b8e69afd67f2638af3f3c5f02e455589929f9b87f4be3ba485be5edef5ebe2c2",
+     "tafsir:tafsir_ibn_kathir:6:145:1cf4340cca116c6c5b212455796de0b15fb23ef1b851f96121fd402cc7e6a7fc",
+     "tafsir:tafsir_muyassar:6:145:1e14ff941eb8e8bde35880ba65114528e132880530c627ab9ed64017fd9fc062",
+     "tafsir:tafsir_saadi:6:145:986392b51867fe89c1766a0c715f7619fcab7ec97b27b537f1ff04a88abe0b9c",
+     "tafsir:tafsir_tabari:6:145:154872b4b7735651a4b3dd2ed2f25683fa4ef033c80dfaa5eb6497a0bba02425"
+    ],
+    "uncertainties": [],
+    "errors": [],
+    "provenance": {
+     "snapshot_ids": [
+      "mubin.local.quran-tafsir-db",
+      "mubin.local.quran-snapshot-partial-6-145",
+      "mubin.local.waraqat-w2-h2-017",
+      "mubin.local.waraqat-w1-ch16",
+      "mubin.local.waraqat-w2-h2-015"
+     ]
+    },
+    "trace_id": "b02c2.t1"
+   },
+   "duration_ms": 418.626
+  },
+  {
+   "node_id": "b02c2.h1",
+   "result": {
+    "contract_version": "engine-contract/1.0",
+    "request_id": "b02c2.h1",
+    "engine": "hadith",
+    "engine_version": "hsearch01/0.1",
+    "status": "OK",
+    "findings": [
+     {
+      "reference": "6:145",
+      "mention_id": "hm:8d0ae5b61aee3f55d20219d226e8847afe8163a3",
+      "mention_type": "MAWQUF",
+      "passage_id": "interp:2b22579d3cc3773e2a854ac2f960b1b78c745c9d",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:5f12c21a5f149bf78b8bdee54ee30f3bed182f77",
+      "mention_type": "MAQTU",
+      "passage_id": "interp:ddacbcc6827194c7e3b03f88653e80a323650bad",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:d07e5d3ea29a5c8d920235317d5ae3b56f851b15",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:57fd6cc85923589dd3788030b12d364732538f72",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:b46042365adf6e54662371f77715b32e4e9e07c0",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:57fd6cc85923589dd3788030b12d364732538f72",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:4f1107045808dda738a17088de5b9abcc56e7236",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:57fd6cc85923589dd3788030b12d364732538f72",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:92136bad24ee326a56ad786df26bc9eea612d269",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:5ff63083bf4fba5a760159315fc23612c290c366",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:c902b0bd10d54184d571b05aab705061d7fe8dda",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:5ff63083bf4fba5a760159315fc23612c290c366",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:e2c07d568da4d0b44904600e036c230d065ef457",
+      "mention_type": "MARFU",
+      "passage_id": "interp:5ff63083bf4fba5a760159315fc23612c290c366",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:1e982aa9251ea9714d19a25731a62fe9ff514dc3",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:660b83c75407903df0ae859ac612b0e96f8a343c",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:66aa3e65e4813f06c81aa7e0abdbce5f31e0d1bb",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:660b83c75407903df0ae859ac612b0e96f8a343c",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:6e20d85a020ca7b6218d4b4ab8440a8512da9b02",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:660b83c75407903df0ae859ac612b0e96f8a343c",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:4ed98d4f55539bd3c9ce9928302415067d0f5361",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:660b83c75407903df0ae859ac612b0e96f8a343c",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:a361ca7259b647b54865f9c6dcb0f0d274e1c56b",
+      "mention_type": "MAWQUF",
+      "passage_id": "interp:660b83c75407903df0ae859ac612b0e96f8a343c",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:b55fad1be2e06a4a40057ce371166ab738536094",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:248b324959ac20f6a21a99f75222b56747f1ba18",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:9599b4ceee350eb501dc6ae2d19ff47cbd8e80fe",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:248b324959ac20f6a21a99f75222b56747f1ba18",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:aad9c2986b615fa997898fe8a7d77dd24c9345d9",
+      "mention_type": "MAWQUF",
+      "passage_id": "interp:248b324959ac20f6a21a99f75222b56747f1ba18",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:5ba8b6868217305b897d30fbdebeb0fc77f82365",
+      "mention_type": "MARFU",
+      "passage_id": "interp:f281ad126fc7e5292c7678ce0153015bd5b51a7b",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:2f44019f6ff52569cecc769842dba3066f141e83",
+      "mention_type": "MAWQUF",
+      "passage_id": "interp:fca8fc8479dac6292675e8048bc2a45c6c1741cb",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:bc99d5e73ee6602b6c73f81accfe3347d3e8bddd",
+      "mention_type": "UNDETERMINED",
+      "passage_id": "interp:6ca90c5ca397212405f4dd40a0e8d9387c1ba885",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:ea04540e16ca5b3062073e707750c00d417b201c",
+      "mention_type": "MAQTU",
+      "passage_id": "interp:111d90a4cf704fe0cef92db3a4b252a78a6d056d",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:7b9f516ef4693f4216998b259ba139a7a0dabfec",
+      "mention_type": "MAQTU",
+      "passage_id": "interp:eb5f5a452dd3233bc358d22e91387756ffb2e0df",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:af297f6f371f858db1114799069eb63afafe9e7a",
+      "mention_type": "MAQTU",
+      "passage_id": "interp:795bb62f2062ea9e8a180fbf23b5c802c0eed09c",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     },
+     {
+      "reference": "6:145",
+      "mention_id": "hm:43621cc3d7c5d69bbe3d8ede16b4cded81eeda43",
+      "mention_type": "MAQTU",
+      "passage_id": "interp:960cba60ad7c911dd68b5dbf6635718f6a170338",
+      "candidate_only": true,
+      "grade_assigned": false,
+      "text_included": false
+     }
+    ],
+    "evidence_refs": [
+     "hm:8d0ae5b61aee3f55d20219d226e8847afe8163a3",
+     "hm:5f12c21a5f149bf78b8bdee54ee30f3bed182f77",
+     "hm:d07e5d3ea29a5c8d920235317d5ae3b56f851b15",
+     "hm:b46042365adf6e54662371f77715b32e4e9e07c0",
+     "hm:4f1107045808dda738a17088de5b9abcc56e7236",
+     "hm:92136bad24ee326a56ad786df26bc9eea612d269",
+     "hm:c902b0bd10d54184d571b05aab705061d7fe8dda",
+     "hm:e2c07d568da4d0b44904600e036c230d065ef457",
+     "hm:1e982aa9251ea9714d19a25731a62fe9ff514dc3",
+     "hm:66aa3e65e4813f06c81aa7e0abdbce5f31e0d1bb",
+     "hm:6e20d85a020ca7b6218d4b4ab8440a8512da9b02",
+     "hm:4ed98d4f55539bd3c9ce9928302415067d0f5361",
+     "hm:a361ca7259b647b54865f9c6dcb0f0d274e1c56b",
+     "hm:b55fad1be2e06a4a40057ce371166ab738536094",
+     "hm:9599b4ceee350eb501dc6ae2d19ff47cbd8e80fe",
+     "hm:aad9c2986b615fa997898fe8a7d77dd24c9345d9",
+     "hm:5ba8b6868217305b897d30fbdebeb0fc77f82365",
+     "hm:2f44019f6ff52569cecc769842dba3066f141e83",
+     "hm:bc99d5e73ee6602b6c73f81accfe3347d3e8bddd",
+     "hm:ea04540e16ca5b3062073e707750c00d417b201c",
+     "hm:7b9f516ef4693f4216998b259ba139a7a0dabfec",
+     "hm:af297f6f371f858db1114799069eb63afafe9e7a",
+     "hm:43621cc3d7c5d69bbe3d8ede16b4cded81eeda43"
+    ],
+    "uncertainties": [
+     "HADITH_IDENTITY_AND_GRADE_NOT_VERIFIED"
+    ],
+    "errors": [],
+    "provenance": {
+     "snapshot_ids": [
+      "mubin.local.quran-tafsir-db",
+      "mubin.local.quran-snapshot-partial-6-145",
+      "mubin.local.waraqat-w2-h2-017",
+      "mubin.local.waraqat-w1-ch16",
+      "mubin.local.waraqat-w2-h2-015"
+     ]
+    },
+    "trace_id": "b02c2.h1"
+   },
+   "duration_ms": 394.742
+  },
+  {
+   "node_id": "b02c2.u2",
+   "result": {
+    "contract_version": "engine-contract/1.0",
+    "request_id": "b02c2.u2",
+    "engine": "usul",
+    "engine_version": "usul-u01/0.1",
+    "status": "OK",
+    "findings": [
+     {
+      "rule_id": "usul.b02b.rule.hadr-asl",
+      "application_status": "BLOCKED_BY_OBJECTION",
+      "execution_scope": "ONE_STEP_PROPOSITIONAL_SIMULATION",
+      "scholarly_verified": false
+     },
+     {
+      "rule_id": "usul.b02b.rule.ibaha-asl",
+      "application_status": "BLOCKED_BY_OBJECTION",
+      "execution_scope": "ONE_STEP_PROPOSITIONAL_SIMULATION",
+      "scholarly_verified": false
+     },
+     {
+      "rule_id": "usul.b02b.rule.control",
+      "application_status": "UNDETERMINED",
+      "execution_scope": "ONE_STEP_PROPOSITIONAL_SIMULATION",
+      "scholarly_verified": false
+     }
+    ],
+    "evidence_refs": [],
+    "uncertainties": [
+     "ONE_STEP_PROPOSITIONAL_SIMULATION_NOT_JURISTIC_REASONING"
+    ],
+    "errors": [],
+    "provenance": {
+     "snapshot_ids": [
+      "mubin.local.quran-tafsir-db",
+      "mubin.local.quran-snapshot-partial-6-145",
+      "mubin.local.waraqat-w2-h2-017",
+      "mubin.local.waraqat-w1-ch16",
+      "mubin.local.waraqat-w2-h2-015"
+     ]
+    },
+    "trace_id": "b02c2.u2"
+   },
+   "duration_ms": 0.831
+  },
+  {
+   "node_id": "b02c2.f1",
+   "result": {
+    "contract_version": "engine-contract/1.0",
+    "request_id": "b02c2.f1",
+    "engine": "fiqh",
+    "engine_version": "fiqh-f01/0.1",
+    "status": "PARTIAL",
+    "findings": [
+     {
+      "case_id": "b02c2.diagnostic.6-145",
+      "opinion_refs": [
+       "usul.b02b.view.hadr-asl",
+       "usul.b02b.view.ibaha-asl"
+      ],
+      "linked_evidence_count": 33,
+      "authority": "RESEARCH_ONLY",
+      "juristic_conclusion": null,
+      "source_claims_verified": false,
+      "opinion_source_attribution_verified": false
+     }
+    ],
+    "evidence_refs": [
+     "ev.usul.3236ede5cdfbe5c6db24559f.142.252.c8af8b382fa3c1451e6290c7",
+     "ev.usul.3236ede5cdfbe5c6db24559f.492.637.d185203cebe85f31899cd54e",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.98.176.1ae0f2961e829e7416333672",
+     "ev.usul.c4a7c6a288dee71b3c3b295c.343.442.c532986a1f63df5d14337ddb",
+     "ev.quran.6.145.ff61ff3b937022a0b6469ff1",
+     "tafsir:tafsir_baghawi:6:145:b8e69afd67f2638af3f3c5f02e455589929f9b87f4be3ba485be5edef5ebe2c2",
+     "tafsir:tafsir_ibn_kathir:6:145:1cf4340cca116c6c5b212455796de0b15fb23ef1b851f96121fd402cc7e6a7fc",
+     "tafsir:tafsir_muyassar:6:145:1e14ff941eb8e8bde35880ba65114528e132880530c627ab9ed64017fd9fc062",
+     "tafsir:tafsir_saadi:6:145:986392b51867fe89c1766a0c715f7619fcab7ec97b27b537f1ff04a88abe0b9c",
+     "tafsir:tafsir_tabari:6:145:154872b4b7735651a4b3dd2ed2f25683fa4ef033c80dfaa5eb6497a0bba02425",
+     "hm:8d0ae5b61aee3f55d20219d226e8847afe8163a3",
+     "hm:5f12c21a5f149bf78b8bdee54ee30f3bed182f77",
+     "hm:d07e5d3ea29a5c8d920235317d5ae3b56f851b15",
+     "hm:b46042365adf6e54662371f77715b32e4e9e07c0",
+     "hm:4f1107045808dda738a17088de5b9abcc56e7236",
+     "hm:92136bad24ee326a56ad786df26bc9eea612d269",
+     "hm:c902b0bd10d54184d571b05aab705061d7fe8dda",
+     "hm:e2c07d568da4d0b44904600e036c230d065ef457",
+     "hm:1e982aa9251ea9714d19a25731a62fe9ff514dc3",
+     "hm:66aa3e65e4813f06c81aa7e0abdbce5f31e0d1bb",
+     "hm:6e20d85a020ca7b6218d4b4ab8440a8512da9b02",
+     "hm:4ed98d4f55539bd3c9ce9928302415067d0f5361",
+     "hm:a361ca7259b647b54865f9c6dcb0f0d274e1c56b",
+     "hm:b55fad1be2e06a4a40057ce371166ab738536094",
+     "hm:9599b4ceee350eb501dc6ae2d19ff47cbd8e80fe",
+     "hm:aad9c2986b615fa997898fe8a7d77dd24c9345d9",
+     "hm:5ba8b6868217305b897d30fbdebeb0fc77f82365",
+     "hm:2f44019f6ff52569cecc769842dba3066f141e83",
+     "hm:bc99d5e73ee6602b6c73f81accfe3347d3e8bddd",
+     "hm:ea04540e16ca5b3062073e707750c00d417b201c",
+     "hm:7b9f516ef4693f4216998b259ba139a7a0dabfec",
+     "hm:af297f6f371f858db1114799069eb63afafe9e7a",
+     "hm:43621cc3d7c5d69bbe3d8ede16b4cded81eeda43"
+    ],
+    "uncertainties": [
+     "USUL_APPLICATION_NOT_EXECUTED",
+     "SOURCE_SPAN_MATCH_NOT_OPINION_ATTRIBUTION"
+    ],
+    "errors": [],
+    "provenance": {
+     "snapshot_ids": [
+      "mubin.local.quran-tafsir-db",
+      "mubin.local.quran-snapshot-partial-6-145",
+      "mubin.local.waraqat-w2-h2-017",
+      "mubin.local.waraqat-w1-ch16",
+      "mubin.local.waraqat-w2-h2-015"
+     ]
+    },
+    "trace_id": "b02c2.f1"
+   },
+   "duration_ms": 418.65
+  }
+ ],
+ "synthetic_acceptance": false
+}
