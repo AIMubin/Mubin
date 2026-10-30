@@ -25,7 +25,7 @@ gate for a metadata-only research pull request.
 ```bash
 python -m pip install -r core/requirements-test.txt
 python -m unittest qa.tests.test_b02b_handoff -v
-python qa/check_b02b_handoff.py
+python -m qa.check_b02b_handoff
 ```
 
 On a code-only branch without a `research/b02b/` package, the workflow
