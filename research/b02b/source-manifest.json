@@ -1,0 +1,77 @@
+{
+ "contract": "mubin-b02b-source-manifest-v0.1",
+ "batch": "MUBIN-SYS-B02-B",
+ "case_id": "B02B-CASE-6-145",
+ "generated_at": "2026-10-30T12:02:28.224726+03:00",
+ "git_head_baseline": "953ffd703e7df285cd062a316753c9e665e33169",
+ "policy": "internal_research_only; publication separately gated; no text shipped",
+ "sources": [
+  {
+   "id": "qurantafsir:linked-db",
+   "kind": "sqlite_multi_corpus",
+   "sha256": "a1bd1811ab1b3a4a0373b6499f916f8c379df64ad77fbaf1988e08d34a1814a0",
+   "upstream_declared_sha256": "10e61f615ab5e6a3440e8ecc8ba1dc2273d12cd9048752760fe53a44d191cc27",
+   "pin_matched": true,
+   "rows": {
+    "verses": 6236,
+    "tafsirs": 31180
+   },
+   "tafsir_works": [
+    "baghawy",
+    "katheer",
+    "moyassar",
+    "saadi",
+    "tabary"
+   ]
+  },
+  {
+   "id": "quran:verse-row:6:145",
+   "kind": "verse_row",
+   "sha256": "ff61ff3b937022a0b6469ff149f49cf8ab1467ab21c4b91599d45515515fe12f",
+   "chars": 166
+  },
+  {
+   "id": "waraqat:w2:h2-017",
+   "kind": "usul_section_extract",
+   "sha256": "3236ede5cdfbe5c6db24559f2ff31c6680b8d4ff65f6b58eca11696822a47a30",
+   "bytes": 821,
+   "statements_pinned": [
+    "view_hadr_asl",
+    "view_ibaha_asl"
+   ]
+  },
+  {
+   "id": "waraqat:w1:chapter-016",
+   "kind": "usul_section_extract",
+   "sha256": "c4a7c6a288dee71b3c3b295c698fcb1ff642eb3a4478720dbede7bae7b029aae",
+   "bytes": 579,
+   "statements_pinned": [
+    "view_hadr_asl",
+    "view_ibaha_asl"
+   ]
+  }
+ ],
+ "hadith_sources": [
+  {
+   "id": "openiti:0279Tirmidhi.Sunan",
+   "blob_sha_verified_by_pipeline": true,
+   "verification": "git-blob sha verified on load by hsearch pipeline"
+  },
+  {
+   "id": "openiti:0458Bayhaqi.SunanKubra",
+   "blob_sha_verified_by_pipeline": true,
+   "verification": "git-blob sha verified on load by hsearch pipeline"
+  },
+  {
+   "id": "openiti:0762IbnYusufZaylaci.NasbRaya",
+   "blob_sha_verified_by_pipeline": true,
+   "verification": "git-blob sha verified on load by hsearch pipeline"
+  },
+  {
+   "id": "openiti:1353IbnCabdRahimMubarakfuri.TuhfatAhwadhi",
+   "blob_sha_verified_by_pipeline": true,
+   "verification": "git-blob sha verified on load by hsearch pipeline"
+  }
+ ],
+ "rights_status": "legal_review_pending (all sources)"
+}

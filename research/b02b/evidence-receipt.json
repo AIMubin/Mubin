@@ -1,0 +1,98 @@
+{
+ "contract": "mubin-b02b-evidence-receipt-v0.1",
+ "batch": "MUBIN-SYS-B02-B",
+ "case_id": "B02B-CASE-6-145",
+ "generated_at": "2026-10-30T12:02:28.224726+03:00",
+ "git_head_baseline": "953ffd703e7df285cd062a316753c9e665e33169",
+ "selected_case": {
+  "verse": "6:145",
+  "usul_rule_topic": "aslu-ashya (hadr vs ibaha) + istishab",
+  "tafsir_coverage": "5/5",
+  "witness": {
+   "status": "CANDIDATE_MATCH",
+   "kind": "non_quranic_10_word_matn_fragment",
+   "tafsir_work": "tafsir_ibn_kathir",
+   "hadith_source": "openiti:0458Bayhaqi.SunanKubra",
+   "witness_locator": "L144309",
+   "narration_identity_established": false
+  },
+  "runner_up": {
+   "case_id": "B02B-CASE-49-6",
+   "verse": "49:6",
+   "receipts_frozen": true
+  }
+ },
+ "stages_executed": [
+  {
+   "stage": "QURAN_TAFSIR",
+   "receipt": "stage-quran-tafsir-6-145-v1.json",
+   "payload_sha256": "26f1e0919c614febd9e9e8f152cbf08d95db56463cf1785ca1f4f646e39e6af2",
+   "summary": {
+    "passages_total": 128,
+    "works": 5
+   }
+  },
+  {
+   "stage": "HADITH_HSEARCH01",
+   "receipt": "hsearch-6-145-gate-v2.json",
+   "payload_sha256": "875adf7c6188c28969cb4024e8f2e3541f90036922d626ed1c0a11f7100f826e",
+   "summary": {
+    "windows": 23,
+    "pinned_blocks": 54599,
+    "links": 23,
+    "links_by_status": {
+     "NO_MATCH": 21,
+     "CANDIDATE_MATCH": 2
+    },
+    "source_unavailable": []
+   }
+  },
+  {
+   "stage": "USUL_U01_TRACE",
+   "receipt": "stage-usul-6-145-v1.json",
+   "payload_sha256": "ba68815c33d64fa83adc40372c5973190b8ba4497256621a75f42f4cb7148033",
+   "summary": {
+    "rules_traced": 3,
+    "both_views_blocked_by_open_objections": true,
+    "tarjih_claimed": false,
+    "conclusions": "UNDETERMINED"
+   }
+  },
+  {
+   "stage": "FIQH_F00_GAP",
+   "receipt": "stage-fiqh-6-145-v1.json",
+   "payload_sha256": "bb2b1389719d3ffdfe748101a81dca00a74f3821666cd94a5bdc15f346b9cf0b",
+   "summary": {
+    "gap_declared": true,
+    "fiqh_output": null
+   }
+  }
+ ],
+ "gate_classification": {
+  "receipt": "gate-classification-v1.json (private workspace)",
+  "verse_6_145": {
+   "aligned": 2,
+   "narration_fragment_candidates": 1,
+   "verse_quote_artifacts": 1
+  }
+ },
+ "gaps_declared": [
+  {
+   "type": "fiqh_f00_no_engine"
+  },
+  {
+   "type": "usul_ut0123_stage05_08_chain_missing_for_w2_h2_017"
+  },
+  {
+   "type": "e2e_research_slice_question_fixed",
+   "detail": "engines.e2e.research_slice enforces a fixed QUESTION (amr/2:43); arbitrary-verse five-engine composition requires kernel-side extension (B02-A/B02-C)"
+  },
+  {
+   "type": "scan_v1_opening_probe_false_positives",
+   "detail": "documented; closing-confirm rule applied in gate"
+  }
+ ],
+ "text_included": false,
+ "scholarly_verified": false,
+ "juristic_inference_allowed": false
+}
