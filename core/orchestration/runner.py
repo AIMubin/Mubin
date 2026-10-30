@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import time
+import hashlib
 from core.contracts import CONTRACT_VERSION, ContractError, validate_request, validate_result
 from .plan import CasePlan
 
@@ -28,17 +29,34 @@ async def run_case(plan, registry, store=None):
 
     async def run_node(node):
         began = time.perf_counter()
+        if "_upstream" in node["inputs"]:
+            raise ContractError("PLAN_UPSTREAM_SPOOFING")
+        dependent = [await tasks[d] for d in node["depends_on"]]
+        digest = hashlib.sha256((plan.case_id + ":" + node["id"]).encode("utf-8")).hexdigest()
+        upstream = []
+        for item in dependent:
+            result = item["result"]
+            upstream.append({
+                "engine": result["engine"], "status": result["status"],
+                "evidence_refs": list(result["evidence_refs"]),
+                "synthetic": any(x.get("synthetic_fixture") is True or x.get("synthetic") is True
+                                 for x in result["findings"]),
+                "references": sorted({x["reference"] for x in result["findings"]
+                                      if type(x.get("reference")) is str}),
+            })
+        inputs = dict(node["inputs"])
+        if dependent:
+            inputs["_upstream"] = upstream
         request = {
             "contract_version": CONTRACT_VERSION, "request_id": node["id"],
             "case_id": plan.case_id, "engine": node["engine"], "operation": node["operation"],
-            "inputs": node["inputs"], "methodology_profile_id": plan.methodology_profile_id,
+            "inputs": inputs, "methodology_profile_id": plan.methodology_profile_id,
             "source_snapshot_ids": list(plan.source_snapshot_ids),
             "limits": {"timeout_ms": node["timeout_ms"], "max_results": node["max_results"]},
-            "idempotency_key": plan.case_id + ":" + node["id"],
+            "idempotency_key": "idem." + digest,
         }
         validate_request(request)
-        dependent = [await tasks[d] for d in node["depends_on"]]
-        if any(x["result"]["status"] != "OK" for x in dependent):
+        if any(x["result"]["status"] not in {"OK", "NO_MATCH"} for x in dependent):
             result = _result(request, "UNDETERMINED", "DEPENDENCY_NOT_OK")
         else:
             try:

@@ -39,6 +39,8 @@ class CasePlan:
                 raise PlanError("PLAN_NODE_IDENTITY_INVALID")
             if type(node["inputs"]) is not dict:
                 raise PlanError("PLAN_NODE_LIMITS_INVALID")
+            if "_upstream" in node["inputs"]:
+                raise PlanError("PLAN_UPSTREAM_SPOOFING")
             try:
                 canonical_inputs = json.dumps(node["inputs"], sort_keys=True, allow_nan=False,
                                              ensure_ascii=False, separators=(",", ":"))
