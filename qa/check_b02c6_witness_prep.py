@@ -112,6 +112,12 @@ def validate_view(rec, evidence):
         need(type(records) is list and len(records) == 4
              and type(probe.get("sources_with_hits")) is int,
              "WITNESS_PREP_PROBE_STRUCTURE_INVALID")
+        # Reject duplicated/unknown source identities before applying the
+        # Bayhaqi-specific evidence shape to any row.
+        source_ids = [row.get("source_id") if type(row) is dict else None
+                      for row in records]
+        need(len(set(source_ids)) == 4 and set(source_ids) == SOURCES,
+             "WITNESS_PREP_SOURCE_SET_INVALID")
         by_source = {}
         counted = 0
         for item in records:
