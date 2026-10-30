@@ -92,6 +92,18 @@
   "fiqh_f01_run": "stage-fiqh-f01-run-v1.json - PARTIAL / USUL_APPLICATION_NOT_EXECUTED",
   "no_bar_lowered": true
  },
+ "p0_projection_b02a": {
+  "public_view_file": "p0-projection-b02b-6-145-v1.json",
+  "contract": "mubin-b02a-p0-projection/1.0",
+  "status": "P0_STRUCTURALLY_VALID",
+  "private_bundle_sha256": "146bb2f17f31e1a1ad34116ee0aab9a699e29534fca9b341748d2d1eb956e88f",
+  "graph_sha256": "see public view file (recompute via verify_redacted_projection)",
+  "bundle_contents": {"sources": 2, "evidence": 4, "methodologies": 1,
+                      "claims": 3, "rules": 2, "inferences": 1,
+                      "objections": 2, "proofs": 1},
+  "honesty": "full bundle with excerpts stays in the private vault; both opposing statements encoded; open objections stand; conclusion and proof UNDETERMINED; P0 pass is structural only",
+  "verification": "verify_redacted_projection=True; verify_private_projection=True; tampered-edge and forged-excerpt negatives rejected (private run receipt p0-projection-run-v1.json)"
+ },
  "gaps_declared": [
   {
    "type": "fiqh_f00_no_engine"

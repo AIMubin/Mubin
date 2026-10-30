@@ -17,6 +17,16 @@
 > بحق: `PARTIAL / USUL_APPLICATION_NOT_EXECUTED`. لم تُخفض العتبة.
 > الإيصالات: `selection-verdict-v3.json`، `gate-semantic-bridge-v1.json`،
 > `stage-fiqh-f01-run-v1.json` (مساحة خاصة).
+>
+> **إضافة جسر B02-A:** بُنيت حزمة P0 حقيقية دنيا للجانب الأصولي المحفوظ
+> (2 مصادر، 4 أدلة بنصوصها الحرفية — خاصة، منهجية 1، قولان كقاعدتي
+> deduction مسودتين، استنتاج واحد خلاصته UNDETERMINED، اعتراضان مفتوحان
+> متقابلان، إثبان UNDETERMINED) → `validate_bundle` ناجح (0 مشاكل) →
+> `project_p0_bundle` أنتج عرضاً منقحاً بلا نصوص (16 عقدة/35 حافة) →
+> `verify_redacted_projection=True` و`verify_private_projection=True`
+> واختباران سلبيان رفضا تلاعب الحافة والنص المزور. العرض المنقح هنا:
+> `p0-projection-b02b-6-145-v1.json` (ملزم بـ`private_bundle_sha256`
+> في إيصال التشغيل الخاص). حزمة P0 الكاملة تبقى في الخزنة الخاصة.
 
 ## النتيجة
 
