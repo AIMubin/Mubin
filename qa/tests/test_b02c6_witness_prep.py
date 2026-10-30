@@ -30,13 +30,15 @@ def resign(obj):
 
 
 class WitnessPrepMetadataTests(unittest.TestCase):
-    def mutate(self, update, expected, *, resign_sha=True):
+    def mutate(self, update, expected, *, resign_sha=True,
+               synchronize_handoff=True):
         rec, evidence = (deepcopy(x) for x in load())
         update(rec, evidence)
         if resign_sha:
             resign(rec)
-            evidence["b02c6_witness_identity_prep"]["public_receipt_sha256"] = (
-                rec["evidence_payload_sha256"])
+            if synchronize_handoff:
+                evidence["b02c6_witness_identity_prep"]["public_receipt_sha256"] = (
+                    rec["evidence_payload_sha256"])
         with self.assertRaisesRegex(WitnessPrepError, expected):
             validate_view(rec, evidence)
 
@@ -123,7 +125,7 @@ class WitnessPrepMetadataTests(unittest.TestCase):
         self.mutate(
             lambda r,e: e["b02c6_witness_identity_prep"].update(
                 public_receipt_sha256="0"*64),
-            "HANDOFF_MISMATCH")
+            "HANDOFF_MISMATCH", synchronize_handoff=False)
 
     def test_strict_selection_cannot_be_promoted(self):
         self.mutate(
