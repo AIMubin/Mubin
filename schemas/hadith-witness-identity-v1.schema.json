@@ -68,16 +68,16 @@
             ]
           },
           "source_id": {
-            "$ref": "#/$defs/id"
+            "$ref": "#/$defs/source_token"
           },
           "work_id": {
-            "$ref": "#/$defs/id"
+            "$ref": "#/$defs/source_token"
           },
           "source_sha256": {
             "$ref": "#/$defs/sha"
           },
           "version_ref": {
-            "$ref": "#/$defs/id"
+            "$ref": "#/$defs/source_token"
           },
           "locator": {
             "type": "string",
@@ -143,6 +143,10 @@
           "$ref": "#/$defs/sha"
         }
       }
+    },
+    "source_token": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
     }
   }
 }
