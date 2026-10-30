@@ -36,7 +36,7 @@ jobs:
       - name: Test metadata gate negative cases
         run: python -m unittest qa.tests.test_b02b_handoff -v
       - name: Verify handoff when supplied by checkout
-        run: python qa/check_b02b_handoff.py --if-present
+        run: python -m qa.check_b02b_handoff --if-present
 
 # This CI has no access to the private Waraqat/Tafsir/Hadith sources or model
 # review receipts and never claims to authenticate them.
