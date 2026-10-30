@@ -6,6 +6,7 @@ on:
       - 'core/orchestration/**'
       - 'engines/fiqh/**'
       - 'schemas/engine-*-v1.schema.json'
+      - 'schemas/hadith-*-v1.schema.json'
       - 'evaluation/integration/**'
       - '.github/workflows/integration-kernel.yml'
   push:
@@ -15,6 +16,7 @@ on:
       - 'core/orchestration/**'
       - 'engines/fiqh/**'
       - 'schemas/engine-*-v1.schema.json'
+      - 'schemas/hadith-*-v1.schema.json'
       - 'evaluation/integration/**'
       - '.github/workflows/integration-kernel.yml'
   workflow_dispatch:
