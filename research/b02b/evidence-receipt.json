@@ -117,6 +117,29 @@
   ],
   "all_statuses_match_expectations": true
  },
+ "b02c_diagnostic_run": {
+  "kernel_receipt_file": "b02c-kernel-receipt-6-145-v1.json",
+  "diagnostic_receipt_file": "b02c-diagnostic-run-v1.json",
+  "kernel_status": "PARTIAL",
+  "nodes": {
+   "quran": "OK (1 finding, 1 evidence ref, external_unverified partial snapshot)",
+   "tafsir": "OK (5 works, 5 evidence ids)",
+   "hadith": "OK (23 mention-cue findings; cue windows only, identity/grade not verified)",
+   "usul": "OK (3 trace entries; both views blocked by open objections; 0 evidence refs by contract)",
+   "fiqh": "UNDETERMINED (INSUFFICIENT_EVIDENCE_FOR_REASONED_FINDING; OPINION_SOURCE_NOT_IN_UPSTREAM_EVIDENCE)"
+  },
+  "four_states": {
+   "engine_execution": "engineering measure recorded (PARTIAL)",
+   "evidence_chain": "established + missing links counted in diagnostic receipt",
+   "semantic_acceptance": "machine MACHINE_SUPPORTED_RESEARCH_ONLY; scholarly UNDETERMINED",
+   "fiqh_acceptance": "not verified; juristic_conclusion=null"
+  },
+  "carried_gaps": ["no kernel node ingests pinned usul sections",
+                   "kernel hadith is mention-cue only (full search = separate H-Search-01 receipt)",
+                   "fiqh opinion binding unsupported by kernel contracts",
+                   "case selection remains REJECTED under strict gate; diagnostic run only"],
+  "completed_inference_claimed": false
+ },
  "gaps_declared": [
   {
    "type": "fiqh_f00_no_engine"

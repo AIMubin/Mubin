@@ -1,0 +1,111 @@
+{
+ "contract": "mubin-b02c-diagnostic-run-v0.1",
+ "generated_at": "2026-10-30T14:46:07.166909+03:00",
+ "kernel_baseline": "main @ a68bc20 (A01 kernel + B01 adapters + B02-A + semantic link contract)",
+ "kernel_receipt": "b02c-kernel-receipt-6-145-v1.json",
+ "kernel_case_id": "b02c.diagnostic.6-145",
+ "kernel_status": "PARTIAL",
+ "kernel_nodes": [
+  {
+   "node": "b02c.q1",
+   "engine": "quran",
+   "status": "OK",
+   "findings": 1,
+   "evidence_refs": 1,
+   "uncertainties": [],
+   "duration_ms": 30.232
+  },
+  {
+   "node": "b02c.t1",
+   "engine": "tafsir",
+   "status": "OK",
+   "findings": 5,
+   "evidence_refs": 5,
+   "uncertainties": [],
+   "duration_ms": 394.222
+  },
+  {
+   "node": "b02c.h1",
+   "engine": "hadith",
+   "status": "OK",
+   "findings": 23,
+   "evidence_refs": 23,
+   "uncertainties": [
+    "HADITH_IDENTITY_AND_GRADE_NOT_VERIFIED"
+   ],
+   "duration_ms": 397.341
+  },
+  {
+   "node": "b02c.u1",
+   "engine": "usul",
+   "status": "OK",
+   "findings": 3,
+   "evidence_refs": 0,
+   "uncertainties": [
+    "ONE_STEP_PROPOSITIONAL_SIMULATION_NOT_JURISTIC_REASONING"
+   ],
+   "duration_ms": 0.693
+  },
+  {
+   "node": "b02c.f1",
+   "engine": "fiqh",
+   "status": "UNDETERMINED",
+   "findings": 0,
+   "evidence_refs": 29,
+   "uncertainties": [
+    "INSUFFICIENT_EVIDENCE_FOR_REASONED_FINDING",
+    "OPINION_SOURCE_NOT_IN_UPSTREAM_EVIDENCE"
+   ],
+   "duration_ms": 396.978
+  }
+ ],
+ "state_1_engine_execution": {
+  "measure": "engineering",
+  "quran": "OK",
+  "tafsir": "OK",
+  "hadith_mention_only": "OK",
+  "hadith_findings": 23,
+  "usul": "OK",
+  "fiqh": "UNDETERMINED",
+  "kernel_overall": "PARTIAL"
+ },
+ "state_2_evidence_chain": {
+  "established": [
+   "quran verse coordinate + digest",
+   "5 tafsir work evidence ids",
+   "23 mention-cue candidates (cue windows only)",
+   "usul trace entries (no evidence refs by contract)"
+  ],
+  "missing_or_gap": [
+   "kernel has no node ingesting pinned usul sections -> usul evidence_refs empty by contract",
+   "fiqh opinions could not be bound to upstream evidence (OPINION_SOURCE_NOT_IN_UPSTREAM_EVIDENCE)",
+   "kernel hadith node is mention-cue only; real four-source witness search lives in the separate H-Search-01 receipt hsearch-6-145-gate-v2.json"
+  ]
+ },
+ "state_3_semantic_acceptance": {
+  "machine_level": "MACHINE_SUPPORTED_RESEARCH_ONLY (sl-gate-v1.json; self-play, model_independence_established=false)",
+  "scholarly_level": "UNDETERMINED",
+  "contract": "mubin-semantic-link-research/1.0"
+ },
+ "state_4_fiqh_acceptance": {
+  "verified": false,
+  "kernel_fiqh": "UNDETERMINED",
+  "juristic_conclusion": null,
+  "note": "F0.1 assembly only; no ruling"
+ },
+ "carried_gaps": [
+  "no kernel node ingests pinned usul section sources",
+  "kernel hadith operation is mention-cue only (full search is a separate private receipt)",
+  "fiqh opinion binding to upstream evidence unsupported by kernel contracts",
+  "semantic linkage is machine-supported research only, scholarly acceptance remains UNDETERMINED",
+  "6:145 case selection remains REJECTED under the strict selection gate; this is a diagnostic run, not a selected-case integration"
+ ],
+ "claims": {
+  "completed_inference_claimed": false,
+  "selected_case_integration_claimed": false,
+  "scholarly_verified": false,
+  "juristic_inference_allowed": false
+ },
+ "text_included": false,
+ "evidence_payload_sha256": "459c8eb8da944a49a4b570ac3346f5363e188c0468c77abe41e5210fe3e9b5c4"
+}
