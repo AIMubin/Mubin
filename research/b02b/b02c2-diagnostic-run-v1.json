@@ -1,0 +1,104 @@
+{
+ "contract": "mubin-b02c2-source-bound-replay-v0.1",
+ "generated_at": "2026-10-30T16:16:37.938203+03:00",
+ "baseline": "main @ 217de11 (PR #129/#131/#132 merged)",
+ "directive": "MUBIN-SYS-B02-C.2 Source-Bound Diagnostic Replay",
+ "kernel_receipt": "b02c2-kernel-receipt-6-145-v1.json",
+ "kernel_case_id": "b02c2.diagnostic.6-145",
+ "kernel_status": "PARTIAL",
+ "kernel_nodes": [
+  {
+   "node": "b02c2.us1",
+   "engine": "usul",
+   "operation": null,
+   "status": "OK",
+   "findings": 4,
+   "evidence_refs": 4,
+   "uncertainties": [
+    "SOURCE_BYTE_FIDELITY_ONLY_NO_JURISTIC_ATTRIBUTION"
+   ]
+  },
+  {
+   "node": "b02c2.q1",
+   "engine": "quran",
+   "operation": null,
+   "status": "OK",
+   "findings": 1,
+   "evidence_refs": 1,
+   "uncertainties": []
+  },
+  {
+   "node": "b02c2.t1",
+   "engine": "tafsir",
+   "operation": null,
+   "status": "OK",
+   "findings": 5,
+   "evidence_refs": 5,
+   "uncertainties": []
+  },
+  {
+   "node": "b02c2.h1",
+   "engine": "hadith",
+   "operation": null,
+   "status": "OK",
+   "findings": 23,
+   "evidence_refs": 23,
+   "uncertainties": [
+    "HADITH_IDENTITY_AND_GRADE_NOT_VERIFIED"
+   ]
+  },
+  {
+   "node": "b02c2.u2",
+   "engine": "usul",
+   "operation": null,
+   "status": "OK",
+   "findings": 3,
+   "evidence_refs": 0,
+   "uncertainties": [
+    "ONE_STEP_PROPOSITIONAL_SIMULATION_NOT_JURISTIC_REASONING"
+   ]
+  },
+  {
+   "node": "b02c2.f1",
+   "engine": "fiqh",
+   "operation": null,
+   "status": "PARTIAL",
+   "findings": 1,
+   "evidence_refs": 33,
+   "uncertainties": [
+    "USUL_APPLICATION_NOT_EXECUTED",
+    "SOURCE_SPAN_MATCH_NOT_OPINION_ATTRIBUTION"
+   ]
+  }
+ ],
+ "closure_criteria": {
+  "pinned_usul_refs_inside_kernel_results": true,
+  "fiqh_binding_gap_measurable": {
+   "bound_opinions": 2,
+   "unbound_before_v1": 2,
+   "fiqh_status_v1": "UNDETERMINED",
+   "fiqh_status_v2": "PARTIAL",
+   "opinion_source_attribution_verified": false,
+   "note": "byte-consistency binding only; opinion attribution, semantic linkage and inference validity stay false/UNDETERMINED by contract"
+  }
+ },
+ "distinctions_preserved": {
+  "source_matching": "byte-level digest equality only",
+  "semantic_linkage": "separate contract; machine-supported research status only (sl-gate-v1.json)",
+  "opinion_attribution": false,
+  "inference_validity": "UNDETERMINED; usul simulation blocked by open objections; proof undetermined in P0 bundle"
+ },
+ "unchanged": {
+  "selection_gate_verdict": "REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR",
+  "machine_supported_status_is_scholarly": false,
+  "version_yaml_touched": false
+ },
+ "v1_receipts_untouched": true,
+ "claims": {
+  "completed_inference_claimed": false,
+  "scholarly_verified": false,
+  "juristic_inference_allowed": false,
+  "text_included": false
+ },
+ "evidence_payload_sha256": "ee0e2643443ab52de806eb432f80dcdc36a8169359e587e36c768275b360118c"
+}

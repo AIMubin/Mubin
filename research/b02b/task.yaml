@@ -140,3 +140,12 @@ handoff_package:
     مخططات حزمة التسليم غير معرّفة بعد على قناة GitHub (لا task.yaml ولا
     evidence-receipt في المستودع). سأسلّم وفق أفضل تقدير محلي، ويُعاير
     عند تثبيت المخطط المشترك في B02-A/C.
+
+b02c2_replay_2026-10-30:
+  directive: MUBIN-SYS-B02-C.2 Source-Bound Diagnostic Replay (main @ 217de11)
+  kernel_status: PARTIAL
+  usul_bind_source_spans: 4 spans bound via ev.usul.* handles (byte fidelity only)
+  fiqh_binding: UNDETERMINED (v1) -> PARTIAL (v2), opinions bound to ev.usul.* handles
+  boundaries_intact: [opinion_attribution_false, source_claims_verified_false, juristic_conclusion_null]
+  selection_gate_verdict_unchanged: REJECTED_ALL_CANDIDATES_UNDER_FULL_BAR
+  receipts: [b02c2-kernel-receipt-6-145-v1.json, b02c2-diagnostic-run-v1.json]
