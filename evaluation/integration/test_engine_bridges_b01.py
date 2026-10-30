@@ -86,9 +86,17 @@ class EngineBridgeTests(unittest.IsolatedAsyncioTestCase):
         for patcher in patchers:
             patcher.start()
             self.addCleanup(patcher.stop)
-        self.quran = load_snapshot(
-            (FIX / "q01-manifest-synthetic.json").read_bytes(),
-            (FIX / "q01-verses-synthetic.json").read_bytes())
+        manifest = json.loads((FIX / "q01-manifest-synthetic.json").read_bytes())
+        corpus = json.loads((FIX / "q01-verses-synthetic.json").read_bytes())
+        # Extend the existing synthetic snapshot with the *same* coordinate
+        # used by the Tafsir and Hadith fixtures. No authentic Quran text.
+        corpus["verses"].append({
+            "surah": 2, "ayah": 43, "text": "بيانات اصطناعية للاختبار فقط"})
+        raw = (json.dumps(corpus, sort_keys=True, ensure_ascii=True,
+                          separators=(",", ":")) + "\\n").encode("utf-8")
+        manifest["raw_sha256"] = hashlib.sha256(raw).hexdigest()
+        manifest["declared_verse_count"] = len(corpus["verses"])
+        self.quran = load_snapshot(json.dumps(manifest).encode("utf-8"), raw)
         self.ids = ("snap.synthetic.quran", "snap.synthetic.tafsir")
         self.registry = build_engine_registry(
             snapshot_ids=self.ids, quran_index=self.quran, tafsir_db=self.db)
@@ -99,7 +107,7 @@ class EngineBridgeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_all_five_run_actual_code_no_fatwa(self):
         entries = (
-            node("n.quran", "quran", "lookup_verse", {"reference": "1:1"}),
+            node("n.quran", "quran", "lookup_verse", {"reference": "2:43"}),
             node("n.tafsir", "tafsir", "research_verse", {"reference": "2:43"}),
             node("n.hadith", "hadith", "detect_tafsir_mentions", {"reference": "2:43"}),
             node("n.usul", "usul", "evaluate_proposition", {"model": model()}),
@@ -137,7 +145,7 @@ class EngineBridgeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_quran_missing_verse_not_synthetic_hit(self):
         report = await run_case(self.case(
-            node("n.quran", "quran", "lookup_verse", {"reference": "2:43"})), self.registry)
+            node("n.quran", "quran", "lookup_verse", {"reference": "2:44"})), self.registry)
         self.assertEqual(report["status"], "NO_MATCH")
 
     async def test_hadith_no_cue_does_not_claim_hadith_absence(self):
@@ -148,6 +156,18 @@ class EngineBridgeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(report["status"], "NO_MATCH")
         self.assertIn("NO_NARRATION_CUE_IN_SCOPED_TAFSIR",
                       report["nodes"][0]["result"]["uncertainties"])
+
+    async def test_cross_engine_mismatched_reference_blocks_fiqh(self):
+        report = await run_case(self.case(
+            node("n.quran", "quran", "lookup_verse", {"reference": "1:1"}),
+            node("n.tafsir", "tafsir", "research_verse", {"reference": "2:43"}),
+            node("n.fiqh", "fiqh", "prepare_case", {
+                "question": "مسألة اصطناعية",
+                "opinions": [{"opinion_id": "op.synthetic", "source_ref": EVIDENCE}],
+            }, ("n.quran", "n.tafsir"))), self.registry)
+        fiqh = report["nodes"][-1]["result"]
+        self.assertEqual(fiqh["status"], "UNDETERMINED")
+        self.assertIn("CROSS_ENGINE_REFERENCE_MISMATCH", fiqh["uncertainties"])
 
     async def test_fiqh_unbound_opinion_cannot_qualify(self):
         data = {"question": "مسألة اصطناعية",

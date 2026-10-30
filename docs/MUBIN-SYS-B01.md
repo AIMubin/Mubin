@@ -27,7 +27,8 @@ A dependent node receives a sealed `_upstream` list assembled from validated
 direct dependency receipts: `engine`, `status`, `evidence_refs` and the
 `synthetic` flag. The plan is forbidden from supplying this key itself.
 Only upstream `OK` and `NO_MATCH` complete dependencies; all other
-states block the dependent node. Fiqh refuses to promote opinions not bound to
+states block the dependent node. Source verse references also propagate;
+Fiqh refuses to combine different Quran coordinates as one finding. Fiqh refuses to promote opinions not bound to
 a directly upstream evidence reference. A fully successful *technical* Usul
 simulation does not qualify the simulated rule as scholarly valid.
 

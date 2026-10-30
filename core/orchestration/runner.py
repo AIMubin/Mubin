@@ -41,6 +41,8 @@ async def run_case(plan, registry, store=None):
                 "evidence_refs": list(result["evidence_refs"]),
                 "synthetic": any(x.get("synthetic_fixture") is True or x.get("synthetic") is True
                                  for x in result["findings"]),
+                "references": sorted({x["reference"] for x in result["findings"]
+                                      if type(x.get("reference")) is str}),
             })
         inputs = dict(node["inputs"])
         if dependent:

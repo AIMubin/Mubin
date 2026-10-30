@@ -158,10 +158,14 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
         inputs = _input(req, {"question", "opinions"})
         upstream = inputs.get("_upstream", [])
         if type(upstream) is not list or any(type(x) is not dict or
-           set(x) != {"engine", "status", "evidence_refs", "synthetic"} for x in upstream):
+           set(x) != {"engine", "status", "evidence_refs", "synthetic", "references"} for x in upstream):
             raise ContractError("FIQH_UPSTREAM_INVALID")
         if any(x["status"] not in ("OK", "NO_MATCH") for x in upstream):
             raise ContractError("FIQH_UPSTREAM_STATUS_INVALID")
+        if any(type(x["references"]) is not list or
+               any(type(ref) is not str for ref in x["references"]) or
+               type(x["evidence_refs"]) is not list for x in upstream):
+            raise ContractError("FIQH_UPSTREAM_REFERENCE_INVALID")
         opinions_raw = inputs["opinions"]
         if type(opinions_raw) is not list or len(opinions_raw) > 50:
             raise ContractError("FIQH_OPINIONS_INVALID")
@@ -174,6 +178,8 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
                                            case.methodology_profile_id))
         refs = tuple(dict.fromkeys(
             ev for entry in upstream for ev in entry["evidence_refs"]))
+        references = {ref for entry in upstream for ref in entry["references"]}
+        mismatched_references = len(references) > 1
         # No user-supplied evidence IDs: upstream refs come from checked engine receipts.
         scoped = tuple(op for op in opinions if op.source_ref in refs)
         finding = prepare_research(case, scoped, refs)
@@ -184,7 +190,10 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
             uncertainties.append("OPINION_SOURCE_NOT_IN_UPSTREAM_EVIDENCE")
         if not upstream:
             uncertainties.append("NO_ENGINE_DEPENDENCIES")
+        if mismatched_references:
+            uncertainties.append("CROSS_ENGINE_REFERENCE_MISMATCH")
         return _response(req, "PARTIAL" if finding.status == "PARTIAL" and not synthetic
+                         and not mismatched_references
                          else "UNDETERMINED", [{
             "case_id": case.case_id, "opinion_refs": list(finding.opinion_refs),
             "linked_evidence_count": len(refs), "authority": "RESEARCH_ONLY",
