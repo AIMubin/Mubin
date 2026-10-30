@@ -9,9 +9,11 @@ from core.orchestration.hadith_usul_mediation import (
     MediationError, assess_hadith_usul_hop,
 )
 
+PREFIX = b"PINNED_CONTEXT_BEFORE_"
+SUFFIX = b"_PINNED_CONTEXT_AFTER"
 DOCUMENTS = {
-    "source.hadith": "مصدر حديث تجريبي لا يمثل حديثاً صحيحاً".encode("utf-8"),
-    "source.usul": "قاعدة أصولية تجريبية للاختبارات البرمجية فقط".encode("utf-8"),
+    "source.hadith": PREFIX + "مصدر حديث تجريبي لا يمثل حديثاً صحيحاً".encode("utf-8") + SUFFIX,
+    "source.usul": PREFIX + "قاعدة أصولية تجريبية للاختبارات البرمجية فقط".encode("utf-8") + SUFFIX,
 }
 PINS = {k: sha256(v).hexdigest() for k, v in DOCUMENTS.items()}
 STORAGE = {}
@@ -32,11 +34,12 @@ def source_read(src, start, end):
 
 def anchor(src):
     raw = DOCUMENTS[src]
+    start, end = len(PREFIX), len(raw) - len(SUFFIX)
     return {
         "source_id": src, "source_sha256": sha(raw),
-        "start_byte": 0, "end_byte": len(raw),
+        "start_byte": start, "end_byte": end,
         "context_start_byte": 0, "context_end_byte": len(raw),
-        "span_sha256": sha(raw), "context_sha256": sha(raw),
+        "span_sha256": sha(raw[start:end]), "context_sha256": sha(raw),
     }
 
 
@@ -162,6 +165,16 @@ class MediationTests(unittest.TestCase):
         x = sample()
         x["reviews"] = x["reviews"][2:]
         self.assertEqual(run(x)["status"], "UNDETERMINED")
+
+    def test_context_cannot_be_only_the_quoted_fragment(self):
+        x = sample()
+        for role in ("witness", "usul"):
+            a = x[role]["source_span"]
+            a["context_start_byte"] = a["start_byte"]
+            a["context_end_byte"] = a["end_byte"]
+            a["context_sha256"] = a["span_sha256"]
+        with self.assertRaisesRegex(MediationError, "MEDIATION_SPAN_INVALID"):
+            run(x)
 
     def test_replay_different_source_pin_refused(self):
         x = sample()
