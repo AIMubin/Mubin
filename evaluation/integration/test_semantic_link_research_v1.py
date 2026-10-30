@@ -127,6 +127,11 @@ class SemanticResearchTests(unittest.TestCase):
     def test_critic_veto_blocks(self):
         x=sample()
         x["assessments"][-1]["verdict"]="OPEN_DEFEATER"
+        recorded=json.loads(RECEIPTS["run.003"])
+        recorded["verdict"]="OPEN_DEFEATER"
+        rewritten=json.dumps(recorded, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        RECEIPTS["run.003"]=rewritten
+        x["assessments"][-1]["receipt_sha256"]=digest(rewritten)
         self.assertEqual(self.evaluate(x)["status"], "CONTESTED")
 
     def test_repeated_review_run_invalid(self):
