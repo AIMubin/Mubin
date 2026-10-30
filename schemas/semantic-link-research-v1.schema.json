@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/AIMubin/Mubin/main/schemas/semantic-link-research-v1.schema.json",
+  "title": "Mubin machine-assessed source-grounded research linkage (NOT authoritative)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "case_id",
+    "verse_reference",
+    "rule_id",
+    "methodology_profile_id",
+    "relation_type",
+    "anchors",
+    "assessments",
+    "open_defeater_ids"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mubin-semantic-link-research/1.0"
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+    },
+    "verse_reference": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,2}:[1-9][0-9]{0,2}$"
+    },
+    "rule_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+    },
+    "methodology_profile_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+    },
+    "relation_type": {
+      "enum": [
+        "LEXICAL_OVERLAP",
+        "EXPLICIT_SOURCE_APPLICATION",
+        "TAFSIR_MEDIATED_APPLICATION",
+        "CONTEXTUAL_HYPOTHESIS"
+      ]
+    },
+    "anchors": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "role",
+          "source_id",
+          "source_sha256",
+          "reference",
+          "start_byte",
+          "end_byte",
+          "context_start_byte",
+          "context_end_byte",
+          "excerpt_sha256",
+          "context_sha256"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          },
+          "role": {
+            "enum": [
+              "quran",
+              "tafsir",
+              "usul"
+            ]
+          },
+          "source_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "start_byte": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end_byte": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "context_start_byte": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "context_end_byte": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "excerpt_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "context_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "assessments": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "run_id",
+          "model_id",
+          "role",
+          "verdict",
+          "anchor_ids",
+          "receipt_sha256"
+        ],
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+          },
+          "model_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "role": {
+            "enum": [
+              "supporter",
+              "critic"
+            ]
+          },
+          "verdict": {
+            "enum": [
+              "SUPPORTS_LINK",
+              "REFUTES_LINK",
+              "NO_OPEN_DEFEATER",
+              "OPEN_DEFEATER",
+              "UNDETERMINED"
+            ]
+          },
+          "anchor_ids": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+            }
+          },
+          "receipt_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "open_defeater_ids": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{2,127}$"
+      }
+    }
+  }
+}
