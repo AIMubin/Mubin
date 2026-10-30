@@ -227,8 +227,23 @@ class MediationTests(unittest.TestCase):
     def test_model_role_duplicate_rejected(self):
         x = sample()
         x["reviews"][1]["model_id"] = x["reviews"][0]["model_id"]
-        with self.assertRaisesRegex(MediationError, "REVIEW_NOT_SOURCE_BOUND"):
+        doc = json.loads(STORAGE["run.synthetic.2"])
+        doc["model_id"] = x["reviews"][0]["model_id"]
+        raw = canon(doc)
+        STORAGE["run.synthetic.2"] = raw
+        x["reviews"][1]["receipt_sha256"] = sha(raw)
+        with self.assertRaisesRegex(MediationError, "DUPLICATE_MODEL_ROLE"):
             run(x)
+
+    def test_realistic_local_model_id_is_supported_when_receipt_matches(self):
+        x = sample()
+        x["reviews"][0]["model_id"] = "glm-5.3-flash@dsh-local-agent"
+        doc = json.loads(STORAGE["run.synthetic.1"])
+        doc["model_id"] = x["reviews"][0]["model_id"]
+        raw = canon(doc)
+        STORAGE["run.synthetic.1"] = raw
+        x["reviews"][0]["receipt_sha256"] = sha(raw)
+        self.assertEqual(run(x)["status"], "MACHINE_RESEARCH_CANDIDATE_ONLY")
 
     def test_critic_can_veto_when_receipt_unchanged_sources(self):
         x = sample()
