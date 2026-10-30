@@ -69,7 +69,11 @@ def _check_source_span(anchor, pins, read_span):
             or type(cs) is not int or type(ce) is not int
             or not 0 <= cs <= st < en <= ce
             or not 0 < en-st <= MAX_WINDOW
-            or not 0 < ce-cs <= MAX_WINDOW):
+            or not 0 < ce-cs <= MAX_WINDOW
+            or (ce-cs)-(en-st) < 16):
+        # A cited excerpt alone is not source context. Require surrounding
+        # raw bytes; this is a *minimal* engineering guard, not a guarantee
+        # of adequate linguistic or historical context.
         raise MediationError("MEDIATION_SPAN_INVALID")
     try:
         excerpt = read_span(source_id, st, en)
