@@ -234,5 +234,19 @@
    "v1_receipts_untouched": true,
    "version_yaml_touched": false
   }
+ },
+ "b02c3_evidence_chain": {
+  "chain_receipt_file": "b02c3-evidence-chain-6-145-v1.json",
+  "contract": "mubin-b02c3-evidence-chain-v0.1",
+  "overall_status": "PARTIALLY_BOUND_CHAIN_OPEN",
+  "edges": {
+   "e.quran-tafsir": "ESTABLISHED_BYTE_PINNED",
+   "e.tafsir-hadith": "CANDIDATE_MATCH_LEXICAL",
+   "e.hadith-usul": "SEMANTIC_LINK_UNASSESSED_AT_THIS_HOP",
+   "e.usul-fiqh": "STRUCTURALLY_BOUND_RESEARCH_ONLY"
+  },
+  "weakest_hop": "e.hadith-usul",
+  "scientifically_established_chain": false,
+  "assembled_from": "existing frozen receipts only; no new source runs"
  }
 }

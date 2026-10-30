@@ -1,4 +1,4 @@
-# B02-B Handoff — MUBIN-SYS-B02-B
+﻿# B02-B Handoff — MUBIN-SYS-B02-B
 
 **Batch:** MUBIN-SYS-B02 · **Lane:** B02-B (Local Execution Lead)
 **Preserved candidate (selection REJECTED under strict gate v3):** `B02B-CASE-6-145` — verse 6:145 + al-Waraqat «الحظر والإباحة»
@@ -42,6 +42,8 @@
 > لم يتغير، وحالة MACHINE_SUPPORTED لم تتحول لاعتماد علمي، وإيصالات v1
 > لم تُمس. الإيصالات: `b02c2-kernel-receipt-6-145-v1.json` +
 > `b02c2-diagnostic-run-v1.json`.
+>
+> **إضافة B02-C.3 (main @ `74e3cd9` — Cross-Engine Evidence Chain، الجانب المحلي):** مادة السلسلة عبر المحركات مجمّدة من الإيصالات المجمدة حصراً (بلا تشغيلات جديدة): 5 عقد و4 حواف — quran→tafsir `ESTABLISHED_BYTE_PINNED`؛ tafsir→hadith `CANDIDATE_MATCH_LEXICAL` (باعتراضَي عدم ثبوت الهوية واستبعاد رابط artifact)؛ hadith→usul `SEMANTIC_LINK_UNASSESSED_AT_THIS_HOP` (**رفض fail-closed: لا مُقيّم منفذ لهذه الحلقة**)؛ usul→fiqh `STRUCTURALLY_BOUND_RESEARCH_ONLY` (باعتراضَي عدم إسناد وعدم تنفيذ تطبيق). السلسلة ككل: `PARTIALLY_BOUND_CHAIN_OPEN`، `scientifically_established_chain=false`. الإيصال: `b02c3-evidence-chain-6-145-v1.json` (metadata-only، صفر حرف عربي).
 >
 > **إضافة عقد الربط الدلالي (P2 — main @ `a68bc20`، PR #130):** شُغّل
 > `evaluate_research_link` على مصادر مثبتة بأربع حالات: **6:145 وساطة
