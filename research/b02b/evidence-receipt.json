@@ -248,5 +248,23 @@
   "weakest_hop": "e.hadith-usul",
   "scientifically_established_chain": false,
   "assembled_from": "existing frozen receipts only; no new source runs"
+ },
+ "b02c5_plan_bound_replay": {
+  "audit_file": "b02c5-plan-bound-audit-6-145-v1.json",
+  "contract": "mubin-plan-bound-execution/1.0",
+  "status": "PLAN_AND_RESULT_BOUND_OPERATOR_LOCAL_ONLY",
+  "node_count": 6,
+  "dependency_edge_count": 5,
+  "plan_hmac_sha256": "420da9c1ddc9984e87f8827c7d50542879e86456905a08a9a45a0563ce6db42f",
+  "receipt_hmac_sha256": "127050ab5e01ceb4f26295c9ef6466fc4443eff89715357c37392ce9f11a4cd1",
+  "verification": "verify_plan_bound_replay=True locally; tampered-audit and wrong-key negatives rejected (private verify receipt b02c5-verify-v1.json)",
+  "full_plan_and_receipt": "private vault only; audit exports no inputs or text",
+  "boundaries": {
+   "scientific_chain_established": false,
+   "scholarly_verified": false,
+   "juristic_inference_allowed": false,
+   "hadith_identity_verified": false,
+   "private_source_authenticated": false
+  }
  }
 }

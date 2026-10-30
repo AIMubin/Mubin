@@ -1,0 +1,115 @@
+{
+ "contract": "mubin-plan-bound-execution/1.0",
+ "case_id": "b02c2.diagnostic.6-145",
+ "status": "PLAN_AND_RESULT_BOUND_OPERATOR_LOCAL_ONLY",
+ "plan_hmac_sha256": "420da9c1ddc9984e87f8827c7d50542879e86456905a08a9a45a0563ce6db42f",
+ "receipt_hmac_sha256": "127050ab5e01ceb4f26295c9ef6466fc4443eff89715357c37392ce9f11a4cd1",
+ "node_count": 6,
+ "dependency_edge_count": 5,
+ "nodes": [
+  {
+   "node_id": "b02c2.f1",
+   "engine": "fiqh",
+   "operation": "prepare_case",
+   "depends_on": [
+    "b02c2.us1",
+    "b02c2.q1",
+    "b02c2.t1",
+    "b02c2.h1",
+    "b02c2.u2"
+   ],
+   "result_status": "PARTIAL",
+   "evidence_ref_count": 33,
+   "input_hmac_sha256": "8f72303eee47201278abd1248754c4c4e468d0337b46a1190cd816c77b742f21",
+   "result_hmac_sha256": "4f99c41c209b6a0d99b08d95382aee40ef38b854037333b281361599942b647b"
+  },
+  {
+   "node_id": "b02c2.h1",
+   "engine": "hadith",
+   "operation": "detect_tafsir_mentions",
+   "depends_on": [],
+   "result_status": "OK",
+   "evidence_ref_count": 23,
+   "input_hmac_sha256": "b1ab3ba9aaaa43a9815d46dca51be5b16e9adc1e3a791e2388f545139b7a7cb9",
+   "result_hmac_sha256": "9e17caad3add93446733c824113f160f4447502119450c553913f725eaa524d3"
+  },
+  {
+   "node_id": "b02c2.q1",
+   "engine": "quran",
+   "operation": "lookup_verse",
+   "depends_on": [],
+   "result_status": "OK",
+   "evidence_ref_count": 1,
+   "input_hmac_sha256": "6655c5d78972d422f39cb8e6c2afe142d545d42022c5c1121add70418edc004e",
+   "result_hmac_sha256": "cf64c50fcceeebd12e13e5eb98cd59916ec069aaf948e7047a5c2a527628ea4b"
+  },
+  {
+   "node_id": "b02c2.t1",
+   "engine": "tafsir",
+   "operation": "research_verse",
+   "depends_on": [],
+   "result_status": "OK",
+   "evidence_ref_count": 5,
+   "input_hmac_sha256": "7455e54e424c746c373a43ad3cb32ac0cc278a4291dce86277416fbcc887f783",
+   "result_hmac_sha256": "91835d6f9cd492e2010d465066eb20f2fecb3b1ae7fcfa8049bca2c6b573b83c"
+  },
+  {
+   "node_id": "b02c2.u2",
+   "engine": "usul",
+   "operation": "evaluate_proposition",
+   "depends_on": [],
+   "result_status": "OK",
+   "evidence_ref_count": 0,
+   "input_hmac_sha256": "8710b7449708072ac168890230343c7c22e4bde62be1e7a968692d3c66ad9826",
+   "result_hmac_sha256": "a8c611c4d361dbda65a288a7d1ebfcb4ff4950bb8fca7a0e117372f36a6deab9"
+  },
+  {
+   "node_id": "b02c2.us1",
+   "engine": "usul",
+   "operation": "bind_source_spans",
+   "depends_on": [],
+   "result_status": "OK",
+   "evidence_ref_count": 4,
+   "input_hmac_sha256": "f5257c8839a5159b85e6f61badee27a351ce234322bc8ef62a8015e24471d618",
+   "result_hmac_sha256": "b7f37dddf47112fa5174810adf03c37deb5effb04b1d6541d10960315dabcad2"
+  }
+ ],
+ "dependencies": [
+  {
+   "from_node": "b02c2.h1",
+   "to_node": "b02c2.f1",
+   "relation": "DECLARED_DIRECT_DEPENDENCY_ONLY"
+  },
+  {
+   "from_node": "b02c2.q1",
+   "to_node": "b02c2.f1",
+   "relation": "DECLARED_DIRECT_DEPENDENCY_ONLY"
+  },
+  {
+   "from_node": "b02c2.t1",
+   "to_node": "b02c2.f1",
+   "relation": "DECLARED_DIRECT_DEPENDENCY_ONLY"
+  },
+  {
+   "from_node": "b02c2.u2",
+   "to_node": "b02c2.f1",
+   "relation": "DECLARED_DIRECT_DEPENDENCY_ONLY"
+  },
+  {
+   "from_node": "b02c2.us1",
+   "to_node": "b02c2.f1",
+   "relation": "DECLARED_DIRECT_DEPENDENCY_ONLY"
+  }
+ ],
+ "original_operations_from_supplied_plan": true,
+ "dependency_ids_from_supplied_plan": true,
+ "operator_local_execution_attested": false,
+ "external_runtime_authenticated": false,
+ "upstream_payload_delivery_verified": false,
+ "private_source_authenticated": false,
+ "hadith_identity_verified": false,
+ "scholarly_verified": false,
+ "scientific_chain_established": false,
+ "juristic_inference_allowed": false,
+ "source_text_included": false
+}
