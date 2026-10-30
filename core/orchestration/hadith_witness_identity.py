@@ -175,11 +175,12 @@ def assess_hadith_witness_identity(request, *, source_registry,
             "WITNESS_FRAGMENT_OUTSIDE_CONTEXT")
     fragment = _check_span(fragment_spec, primary["context"],
                            primary["source_id"], read_span)
-    if primary["segment_type"] == "MATN_CANDIDATE":
-        _reject(primary["segment"]["start_byte"]
-                <= fragment_spec["start_byte"] < fragment_spec["end_byte"]
-                <= primary["segment"]["end_byte"],
-                "WITNESS_FRAGMENT_OUTSIDE_REPORTED_MATN")
+    # All segment labels (including reported Quran quote / commentary)
+    # must actually encompass the lexical fragment being classified.
+    _reject(primary["segment"]["start_byte"]
+            <= fragment_spec["start_byte"] < fragment_spec["end_byte"]
+            <= primary["segment"]["end_byte"],
+            "WITNESS_FRAGMENT_OUTSIDE_REPORTED_SEGMENT")
     try:
         bridge_data = read_bridge(request["hsearch_bridge"]["link_id"])
     except Exception as exc:
@@ -191,6 +192,9 @@ def assess_hadith_witness_identity(request, *, source_registry,
     match_count = sum(
         w["role"] == "comparison"
         and w["work_id"] != primary["work_id"]
+        # Separate source IDs may still be byte-identical mirrors of one
+        # imported file; never count them as independent textual records.
+        and w["source_sha256"] != primary["source_sha256"]
         and w["segment_type"] == "MATN_CANDIDATE"
         and source_bytes[w["source_id"]] == source_bytes[primary["source_id"]]
         for w in records
