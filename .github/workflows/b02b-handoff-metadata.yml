@@ -10,6 +10,8 @@ on:
       - 'qa/tests/test_b02c2_replay.py'
       - 'qa/check_b02c3_chain.py'
       - 'qa/tests/test_b02c3_chain.py'
+      - 'qa/check_b02c5_plan_audit.py'
+      - 'qa/tests/test_b02c5_plan_audit.py'
       - '.github/workflows/b02b-handoff-metadata.yml'
   push:
     branches: [main]
@@ -21,6 +23,8 @@ on:
       - 'qa/tests/test_b02c2_replay.py'
       - 'qa/check_b02c3_chain.py'
       - 'qa/tests/test_b02c3_chain.py'
+      - 'qa/check_b02c5_plan_audit.py'
+      - 'qa/tests/test_b02c5_plan_audit.py'
       - '.github/workflows/b02b-handoff-metadata.yml'
   workflow_dispatch:
 
@@ -53,6 +57,10 @@ jobs:
         run: python -m unittest qa.tests.test_b02c3_chain -v
       - name: Verify B02-C.3 chain when supplied by checkout
         run: python -m qa.check_b02c3_chain --if-present
+      - name: Test B02-C.5 public audit tamper invariants
+        run: python -m unittest qa.tests.test_b02c5_plan_audit -v
+      - name: Verify B02-C.5 plan audit when supplied by checkout
+        run: python -m qa.check_b02c5_plan_audit --if-present
 
 # This CI has no access to the private Waraqat/Tafsir/Hadith sources or model
 # review receipts and never claims to authenticate them.
