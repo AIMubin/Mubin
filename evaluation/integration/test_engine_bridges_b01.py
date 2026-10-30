@@ -93,7 +93,7 @@ class EngineBridgeTests(unittest.IsolatedAsyncioTestCase):
         corpus["verses"].append({
             "surah": 2, "ayah": 43, "text": "بيانات اصطناعية للاختبار فقط"})
         raw = (json.dumps(corpus, sort_keys=True, ensure_ascii=True,
-                          separators=(",", ":")) + "\\n").encode("utf-8")
+                          separators=(",", ":")) + "\n").encode("utf-8")
         manifest["raw_sha256"] = hashlib.sha256(raw).hexdigest()
         manifest["declared_verse_count"] = len(corpus["verses"])
         self.quran = load_snapshot(json.dumps(manifest).encode("utf-8"), raw)
