@@ -184,12 +184,18 @@ def assess_hadith_usul_hop(request, *, source_pins, read_span,
             not callable(read_span) or
             not callable(read_witness) or not callable(read_assessment)):
         raise MediationError("MEDIATION_TRUSTED_READERS_REQUIRED")
+    if (request["witness"]["source_span"]["source_id"] ==
+            request["usul"]["source_span"]["source_id"]):
+        raise MediationError("MEDIATION_SOURCE_DOMAINS_COLLAPSED")
     _check_source_span(request["witness"]["source_span"], source_pins, read_span)
     _check_source_span(request["usul"]["source_span"], source_pins, read_span)
     complete = _check_witness(request["witness"], read_witness)
 
+    # Bind objections to the reviewed immutable input. A caller must not
+    # delete open defeaters and replay old positive AI votes.
     core = {k: request[k] for k in (
-        "contract", "case_id", "verse_reference", "hypothesis", "witness", "usul")}
+        "contract", "case_id", "verse_reference", "hypothesis", "witness",
+        "usul", "open_defeater_ids")}
     input_sha = _sha(_canonical(core))
     roles = _reviews(request, read_assessment, input_sha)
     challenged = bool(request["open_defeater_ids"]) or any(
