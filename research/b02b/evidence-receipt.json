@@ -105,6 +105,18 @@
   "honesty": "full bundle with excerpts stays in the private vault; both opposing statements encoded; open objections stand; conclusion and proof UNDETERMINED; P0 pass is structural only",
   "verification": "verify_redacted_projection=True; verify_private_projection=True; tampered-edge and forged-excerpt negatives rejected (private run receipt p0-projection-run-v1.json)"
  },
+ "semantic_link_contract_runs": {
+  "contract_under_test": "mubin-semantic-link-research/1.0 (main @ a68bc20, PR #130)",
+  "combined_receipt": "sl-gate-v1.json (private workspace)",
+  "assessment_model": "glm-5.3-flash@dsh-local-agent (self-play; model_independence_established=false in every result)",
+  "runs": [
+   {"case_id": "b02b.sl.6-145.tafsir-mediated", "relation": "TAFSIR_MEDIATED_APPLICATION", "status": "MACHINE_SUPPORTED_RESEARCH_ONLY", "note": "tafsir anchor quotes the non-Quranic normative fragment byte-pinned; 2 supporter + 1 critic-scope clearance; NOT scholarly approval"},
+   {"case_id": "b02b.sl.49-6.tafsir-mediated", "relation": "TAFSIR_MEDIATED_APPLICATION", "status": "CONTESTED", "note": "supporter recorded OPEN_DEFEATER: verse concerns verifying a specific report, not the khabar-class taxonomy"},
+   {"case_id": "b02b.sl.2-8.hadr-fp-control", "relation": "TAFSIR_MEDIATED_APPLICATION", "status": "CONTESTED", "note": "critic REFUTES_LINK: generic rhetorical frame overlap; known false positive refused"},
+   {"case_id": "b02b.sl.6-145.lexical-only", "relation": "LEXICAL_OVERLAP", "status": "LEXICAL_ONLY", "note": "contract-degraded lexical relation"}
+  ],
+  "all_statuses_match_expectations": true
+ },
  "gaps_declared": [
   {
    "type": "fiqh_f00_no_engine"
