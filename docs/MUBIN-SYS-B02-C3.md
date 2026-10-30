@@ -37,3 +37,5 @@ Tafsir/Usul source context and semantic counterexamples. Preserve
 `VERSION.yaml`.
 
 Run `python -m unittest discover -s evaluation/integration -v`.
+
+CI review must compare the *exact* PR HEAD with the branch HEAD.
