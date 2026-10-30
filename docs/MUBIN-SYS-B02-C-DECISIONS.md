@@ -36,9 +36,14 @@ The callback must never use file paths from the AI candidate.
 An AI proposes one relation class:
 `LEXICAL_OVERLAP`, `EXPLICIT_SOURCE_APPLICATION`,
 `TAFSIR_MEDIATED_APPLICATION`, or `CONTEXTUAL_HYPOTHESIS`.
-At least two independent **run identifiers** supporting the relation
-and one adversarial review reporting no open defeater are needed
-for `MACHINE_SUPPORTED_RESEARCH_ONLY`. Reused run IDs, missing anchors,
+At least two distinct **run identifiers** supporting the relation and
+one adversarial review reporting no open defeater are needed for
+`MACHINE_SUPPORTED_RESEARCH_ONLY`; each review must have an immutable local
+receipt with matching SHA256 and matching canonical evidence-input digest.
+Without a trusted local review-receipt reader the gate cannot pass.
+`CONTEXTUAL_HYPOTHESIS` cannot pass even with repeated AI approval; only
+`EXPLICIT_SOURCE_APPLICATION` and `TAFSIR_MEDIATED_APPLICATION` can
+reach the research-only positive state. Reused run IDs, missing anchors,
 unsupported context and open objections fail closed.
 
 **Critical:** A run identifier is not proof of genuinely independent
