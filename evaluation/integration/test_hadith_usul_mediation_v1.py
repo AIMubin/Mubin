@@ -77,7 +77,8 @@ def sample(relation="RULE_SUPPORT_PROPOSAL", coverage="COMPLETE"):
     STORAGE["bridge"] = bridge_bytes
 
     core = {k: inp[k] for k in (
-        "contract", "case_id", "verse_reference", "hypothesis", "witness", "usul")}
+        "contract", "case_id", "verse_reference", "hypothesis", "witness",
+        "usul", "open_defeater_ids")}
     input_sha = sha(canon(core))
     for index, (role, verdict) in enumerate([
         ("supporter", "SUPPORTS_HYPOTHESIS"),
@@ -97,6 +98,19 @@ def sample(relation="RULE_SUPPORT_PROPOSAL", coverage="COMPLETE"):
         STORAGE[run] = raw
         inp["reviews"].append({**review, "receipt_sha256": sha(raw)})
     return inp
+
+
+def rebind_reviews(inp):
+    core = {k: inp[k] for k in (
+        "contract", "case_id", "verse_reference", "hypothesis", "witness",
+        "usul", "open_defeater_ids")}
+    digest = sha(canon(core))
+    for review in inp["reviews"]:
+        payload = json.loads(STORAGE[review["run_id"]])
+        payload["input_sha256"] = digest
+        raw = canon(payload)
+        STORAGE[review["run_id"]] = raw
+        review["receipt_sha256"] = sha(raw)
 
 
 def run(x, **kwargs):
@@ -133,7 +147,16 @@ class MediationTests(unittest.TestCase):
     def test_open_defeater_veto(self):
         x = sample()
         x["open_defeater_ids"] = ["objection.001"]
+        rebind_reviews(x)
         self.assertEqual(run(x)["status"], "CONTESTED")
+
+    def test_removing_open_defeater_cannot_replay_positive_reviews(self):
+        x = sample()
+        x["open_defeater_ids"] = ["objection.001"]
+        rebind_reviews(x)
+        x["open_defeater_ids"] = []
+        with self.assertRaisesRegex(MediationError, "REVIEW_NOT_SOURCE_BOUND"):
+            run(x)
 
     def test_supporters_missing_means_undetermined(self):
         x = sample()
@@ -150,6 +173,12 @@ class MediationTests(unittest.TestCase):
         x = sample()
         x["usul"]["source_span"]["span_sha256"] = "f"*64
         with self.assertRaisesRegex(MediationError, "SOURCE_BYTES_DIFFER"):
+            run(x)
+
+    def test_witness_and_usul_cannot_be_same_source(self):
+        x = sample()
+        x["usul"]["source_span"] = copy.deepcopy(x["witness"]["source_span"])
+        with self.assertRaisesRegex(MediationError, "SOURCE_DOMAINS_COLLAPSED"):
             run(x)
 
     def test_hsearch_bridge_digest_forgery_refused(self):
