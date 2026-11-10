@@ -2,10 +2,13 @@
 from __future__ import annotations
 import asyncio
 import json
+import threading
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from core.contracts import CONTRACT_VERSION, ContractError, EngineRegistry, validate_request, validate_result
 from core.orchestration import CasePlan, PlanError, run_case, InMemoryCaseStore
+from core.orchestration import runner as kernel_runner
 from core.orchestration.mock_adapters import synthetic_registry
 from engines.fiqh.models import FiqhCase, JuristicOpinion
 from engines.fiqh.contracts import prepare_research
@@ -161,6 +164,80 @@ class ExecutionTests(unittest.IsolatedAsyncioTestCase):
         byid = {x["node_id"]: x["result"]["status"] for x in receipt["nodes"]}
         self.assertEqual(byid["req.001"], "UNAVAILABLE")
         self.assertEqual(byid["req.002"], "OK")
+
+    async def test_sync_timeout_does_not_claim_worker_was_killed(self):
+        started, release, finished = (threading.Event() for _ in range(3))
+        registry = EngineRegistry()
+        def stalled(req):
+            started.set()
+            try:
+                release.wait(3)
+            finally:
+                finished.set()
+            raise RuntimeError("PRIVATE_LATE_FAILURE_MUST_NOT_LEAK")
+        registry.register("quran", ["test_lookup"], stalled)
+        try:
+            case_task = asyncio.create_task(
+                run_case(plan(node("req.001", "quran", timeout=150)), registry))
+            self.assertTrue(await asyncio.to_thread(started.wait, 2))
+            receipt = await case_task
+            self.assertEqual(receipt["status"], "UNAVAILABLE")
+            result = receipt["nodes"][0]["result"]
+            self.assertEqual(result["status"], "UNAVAILABLE")
+            self.assertIn("ENGINE_TIMEOUT", result["uncertainties"])
+            self.assertIn("SYNC_WORKER_TERMINATION_NOT_CONFIRMED",
+                          result["uncertainties"])
+            self.assertFalse(finished.is_set())
+            self.assertNotIn("PRIVATE_LATE_FAILURE", str(receipt))
+        finally:
+            release.set()
+            self.assertTrue(await asyncio.to_thread(finished.wait, 2))
+            await asyncio.sleep(0.03)
+
+    async def test_timed_out_sync_worker_keeps_admission_permit(self):
+        started, release, finished, invoked = (threading.Event() for _ in range(4))
+        blocked = EngineRegistry()
+        quick = EngineRegistry()
+        def stalled(req):
+            started.set()
+            try:
+                release.wait(3)
+            finally:
+                finished.set()
+            return None
+        def would_run(req):
+            invoked.set()
+            return None
+        blocked.register("quran", ["test_lookup"], stalled)
+        quick.register("hadith", ["test_lookup"], would_run)
+        # Only for this test: cap the process-wide worker budget to one.
+        # The worker captures its permit, so teardown cannot leak a lease.
+        with patch.object(kernel_runner, "_SYNC_WORKER_PERMITS",
+                          threading.BoundedSemaphore(1)):
+            try:
+                task = asyncio.create_task(run_case(
+                    plan(node("req.001", "quran", timeout=150)), blocked))
+                self.assertTrue(await asyncio.to_thread(started.wait, 2))
+                first = await task
+                self.assertEqual(first["status"], "UNAVAILABLE")
+                denied = await run_case(
+                    plan(node("req.002", "hadith", timeout=40),
+                         case="case.002"), quick)
+                self.assertEqual(denied["status"], "UNAVAILABLE")
+                self.assertEqual(denied["nodes"][0]["result"]["uncertainties"],
+                                 ["ENGINE_TIMEOUT"])
+                self.assertFalse(invoked.is_set())
+            finally:
+                release.set()
+                self.assertTrue(await asyncio.to_thread(finished.wait, 2))
+                await asyncio.sleep(0.03)
+            # The old worker has now released its admission slot; the same
+            # handler may be invoked, proving that permits are not leaked.
+            resumed = await run_case(
+                plan(node("req.003", "hadith", timeout=300),
+                     case="case.003"), quick)
+            self.assertTrue(invoked.is_set())
+            self.assertEqual(resumed["status"], "REJECTED")
 
     async def test_failure_blocks_only_dependents(self):
         r = synthetic_registry(statuses={"quran": "UNAVAILABLE"})

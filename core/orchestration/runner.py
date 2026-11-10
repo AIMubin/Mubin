@@ -1,7 +1,9 @@
 """Execute independent DAG nodes concurrently with bounded concurrency and truthful failure states."""
 from __future__ import annotations
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import inspect
+import threading
 import time
 import hashlib
 from core.contracts import CONTRACT_VERSION, ContractError, validate_request, validate_result
@@ -17,6 +19,51 @@ def _result(request, status, code):
         "provenance": {"snapshot_ids": list(request["source_snapshot_ids"])},
         "trace_id": request["request_id"],
     }
+
+
+# One process-wide admission budget, not one budget per request or event loop.
+# A sync handler cannot be forcibly cancelled by asyncio.wait_for. Its permit is
+# retained by the *worker thread*, even after the waiting request times out.
+_SYNC_WORKER_LIMIT = 8
+_SYNC_WORKER_PERMITS = threading.BoundedSemaphore(_SYNC_WORKER_LIMIT)
+_SYNC_EXECUTOR = ThreadPoolExecutor(
+    max_workers=_SYNC_WORKER_LIMIT, thread_name_prefix="mubin-engine")
+
+
+def _observe_completion(future):
+    """Consume late adapter exceptions without logging potentially private data."""
+    if not future.cancelled():
+        try:
+            future.exception()
+        except BaseException:
+            pass
+
+
+async def _run_sync_handler(handler, request, lifecycle):
+    """Bound synchronous adapter work across cases; timeout never implies a kill.
+
+    No executor work is queued before a permit is available. The surrounding
+    wait_for also bounds time spent waiting for a worker permit.
+    """
+    permit = _SYNC_WORKER_PERMITS
+    while not permit.acquire(blocking=False):
+        await asyncio.sleep(0.01)
+    def invoke():
+        try:
+            return handler(request)
+        finally:
+            lifecycle["finished"] = True
+            permit.release()
+    try:
+        future = asyncio.get_running_loop().run_in_executor(_SYNC_EXECUTOR, invoke)
+    except BaseException:
+        permit.release()
+        raise
+    lifecycle["submitted"] = True
+    future.add_done_callback(_observe_completion)
+    # Shield only protects worker bookkeeping. It does NOT let the timed-out
+    # request wait for, cancel, or publish the late worker's eventual result.
+    return await asyncio.shield(future)
 
 
 async def run_case(plan, registry, store=None):
@@ -61,11 +108,12 @@ async def run_case(plan, registry, store=None):
         else:
             try:
                 handler = registry.resolve(node["engine"], node["operation"])
+                sync_lifecycle = {"submitted": False, "finished": False}
                 async def dispatch():
                     async with sem:
                         if inspect.iscoroutinefunction(handler):
                             return await handler(request)
-                        output = await asyncio.to_thread(handler, request)
+                        output = await _run_sync_handler(handler, request, sync_lifecycle)
                         if inspect.isawaitable(output):
                             return await output
                         return output
@@ -75,6 +123,8 @@ async def run_case(plan, registry, store=None):
                     validate_result(request, result)
                 except asyncio.TimeoutError:
                     result = _result(request, "UNAVAILABLE", "ENGINE_TIMEOUT")
+                    if sync_lifecycle["submitted"] and not sync_lifecycle["finished"]:
+                        result["uncertainties"].append("SYNC_WORKER_TERMINATION_NOT_CONFIRMED")
                 except ContractError:
                     result = _result(request, "REJECTED", "ENGINE_CONTRACT_REJECTED")
                 except Exception:
