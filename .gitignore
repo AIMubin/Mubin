@@ -3,3 +3,27 @@ corpus-data/
 __pycache__/
 .pytest_cache/
 *.pyc
+
+# Defense in depth: source corpora, local credentials, and private database bytes.
+# These ignore rules do not replace the tracked-file CI guard or history review.
+operator-vault/
+private-vault/
+vault-data/
+private-sources/
+.secrets/
+.private/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.parquet
+*.pem
+*.p12
+*.pfx
+*.p8
+*.key
+.env
+.env.*
+!.env.example
+!.env.sample
