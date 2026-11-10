@@ -15,7 +15,7 @@ def validate_result(request, result):
         raise ContractError("RESULT_IDENTITY_MISMATCH")
     if not identifier(result["trace_id"]) or not isinstance(result["engine_version"], str) or not result["engine_version"]:
         raise ContractError("RESULT_METADATA_INVALID")
-    if result["status"] not in STATUSES:
+    if type(result["status"]) is not str or result["status"] not in STATUSES:
         raise ContractError("RESULT_STATUS_INVALID")
     if type(result["findings"]) is not list or len(result["findings"]) > request["limits"]["max_results"]:
         raise ContractError("RESULT_FINDINGS_INVALID")

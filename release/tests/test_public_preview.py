@@ -29,6 +29,13 @@ class PublicPreviewTests(unittest.TestCase):
         self.assertEqual(data["preview_status"],
                          "STATIC_ARTIFACT_READY_NOT_HOSTING_CONFIRMED")
 
+    def test_five_engine_inventory_matches_version_register(self):
+        data = public_manifest(self.root)
+        self.assertEqual([row["name"] for row in data["engines"]],
+                         ["Quran", "Tafsir", "Hadith", "Usul", "Fiqh"])
+        self.assertEqual(data["engines"][1]["milestone"], "T0.3")
+        self.assertEqual(data["engines"][1]["public_mode"], "status_only")
+
     def test_preview_contains_no_source_text_or_scholarly_publication(self):
         result = public_manifest(self.root)
         self.assertFalse(result["source_text_included"])

@@ -33,15 +33,16 @@ def validate_request(request):
     if not all(identifier(request[field]) for field in (
             "request_id", "case_id", "operation", "methodology_profile_id", "idempotency_key")):
         raise ContractError("REQUEST_IDENTIFIER_INVALID")
-    if request["engine"] not in ENGINE_NAMES:
+    if type(request["engine"]) is not str or request["engine"] not in ENGINE_NAMES:
         raise ContractError("ENGINE_UNKNOWN")
     if type(request["inputs"]) is not dict:
         raise ContractError("REQUEST_INPUT_INVALID")
     try:
-        encoded = json.dumps(request["inputs"], sort_keys=True, allow_nan=False, ensure_ascii=False)
-    except (TypeError, ValueError, RecursionError) as exc:
+        encoded = json.dumps(request["inputs"], sort_keys=True, allow_nan=False,
+                             ensure_ascii=False).encode("utf-8", "strict")
+    except (TypeError, ValueError, UnicodeError, RecursionError) as exc:
         raise ContractError("REQUEST_INPUT_INVALID") from exc
-    if len(encoded.encode("utf-8")) > 65536:
+    if len(encoded) > 65536:
         raise ContractError("REQUEST_INPUT_INVALID")
     if not _ids(request["source_snapshot_ids"]):
         raise ContractError("SOURCE_SNAPSHOTS_INVALID")
