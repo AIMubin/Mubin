@@ -65,6 +65,46 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(PlanError):
             plan(node("req.001", "quran", inputs={"bad": object()})).ordered()
 
+    def test_malformed_plan_fields_fail_closed(self):
+        with self.assertRaisesRegex(PlanError, "PLAN_SNAPSHOTS_INVALID"):
+            CasePlan("case.001", "profile.research", ("snap.001", []),
+                     (node("req.001", "quran"),)).ordered()
+        with self.assertRaisesRegex(PlanError, "PLAN_NODE_IDENTITY_INVALID"):
+            plan(node("req.001", [])).ordered()
+        with self.assertRaisesRegex(PlanError, "PLAN_DEPENDENCIES_INVALID"):
+            plan(node("req.001", "quran", deps=[["req.002"]])).ordered()
+
+    def test_unpaired_unicode_surrogates_are_rejected(self):
+        with self.assertRaisesRegex(PlanError, "PLAN_INPUT_NOT_JSON"):
+            plan(node("req.001", "quran", inputs={"text": "\ud800"})).ordered()
+        req = {"contract_version": CONTRACT_VERSION, "request_id": "req.001",
+               "case_id": "case.001", "engine": "quran", "operation": "test_lookup",
+               "inputs": {"text": "\ud800"}, "methodology_profile_id": "profile.research",
+               "source_snapshot_ids": ["snap.001"],
+               "limits": {"timeout_ms": 500, "max_results": 3},
+               "idempotency_key": "idem.001"}
+        with self.assertRaisesRegex(ContractError, "REQUEST_INPUT_INVALID"):
+            validate_request(req)
+
+    def test_bad_envelope_types_raise_contract_errors(self):
+        req = {"contract_version": CONTRACT_VERSION, "request_id": "req.001",
+               "case_id": "case.001", "engine": "quran", "operation": "test_lookup",
+               "inputs": {}, "methodology_profile_id": "profile.research",
+               "source_snapshot_ids": ["snap.001"],
+               "limits": {"timeout_ms": 500, "max_results": 3},
+               "idempotency_key": "idem.001"}
+        for bad in ([], {}, None):
+            with self.subTest(engine=bad), self.assertRaisesRegex(ContractError, "ENGINE_UNKNOWN"):
+                validate_request({**req, "engine": bad})
+            with self.subTest(limits=bad), self.assertRaisesRegex(ContractError, "LIMITS_INVALID"):
+                validate_request({**req, "limits": bad})
+        result = {"contract_version": CONTRACT_VERSION, "request_id": "req.001",
+                  "engine": "quran", "engine_version": "synthetic/0.1", "status": [],
+                  "findings": [], "evidence_refs": [], "uncertainties": [], "errors": [],
+                  "provenance": {"snapshot_ids": ["snap.001"]}, "trace_id": "req.001"}
+        with self.assertRaisesRegex(ContractError, "RESULT_STATUS_INVALID"):
+            validate_result(req, result)
+
     def test_upstream_override_rejected(self):
         with self.assertRaises(PlanError):
             plan(node("req.001", "fiqh", inputs={"_upstream": []})).ordered()

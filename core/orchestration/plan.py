@@ -22,8 +22,8 @@ class CasePlan:
             raise PlanError("PLAN_IDENTIFIERS_INVALID")
         if (not isinstance(self.source_snapshot_ids, tuple)
                 or len(self.source_snapshot_ids) > 128
-                or len(set(self.source_snapshot_ids)) != len(self.source_snapshot_ids)
-                or not all(identifier(x) for x in self.source_snapshot_ids)):
+                or not all(identifier(x) for x in self.source_snapshot_ids)
+                or len(set(self.source_snapshot_ids)) != len(self.source_snapshot_ids)):
             raise PlanError("PLAN_SNAPSHOTS_INVALID")
         if type(self.max_parallel) is not int or not 1 <= self.max_parallel <= 16:
             raise PlanError("PLAN_PARALLELISM_INVALID")
@@ -35,7 +35,8 @@ class CasePlan:
             if type(node) is not dict or set(node) != {"id", "engine", "operation", "inputs", "depends_on", "timeout_ms", "max_results"}:
                 raise PlanError("PLAN_NODE_SHAPE_INVALID")
             if (not identifier(node["id"]) or node["id"] in nodes
-                    or node["engine"] not in ENGINE_NAMES or not identifier(node["operation"])):
+                    or type(node["engine"]) is not str or node["engine"] not in ENGINE_NAMES
+                    or not identifier(node["operation"])):
                 raise PlanError("PLAN_NODE_IDENTITY_INVALID")
             if type(node["inputs"]) is not dict:
                 raise PlanError("PLAN_NODE_LIMITS_INVALID")
@@ -44,15 +45,17 @@ class CasePlan:
             try:
                 canonical_inputs = json.dumps(node["inputs"], sort_keys=True, allow_nan=False,
                                              ensure_ascii=False, separators=(",", ":"))
-            except (TypeError, ValueError, RecursionError) as exc:
+                canonical_bytes = canonical_inputs.encode("utf-8", "strict")
+            except (TypeError, ValueError, UnicodeError, RecursionError) as exc:
                 raise PlanError("PLAN_INPUT_NOT_JSON") from exc
-            if (len(canonical_inputs.encode("utf-8")) > 65536
+            if (len(canonical_bytes) > 65536
                     or type(node["timeout_ms"]) is not int or not 1 <= node["timeout_ms"] <= 120000
                     or type(node["max_results"]) is not int or not 1 <= node["max_results"] <= 1000):
                 raise PlanError("PLAN_NODE_LIMITS_INVALID")
             deps = node["depends_on"]
-            if (type(deps) is not list or len(deps) > 64 or len(set(deps)) != len(deps)
-                    or not all(identifier(d) for d in deps)):
+            if (type(deps) is not list or len(deps) > 64
+                    or not all(identifier(d) for d in deps)
+                    or len(set(deps)) != len(deps)):
                 raise PlanError("PLAN_DEPENDENCIES_INVALID")
             key = (node["engine"], node["operation"], canonical_inputs)
             if key in keys:
