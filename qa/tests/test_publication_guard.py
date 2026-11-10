@@ -61,7 +61,14 @@ class PublicationGuardTests(unittest.TestCase):
                               encoding="utf-8")
             git(root, "add", WITNESS_PATH)
             git(root, "commit", "-qm", "synthetic redaction")
-            self.assertEqual(scan_tip(root)["status"], "PASS")
+            # Redaction alone is not a valid publication certificate:
+            # the synthetic receipt intentionally lacks its signed contract.
+            self.assertFalse(_has_unredacted_witness_field(
+                json.loads(source.read_text(encoding="utf-8"))))
+            tip = scan_tip(root)
+            self.assertEqual(tip["status"], "FAIL")
+            self.assertTrue(any(x["code"] == "WITNESS_PUBLICATION_GATE_INVALID"
+                                for x in tip["violations"]))
             audit = history_summary(root)
             self.assertEqual(audit["historical_unredacted_versions_found"], 1)
             self.assertEqual(audit["witness_versions_examined"], 2)
