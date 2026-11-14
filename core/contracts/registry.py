@@ -8,7 +8,7 @@ class EngineRegistry:
         self._adapters = {}
 
     def register(self, engine, operations, handler):
-        if engine not in ENGINE_NAMES or engine in self._adapters:
+        if type(engine) is not str or engine not in ENGINE_NAMES or engine in self._adapters:
             raise ContractError("REGISTRY_ENGINE_INVALID")
         if (not isinstance(operations, (tuple, list, set, frozenset)) or not operations
                 or not all(identifier(op) for op in operations) or not callable(handler)):
@@ -16,11 +16,15 @@ class EngineRegistry:
         self._adapters[engine] = (frozenset(operations), handler)
 
     def resolve(self, engine, operation):
+        # Invalid external identifiers must never escape as TypeError
+        # (for example, unhashable list/dict inputs).
+        if type(engine) is not str or engine not in ENGINE_NAMES:
+            raise ContractError("ENGINE_UNAVAILABLE")
         item = self._adapters.get(engine)
         if item is None:
             raise ContractError("ENGINE_UNAVAILABLE")
         ops, handler = item
-        if operation not in ops:
+        if not identifier(operation) or operation not in ops:
             raise ContractError("OPERATION_UNSUPPORTED")
         return handler
 
