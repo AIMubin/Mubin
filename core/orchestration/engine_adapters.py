@@ -40,7 +40,12 @@ def _reference(value):
     if type(value) is not str:
         raise ContractError("REFERENCE_INVALID")
     parts = value.split(":")
-    if len(parts) != 2 or not all(part.isascii() and part.isdecimal() for part in parts):
+    # Bound digits before int conversion: huge user-supplied decimal strings
+    # otherwise raise Python's int-string limit ValueError, surfaced as ERROR.
+    # Permits normal zero-padded references while avoiding unbounded parsing.
+    if (len(parts) != 2 or not all(
+            1 <= len(part) <= 64 and part.isascii() and part.isdecimal()
+            for part in parts)):
         raise ContractError("REFERENCE_INVALID")
     s, a = map(int, parts)
     if s < 1 or s > 114 or a < 1 or a > verse_counts()[s-1]:
@@ -59,8 +64,9 @@ def build_engine_registry(*, snapshot_ids, quran_index=None,
     No live network fetching, generation, or rights/scholarly evaluation.
     """
     if (type(snapshot_ids) is not tuple or not snapshot_ids
-            or len(snapshot_ids) > 128 or len(set(snapshot_ids)) != len(snapshot_ids)
-            or not all(identifier(s) for s in snapshot_ids)):
+            or len(snapshot_ids) > 128
+            or not all(identifier(s) for s in snapshot_ids)
+            or len(set(snapshot_ids)) != len(snapshot_ids)):
         raise ContractError("ADAPTER_SNAPSHOT_CONFIG_INVALID")
     for path in (tafsir_db, hadith_cache):
         if path is not None and not isinstance(path, Path):
