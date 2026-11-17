@@ -58,7 +58,8 @@ class PublicationGuardTests(unittest.TestCase):
             self.assertIn("WITNESS_PUBLICATION_GATE_INVALID",
                           {x["code"] for x in invalid["violations"]})
 
-            git(root, "rm", WITNESS_PATH)
+            # Force removal of a newly staged synthetic file (no commit).
+            git(root, "rm", "-f", WITNESS_PATH)
             deleted = scan_tip(root)
             self.assertEqual(deleted["status"], "FAIL")
             self.assertFalse(deleted["witness_receipt_checked"])
