@@ -79,8 +79,14 @@ def scan_tip(root):
     # Reuse the strict, original B02-C.6 redacted receipt validator:
     # it verifies the original JSON self-digest and no raw Arabic excerpt.
     receipt = Path(root) / WITNESS_PATH
-    checked = receipt.is_file()
-    if checked:
+    # The original witness receipt is mandatory. Missing, untracked or
+    # symlinked replacements cannot silently disable the publication gate.
+    checked = (WITNESS_PATH in paths and receipt.is_file()
+               and not receipt.is_symlink())
+    if not checked:
+        findings.append({"code": "WITNESS_PUBLICATION_RECEIPT_NOT_TRACKED",
+                         "path_id": _path_id(WITNESS_PATH)})
+    else:
         try:
             from qa.check_b02c6_witness_prep import validate
             validate(root)

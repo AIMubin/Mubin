@@ -29,8 +29,10 @@ by this structural comparison. Those questions require separate evidence.
 
 `qa/publication_guard.py` rejects dangerous **tracked filenames**, including
 local source-vault directories, databases and obvious credential containers.
-It also invokes the existing B02-C.6 metadata validator (which protects
-digest consistency, text exclusion and scientific non-promotion).
+It **requires the B02-C.6 witness receipt to be tracked, present and a
+regular non-symlink file**; missing/untracked/replaced-with-symlink receipts
+fail closed. It also invokes the existing B02-C.6 metadata validator (which
+protects digest consistency, text exclusion and scientific non-promotion).
 The CI workflow runs on every PR and main push, for Windows and Ubuntu.
 `.gitignore` is defense in depth only.
 

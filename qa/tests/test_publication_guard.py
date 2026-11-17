@@ -34,6 +34,37 @@ class PublicationGuardTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIsNone(path_violation(path))
 
+    def test_required_receipt_missing_untracked_or_deleted_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            git(root, "init", "-q")
+            missing = scan_tip(root)
+            self.assertEqual(missing["status"], "FAIL")
+            self.assertFalse(missing["witness_receipt_checked"])
+            self.assertIn("WITNESS_PUBLICATION_RECEIPT_NOT_TRACKED",
+                          {x["code"] for x in missing["violations"]})
+
+            receipt = root / WITNESS_PATH
+            receipt.parent.mkdir(parents=True)
+            receipt.write_text('{"test": "SYNTHETIC_ONLY"}', encoding="utf-8")
+            untracked = scan_tip(root)
+            self.assertEqual(untracked["status"], "FAIL")
+            self.assertIn("WITNESS_PUBLICATION_RECEIPT_NOT_TRACKED",
+                          {x["code"] for x in untracked["violations"]})
+
+            git(root, "add", WITNESS_PATH)
+            invalid = scan_tip(root)
+            self.assertTrue(invalid["witness_receipt_checked"])
+            self.assertIn("WITNESS_PUBLICATION_GATE_INVALID",
+                          {x["code"] for x in invalid["violations"]})
+
+            git(root, "rm", WITNESS_PATH)
+            deleted = scan_tip(root)
+            self.assertEqual(deleted["status"], "FAIL")
+            self.assertFalse(deleted["witness_receipt_checked"])
+            self.assertIn("WITNESS_PUBLICATION_RECEIPT_NOT_TRACKED",
+                          {x["code"] for x in deleted["violations"]})
+
     def test_unredacted_historical_marker_is_structural_only(self):
         original = {"negative_control": {
             "shared_span_containment_check": {
