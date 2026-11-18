@@ -12,6 +12,7 @@ on:
     paths:
       - 'docs/governance/**'
       - 'qa/tests/test_main_ruleset_templates.py'
+      - 'scripts/governance/activate-main-ruleset.ps1'
       - '.github/workflows/governance-template-checks.yml'
   workflow_dispatch:
 

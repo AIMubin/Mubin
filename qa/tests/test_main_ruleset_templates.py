@@ -67,7 +67,8 @@ class MainRulesetTests(unittest.TestCase):
         for required in ("[switch]$Apply", "if (-not $Apply)",
                          "INDEPENDENT_REVIEWER_CONFIRMATION_REQUIRED",
                          "REQUIRED_MAIN_HEAD_CHECK_MISSING",
-                         "BOOTSTRAP_RULESET_ID_INVALID", "DRY_RUN"):
+                         "BOOTSTRAP_RULESET_ID_INVALID",
+                         "BOOTSTRAP_SCOPE_OR_RULES_MISMATCH", "DRY_RUN"):
             self.assertIn(required, script)
         workflow = (ROOT / ".github/workflows/governance-template-checks.yml"
                     ).read_text(encoding="utf-8")

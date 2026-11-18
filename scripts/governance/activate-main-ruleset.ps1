@@ -139,6 +139,24 @@ $Bootstrap = @($Existing | Where-Object {
 if ($Bootstrap.Count -ne 1) {
     Refuse "VERIFIED_BOOTSTRAP_RULESET_REQUIRED"
 }
+$RulesetId = [string]$Bootstrap[0].id
+if ($RulesetId -notmatch "^[0-9]+$") {
+    Refuse "BOOTSTRAP_RULESET_ID_INVALID"
+}
+$BootstrapDetails = GhJson "repos/$Repo/rulesets/$RulesetId"
+$ReferenceList = @($BootstrapDetails.conditions.ref_name.include)
+$BootstrapTypes = @($BootstrapDetails.rules | ForEach-Object { $_.type })
+if ($BootstrapDetails.target -ne "branch" -or
+    $BootstrapDetails.enforcement -ne "active" -or
+    $ReferenceList.Count -ne 1 -or
+    $ReferenceList[0] -cne "refs/heads/main" -or
+    $BootstrapTypes.Count -ne 3 -or
+    $BootstrapTypes -ccontains "required_status_checks" -or
+    $BootstrapTypes -cnotcontains "pull_request" -or
+    $BootstrapTypes -cnotcontains "non_fast_forward" -or
+    $BootstrapTypes -cnotcontains "deletion") {
+    Refuse "BOOTSTRAP_SCOPE_OR_RULES_MISMATCH"
+}
 $Branch = GhJson "repos/$Repo/branches/main"
 if (-not $Branch.protected) {
     Refuse "PROTECTION_NOT_CONFIRMED"
@@ -165,10 +183,6 @@ foreach ($Context in $MustPass) {
 
 # The only allowed update is replacement of our known bootstrap ruleset ID.
 # No force push, branch update, manual review spoofing or broad API writes.
-$RulesetId = [string]$Bootstrap[0].id
-if ($RulesetId -notmatch "^[0-9]+$") {
-    Refuse "BOOTSTRAP_RULESET_ID_INVALID"
-}
 & gh api -X PUT "repos/$Repo/rulesets/$RulesetId" --input $TemplatePath 1>$null 2>$null
 if ($LASTEXITCODE -ne 0) {
     Refuse "STRICT_RULESET_WRITE_FAILED"
