@@ -1,0 +1,58 @@
+{
+  "name": "Mubin main - verified CI and independent review",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/main"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_linear_history"
+    },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "allowed_merge_methods": [
+          "squash"
+        ],
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": false,
+        "require_last_push_approval": true,
+        "required_approving_review_count": 1,
+        "required_review_thread_resolution": true
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "required_status_checks": [
+          {
+            "context": "Baseline contracts and public-preview (ubuntu-latest)"
+          },
+          {
+            "context": "Baseline contracts and public-preview (windows-latest)"
+          },
+          {
+            "context": "Public tracked-artifact safety (ubuntu-latest)"
+          },
+          {
+            "context": "Public tracked-artifact safety (windows-latest)"
+          }
+        ],
+        "strict_required_status_checks_policy": true
+      }
+    }
+  ]
+}
