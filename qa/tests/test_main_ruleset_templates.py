@@ -61,6 +61,19 @@ class MainRulesetTests(unittest.TestCase):
         self.assertEqual(reviews["required_approving_review_count"], 1)
         self.assertTrue(reviews["require_last_push_approval"])
 
+    def test_operator_script_is_explicit_dry_run_first(self):
+        script = (ROOT / "scripts/governance/activate-main-ruleset.ps1").read_text(
+            encoding="utf-8")
+        for required in ("[switch]$Apply", "if (-not $Apply)",
+                         "INDEPENDENT_REVIEWER_CONFIRMATION_REQUIRED",
+                         "REQUIRED_MAIN_HEAD_CHECK_MISSING",
+                         "BOOTSTRAP_RULESET_ID_INVALID", "DRY_RUN"):
+            self.assertIn(required, script)
+        workflow = (ROOT / ".github/workflows/governance-template-checks.yml"
+                    ).read_text(encoding="utf-8")
+        self.assertIn("pwsh -NoProfile -File", workflow)
+        self.assertNotIn(" -Apply", workflow)
+
     def test_documentation_explicitly_rejects_premature_enforcement(self):
         readme = (FOLDER / "README.md").read_text(encoding="utf-8")
         for required in ("#142", "#144", "#146", "deadlock",

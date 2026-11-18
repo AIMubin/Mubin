@@ -6,6 +6,40 @@ Observed 2026-11-13: \`main.protected=false\`, and the repository rulesets
 collection was empty. The connected GitHub integration supports code and PR
 writes, **not** repository ruleset writes.
 
+## One-command Windows / PowerShell operator flow (recommended)
+
+After checking out this governance change in a trusted local repository,
+run a **read-only dry run** (works without GitHub authentication):
+
+```powershell
+pwsh -NoProfile -File scripts/governance/activate-main-ruleset.ps1 -Mode bootstrap
+```
+
+An authorized GitHub administrator can perform the actual bootstrap only
+after inspecting the template and confirming `gh auth status`:
+
+```powershell
+pwsh -NoProfile -File scripts/governance/activate-main-ruleset.ps1 -Mode bootstrap -Apply
+```
+
+After the new workflows are merged into `main`, all four required
+jobs have passed on the actual `main` HEAD, and an independent reviewer
+has been enrolled, the same operator can preview and explicitly apply
+strict protection:
+
+```powershell
+pwsh -NoProfile -File scripts/governance/activate-main-ruleset.ps1 -Mode strict
+pwsh -NoProfile -File scripts/governance/activate-main-ruleset.ps1 -Mode strict -Apply -IndependentReviewerConfirmed
+```
+
+The `-Apply` switch is the **only** mode that permits a remote write.
+The script refuses duplicate ruleset names, missing workflows or checks,
+unconfirmed bootstrap protection and missing independent-reviewer
+confirmation. An assertion switch does **not** itself prove that a qualified
+human approved any PR. Do not use a GitHub API token inside chat.
+The script's confirmation means GitHub accepted the policy, not that
+an adversarial bypass or permissions audit has been completed.
+
 ## Why two stages are necessary
 
 PR [#142](https://github.com/AIMubin/Mubin/pull/142) adds the baseline

@@ -5,6 +5,7 @@ on:
     paths:
       - 'docs/governance/**'
       - 'qa/tests/test_main_ruleset_templates.py'
+      - 'scripts/governance/activate-main-ruleset.ps1'
       - '.github/workflows/governance-template-checks.yml'
   push:
     branches: [main]
@@ -33,3 +34,7 @@ jobs:
           python-version: '3.11'
       - name: Verify both ruleset imports without contacting GitHub
         run: python -m unittest qa.tests.test_main_ruleset_templates -v
+      - name: Dry-run PowerShell bootstrap without credentials or writes
+        run: pwsh -NoProfile -File scripts/governance/activate-main-ruleset.ps1 -Mode bootstrap
+      - name: Dry-run PowerShell strict policy without credentials or writes
+        run: pwsh -NoProfile -File scripts/governance/activate-main-ruleset.ps1 -Mode strict
