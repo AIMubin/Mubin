@@ -35,7 +35,8 @@
     },
     "engine_version": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 128
     },
     "status": {
       "enum": [
@@ -53,7 +54,8 @@
       "items": {
         "type": "object"
       },
-      "maxItems": 1000
+      "maxItems": 1000,
+      "description": "Research metadata only; no raw source body fields. Runtime additionally enforces a 64 KiB serialized findings limit, bounded nesting and values; this alone does not authorize publication."
     },
     "evidence_refs": {
       "type": "array",
@@ -68,14 +70,16 @@
       "items": {
         "type": "string",
         "maxLength": 160
-      }
+      },
+      "maxItems": 128
     },
     "errors": {
       "type": "array",
       "items": {
         "type": "string",
         "maxLength": 160
-      }
+      },
+      "maxItems": 128
     },
     "provenance": {
       "type": "object",
