@@ -108,6 +108,47 @@ class ContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "RESULT_STATUS_INVALID"):
             validate_result(req, result)
 
+    def test_findings_metadata_boundary_rejects_raw_and_non_json_values(self):
+        request = {"contract_version": CONTRACT_VERSION, "request_id": "req.001",
+                   "case_id": "case.001", "engine": "quran",
+                   "operation": "test_lookup", "inputs": {},
+                   "methodology_profile_id": "profile.research",
+                   "source_snapshot_ids": ["snap.001"],
+                   "limits": {"timeout_ms": 500, "max_results": 3},
+                   "idempotency_key": "idem.001"}
+        result = {"contract_version": CONTRACT_VERSION, "request_id": "req.001",
+                  "engine": "quran", "engine_version": "synthetic/0.1",
+                  "status": "OK",
+                  "findings": [{"kind": "SOURCE_METADATA", "reference": "1:1",
+                                "text_sha256": "0" * 64,
+                                "synthetic_fixture": True}],
+                  "evidence_refs": [], "uncertainties": [], "errors": [],
+                  "provenance": {"snapshot_ids": ["snap.001"]},
+                  "trace_id": "req.001"}
+        self.assertIs(validate_result(request, result), result)
+        bad = (
+            [{"text": "SYNTHETIC_ONLY_SOURCE_EXCERPT"}],
+            [{"detail": {"raw_text": "SYNTHETIC_ONLY_SOURCE_EXCERPT"}}],
+            [{"detail": {"snippet": "SYNTHETIC_ONLY_SOURCE_EXCERPT"}}],
+            [{"kind": object()}], [{"kind": b"SYNTHETIC_BYTES"}],
+            [{"kind": float("nan")}],
+            [{"kind": "\\ud800".encode("ascii").decode("unicode_escape")}],
+            [{"label": "x" * 70000}],
+        )
+        for findings in bad:
+            with self.subTest(finding_type=str(type(findings[0].get("kind")))):
+                with self.assertRaisesRegex(ContractError, "RESULT_FINDINGS_INVALID"):
+                    validate_result(request, {**result, "findings": findings})
+
+        loop = {}
+        loop["cycle"] = loop
+        with self.assertRaisesRegex(ContractError, "RESULT_FINDINGS_INVALID"):
+            validate_result(request, {**result, "findings": [loop]})
+        with self.assertRaisesRegex(ContractError, "RESULT_DIAGNOSTICS_INVALID"):
+            validate_result(request, {**result, "uncertainties": ["SYNTHETIC"] * 129})
+        with self.assertRaisesRegex(ContractError, "RESULT_METADATA_INVALID"):
+            validate_result(request, {**result, "engine_version": "v" * 129})
+
     def test_upstream_override_rejected(self):
         with self.assertRaises(PlanError):
             plan(node("req.001", "fiqh", inputs={"_upstream": []})).ordered()
