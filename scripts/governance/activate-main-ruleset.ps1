@@ -55,6 +55,88 @@ if ($Template.target -ne "branch" -or $Template.enforcement -ne "active" -or
     Refuse "RULESET_TEMPLATE_SCOPE_INVALID"
 }
 
+# Fail closed on both local template policy regression and API read-back drift.
+function ConfirmRulesetMatches($Expected, $Actual) {
+    if ($Actual.target -ne $Expected.target -or
+        $Actual.enforcement -ne $Expected.enforcement) {
+        Refuse "RULESET_REMOTE_SCOPE_MISMATCH"
+    }
+    if (@($Actual.bypass_actors).Count -ne 0) {
+        Refuse "RULESET_REMOTE_BYPASS_DETECTED"
+    }
+    $Included = @($Actual.conditions.ref_name.include)
+    if ($Included.Count -ne 1 -or $Included[0] -cne "refs/heads/main" -or
+        @($Actual.conditions.ref_name.exclude).Count -ne 0) {
+        Refuse "RULESET_REMOTE_SCOPE_MISMATCH"
+    }
+    $ExpectedRules = @($Expected.rules)
+    $ActualRules = @($Actual.rules)
+    if ($ExpectedRules.Count -ne $ActualRules.Count) {
+        Refuse "RULESET_REMOTE_RULES_MISMATCH"
+    }
+    foreach ($Item in $ExpectedRules) {
+        $Matches = @($ActualRules | Where-Object { $_.type -ceq $Item.type })
+        if ($Matches.Count -ne 1) {
+            Refuse "RULESET_REMOTE_RULES_MISMATCH"
+        }
+        $Observed = $Matches[0]
+        if ($Item.type -eq "pull_request") {
+            foreach ($Name in @(
+                "required_approving_review_count", "require_last_push_approval",
+                "required_review_thread_resolution", "dismiss_stale_reviews_on_push",
+                "require_code_owner_review"
+            )) {
+                if ($Observed.parameters.$Name -cne $Item.parameters.$Name) {
+                    Refuse "RULESET_REMOTE_REVIEW_MISMATCH"
+                }
+            }
+            $ExpectedMethods = @($Item.parameters.allowed_merge_methods)
+            $ActualMethods = @($Observed.parameters.allowed_merge_methods)
+            if ($ExpectedMethods.Count -ne $ActualMethods.Count) {
+                Refuse "RULESET_REMOTE_REVIEW_MISMATCH"
+            }
+            foreach ($Method in $ExpectedMethods) {
+                if ($ActualMethods -cnotcontains $Method) {
+                    Refuse "RULESET_REMOTE_REVIEW_MISMATCH"
+                }
+            }
+        } elseif ($Item.type -eq "required_status_checks") {
+            if ($Observed.parameters.strict_required_status_checks_policy -cne
+                $Item.parameters.strict_required_status_checks_policy) {
+                Refuse "RULESET_REMOTE_CHECKS_MISMATCH"
+            }
+            $Required = @($Item.parameters.required_status_checks |
+                ForEach-Object { $_.context })
+            $Provided = @($Observed.parameters.required_status_checks |
+                ForEach-Object { $_.context })
+            if ($Required.Count -ne $Provided.Count) {
+                Refuse "RULESET_REMOTE_CHECKS_MISMATCH"
+            }
+            foreach ($Context in $Required) {
+                if ($Provided -cnotcontains $Context) {
+                    Refuse "RULESET_REMOTE_CHECKS_MISMATCH"
+                }
+            }
+        }
+    }
+}
+
+$ExpectedRuleTypes = if ($Mode -eq "bootstrap") {
+    @("pull_request", "non_fast_forward", "deletion")
+} else {
+    @("pull_request", "non_fast_forward", "deletion",
+      "required_linear_history", "required_status_checks")
+}
+$ConfiguredTypes = @($Template.rules | ForEach-Object { $_.type })
+if ($ConfiguredTypes.Count -ne $ExpectedRuleTypes.Count) {
+    Refuse "RULESET_TEMPLATE_REQUIRED_RULE_MISSING"
+}
+foreach ($RuleType in $ExpectedRuleTypes) {
+    if (@($ConfiguredTypes | Where-Object { $_ -ceq $RuleType }).Count -ne 1) {
+        Refuse "RULESET_TEMPLATE_REQUIRED_RULE_MISSING"
+    }
+}
+
 $PullRules = @($Template.rules | Where-Object { $_.type -eq "pull_request" })
 if ($PullRules.Count -ne 1 -or
     -not $PullRules[0].parameters.required_review_thread_resolution) {
@@ -68,6 +150,7 @@ $MustPass = @(
 )
 if ($Mode -eq "bootstrap") {
     if ($PullRules[0].parameters.required_approving_review_count -ne 0 -or
+        $PullRules[0].parameters.require_last_push_approval -ne $false -or
         @($Template.rules | Where-Object {
             $_.type -eq "required_status_checks"
         }).Count -ne 0) {
@@ -125,11 +208,19 @@ if ($Mode -eq "bootstrap") {
     if ($LASTEXITCODE -ne 0) {
         Refuse "BOOTSTRAP_WRITE_FAILED"
     }
+    $Created = @(GhJson "repos/$Repo/rulesets?includes_parents=true" |
+        Where-Object { $_.name -eq $Template.name })
+    if ($Created.Count -ne 1 -or
+        [string]$Created[0].id -notmatch "^[0-9]+$") {
+        Refuse "BOOTSTRAP_READBACK_MISSING"
+    }
+    $Active = GhJson "repos/$Repo/rulesets/$($Created[0].id)"
+    ConfirmRulesetMatches $Template $Active
     $Branch = GhJson "repos/$Repo/branches/main"
     if (-not $Branch.protected) {
         Refuse "PROTECTION_NOT_CONFIRMED"
     }
-    Write-Output "BOOTSTRAP_ACTIVE: GitHub reports main protected; review live rules."
+    Write-Output "BOOTSTRAP_ACTIVE: matched live rules and GitHub reports protected main."
     exit 0
 }
 
@@ -144,19 +235,9 @@ if ($RulesetId -notmatch "^[0-9]+$") {
     Refuse "BOOTSTRAP_RULESET_ID_INVALID"
 }
 $BootstrapDetails = GhJson "repos/$Repo/rulesets/$RulesetId"
-$ReferenceList = @($BootstrapDetails.conditions.ref_name.include)
-$BootstrapTypes = @($BootstrapDetails.rules | ForEach-Object { $_.type })
-if ($BootstrapDetails.target -ne "branch" -or
-    $BootstrapDetails.enforcement -ne "active" -or
-    $ReferenceList.Count -ne 1 -or
-    $ReferenceList[0] -cne "refs/heads/main" -or
-    $BootstrapTypes.Count -ne 3 -or
-    $BootstrapTypes -ccontains "required_status_checks" -or
-    $BootstrapTypes -cnotcontains "pull_request" -or
-    $BootstrapTypes -cnotcontains "non_fast_forward" -or
-    $BootstrapTypes -cnotcontains "deletion") {
-    Refuse "BOOTSTRAP_SCOPE_OR_RULES_MISMATCH"
-}
+$BootstrapPolicy = Get-Content -LiteralPath (Join-Path $Folder "main-bootstrap.ruleset.json") -Raw -Encoding UTF8 |
+    ConvertFrom-Json -Depth 64
+ConfirmRulesetMatches $BootstrapPolicy $BootstrapDetails
 $Branch = GhJson "repos/$Repo/branches/main"
 if (-not $Branch.protected) {
     Refuse "PROTECTION_NOT_CONFIRMED"
@@ -188,11 +269,13 @@ if ($LASTEXITCODE -ne 0) {
     Refuse "STRICT_RULESET_WRITE_FAILED"
 }
 $Actual = GhJson "repos/$Repo/rulesets/$RulesetId"
-if ($Actual.name -ne $Template.name -or
-    $Actual.enforcement -ne "active" -or
-    @($Actual.rules | Where-Object {
-        $_.type -eq "required_status_checks"
-    }).Count -ne 1) {
+if ($Actual.name -ne $Template.name) {
     Refuse "STRICT_RULESET_NOT_CONFIRMED"
 }
-Write-Output "STRICT_ACTIVE: review GitHub ruleset and independent approvals."
+ConfirmRulesetMatches $Template $Actual
+$FinalBranch = GhJson "repos/$Repo/branches/main"
+if (-not $FinalBranch.protected -or
+    $FinalBranch.commit.sha -cne $HeadSha) {
+    Refuse "MAIN_HEAD_CHANGED_OR_PROTECTION_LOST"
+}
+Write-Output "STRICT_ACTIVE: matched live rules on unchanged protected main."
