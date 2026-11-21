@@ -37,8 +37,15 @@ The script refuses duplicate ruleset names, missing workflows or checks,
 unconfirmed bootstrap protection and missing independent-reviewer
 confirmation. An assertion switch does **not** itself prove that a qualified
 human approved any PR. Do not use a GitHub API token inside chat.
-The script's confirmation means GitHub accepted the policy, not that
-an adversarial bypass or permissions audit has been completed.
+The script verifies **live** rule types, PR review conditions, required
+check contexts, absence of bypass actors, branch scope and enforcement
+after importing or upgrading the ruleset. Tests simulate malformed
+GitHub read-backs without credentials or network calls. A refusal after
+a remote write means an authorized operator must **inspect and remediate
+the now-existing rule manually**; the script deliberately does not
+automatically destroy or roll back protection settings. Passing a
+live-API check is not an adversarial permissions audit or independent
+scholarly approval.
 
 ## Why two stages are necessary
 

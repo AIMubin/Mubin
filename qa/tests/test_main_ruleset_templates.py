@@ -68,12 +68,16 @@ class MainRulesetTests(unittest.TestCase):
                          "INDEPENDENT_REVIEWER_CONFIRMATION_REQUIRED",
                          "REQUIRED_MAIN_HEAD_CHECK_MISSING",
                          "BOOTSTRAP_RULESET_ID_INVALID",
-                         "BOOTSTRAP_SCOPE_OR_RULES_MISMATCH", "DRY_RUN"):
+                         "RULESET_REMOTE_BYPASS_DETECTED",
+                         "RULESET_REMOTE_CHECKS_MISMATCH",
+                         "RULESET_TEMPLATE_REQUIRED_RULE_MISSING",
+                         "ConfirmRulesetMatches", "DRY_RUN"):
             self.assertIn(required, script)
         workflow = (ROOT / ".github/workflows/governance-template-checks.yml"
                     ).read_text(encoding="utf-8")
         self.assertIn("pwsh -NoProfile -File", workflow)
         self.assertNotIn(" -Apply", workflow)
+        self.assertIn("test-activation-readback.ps1", workflow)
 
     def test_documentation_explicitly_rejects_premature_enforcement(self):
         readme = (FOLDER / "README.md").read_text(encoding="utf-8")
