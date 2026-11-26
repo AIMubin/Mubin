@@ -120,7 +120,12 @@ def history_summary(root, max_commits=2000):
     Original PR heads, deleted refs, forks and GitHub caches are not all covered
     by this API. Even zero findings is never evidence of historical erasure.
     """
-    commits = _git(root, "rev-list", "--all", "--", WITNESS_PATH).splitlines()
+    # Path-limited Git history defaults to TREESAME parent simplification:
+    # a merge that keeps a redacted mainline tree may hide an exposed
+    # side-branch ancestor even after that branch's ref was deleted.
+    # --full-history follows all reachable merge parents for this path.
+    commits = _git(root, "rev-list", "--full-history", "--all", "--",
+                   WITNESS_PATH).splitlines()
     examined, detected = 0, 0
     for raw_sha in commits[:max_commits]:
         sha = raw_sha.decode("ascii", "strict")
@@ -135,6 +140,8 @@ def history_summary(root, max_commits=2000):
     return {
         "scope": "FETCHED_REACHABLE_REFS_ONLY",
         "history_complete_for_fetched_refs": len(commits) <= max_commits,
+        # Historical field name kept for receipt compatibility; merges that
+        # retain the same file can be included by --full-history.
         "changed_commits_seen": len(commits),
         "witness_versions_examined": examined,
         "historical_unredacted_versions_found": detected,

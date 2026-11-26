@@ -77,6 +77,47 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertTrue(_has_unredacted_witness_field(original))
         self.assertFalse(_has_unredacted_witness_field(redacted))
 
+    def test_merge_parent_exposure_detected_without_branch_ref(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            git(root, "init", "-q")
+            git(root, "config", "user.email", "test@example.invalid")
+            git(root, "config", "user.name", "Synthetic Test")
+            source = root / WITNESS_PATH
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                json.dumps({"shared_span_folded_sha256": "0" * 64}),
+                encoding="utf-8")
+            git(root, "add", WITNESS_PATH)
+            git(root, "commit", "-qm", "synthetic redacted base")
+            trunk = git(root, "branch", "--show-current").stdout.decode().strip()
+            self.assertTrue(trunk)
+            git(root, "checkout", "-qb", "synthetic-exposure")
+            source.write_text(
+                json.dumps({"shared_span_folded": "SYNTHETIC_ONLY_EXCERPT"}),
+                encoding="utf-8")
+            git(root, "add", WITNESS_PATH)
+            git(root, "commit", "-qm", "synthetic side-branch exposure")
+            exposed = git(root, "rev-parse", "HEAD").stdout.strip()
+            git(root, "checkout", "-q", trunk)
+            # A merge with the same redacted file as mainline: the side
+            # branch's commit remains an ancestor after its ref is deleted.
+            git(root, "merge", "-q", "--no-ff", "-s", "ours",
+                "synthetic-exposure", "-m", "retain redacted mainline")
+            git(root, "branch", "-D", "synthetic-exposure")
+            simplified = git(root, "rev-list", "--all", "--",
+                             WITNESS_PATH).stdout.splitlines()
+            self.assertNotIn(exposed, simplified)
+            full = git(root, "rev-list", "--full-history", "--all", "--",
+                       WITNESS_PATH).stdout.splitlines()
+            self.assertIn(exposed, full)
+            report = history_summary(root)
+            self.assertEqual(report["historical_unredacted_versions_found"], 1)
+            self.assertTrue(report["history_complete_for_fetched_refs"])
+            self.assertGreaterEqual(report["witness_versions_examined"], 3)
+            self.assertFalse(report["historical_eradication_verified"])
+            self.assertNotIn("SYNTHETIC_ONLY_EXCERPT", json.dumps(report))
+
     def test_history_reports_old_version_without_publishing_value(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -37,8 +37,14 @@ The CI workflow runs on every PR and main push, for Windows and Ubuntu.
 `.gitignore` is defense in depth only.
 
 The `--history` option examines versions of this **one known receipt** that
-are reachable from refs **actually fetched** into the checkout. It reports
-counts only, never the text itself. It neither scans every source artifact
+are reachable from refs **actually fetched** into the checkout. It uses
+`git rev-list --full-history` because Git's default path-limited history
+simplification can omit an exposed side-branch ancestor of a merge that
+retains the mainline's redacted file. A synthetic merge-and-delete-ref
+regression tests this failure mode. The legacy `changed_commits_seen`
+field counts selected history commits, including merges that did not alter
+the file; it is not a count of distinct edits. The audit reports counts
+only, never the text itself. It neither scans every source artifact
 nor checks every deleted branch, old original PR head, fork, release asset,
 provider cache or independent clone. A zero count is not proof of erasure,
 and a green prospective gate never closes issue #145.
