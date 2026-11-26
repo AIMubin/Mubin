@@ -44,6 +44,27 @@ function global:gh {
     if ($Call -eq "api repos/AIMubin/Mubin/branches/main") {
         return ('{"protected":true,"commit":{"sha":"' + ('a' * 40) + '"}}')
     }
+    if ($Call -like "api repos/AIMubin/Mubin/contents/.github/workflows/*") {
+        return '{"type":"file"}'
+    }
+    if ($Call -like "api repos/AIMubin/Mubin/commits/*/check-runs?per_page=100") {
+        $Checks = @(
+            "Baseline contracts and public-preview (ubuntu-latest)",
+            "Baseline contracts and public-preview (windows-latest)",
+            "Public tracked-artifact safety (ubuntu-latest)",
+            "Public tracked-artifact safety (windows-latest)"
+        ) | ForEach-Object {
+            @{
+                name = $_
+                status = "completed"
+                conclusion = "success"
+                app = @{ id = 999 }
+            }
+        }
+        return (ConvertTo-Json -InputObject @{
+            check_runs = $Checks
+        } -Depth 16 -Compress)
+    }
     throw "UNEXPECTED_FAKE_GITHUB_CALL"
 }
 
@@ -76,5 +97,16 @@ ExpectRefusal "RULESET_REMOTE_RULES_MISMATCH" {
 }
 if ($global:Writes -ne 0) {
     throw "STRICT_MOCK_UNEXPECTED_WRITE"
+}
+
+# Even all-green check names cannot authorize strict policy if a different
+# GitHub App supplied them. The tests never query real GitHub.
+$global:Writes = 0
+$global:Scenario = "strict-spoofed-check-app"
+ExpectRefusal "REQUIRED_MAIN_HEAD_CHECK_MISSING_OR_UNTRUSTED" {
+    & $Activation -Mode strict -Apply -IndependentReviewerConfirmed
+}
+if ($global:Writes -ne 0) {
+    throw "SPOOFED_CHECK_MOCK_UNEXPECTED_WRITE"
 }
 Write-Output "MOCK_READBACK_NEGATIVES_PASS no_network=true"

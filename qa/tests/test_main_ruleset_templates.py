@@ -57,6 +57,10 @@ class MainRulesetTests(unittest.TestCase):
         contexts = tuple(c["context"] for c in params["required_status_checks"])
         self.assertEqual(contexts, BASE)
         self.assertEqual(len(set(contexts)), 4)
+        # Verified GitHub Actions application ID on Mubin #142 and #146.
+        self.assertEqual(
+            tuple(c.get("integration_id") for c in params["required_status_checks"]),
+            (15368,) * 4)
         reviews = rules["pull_request"]["parameters"]
         self.assertEqual(reviews["required_approving_review_count"], 1)
         self.assertTrue(reviews["require_last_push_approval"])
@@ -66,10 +70,12 @@ class MainRulesetTests(unittest.TestCase):
             encoding="utf-8")
         for required in ("[switch]$Apply", "if (-not $Apply)",
                          "INDEPENDENT_REVIEWER_CONFIRMATION_REQUIRED",
-                         "REQUIRED_MAIN_HEAD_CHECK_MISSING",
+                         "REQUIRED_MAIN_HEAD_CHECK_MISSING_OR_UNTRUSTED",
                          "BOOTSTRAP_RULESET_ID_INVALID",
                          "RULESET_REMOTE_BYPASS_DETECTED",
                          "RULESET_REMOTE_CHECKS_MISMATCH",
+                         "STRICT_CHECK_SOURCE_INVALID",
+                         "$TrustedChecksAppId = 15368",
                          "RULESET_TEMPLATE_REQUIRED_RULE_MISSING",
                          "ConfirmRulesetMatches", "DRY_RUN"):
             self.assertIn(required, script)

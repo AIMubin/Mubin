@@ -23,7 +23,8 @@ pwsh -NoProfile -File scripts/governance/activate-main-ruleset.ps1 -Mode bootstr
 ```
 
 After the new workflows are merged into `main`, all four required
-jobs have passed on the actual `main` HEAD, and an independent reviewer
+jobs have passed on the actual `main` HEAD **from GitHub Actions (App ID
+`15368`, checked against the actual #142 and #146 runs)**, and an independent reviewer
 has been enrolled, the same operator can preview and explicitly apply
 strict protection:
 
@@ -38,7 +39,8 @@ unconfirmed bootstrap protection and missing independent-reviewer
 confirmation. An assertion switch does **not** itself prove that a qualified
 human approved any PR. Do not use a GitHub API token inside chat.
 The script verifies **live** rule types, PR review conditions, required
-check contexts, absence of bypass actors, branch scope and enforcement
+check contexts **and the source GitHub App**, absence of bypass actors,
+branch scope and enforcement
 after importing or upgrading the ruleset. Tests simulate malformed
 GitHub read-backs without credentials or network calls. A refusal after
 a remote write means an authorized operator must **inspect and remediate
@@ -108,6 +110,12 @@ Check that each exact check name below has run on a new PR with current
 - \`Baseline contracts and public-preview (windows-latest)\`
 - \`Public tracked-artifact safety (ubuntu-latest)\`
 - \`Public tracked-artifact safety (windows-latest)\`
+
+Each strict check in the ruleset has `integration_id: 15368` so a
+different app using an identical context string cannot satisfy it. If
+GitHub Actions changes its installation identity, re-verify the check-runs
+API for the target repository and deliberately update the policy under
+review rather than silently dropping the app restriction.
 
 When a second independent reviewer with repository write permission is
 available, replace the bootstrap policy with

@@ -39,16 +39,20 @@
       "parameters": {
         "required_status_checks": [
           {
-            "context": "Baseline contracts and public-preview (ubuntu-latest)"
+            "context": "Baseline contracts and public-preview (ubuntu-latest)",
+            "integration_id": 15368
           },
           {
-            "context": "Baseline contracts and public-preview (windows-latest)"
+            "context": "Baseline contracts and public-preview (windows-latest)",
+            "integration_id": 15368
           },
           {
-            "context": "Public tracked-artifact safety (ubuntu-latest)"
+            "context": "Public tracked-artifact safety (ubuntu-latest)",
+            "integration_id": 15368
           },
           {
-            "context": "Public tracked-artifact safety (windows-latest)"
+            "context": "Public tracked-artifact safety (windows-latest)",
+            "integration_id": 15368
           }
         ],
         "strict_required_status_checks_policy": true

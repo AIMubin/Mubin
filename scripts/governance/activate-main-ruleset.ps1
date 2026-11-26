@@ -19,6 +19,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $Repo = "AIMubin/Mubin"
+# Verified on both baseline #142 and publication #146 check-runs.
+$TrustedChecksAppId = 15368
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $Folder = Join-Path $Root "docs/governance"
 $TemplateName = if ($Mode -eq "bootstrap") {
@@ -105,15 +107,17 @@ function ConfirmRulesetMatches($Expected, $Actual) {
                 $Item.parameters.strict_required_status_checks_policy) {
                 Refuse "RULESET_REMOTE_CHECKS_MISMATCH"
             }
-            $Required = @($Item.parameters.required_status_checks |
-                ForEach-Object { $_.context })
-            $Provided = @($Observed.parameters.required_status_checks |
-                ForEach-Object { $_.context })
+            $Required = @($Item.parameters.required_status_checks)
+            $Provided = @($Observed.parameters.required_status_checks)
             if ($Required.Count -ne $Provided.Count) {
                 Refuse "RULESET_REMOTE_CHECKS_MISMATCH"
             }
-            foreach ($Context in $Required) {
-                if ($Provided -cnotcontains $Context) {
+            foreach ($Check in $Required) {
+                $Matches = @($Provided | Where-Object {
+                    $_.context -ceq $Check.context
+                })
+                if ($Matches.Count -ne 1 -or
+                    $Matches[0].integration_id -ne $Check.integration_id) {
                     Refuse "RULESET_REMOTE_CHECKS_MISMATCH"
                 }
             }
@@ -166,16 +170,17 @@ if ($Mode -eq "bootstrap") {
         -not $StatusRules[0].parameters.strict_required_status_checks_policy) {
         Refuse "STRICT_RULESET_WEAKENED"
     }
-    $RequiredContexts = @(
-        $StatusRules[0].parameters.required_status_checks |
-        ForEach-Object { $_.context }
-    )
-    if ($RequiredContexts.Count -ne $MustPass.Count) {
+    $RequiredChecks = @($StatusRules[0].parameters.required_status_checks)
+    if ($RequiredChecks.Count -ne $MustPass.Count) {
         Refuse "STRICT_CONTEXTS_MISMATCH"
     }
     foreach ($Context in $MustPass) {
-        if ($RequiredContexts -cnotcontains $Context) {
-            Refuse "STRICT_CONTEXTS_MISMATCH"
+        $Matches = @($RequiredChecks | Where-Object {
+            $_.context -ceq $Context
+        })
+        if ($Matches.Count -ne 1 -or
+            $Matches[0].integration_id -ne $TrustedChecksAppId) {
+            Refuse "STRICT_CHECK_SOURCE_INVALID"
         }
     }
 }
@@ -254,11 +259,15 @@ if ($HeadSha -notmatch "^[0-9a-f]{40}$") {
     Refuse "MAIN_HEAD_INVALID"
 }
 $Checks = GhJson "repos/$Repo/commits/$HeadSha/check-runs?per_page=100"
-$Passed = @($Checks.check_runs | Where-Object { $_.conclusion -eq "success" } |
-    ForEach-Object { $_.name })
 foreach ($Context in $MustPass) {
-    if ($Passed -cnotcontains $Context) {
-        Refuse "REQUIRED_MAIN_HEAD_CHECK_MISSING"
+    $Matched = @($Checks.check_runs | Where-Object {
+        $_.name -ceq $Context -and
+        $_.status -eq "completed" -and
+        $_.conclusion -eq "success" -and
+        $_.app.id -eq $TrustedChecksAppId
+    })
+    if ($Matched.Count -lt 1) {
+        Refuse "REQUIRED_MAIN_HEAD_CHECK_MISSING_OR_UNTRUSTED"
     }
 }
 
