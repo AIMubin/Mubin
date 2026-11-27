@@ -90,6 +90,18 @@ class PublicPreviewTests(unittest.TestCase):
         self.mutate(STAGE08, lambda data:
                     data["limits"].update(redistribution_approved=True))
 
+    def test_unreviewed_candidate_profile_keys_never_enter_public_metadata(self):
+        # A value-only check would allow private source material to leak as
+        # a dictionary key in the generated public JSON. Synthetic only.
+        root = self.make_mutable_tree()
+        file = root / STAGE07
+        data = json.loads(file.read_text(encoding="utf-8"))
+        data["queries"][0]["W2"]["candidates"][
+            "SYNTHETIC_ONLY_PRIVATE_SOURCE_TEXT"] = 0
+        file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        with self.assertRaises(PreviewError):
+            public_manifest(root)
+
     def test_mutating_query_counts_requires_new_review(self):
         self.mutate(STAGE07, lambda data:
                     data["queries"][0]["W1"].update(strict=999))
