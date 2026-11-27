@@ -30,6 +30,13 @@ QUERY_NAMES = {
     "pilot:word-boundary-diagnostic": "و أما",
 }
 SHA = re.compile(r"^[0-9a-f]{64}$")
+# Public artifacts can only expose reviewed normalization profile identifiers.
+# Stage07 receipts are not a trusted source for arbitrary public field names.
+CANDIDATE_PROFILES = frozenset({
+    "ignore_arabic_marks_v1",
+    "ignore_arabic_marks_and_brackets_v1",
+    "ignore_arabic_marks_brackets_and_spaces_v1",
+})
 
 
 class PreviewError(ValueError):
@@ -104,8 +111,10 @@ def public_manifest(root=PROJECT):
         # Folded counts are profile-specific, not distinct occurrences.
         folded = row["W2"].get("candidates", {})
         require(type(folded) is dict and
-                all(type(v) is int and 0 <= v <= 1000 for v in folded.values()),
-                "invalid diagnostic candidate counts")
+                all(type(k) is str and k in CANDIDATE_PROFILES and
+                    type(v) is int and 0 <= v <= 1000
+                    for k, v in folded.items()),
+                "unreviewed diagnostic candidate profile or count")
         counts.append({
             "label_ar": label,
             "w1_exact": row["W1"]["strict"],
