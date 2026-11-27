@@ -30,6 +30,13 @@ QUERY_NAMES = {
     "pilot:word-boundary-diagnostic": "و أما",
 }
 SHA = re.compile(r"^[0-9a-f]{64}$")
+# Public artifacts can only expose reviewed normalization profile identifiers.
+# Stage07 receipts are not a trusted source for arbitrary public field names.
+CANDIDATE_PROFILES = frozenset({
+    "ignore_arabic_marks_v1",
+    "ignore_arabic_marks_and_brackets_v1",
+    "ignore_arabic_marks_brackets_and_spaces_v1",
+})
 
 
 class PreviewError(ValueError):
@@ -53,6 +60,16 @@ def public_manifest(root=PROJECT):
     version = (root / "VERSION.yaml").read_text(encoding="utf-8")
     require(re.search(r"(?m)^  version: 0\.1\.0-alpha$", version) is not None,
             "system version requires explicitly reviewed preview policy")
+    component_names = {"Quran": "quran_engine", "Tafsir": "tafsir_engine",
+                       "Hadith": "hadith_engine", "Usul": "usul_engine",
+                       "Fiqh": "fiqh_engine"}
+    milestones = {}
+    for name, key in component_names.items():
+        match = re.search(
+            rf"(?m)^  {re.escape(key)}:\n    milestone: ([A-Z][0-9.]+)\n",
+            version)
+        require(match is not None, "missing component milestone: " + key)
+        milestones[name] = match.group(1)
     require(st7.get("campaign_decision") == "STAGE07_DUAL_WITNESS_ARABIC_RETRIEVAL_PASS"
             and st8.get("campaign_decision") == "STAGE08_DUAL_SOURCE_CONTEXT_GRAPH_PASS",
             "expected pinned operator research receipts absent")
@@ -94,8 +111,10 @@ def public_manifest(root=PROJECT):
         # Folded counts are profile-specific, not distinct occurrences.
         folded = row["W2"].get("candidates", {})
         require(type(folded) is dict and
-                all(type(v) is int and 0 <= v <= 1000 for v in folded.values()),
-                "invalid diagnostic candidate counts")
+                all(type(k) is str and k in CANDIDATE_PROFILES and
+                    type(v) is int and 0 <= v <= 1000
+                    for k, v in folded.items()),
+                "unreviewed diagnostic candidate profile or count")
         counts.append({
             "label_ar": label,
             "w1_exact": row["W1"]["strict"],
@@ -125,13 +144,15 @@ def public_manifest(root=PROJECT):
             "graph_sha256": st8["graph_sha256"],
         },
         "engines": [
-            {"name": "Quran", "milestone": "Q0.3", "public_mode": "status_only",
+            {"name": "Quran", "milestone": milestones["Quran"], "public_mode": "status_only",
              "note_ar": "العرض الحرفي للقرآن والتفسير محجوب حتى اعتماد النص والحقوق."},
-            {"name": "Hadith", "milestone": "H3.9.2", "public_mode": "status_only",
+            {"name": "Tafsir", "milestone": milestones["Tafsir"], "public_mode": "status_only",
+             "note_ar": "محرك بحث تفسيري تجريبي؛ لا نصوص منشورة ولا اعتماد علمي."},
+            {"name": "Hadith", "milestone": milestones["Hadith"], "public_mode": "status_only",
              "note_ar": "الأحكام البشرية المجمدة لم تُستبدل بقرارات آلية."},
-            {"name": "Usul", "milestone": "U0.1", "public_mode": "metadata_navigation_only",
+            {"name": "Usul", "milestone": milestones["Usul"], "public_mode": "metadata_navigation_only",
              "note_ar": "بحث وصفي تجريبي؛ لا استنباط فقهي ولا اعتماد دلالي."},
-            {"name": "Fiqh", "milestone": "F0.0", "public_mode": "not_available",
+            {"name": "Fiqh", "milestone": milestones["Fiqh"], "public_mode": "not_available",
              "note_ar": "لم يُطلق محرك فقه أو خدمة فتوى."},
         ],
         "research_example": {

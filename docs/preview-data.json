@@ -14,6 +14,12 @@
       "public_mode": "status_only"
     },
     {
+      "milestone": "T0.3",
+      "name": "Tafsir",
+      "note_ar": "محرك بحث تفسيري تجريبي؛ لا نصوص منشورة ولا اعتماد علمي.",
+      "public_mode": "status_only"
+    },
+    {
       "milestone": "H3.9.2",
       "name": "Hadith",
       "note_ar": "الأحكام البشرية المجمدة لم تُستبدل بقرارات آلية.",

@@ -7,6 +7,9 @@ components:
   quran_engine:
     milestone: Q0.3
     maturity: engineering_qualified_limited_scope
+  tafsir_engine:
+    milestone: T0.3
+    maturity: research_only_unqualified
   hadith_engine:
     milestone: H3.9.2
     maturity: qualification

@@ -29,6 +29,13 @@ class PublicPreviewTests(unittest.TestCase):
         self.assertEqual(data["preview_status"],
                          "STATIC_ARTIFACT_READY_NOT_HOSTING_CONFIRMED")
 
+    def test_five_engine_inventory_matches_version_register(self):
+        data = public_manifest(self.root)
+        self.assertEqual([row["name"] for row in data["engines"]],
+                         ["Quran", "Tafsir", "Hadith", "Usul", "Fiqh"])
+        self.assertEqual(data["engines"][1]["milestone"], "T0.3")
+        self.assertEqual(data["engines"][1]["public_mode"], "status_only")
+
     def test_preview_contains_no_source_text_or_scholarly_publication(self):
         result = public_manifest(self.root)
         self.assertFalse(result["source_text_included"])
@@ -82,6 +89,18 @@ class PublicPreviewTests(unittest.TestCase):
     def test_no_fatwas_or_rights_are_inferred_from_operator_receipts(self):
         self.mutate(STAGE08, lambda data:
                     data["limits"].update(redistribution_approved=True))
+
+    def test_unreviewed_candidate_profile_keys_never_enter_public_metadata(self):
+        # A value-only check would allow private source material to leak as
+        # a dictionary key in the generated public JSON. Synthetic only.
+        root = self.make_mutable_tree()
+        file = root / STAGE07
+        data = json.loads(file.read_text(encoding="utf-8"))
+        data["queries"][0]["W2"]["candidates"][
+            "SYNTHETIC_ONLY_PRIVATE_SOURCE_TEXT"] = 0
+        file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        with self.assertRaises(PreviewError):
+            public_manifest(root)
 
     def test_mutating_query_counts_requires_new_review(self):
         self.mutate(STAGE07, lambda data:
